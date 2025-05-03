@@ -55,7 +55,7 @@ cd backend
 pnpm install
 
 echo "🚀 Starting backend..."
-pnpm run start:dev &
+pnpm run start:dev > /dev/null 2>&1 &
 BACKEND_PID=$!
 
 # Install and start frontend
@@ -64,7 +64,7 @@ echo "📦 Installing frontend dependencies..."
 pnpm install
 
 echo "🚀 Starting frontend on port 3001..."
-PORT=3001 pnpm run dev &
+PORT=3001 pnpm run dev > /dev/null 2>&1 &
 FRONTEND_PID=$!
 
 sleep 3
@@ -74,6 +74,3 @@ echo -e "\n✅ Profolio is now running!"
 echo "🔐 Login here: http://${LAN_IP}:3001/login"
 echo "🧠 Backend API is available at: http://${LAN_IP}:3000/api"
 echo "📦 Container-ready. Both services are now running..."
-
-# Wait for both to exit (or Ctrl+C)
-wait $BACKEND_PID $FRONTEND_PID
