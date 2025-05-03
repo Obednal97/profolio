@@ -16,15 +16,25 @@ type Liability = {
 };
 
 async function fetchData(userId: string) {
-  const [assetsRes, liabilitiesRes] = await Promise.all([
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/assets?userId=${userId}`, { cache: 'no-store' }),
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/liabilities?userId=${userId}`, { cache: 'no-store' }),
-  ]);
+  try {
+    const [assetsRes, liabilitiesRes] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/assets?userId=${userId}`, { cache: 'no-store' }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/liabilities?userId=${userId}`, { cache: 'no-store' }),
+    ]);
 
-  const assets = await assetsRes.json();
-  const liabilities = await liabilitiesRes.json();
+    const assets = await assetsRes.json();
+    const liabilities = await liabilitiesRes.json();
 
-  return { assets, liabilities };
+    if (!Array.isArray(assets) || !Array.isArray(liabilities)) {
+      console.error('Invalid data shape:', { assets, liabilities });
+      return { assets: [], liabilities: [] };
+    }
+
+    return { assets, liabilities };
+  } catch (error) {
+    console.error('Fetch failed:', error);
+    return { assets: [], liabilities: [] };
+  }
 }
 
 export default async function DashboardPage() {
