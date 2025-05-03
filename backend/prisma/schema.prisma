@@ -1,0 +1,53 @@
+enum AssetType {
+  CRYPTO
+  STOCK
+  PROPERTY
+  EQUITY
+  OTHER
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String      @id @default(uuid())
+  email       String      @unique
+  taxCountry  String
+  taxRate     Int // stored as basis points, e.g. 0.25 => 2500
+  assets      Asset[]
+  liabilities Liability[]
+}
+
+model Asset {
+  id            String  @id @default(uuid())
+  userId        String
+  name          String
+  type          AssetType
+  quantity      Int    // stored in micro-units, e.g. 1.234 => 1234000
+  source        String?
+  externalId    String?
+  valueOverride Int?   // stored in pence/cents, e.g. £10.99 => 1099
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Liability {
+  id           String    @id @default(uuid())
+  userId       String
+  name         String
+  balance      Int     // stored in pence/cents, e.g. £45,000.23 => 4500023
+  interestRate Int     // stored as basis points, e.g. 3.5% => 3500
+  dueDate      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
