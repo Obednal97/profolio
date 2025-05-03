@@ -57,8 +57,10 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --brand-primary: oklch(0.95 0.33 135);
+  --brand-secondary: oklch(0.85 0.26 320);
+  --accent: var(--brand-primary);
+  --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -91,8 +93,10 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --brand-primary: oklch(0.95 0.33 135);
+  --brand-secondary: oklch(0.85 0.26 320);
+  --accent: var(--brand-primary);
+  --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
@@ -119,4 +123,37 @@
   body {
     @apply bg-background text-foreground;
   }
+  ::selection {
+    @apply bg-[oklch(0.95_0.33_135_/_0.3)];
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--accent);
+    border-radius: 4px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  html {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  body {
+    @apply transition-all;
+  }
+}
+
+.glass-tile {
+  backdrop-filter: blur(12px);
+  background-color: oklch(0 0 0 / 0.2);
+  border: 1px solid oklch(1 0 0 / 10%);
+  border-radius: var(--radius-lg);
 }
