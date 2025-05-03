@@ -4,6 +4,7 @@ enum AssetType {
   PROPERTY
   EQUITY
   OTHER
+  BOND
 }
 
 generator client {
@@ -29,9 +30,11 @@ model Asset {
   userId        String
   name          String
   type          AssetType
+  symbol        String?
   quantity      Int    // stored in micro-units, e.g. 1.234 => 1234000
   source        String?
   externalId    String?
+  currency      String?
   valueOverride Int?   // stored in pence/cents, e.g. £10.99 => 1099
 
   createdAt DateTime @default(now())
