@@ -8,10 +8,12 @@ import { useEffect } from 'react';
 
 export default function LoginPage() {
   const [userId, setUserId] = useState('');
+  const [theme, setTheme] = useState('system');
   const router = useRouter();
 
   useEffect(() => {
-    const mode = localStorage.getItem('theme');
+    const mode = localStorage.getItem('theme') || 'system';
+    setTheme(mode);
     if (mode === 'light') {
       document.documentElement.classList.remove('dark');
     } else if (mode === 'dark') {
@@ -28,6 +30,7 @@ export default function LoginPage() {
 
   const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
+    setTheme(value);
     localStorage.setItem('theme', value);
     if (value === 'light') {
       document.documentElement.classList.remove('dark');
@@ -42,9 +45,26 @@ export default function LoginPage() {
     }
   };
 
-  const handleLogin = () => {
+  async function createUser(userId: string) {
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId }),
+      });
+      if (!res.ok) {
+        console.error('Failed to create user');
+      }
+    } catch (err) {
+      console.error('Error creating user', err);
+    }
+  }
+
+  const handleLogin = async () => {
     if (!userId.trim()) return;
+    await createUser(userId);
     localStorage.setItem('userId', userId);
+    document.cookie = `userId=${userId}; path=/; max-age=604800`;
     router.push('/dashboard');
   };
 
@@ -53,7 +73,7 @@ export default function LoginPage() {
       <div className="absolute top-4 right-4">
         <select
           onChange={handleThemeChange}
-          defaultValue={localStorage.getItem('theme') || 'system'}
+          defaultValue={theme}
           className="bg-white/10 text-white p-2 rounded border border-white/20"
         >
           <option value="system">System</option>
