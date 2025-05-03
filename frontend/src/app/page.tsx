@@ -8,9 +8,22 @@ export default function HomePage() {
       {/* Header */}
       <header className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Profolio</h1>
-        <Link href="/login" className="bg-neon px-4 py-2 rounded shadow-neon hover:shadow-pinkGlow transition-shadow">
-          Login
-        </Link>
+        <div className="flex items-center space-x-4">
+          <select
+            onChange={(e) =>
+              document.documentElement.setAttribute('data-theme', e.target.value)
+            }
+            className="bg-card text-foreground border border-gray-600 rounded px-2 py-1 text-sm"
+            defaultValue="system"
+          >
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="system">System</option>
+          </select>
+          <Link href="/login" className="bg-neon px-4 py-2 rounded shadow-neon hover:shadow-pinkGlow transition-shadow">
+            Login
+          </Link>
+        </div>
       </header>
 
       {/* Hero Section */}
