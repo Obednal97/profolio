@@ -1,7 +1,5 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 type Asset = {
   id: string;
@@ -17,33 +15,28 @@ type Liability = {
   balance: number;
 };
 
-export default function DashboardPage() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [liabilities, setLiabilities] = useState<Liability[]>([]);
-  const router = useRouter();
+async function fetchData(userId: string) {
+  const [assetsRes, liabilitiesRes] = await Promise.all([
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/assets?userId=${userId}`, { cache: 'no-store' }),
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/liabilities?userId=${userId}`, { cache: 'no-store' }),
+  ]);
 
-  useEffect(() => {
-    const uid = localStorage.getItem('userId');
-    if (!uid) {
-      router.push('/login');
-      return;
-    }
-    setUserId(uid);
+  const assets = await assetsRes.json();
+  const liabilities = await liabilitiesRes.json();
 
-    fetch(`/api/assets?userId=${uid}`)
-      .then(res => res.json())
-      .then(setAssets)
-      .catch(() => setAssets([]));
+  return { assets, liabilities };
+}
 
-    fetch(`/api/liabilities?userId=${uid}`)
-      .then(res => res.json())
-      .then(setLiabilities)
-      .catch(() => setLiabilities([]));
-  }, [router]);
+export default async function DashboardPage() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) {
+    redirect('/login');
+  }
 
-  const totalAssets = assets.reduce((acc, a) => acc + (a.valueOverride ?? 0), 0);
-  const totalLiabilities = liabilities.reduce((acc, l) => acc + l.balance, 0);
+  const { assets, liabilities } = await fetchData(userId);
+
+  const totalAssets = assets.reduce((acc: number, a: Asset) => acc + (a.valueOverride ?? 0), 0);
+  const totalLiabilities = liabilities.reduce((acc: number, l: Liability) => acc + l.balance, 0);
   const netWorth = totalAssets - totalLiabilities;
 
   return (
@@ -57,7 +50,7 @@ export default function DashboardPage() {
       <div>
         <h2 className="text-xl font-semibold mt-8 mb-2">Assets</h2>
         <ul className="space-y-2">
-          {assets.map((a) => (
+          {assets.map((a: Asset) => (
             <li key={a.id} className="p-3 bg-white shadow rounded">
               {a.name} – £{((a.valueOverride ?? 0) / 100).toFixed(2)}
             </li>
@@ -67,7 +60,7 @@ export default function DashboardPage() {
       <div>
         <h2 className="text-xl font-semibold mt-8 mb-2">Liabilities</h2>
         <ul className="space-y-2">
-          {liabilities.map((l) => (
+          {liabilities.map((l: Liability) => (
             <li key={l.id} className="p-3 bg-white shadow rounded">
               {l.name} – £{(l.balance / 100).toFixed(2)}
             </li>

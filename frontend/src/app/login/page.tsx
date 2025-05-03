@@ -12,7 +12,7 @@ export default function LoginPage() {
   const handleLogin = () => {
     if (!userId.trim()) return;
     localStorage.setItem('userId', userId);
-    router.push('/');
+    router.push('/dashboard');
   };
 
   return (

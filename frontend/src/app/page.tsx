@@ -49,7 +49,7 @@ export default function HomePage() {
       <section className="max-w-4xl mx-auto text-center">
         <h2 className="text-2xl font-bold mb-2">Why Profolio?</h2>
         <p className="text-gray-300">
-          Whether you’re a founder, investor, or just getting started — Profolio gives you clarity,
+          Whether you’re a founder, investor, or just getting a grip on personal finances — Profolio gives you clarity,
           control, and peace of mind by letting you manage everything in one private, powerful place.
         </p>
       </section>

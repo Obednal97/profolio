@@ -39,14 +39,22 @@ if [ ! -f "$ENV_FILE_BACKEND" ]; then
   echo "Creating backend .env..."
   echo "DATABASE_URL=postgresql://profolio:temppassword@${LAN_IP}:5432/profolio" > "$ENV_FILE_BACKEND"
 else
-  sed -i '' "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://profolio:temppassword@${LAN_IP}:5432/profolio|" "$ENV_FILE_BACKEND"
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://profolio:temppassword@${LAN_IP}:5432/profolio|" "$ENV_FILE_BACKEND"
+  else
+    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://profolio:temppassword@${LAN_IP}:5432/profolio|" "$ENV_FILE_BACKEND"
+  fi
 fi
 
 if [ ! -f "$ENV_FILE_FRONTEND" ]; then
   echo "Creating frontend .env..."
   echo "NEXT_PUBLIC_API_URL=http://${LAN_IP}:3000/api" > "$ENV_FILE_FRONTEND"
 else
-  sed -i '' "s|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://${LAN_IP}:3000/api|" "$ENV_FILE_FRONTEND"
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://${LAN_IP}:3000/api|" "$ENV_FILE_FRONTEND"
+  else
+    sed -i "s|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://${LAN_IP}:3000/api|" "$ENV_FILE_FRONTEND"
+  fi
 fi
 
 # Install and start backend
