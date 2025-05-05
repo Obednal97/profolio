@@ -10,8 +10,7 @@ interface HeaderLayoutProps {
 export const HeaderLayout: React.FC<HeaderLayoutProps> = ({ user, currentPath }) => {
   return (
     <header>
-      <div className="flex items-center justify-between">
-        {/* Left: Logo and title */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 backdrop-blur-md bg-background/80">
         <div className="flex items-center space-x-4">
           <div className="flex flex-col leading-tight">
             <span className="text-xl font-bold text-foreground">Profolio</span>
