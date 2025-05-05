@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation';
 import MetricCard from '@/components/ui/metricCard';
 import { Tile } from '@/components/ui/tile/tile';
 import { Button } from '@/components/ui/button/button';
-import { HeaderLayout as Header } from '@/components/layout/headerLayout';
-import { FooterLayout as Footer } from '@/components/layout/footerLayout';
 // import LineChart from '@/components/charts/line';
 import PieChart from '@/components/charts/pie';
 import type { Asset, Expense } from "@/types/global";
@@ -92,9 +90,7 @@ function DashboardPage() {
   }
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-gray-900 text-white p-4 md:p-6">
+    <main className="min-h-screen bg-gray-900 text-white p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
             <h1 className="text-3xl font-semibold mb-4 md:mb-0">Financial Dashboard</h1>
@@ -200,8 +196,6 @@ function DashboardPage() {
           )}
         </div>
       </main>
-      <Footer />
-    </>
   );
 }
 

@@ -2,8 +2,6 @@
 import type { Expense, ExpenseFormData } from "@/types/global";
 import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/lib/user";
-import { HeaderLayout } from "@/components/layout/headerLayout";
-import { FooterLayout } from "@/components/layout/footerLayout";
 import { BaseModal as Modal } from "@/components/modals/modal";
 
 const categories = [
@@ -313,123 +311,91 @@ function ExpenseManager() {
     );
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#1a1a1a] text-white">
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
-              Welcome to Expense Manager
-            </h2>
-            <p className="text-white/60 max-w-md mx-auto mt-2">
-              Track and manage your expenses efficiently.
-            </p>
-            <a
-              href="/account/signin"
-              className="inline-block px-6 py-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200 mt-4"
-            >
-              <i className="fas fa-sign-in-alt mr-2"></i>
-              Sign In to Manage Expenses
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-white">
-      <HeaderLayout>
-        <FooterLayout>
-          <div className="p-4 md:p-6 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h1 className="text-3xl font-semibold bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
-                  Expense Manager
-                </h1>
-                <p className="text-white/60 mt-2">Track and manage your expenses</p>
-              </div>
-              <button
-                onClick={handleOpenModal}
-                className="px-4 py-2 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
-              >
-                <i className="fas fa-plus mr-2"></i>
-                Add Expense
-              </button>
-            </div>
+    <div>
+      <div className="p-4 md:p-6 max-w-7xl mx-auto">
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={handleOpenModal}
+            className="px-4 py-2 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
+          >
+            <i className="fas fa-plus mr-2"></i>
+            Add Expense
+          </button>
+        </div>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-                <p className="text-red-400 flex items-center">
-                  <i className="fas fa-exclamation-circle mr-2"></i>
-                  {error}
-                </p>
-              </div>
-            )}
-
-            <div className="grid gap-6">
-              {loading ? (
-                <div className="flex justify-center p-12">
-                  <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full shadow-[0_0_8px_#00ff88]"></div>
-                </div>
-              ) : expenses.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-white/40 text-6xl mb-4">
-                    <i className="fas fa-receipt"></i>
-                  </div>
-                  <h3 className="text-xl font-medium text-white/80 mb-2">
-                    No Expenses Yet
-                  </h3>
-                  <p className="text-white/60">
-                    Start tracking your expenses by adding your first expense.
-                  </p>
-                </div>
-              ) : (
-                expenses.map((expense) => (
-                  <div
-                    key={expense.id}
-                    className="bg-[#2a2a2a] rounded-xl p-6 border border-white/10 hover:border-green-500/50 transition-all duration-200"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-xl font-semibold text-white/80">
-                          {expense.description}
-                        </h3>
-                        <p className="text-white/60">
-                          <i className="fas fa-tag mr-2"></i>
-                          {expense.category}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEdit(expense)}
-                          className="p-2 text-white/60 hover:text-white/80 transition-colors"
-                        >
-                          <i className="fas fa-edit"></i>
-                        </button>
-                        <button
-                          onClick={() => expense.id && handleDelete(expense.id)}
-                          className="p-2 text-white/60 hover:text-red-400 transition-colors"
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex justify-between items-center">
-                      <span className="text-red-400 font-semibold text-xl">
-                        {formatCurrency(expense.amount)}
-                      </span>
-                      <span className="text-white/60">
-                        {new Date(expense.date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+            <p className="text-red-400 flex items-center">
+              <i className="fas fa-exclamation-circle mr-2"></i>
+              {error}
+            </p>
           </div>
-        </FooterLayout>
-      </HeaderLayout>
+        )}
+
+        <div className="grid gap-6">
+          {loading ? (
+            <div className="flex justify-center p-12">
+              <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full shadow-[0_0_8px_#00ff88]"></div>
+            </div>
+          ) : expenses.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-white/40 text-6xl mb-4">
+                <i className="fas fa-receipt"></i>
+              </div>
+              <h3 className="text-xl font-medium text-white/80 mb-2">
+                No Expenses Yet
+              </h3>
+              <p className="text-white/60">
+                Start tracking your expenses by adding your first expense.
+              </p>
+            </div>
+          ) : (
+            expenses.map((expense) => (
+              <div
+                key={expense.id}
+                className="bg-[#2a2a2a] rounded-xl p-6 border border-white/10 hover:border-green-500/50 transition-all duration-200"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xl font-semibold text-white/80">
+                      {expense.description}
+                    </h3>
+                    <p className="text-white/60">
+                      <i className="fas fa-tag mr-2"></i>
+                      {expense.category}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(expense)}
+                      className="p-2 text-white/60 hover:text-white/80 transition-colors"
+                    >
+                      <i className="fas fa-edit"></i>
+                    </button>
+                    <button
+                      onClick={() => expense.id && handleDelete(expense.id)}
+                      className="p-2 text-white/60 hover:text-red-400 transition-colors"
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-between items-center">
+                  <span className="text-red-400 font-semibold text-xl">
+                    {formatCurrency(expense.amount)}
+                  </span>
+                  <span className="text-white/60">
+                    {new Date(expense.date).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       {(showModal || editingExpense) && (
         <Modal isOpen={true} onClose={handleCloseModal}>
