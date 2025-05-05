@@ -55,7 +55,7 @@ function DashboardPage() {
   useEffect(() => {
     const uid = localStorage.getItem('userId');
     if (!uid) {
-      router.push('/login');
+      router.push('/auth/SignIn');
     } else {
       setUserId(uid);
     }

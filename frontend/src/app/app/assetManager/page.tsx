@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useCallback, useMemo, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user";
-import { HeaderLayout } from "@/components/layout/headerLayout";
-import { FooterLayout } from "@/components/layout/footerLayout";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import type { Asset } from "@/types/global";
@@ -18,9 +17,15 @@ const formatCurrency = (cents: number) => {
   return currencyFormatter.format(cents / 100);
 };
 
-function AssetManager() {
+export default function AssetManager() {
   const [error, setError] = useState<string | null>(null);
   const { data: user } = useUser();
+  const router = useRouter();
+  useEffect(() => {
+    if (!user) {
+      router.push("/auth/SignIn");
+    }
+  }, [user, router]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -33,6 +38,7 @@ function AssetManager() {
     if (!user) return;
     setLoading(true);
     try {
+
       const response = await fetch("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,6 +63,7 @@ function AssetManager() {
       fetchAssets();
     }
   }, [user, fetchAssets]);
+
 
   const fetchChartData = useCallback(async () => {
     if (!user) return;
@@ -1000,118 +1007,46 @@ function AssetManager() {
       </div>
     );
   };
-
-  if (!user) {
-    return (
-      <HeaderLayout>
-        <FooterLayout>
-          <div className="min-h-screen bg-[#1a1a1a] text-white">
-            <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-              <div className="text-center space-y-4">
-                <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
-                  Welcome to Asset Management
-                </h2>
-                <p className="text-white/60 max-w-md mx-auto">
-                  Track and manage your investments in one place.
-                </p>
-                <a
-                  href="/account/signin"
-                  className="inline-block px-6 py-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
-                >
-                  <i className="fas fa-sign-in-alt mr-2"></i>
-                  Sign In to Manage Assets
-                </a>
-              </div>
-            </div>
-          </div>
-        </FooterLayout>
-      </HeaderLayout>
-    );
-  }
-
-  if (loading) {
-    return (
-      <HeaderLayout>
-        <FooterLayout>
-          <div className="min-h-screen bg-[#1a1a1a] text-white">
-            <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-              <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full shadow-[0_0_8px_#00ff88]"></div>
-            </div>
-          </div>
-        </FooterLayout>
-      </HeaderLayout>
-    );
-  }
-
   return (
-    <HeaderLayout>
-      <FooterLayout>
-        <div className="min-h-screen bg-[#1a1a1a] text-white">
-          <div className="p-4 md:p-6 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h1 className="text-3xl font-semibold bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
-                  Asset Management
-                </h1>
-                <p className="text-white/60 mt-2">
-                  Track and manage your investments
-                </p>
-              </div>
-              <Button onClick={handleOpenModal} icon="fa-plus" variant="default">
-                Add Asset
-              </Button>
-            </div>
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-white/80">Asset Manager</h1>
+        <Button onClick={handleOpenModal}>Add Asset</Button>
+      </div>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-                <p className="text-red-400 flex items-center">
-                  <i className="fas fa-exclamation-circle mr-2"></i>
-                  {error}
-                </p>
-              </div>
-            )}
+      {error && (
+        <p className="text-red-500 font-medium">{error}</p>
+      )}
 
-            <AssetSummaryChart />
-
-            <div className="grid gap-6">
-              {assets.map((asset) => (
-                <AssetCard
-                  key={asset.id}
-                  asset={asset}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-
-              {assets.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-white/40 text-6xl mb-4">
-                    <i className="fas fa-coins"></i>
-                  </div>
-                  <h3 className="text-xl font-medium text-white/80 mb-2">
-                    No Assets Yet
-                  </h3>
-                  <p className="text-white/60">
-                    Start building your portfolio by adding your first asset.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {(showAddModal || editingAsset) && (
-            <Modal isOpen={true} onClose={handleCloseModal}>
-              <AssetModal
-                onClose={handleCloseModal}
-                onSubmit={handleSubmit}
-                initialData={editingAsset}
-              />
-            </Modal>
-          )}
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full"></div>
         </div>
-      </FooterLayout>
-    </HeaderLayout>
-  );
-}
+      ) : (
+        <>
+          <AssetSummaryChart />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {assets.map(asset => (
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
-export default AssetManager;
+      {showAddModal && (
+        <Modal isOpen={showAddModal} onClose={handleCloseModal}>
+          <AssetModal
+            onClose={handleCloseModal}
+            onSubmit={handleSubmit}
+            initialData={editingAsset}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+};
