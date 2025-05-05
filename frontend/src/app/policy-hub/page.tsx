@@ -1,5 +1,6 @@
+"use client";
 import Link from "next/link";
-import { ShieldCheck, FileText, Cookie, EyeOff, BookOpen, AlertCircle } from "lucide-react";
+import { ShieldCheck, FileText, Cookie, EyeOff, BookOpen } from "lucide-react";
 
 export default function PolicyHubPage() {
   return (
@@ -15,10 +16,9 @@ export default function PolicyHubPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <PolicyCard icon={<FileText />} title="General Terms Of Service" href="/policy-hub/terms" />
           <PolicyCard icon={<EyeOff />} title="Acceptable Use Policy" href="/policy-hub/aup" />
-          <PolicyCard icon={<BookOpen />} title="Community Guidelines" href="/policy-hub/community-guidelines" />
+          <PolicyCard icon={<BookOpen />} title="Community Guidelines" href="/policy-hub/community" />
           <PolicyCard icon={<ShieldCheck />} title="Privacy Policy" href="/policy-hub/privacy" />
           <PolicyCard icon={<Cookie />} title="Cookie Policy" href="/policy-hub/cookies" />
-          <PolicyCard icon={<AlertCircle />} title="Complaints Policy" href="/policy-hub/complaints" />
         </div>
       </section>
 
