@@ -56,8 +56,10 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {icon && <i className={`fas ${icon} mr-2`} />}
-      {children}
+      <span className="flex items-center gap-2">
+        {icon && <i className={`fas ${icon}`} />}
+        {children}
+      </span>
     </Comp>
   )
 }
