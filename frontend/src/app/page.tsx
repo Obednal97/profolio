@@ -59,10 +59,16 @@ export default function LandingPage() {
           animate="visible"
           variants={fadeUp}
         >
-          <motion.h1 className="text-7xl sm:text-8xl font-extrabold text-white mb-4 tracking-tight" variants={fadeUp}>
+          <motion.h1 
+            className="text-7xl sm:text-8xl font-extrabold text-white mb-4 tracking-tight drop-shadow-md"
+            variants={fadeUp}
+          >
             Profolio
           </motion.h1>
-          <motion.h1 className="text-5xl sm:text-6xl font-extrabold text-neon mb-6 drop-shadow-md">
+          <motion.h1 
+            className="text-5xl sm:text-6xl font-extrabold text-neon mb-6 tracking-tight drop-shadow-md"
+            variants={fadeUp}
+          >
             Your Wealth, Unified
           </motion.h1>
           <motion.p
