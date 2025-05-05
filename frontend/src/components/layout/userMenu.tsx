@@ -88,13 +88,13 @@ export default function UserMenu({
       ) : (
         <>
           <Link
-            href="/signIn"
+            href="/auth/signIn"
             className="px-4 py-2 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
           >
             Log In
           </Link>
           <Link
-            href="/signUp"
+            href="/auth/signUp"
             className="px-4 py-2 bg-green-500 text-black rounded-lg font-semibold hover:bg-green-400 transition"
           >
             Sign Up
