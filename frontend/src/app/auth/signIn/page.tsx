@@ -26,7 +26,7 @@ function SignInPage() {
       await signInWithCredentials({
         email: formData.email,
         password: formData.password,
-        callbackUrl: '/dashboard',
+        callbackUrl: '/app/dashboard',
         redirect: true,
       });
     } catch (err) {
@@ -45,7 +45,7 @@ function SignInPage() {
           </h2>
           <p className="text-white/60">You’re already logged in.</p>
           <a
-            href="/dashboard"
+            href="/app/dashboard"
             className="inline-block px-6 py-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
           >
             Go to Dashboard
@@ -98,10 +98,13 @@ function SignInPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <a href="/account/reset-password" className="text-white/60 hover:text-white/80">
-                  Forgot password?
-                </a>
+              <div className="text-sm mt-1">
+                <p className="text-white/60">
+                  Forgot your password?{' '}
+                  <a href="/auth/forgotPassword" className="text-green-400 hover:text-green-300 font-medium">
+                    Reset it here
+                  </a>.
+                </p>
               </div>
 
               <Button
@@ -123,7 +126,7 @@ function SignInPage() {
 
             <p className="text-center mt-6 text-white/60">
               Don’t have an account?{' '}
-              <a href="/account/signup" className="text-green-400 hover:text-green-300 transition-colors">
+              <a href="/auth/signup" className="text-green-400 hover:text-green-300 transition-colors">
                 Sign up
               </a>
             </p>

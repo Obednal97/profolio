@@ -25,10 +25,10 @@ const staggerChildren = {
 };
 
 const getLiveNetWorth = () => {
-  const base = 1_010_000; // Start around 1.01M
-  const ratePerSecond = 1.33; // Simulated growth rate
+  const base = 700_000; // Start at 700k
+  const ratePerSecond = 0.01; // +0.01 per second
   const now = Math.floor(Date.now() / 1000);
-  return base + Math.floor(ratePerSecond * (now - 1700000000));
+  return base + ratePerSecond * (now - 1700000000);
 };
 
 const formatCompactNumber = (num: number) =>

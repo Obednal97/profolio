@@ -52,7 +52,7 @@ function SignUpPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        callbackUrl: "/dashboard",
+        callbackUrl: "/app/dashboard",
         redirect: true,
       });
     } catch (err) {
@@ -74,7 +74,7 @@ function SignUpPage() {
               You are already signed in to your account.
             </p>
             <a
-              href="/dashboard"
+              href="/app/dashboard"
               className="inline-block px-6 py-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
             >
               <i className="fas fa-chart-line mr-2"></i>
@@ -210,7 +210,7 @@ function SignUpPage() {
             <p className="text-white/60">
               Already have an account?{" "}
               <a
-                href="/account/signin"
+                href="/auth/signin"
                 className="text-green-400 hover:text-green-300 transition-colors"
               >
                 Sign In

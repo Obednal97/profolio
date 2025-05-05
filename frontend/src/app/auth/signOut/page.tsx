@@ -37,7 +37,7 @@ function SignOut() {
               </h2>
               <p className="text-white/60">{error}</p>
               <a
-                href="/dashboard"
+                href="/app/dashboard"
                 className="inline-block px-6 py-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
               >
                 <i className="fas fa-arrow-left mr-2"></i>
