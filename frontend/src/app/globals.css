@@ -123,6 +123,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  .app-root {
+    @apply min-h-screen flex flex-col antialiased;
+  }
   ::selection {
     @apply bg-[oklch(0.95_0.33_135_/_0.3)];
   }
@@ -156,4 +159,47 @@
   background-color: oklch(0 0 0 / 0.2);
   border: 1px solid oklch(1 0 0 / 10%);
   border-radius: var(--radius-lg);
+}
+
+/* === Custom UI Utilities for Tiles, Modals, Charts, Buttons === */
+
+.modal-overlay {
+  background-color: oklch(0 0 0 / 0.4);
+  backdrop-filter: blur(6px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out both;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out both;
+  }
+
+  .chart-tooltip {
+    @apply bg-[#1f1f1f] border border-white/10 rounded-md text-sm text-white px-3 py-2;
+  }
+
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-colors duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-green-500 text-black hover:bg-green-400;
+  }
+
+  .btn-danger {
+    @apply bg-red-500 text-white hover:bg-red-600;
+  }
 }
