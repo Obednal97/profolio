@@ -4,10 +4,9 @@ interface FooterLayoutProps {
   children?: React.ReactNode;
 }
 
-export const FooterLayout: React.FC<FooterLayoutProps> = ({ children }) => {
+export const FooterLayout: React.FC<FooterLayoutProps> = ({}) => {
   return (
     <div className="flex flex-col bg-background text-foreground flex-1">
-      <main className="flex-1 px-6 py-8">{children}</main>
       <footer className="w-full border-t border-white/10 px-6 py-6 text-sm text-muted-foreground">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 max-w-7xl mx-auto">
           <div className="flex space-x-4">

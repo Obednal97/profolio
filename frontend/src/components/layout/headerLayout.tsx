@@ -4,7 +4,7 @@ interface HeaderLayoutProps {
   children?: React.ReactNode;
 }
 
-export const HeaderLayout: React.FC<HeaderLayoutProps> = ({ children }) => {
+export const HeaderLayout: React.FC<HeaderLayoutProps> = ({}) => {
   return (
     <>
       <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between">
@@ -13,9 +13,6 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = ({ children }) => {
           {/* Future: theme toggle, notifications, user menu */}
         </div>
       </header>
-      <main className="flex-1 px-6 py-8 pt-[72px]">
-        {children}
-      </main>
     </>
   );
 };
