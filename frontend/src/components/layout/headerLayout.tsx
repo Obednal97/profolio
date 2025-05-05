@@ -1,5 +1,6 @@
 import React from "react";
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button/button';
 
 function HeaderActions() {
@@ -27,7 +28,13 @@ export const HeaderLayout: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        {/* Placeholder for logo */}
+      <Image
+            src="/logomark.png"
+            alt="Profolio preview"
+            width={600}
+            height={200}
+            className="mx-auto rounded-xl shadow-xl shadow-neon/30 w-full sm:max-w-md h-auto"
+          />
         <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black text-xs font-bold">
           P
         </div>
