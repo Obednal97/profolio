@@ -23,9 +23,9 @@ export default function UserMenu({
   }, [darkMode]);
 
   const profileMenuItems = [
-    { label: "Account Settings", path: "/account/settings", icon: "fa-cog" },
-    { label: "Notifications", path: "/notifications", icon: "fa-bell" },
-    { label: "Sign Out", path: "/account/logout", icon: "fa-sign-out-alt" },
+    { label: "Account Settings", path: "/app/settings", icon: "fa-cog" },
+    { label: "Notifications", path: "/app/notifications", icon: "fa-bell" },
+    { label: "Sign Out", path: "/auth/signOut", icon: "fa-sign-out-alt" },
   ];
 
   return (
@@ -88,13 +88,13 @@ export default function UserMenu({
       ) : (
         <>
           <Link
-            href="/account/signin"
+            href="/signIn"
             className="px-4 py-2 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
           >
             Log In
           </Link>
           <Link
-            href="/account/signup"
+            href="/signUp"
             className="px-4 py-2 bg-green-500 text-black rounded-lg font-semibold hover:bg-green-400 transition"
           >
             Sign Up

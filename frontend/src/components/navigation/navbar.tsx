@@ -15,10 +15,10 @@ export default function Navbar({
 }: NavigationProps) {
   const navigationLinks = user
     ? [
-        { path: "/dashboard", label: "Dashboard", icon: "fa-chart-pie" },
-        { path: "/assetManager", label: "Assets", icon: "fa-wallet" },
-        { path: "/propertyManager", label: "Properties", icon: "fa-home" },
-        { path: "/expenseManager", label: "Expenses", icon: "fa-receipt" },
+        { path: "/app/dashboard", label: "Dashboard", icon: "fa-chart-pie" },
+        { path: "/app/assetManager", label: "Assets", icon: "fa-wallet" },
+        { path: "/app/propertyManager", label: "Properties", icon: "fa-home" },
+        { path: "/app/expenseManager", label: "Expenses", icon: "fa-receipt" },
       ]
     : [
         { path: "/about", label: "About", icon: "fa-info-circle" },

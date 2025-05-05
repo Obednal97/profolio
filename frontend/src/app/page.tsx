@@ -79,7 +79,7 @@ export default function LandingPage() {
           </motion.p>
           <motion.div variants={fadeUp}>
             <Button asChild size="lg">
-              <Link href="/login">See It In Action</Link>
+              <Link href="/auth/signUp">See It In Action</Link>
             </Button>
           </motion.div>
         </motion.div>
