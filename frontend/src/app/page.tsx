@@ -4,6 +4,21 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Tile } from '@/components/ui/tile/tile';
 import { Button } from '@/components/ui/button/button';
+import { motion } from 'framer-motion';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut' } },
+};
+
+const container = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
 
 const TESTIMONIALS = [
   '“Finally a dashboard that actually pulls everything into one place.”',
@@ -24,73 +39,132 @@ const FEATURE_HIGHLIGHTS = [
 
 export default function LandingPage() {
   return (
-    <div className="bg-background text-foreground min-h-screen px-4 sm:px-12 py-8 space-y-12">
+    <div className="text-foreground bg-background min-h-screen">
       {/* Hero Section */}
-      <section aria-label="Hero Section" className="text-center">
-        <h2 className="text-4xl font-bold mb-4 text-neon">Your Wealth, Unified</h2>
-        <p className="text-lg max-w-2xl mx-auto text-gray-300">
-          Profolio brings together your assets, liabilities, crypto, stocks, and properties into a single clean dashboard.
-        </p>
-        <div className="mt-8 flex flex-col items-center space-y-6 sm:flex-row sm:space-y-0 sm:space-x-8 justify-center">
-          <Image
-            src="/hero.png"
-            alt="Profolio preview"
-            width={600}
-            height={400}
-            className="mx-auto rounded-xl shadow-xl shadow-neon/30 w-full sm:max-w-md h-auto"
-          />
-          <Button asChild>
-            <Link href="/login">See It In Action</Link>
-          </Button>
-        </div>
+      <section
+        aria-label="Hero"
+        className="relative h-screen w-full flex items-center justify-center text-center overflow-hidden"
+      >
+        <Image
+          src="/hero.png"
+          alt="Hero background"
+          fill
+          className="object-cover opacity-20 blur-sm"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-background/95 z-10" />
+        <motion.div
+          className="z-20 relative px-6 sm:px-12 max-w-4xl mx-auto"
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+        >
+          <motion.h1 className="text-5xl sm:text-6xl font-extrabold text-neon mb-6 drop-shadow-md">
+            Your Wealth, Unified
+          </motion.h1>
+          <motion.p
+            className="text-lg sm:text-xl text-gray-300 max-w-xl mx-auto mb-8"
+            variants={fadeUp}
+          >
+            Profolio brings together your assets, liabilities, crypto, stocks, and properties into a single clean dashboard.
+          </motion.p>
+          <motion.div variants={fadeUp}>
+            <Button asChild size="lg">
+              <Link href="/login">See It In Action</Link>
+            </Button>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Testimonials Section */}
-      <section
-        aria-label="Testimonials"
-        className="bg-card rounded-xl p-6 max-w-4xl mx-auto text-center mt-12 space-y-4 shadow hover:shadow-neon transition-shadow"
+      <motion.section
+        className="py-20 px-6 sm:px-12 max-w-5xl mx-auto text-center space-y-8"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={container}
       >
-        <h2 className="text-xl font-semibold text-neon">
+        <motion.h2 className="text-2xl font-semibold text-neon" variants={fadeUp}>
           Trusted by founders, creators, and tech-savvy investors
-        </h2>
-        {TESTIMONIALS.map((quote, i) => (
-          <Tile key={i}>
-            <p className="text-gray-400 italic">{quote}</p>
-          </Tile>
-        ))}
-      </section>
+        </motion.h2>
+        <div className="grid sm:grid-cols-2 gap-6">
+          {TESTIMONIALS.map((quote, i) => (
+            <motion.div key={i} variants={fadeUp}>
+              <Tile className="shadow hover:shadow-neon transition-shadow bg-muted/5">
+                <p className="text-gray-400 italic">{quote}</p>
+              </Tile>
+            </motion.div>
+          ))}
+        </div>
+      </motion.section>
 
-      {/* Features */}
-      <section aria-label="Features" className="grid sm:grid-cols-3 gap-6">
-        {FEATURES.map(({ title, desc }) => (
-          <Tile
-            key={title}
-            className="hover:scale-105 transition-transform duration-200 shadow hover:shadow-neon"
-          >
-            <h3 className="text-xl font-semibold mb-2 text-neon">{title}</h3>
-            <p className="text-sm text-gray-400">{desc}</p>
-          </Tile>
-        ))}
-      </section>
+      {/* Features Section */}
+      <motion.section
+        className="py-20 bg-muted/5 px-6 sm:px-12"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={container}
+      >
+        <div className="max-w-6xl mx-auto text-center space-y-12">
+          <motion.h2 className="text-3xl font-bold text-neon mb-6" variants={fadeUp}>
+            Everything in One Place
+          </motion.h2>
+          <div className="grid sm:grid-cols-3 gap-6">
+            {FEATURES.map(({ title, desc }) => (
+              <motion.div key={title} variants={fadeUp}>
+                <Tile className="hover:scale-105 transition-transform duration-300 shadow hover:shadow-neon bg-background/70">
+                  <h3 className="text-xl font-semibold mb-2 text-neon">{title}</h3>
+                  <p className="text-sm text-gray-400">{desc}</p>
+                </Tile>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
 
-      {/* Feature Highlight Section */}
-      <section aria-label="Feature Highlights" className="grid sm:grid-cols-3 gap-6 mt-12">
-        {FEATURE_HIGHLIGHTS.map(({ title, desc }) => (
-          <Tile key={title} className="border border-neon/40 hover:border-neon">
-            <h3 className="text-xl font-bold text-neon mb-2">{title}</h3>
-            <p className="text-sm text-gray-400">{desc}</p>
-          </Tile>
-        ))}
-      </section>
+      {/* Feature Highlights */}
+      <motion.section
+        className="py-20 px-6 sm:px-12 max-w-6xl mx-auto"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={container}
+      >
+        <motion.h2
+          className="text-3xl font-bold text-center text-neon mb-12"
+          variants={fadeUp}
+        >
+          Built for Power Users
+        </motion.h2>
+        <div className="grid sm:grid-cols-3 gap-6">
+          {FEATURE_HIGHLIGHTS.map(({ title, desc }) => (
+            <motion.div key={title} variants={fadeUp}>
+              <Tile className="border border-neon/40 hover:border-neon bg-background/80">
+                <h3 className="text-xl font-bold text-neon mb-2">{title}</h3>
+                <p className="text-sm text-gray-400">{desc}</p>
+              </Tile>
+            </motion.div>
+          ))}
+        </div>
+      </motion.section>
 
-      {/* About */}
-      <section aria-label="About Profolio" className="max-w-4xl mx-auto text-center">
-        <h2 className="text-2xl font-bold mb-2 text-neon">Why Profolio?</h2>
-        <p className="text-gray-300">
-          Whether you’re a founder, investor, or just getting a grip on personal finances — Profolio gives you clarity,
-          control, and peace of mind by letting you manage everything in one private, powerful place.
-        </p>
-      </section>
+      {/* About Section */}
+      <motion.section
+        className="py-20 px-6 sm:px-12 max-w-3xl mx-auto text-center space-y-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={container}
+      >
+        <motion.h2 className="text-2xl font-bold text-neon" variants={fadeUp}>
+          Why Profolio?
+        </motion.h2>
+        <motion.p className="text-gray-300" variants={fadeUp}>
+          Whether you’re a founder, investor, or just getting a grip on personal finances —
+          Profolio gives you clarity, control, and peace of mind by letting you manage everything in one private, powerful place.
+        </motion.p>
+      </motion.section>
     </div>
   );
 }
