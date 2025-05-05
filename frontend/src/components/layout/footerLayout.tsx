@@ -15,7 +15,7 @@ export const FooterLayout: React.FC<FooterLayoutProps> = ({}) => {
             <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:underline">LinkedIn</a>
           </div>
           <div className="flex space-x-4">
-            <a href="/privacy-policy" className="hover:underline">Privacy Policy</a>
+            <a href="/policy-hub" className="hover:underline">Policy Hub</a>
             <a href="/contact" className="hover:underline">Contact</a>
             <a href="/support" className="hover:underline">Support</a>
           </div>

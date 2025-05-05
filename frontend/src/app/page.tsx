@@ -22,39 +22,9 @@ const FEATURE_HIGHLIGHTS = [
   { title: 'Optimized for Founders', desc: 'Equity, options, trusts — all accounted for.' },
 ];
 
-function HeaderActions() {
-  return (
-    <div className="flex items-center space-x-4">
-      <select
-        onChange={(e) =>
-          document.documentElement.setAttribute('data-theme', e.target.value)
-        }
-        className="bg-card text-foreground border border-gray-600 rounded px-2 py-1 text-sm"
-        defaultValue="system"
-      >
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-        <option value="system">System</option>
-      </select>
-      <Button asChild>
-        <Link href="/login">Login</Link>
-      </Button>
-    </div>
-  );
-}
-
 export default function LandingPage() {
   return (
     <div className="bg-background text-foreground min-h-screen px-4 sm:px-12 py-8 space-y-12">
-      {/* Header */}
-      <header className="flex justify-between items-center flex-col sm:flex-row space-y-2 sm:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neon">Profolio</h1>
-          <p className="text-sm text-gray-400">Your Personal Wealth OS</p>
-        </div>
-        <HeaderActions />
-      </header>
-
       {/* Hero Section */}
       <section aria-label="Hero Section" className="text-center">
         <h2 className="text-4xl font-bold mb-4 text-neon">Your Wealth, Unified</h2>
@@ -121,22 +91,6 @@ export default function LandingPage() {
           control, and peace of mind by letting you manage everything in one private, powerful place.
         </p>
       </section>
-
-      {/* Footer */}
-      <footer className="pt-12 border-t border-gray-700 text-sm text-gray-500 text-center space-y-2">
-        <div className="space-x-4">
-          <Link href="/terms" className="hover:text-neon transition-colors">
-            Terms
-          </Link>
-          <Link href="/privacy" className="hover:text-neon transition-colors">
-            Privacy
-          </Link>
-          <Link href="mailto:hello@profolio.app" className="hover:text-neon transition-colors">
-            Contact
-          </Link>
-        </div>
-        <p>&copy; {new Date().getFullYear()} Profolio. All rights reserved.</p>
-      </footer>
     </div>
   );
 }
