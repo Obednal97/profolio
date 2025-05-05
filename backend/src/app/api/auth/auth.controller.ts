@@ -1,8 +1,10 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Post, Res, Get, Req, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { compare, hash } from 'bcrypt';
 import { sign } from 'jsonwebtoken';
 import { PrismaService } from '@/common/prisma.service';
+import { Request } from 'express';
+import { AuthGuard } from './guards/auth.guard'; // adjust path as needed
 
 @Controller('api/auth')
 export class AuthController {
@@ -65,5 +67,15 @@ export class AuthController {
   signout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('token', { path: '/' });
     return { message: 'Signed out successfully' };
+  }
+
+  @Get('user')
+  @UseGuards(AuthGuard)
+  getUser(@Req() req: Request) {
+    return {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name ?? null,
+    };
   }
 }

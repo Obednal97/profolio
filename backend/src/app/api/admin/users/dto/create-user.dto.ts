@@ -9,4 +9,7 @@ export class CreateUserDto {
   
     @ApiProperty({ example: 2500, description: 'Tax rate in basis points. 0.25 = 2500' })
     taxRate!: number;
+
+    @ApiProperty({ example: 'securePassword123', description: 'User password (will be hashed)' })
+    password!: string;
   }

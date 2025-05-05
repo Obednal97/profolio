@@ -1,4 +1,5 @@
-// src/hooks/useAuth.ts
+import { useEffect, useState } from 'react';
+
 interface SignUpParams {
   name: string;
   email: string;
@@ -23,7 +24,13 @@ export function useAuth() {
 }
 
 export function useUser() {
-  return {
-    data: null, // TEMP: simulate unauthenticated
-  };
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/auth/user')
+      .then(res => res.ok ? res.json() : null)
+      .then(setUser);
+  }, []);
+
+  return { data: user };
 }

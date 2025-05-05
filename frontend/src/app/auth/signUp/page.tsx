@@ -47,10 +47,17 @@ function SignUpPage() {
       return;
     }
 
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+    if (!isValidEmail) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
+
     try {
       await signUpWithCredentials({
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         password: formData.password,
         callbackUrl: "/app/dashboard",
         redirect: true,
@@ -145,6 +152,7 @@ function SignUpPage() {
               </label>
               <input
                 type="password"
+                minLength={8}
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
@@ -175,6 +183,7 @@ function SignUpPage() {
               </label>
               <input
                 type="password"
+                minLength={8}
                 value={formData.confirmPassword}
                 onChange={(e) =>
                   setFormData({
@@ -182,7 +191,12 @@ function SignUpPage() {
                     confirmPassword: e.target.value,
                   })
                 }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
+                className={`w-full bg-white/5 border rounded-xl px-4 py-2 text-white focus:outline-none ${
+                  formData.confirmPassword &&
+                  formData.password !== formData.confirmPassword
+                    ? 'border-red-500'
+                    : 'border-white/10 focus:border-green-500/50'
+                }`}
                 required
               />
             </div>
