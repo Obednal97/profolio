@@ -45,7 +45,7 @@ function HeaderActions() {
 
 export default function LandingPage() {
   return (
-    <main className="bg-background text-foreground min-h-screen px-4 sm:px-12 py-8 space-y-12">
+    <div className="bg-background text-foreground min-h-screen px-4 sm:px-12 py-8 space-y-12">
       {/* Header */}
       <header className="flex justify-between items-center flex-col sm:flex-row space-y-2 sm:space-y-0">
         <div>
@@ -137,6 +137,6 @@ export default function LandingPage() {
         </div>
         <p>&copy; {new Date().getFullYear()} Profolio. All rights reserved.</p>
       </footer>
-    </main>
+    </div>
   );
 }
