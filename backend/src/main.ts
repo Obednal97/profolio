@@ -1,18 +1,34 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule } from '@/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { PrismaService } from './common/prisma.service';
+import { PrismaService } from '@/common/prisma.service';
+import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS (adjust origins as needed)
+  // Enable CORS
   app.enableCors({
-    origin: '*', // Change this to your frontend origin in production
+    origin: process.env.NODE_ENV === 'production'
+      ? ['http://192.168.1.27:3001']
+      : true,
   });
 
-  // Global API prefix
+  // Apply security headers
+  app.use(helmet());
+
+  // Global validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    })
+  );
+
+  // Global prefix
   app.setGlobalPrefix('api');
 
   // Swagger setup
@@ -23,6 +39,10 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  // Graceful shutdown for Prisma
+  const prismaService = app.get(PrismaService);
+  await prismaService.enableShutdownHooks(app);
 
   await app.listen(3000, '0.0.0.0');
 }

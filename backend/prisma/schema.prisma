@@ -18,11 +18,18 @@ datasource db {
 
 model User {
   id          String      @id @default(uuid())
+  password    String
   email       String      @unique
-  taxCountry  String
-  taxRate     Int // stored as basis points, e.g. 0.25 => 2500
+  name        String?
+  taxCountry  String?
+  taxRate     Int? // stored as basis points, e.g. 0.25 => 2500
   assets      Asset[]
   liabilities Liability[]
+  expenses    Expense[]
+  properties Property[]
+  settings    Settings?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
 }
 
 model Asset {
@@ -36,9 +43,8 @@ model Asset {
   externalId    String?
   currency      String?
   valueOverride Int?   // stored in pence/cents, e.g. £10.99 => 1099
-
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @default(now())
   user      User     @relation(fields: [userId], references: [id])
 }
 
@@ -49,8 +55,41 @@ model Liability {
   balance      Int     // stored in pence/cents, e.g. £45,000.23 => 4500023
   interestRate Int     // stored as basis points, e.g. 3.5% => 3500
   dueDate      DateTime?
-
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Expense {
+  id        String   @id @default(uuid())
+  amount    Float
+  category  String
+  date      DateTime
+  notes     String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+model Settings {
+  userId   String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+  theme    String?
+  currency String?
+  timezone String?
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Property {
+  id           String   @id @default(uuid())
+  address      String
+  value        Int      // stored in pence/cents, e.g. £230,000.00 => 23000000
+  purchaseDate DateTime
+  notes        String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
 }
