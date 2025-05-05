@@ -21,9 +21,9 @@ export default function Navbar({
         { path: "/app/expenseManager", label: "Expenses", icon: "fa-receipt" },
       ]
     : [
-        { path: "/#/about", label: "About", icon: "fa-info-circle" },
-        { path: "/#/how-it-works", label: "How it works", icon: "fa-lightbulb" },
-        { path: "/#/pricing", label: "Pricing", icon: "fa-tags" },
+        { path: "/about", label: "About", icon: "fa-info-circle" },
+        { path: "/how-it-works", label: "How it works", icon: "fa-lightbulb" },
+        { path: "/pricing", label: "Pricing", icon: "fa-tags" },
       ];
 
   return (
