@@ -32,12 +32,12 @@ export const HeaderLayout: React.FC = () => {
             src="/logomark.png"
             alt="Profolio preview"
             width={600}
-            height={200}
+            max-height={200}
             className="mx-auto rounded-xl shadow-xl shadow-neon/30 w-full sm:max-w-md h-auto"
           />
-        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black text-xs font-bold">
+        {/* <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black text-xs font-bold">
           P
-        </div>
+        </div> */}
         <div className="flex flex-col leading-tight">
           <span className="text-xl font-bold text-foreground">Profolio</span>
           <span className="text-sm text-muted-foreground">Your Personal Wealth OS</span>
