@@ -28,13 +28,13 @@ export const HeaderLayout: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <Image
+        {/* <Image
           src="/logomark.png"
           alt="Profolio preview"
           width={120}
           height={40}
           className="rounded-xl shadow-xl shadow-neon/30 object-cover"
-        />
+        /> */}
         <div className="flex flex-col leading-tight">
           <span className="text-xl font-bold text-foreground">Profolio</span>
           <span className="text-sm text-muted-foreground">Your Personal Wealth OS</span>
