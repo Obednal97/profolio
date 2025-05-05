@@ -6,10 +6,8 @@ interface FooterLayoutProps {
 
 export const FooterLayout: React.FC<FooterLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <main className="flex-1 px-6 py-8">
-        {children}
-      </main>
+    <div className="flex flex-col bg-background text-foreground flex-1">
+      <main className="flex-1 px-6 py-8">{children}</main>
       <footer className="w-full border-t border-white/10 px-6 py-6 text-sm text-muted-foreground">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 max-w-7xl mx-auto">
           <div className="flex space-x-4">
