@@ -105,10 +105,13 @@ export default function PricingPage() {
         </div>
 
         {/* Annual Plan */}
-        <div className="bg-muted/10 p-6 rounded-xl border border-muted/30">
+        <div className="relative bg-muted/10 p-6 rounded-xl border border-muted/30">
+          <div className="absolute top-0 right-0 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-tr-xl rounded-bl-xl shadow-lg z-10">
+            20% OFF
+          </div>
           <h2 className="text-2xl font-semibold">Cloud – Annual</h2>
-          <p className="text-gray-400 text-sm mb-4">Cloud-hosted • £99.99/user/yr</p>
-          <p className="text-4xl font-bold mb-4">£99.99</p>
+          <p className="text-gray-400 text-sm mb-4">Cloud-hosted • £95.90/user/yr</p>
+          <p className="text-4xl font-bold mb-4">£95.90</p>
           <ul className="text-gray-300 text-sm space-y-2">
             <li>✅ All Monthly Plan features</li>
             <li>✅ Priority support</li>

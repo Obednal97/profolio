@@ -4,7 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Tile } from '@/components/ui/tile/tile';
 import { Button } from '@/components/ui/button/button';
-import { motion } from 'framer-motion';
+import { motion, useAnimationFrame } from 'framer-motion';
+import { useState } from 'react';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -37,7 +38,23 @@ const FEATURE_HIGHLIGHTS = [
   { title: 'Optimized for Founders', desc: 'Equity, options, trusts — all accounted for.' },
 ];
 
+const getLiveNetWorth = () => {
+  const base = 7_500_000;
+  const ratePerSecond = 1.33;
+  const now = Math.floor(Date.now() / 1000);
+  return base + Math.floor(ratePerSecond * (now - 1700000000));
+};
+
+const formatCompactNumber = (num: number) =>
+  Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
+
 export default function LandingPage() {
+  const [liveNetWorth, setLiveNetWorth] = useState(getLiveNetWorth());
+
+  useAnimationFrame(() => {
+    setLiveNetWorth(getLiveNetWorth());
+  });
+
   return (
     <div className="text-foreground bg-background min-h-screen">
       {/* Hero Section */}
@@ -84,6 +101,19 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
       </section>
+
+      <motion.section
+        variants={fadeUp}
+        className="w-full max-w-4xl mx-auto text-center my-12 px-6"
+      >
+        <div className="p-6 bg-gradient-to-br from-pink-500 via-green-400 to-blue-500 text-black rounded-xl shadow-xl">
+          <h2 className="text-xl font-bold tracking-tight mb-2">Live net worth tracked on Profolio</h2>
+          <p className="text-4xl font-extrabold tracking-wide">
+            {formatCompactNumber(liveNetWorth)}
+          </p>
+          <p className="text-sm mt-2 text-black/70">Updated every second — and growing</p>
+        </div>
+      </motion.section>
 
       {/* Testimonials Section */}
       <motion.section
