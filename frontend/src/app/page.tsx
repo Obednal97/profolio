@@ -52,7 +52,7 @@ export default function LandingPage() {
           className="object-cover opacity-20 blur-sm"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-background/60 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-background/60 z-10" />
         <motion.div
           className="z-20 relative px-6 sm:px-12 max-w-4xl mx-auto"
           initial="hidden"
