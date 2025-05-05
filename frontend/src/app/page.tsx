@@ -149,7 +149,7 @@ export default function LandingPage() {
         <div className="grid sm:grid-cols-3 gap-6">
           {FEATURE_HIGHLIGHTS.map(({ title, desc }) => (
             <motion.div key={title} variants={fadeUp}>
-              <Tile className="border border-neon/40 hover:border-neon bg-background/80">
+              <Tile className="hover:scale-105 transition-transform duration-300 shadow hover:shadow-neon bg-background/70">
                 <h3 className="text-xl font-bold text-neon mb-2">{title}</h3>
                 <p className="text-sm text-gray-400">{desc}</p>
               </Tile>
