@@ -1,4 +1,3 @@
-"use client";
 import Link from "next/link";
 import { ShieldCheck, FileText, Cookie, EyeOff, BookOpen } from "lucide-react";
 

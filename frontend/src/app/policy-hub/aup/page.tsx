@@ -1,5 +1,5 @@
-import Regulation from "@/content/policies/regulation.mdx";
+import AUP from "@/content/policies/aup.mdx";
 
 export default function TermsPage() {
-  return <Regulation />;
+  return <AUP />;
 }
