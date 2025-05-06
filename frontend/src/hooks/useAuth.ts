@@ -1,4 +1,4 @@
-import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebase } from '../lib/firebase';
 import { useEffect, useState } from 'react';
 
@@ -38,6 +38,10 @@ export function useAuth() {
       if (redirect) {
         window.location.href = callbackUrl;
       }
+    },
+    forceLogout: async () => {
+      const auth = (await getFirebase()).auth!;
+      await firebaseSignOut(auth);
     },
   };
 }
