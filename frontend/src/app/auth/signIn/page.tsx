@@ -18,6 +18,8 @@ function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isFormValid = formData.email.trim() !== '' && formData.password.trim() !== '';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -99,7 +101,7 @@ function SignInPage() {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isFormValid}
                 className="w-full bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl py-2 disabled:opacity-50"
               >
                 {loading ? (

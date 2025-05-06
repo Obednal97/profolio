@@ -37,6 +37,18 @@ function SignUpPage() {
     }));
   };
 
+  const isFormValid = () => {
+    const passwordReqs = validatePassword(formData.password);
+    const passwordsMatch = formData.password === formData.confirmPassword;
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+    return (
+      formData.name.trim() !== "" &&
+      isValidEmail &&
+      passwordsMatch &&
+      passwordReqs.every((req) => req.met)
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -189,7 +201,7 @@ function SignUpPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isFormValid()}
               className="w-full px-4 py-2 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200 disabled:opacity-50"
             >
               {loading ? (
