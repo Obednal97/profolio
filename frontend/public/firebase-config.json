@@ -1,8 +1,9 @@
 {
-    "apiKey": "AIzaSyXXXXXX",
-    "authDomain": "your-app.firebaseapp.com",
+    "apiKey": "AIzaSyBLa_EnmkTGbLU9-SVQN23SCfOv6pn7n0Q",
+    "authDomain": "profolio-9c8e0.firebaseapp.com",
     "projectId": "your-app",
-    "storageBucket": "your-app.appspot.com",
-    "messagingSenderId": "1234567890",
-    "appId": "1:1234567890:web:abcdef123456"
+    "storageBucket": "profolio-9c8e0.firebasestorage.app",
+    "messagingSenderId": "258151466633",
+    "appId": "1:258151466633:web:a5223407f9e07a9919a858",
+    "measurementId": "G-6TG5NF58BX"
   }
