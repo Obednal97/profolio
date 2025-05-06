@@ -36,6 +36,7 @@ function SignInPage() {
       console.error('Sign in error:', err);
       setError('Invalid email or password');
       setLoading(false);
+      return;
     }
   };
 

@@ -31,10 +31,7 @@ export function useAuth() {
           }
         });
       });
-      if (userCredential.user) {
-        const token = await userCredential.user.getIdToken(true);
-        console.log("Signup successful. Token:", token);
-      }
+      await new Promise((r) => setTimeout(r, 150));
     },
     signOut: async ({ callbackUrl = "/", redirect = true } = {}) => {
       await fetch("/api/signout", { method: "POST" });
