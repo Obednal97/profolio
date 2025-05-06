@@ -1,5 +1,5 @@
 import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { getFirebase } from '../lib/firebase';
 import { useEffect, useState } from 'react';
 
 interface SignUpParams {
@@ -18,11 +18,9 @@ interface User {
 
 export function useAuth() {
   return {
-    signInWithCredentials: async ({ email, password }: { email: string; password: string }) => {
-      // TEMP stub
-      console.log("Signin payload", { email, password });
-    },
     signUpWithCredentials: async ({ name, email, password }: SignUpParams) => {
+      const firebase = await getFirebase();
+      const auth = firebase.auth!;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
       if (userCredential.user) {
@@ -44,22 +42,31 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const token = await firebaseUser.getIdToken();
-        const userObj = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email,
-          token,
-        };
-        setUser(userObj);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    let unsubscribe: () => void;
 
-    return () => unsubscribe();
+    const initAuth = async () => {
+      const auth = (await getFirebase()).auth!;
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          const token = await firebaseUser.getIdToken();
+          const userObj = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            token,
+          };
+          setUser(userObj);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      });
+    };
+
+    initAuth();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   return { data: user, loading };
