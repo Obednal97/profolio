@@ -23,8 +23,16 @@ export function useAuth() {
       const auth = firebase.auth!;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
+      await new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            unsubscribe();
+            resolve(true);
+          }
+        });
+      });
       if (userCredential.user) {
-        const token = await userCredential.user.getIdToken();
+        const token = await userCredential.user.getIdToken(true);
         console.log("Signup successful. Token:", token);
       }
     },
