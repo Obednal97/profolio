@@ -78,9 +78,10 @@ export type PropertyFormData = {
 // --------------------
 export type User = {
   id: string;
-  name: string;
-  email: string;
-  role: "user" | "admin" | "super_admin";
+  email: string | null;
+  name?: string;
+  role?: "user" | "admin" | "super_admin";
+  token?: string;
 };
 
 export type Group = {

@@ -1,6 +1,5 @@
 // "use client";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import type { PropertyFormData, Property } from "@/types/global";
 import React, { useState, useCallback, useMemo } from "react";
 import { BaseModal as Modal } from "@/components/modals/modal";
@@ -18,13 +17,6 @@ export default function PropertyManager() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const { data: user } = useUser();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!user) {
-      router.push("/auth/SignIn");
-    }
-  }, [user, router]);
 
   const [viewMode, setViewMode] = useState<"card" | "table" | "map">("card");
   const [sortOrder, setSortOrder] = useState<

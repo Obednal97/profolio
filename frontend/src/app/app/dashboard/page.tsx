@@ -1,12 +1,13 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import type { User } from '@/types/global';
 import MetricCard from '@/components/ui/metricCard';
 import { Tile } from '@/components/ui/tile/tile';
 import { Button } from '@/components/ui/button/button';
 // import LineChart from '@/components/charts/line';
 import PieChart from '@/components/charts/pie';
 import type { Asset, Expense } from "@/types/global";
+import { useUser } from '@/lib/user';
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: 'fa-chart-pie' },
@@ -18,8 +19,7 @@ const tabs = [
 const timeRanges = ["week", "month", "year"];
 
 function DashboardPage() {
-  const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { data: user } = useUser() as { data: User | null };
   const [assets, setAssets] = useState<Asset[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,8 +31,8 @@ function DashboardPage() {
     setLoading(true);
     try {
       const [assetsRes, expensesRes] = await Promise.all([
-        fetch(`/api/assets?userId=${userId}`, { cache: 'no-store' }),
-        fetch(`/api/expenses?userId=${userId}`, { cache: 'no-store' }),
+        fetch(`/api/assets?userId=${user?.id}`, { cache: 'no-store' }),
+        fetch(`/api/expenses?userId=${user?.id}`, { cache: 'no-store' }),
       ]);
 
       const assetsData = await assetsRes.json();
@@ -50,20 +50,12 @@ function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [user?.id]);
+
 
   useEffect(() => {
-    const uid = localStorage.getItem('userId');
-    if (!uid) {
-      router.push('/auth/SignIn');
-    } else {
-      setUserId(uid);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    if (userId) fetchData();
-  }, [userId, fetchData]);
+    if (user?.id) fetchData();
+  }, [user?.id, fetchData]);
 
   const netWorth = useMemo(() => {
     return assets.reduce((total, asset) => total + (asset.current_value ?? 0), 0);

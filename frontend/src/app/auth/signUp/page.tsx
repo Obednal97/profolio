@@ -1,19 +1,27 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth, useUser } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/layout/authLayout";
+import { useRouter } from 'next/navigation';
 
 function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { signUpWithCredentials } = useAuth();
   const { data: user } = useUser();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+
+  useEffect(() => {
+    if (user?.token) {
+      router.push('/app/dashboard');
+    }
+  }, [user, router]);
 
   const validatePassword = (password: string) => {
     const requirements = [
@@ -69,29 +77,7 @@ function SignUpPage() {
     }
   };
 
-  if (user) {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
-              Already Signed In
-            </h2>
-            <p className="text-white/60 max-w-md mx-auto">
-              You are already signed in to your account.
-            </p>
-            <a
-              href="/app/dashboard"
-              className="inline-block px-6 py-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
-            >
-              <i className="fas fa-chart-line mr-2"></i>
-              Go to Dashboard
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (user?.token) return null;
 
   return (
     <AuthLayout>

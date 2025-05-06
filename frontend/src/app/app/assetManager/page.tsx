@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useMemo, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
@@ -20,12 +19,6 @@ const formatCurrency = (cents: number) => {
 export default function AssetManager() {
   const [error, setError] = useState<string | null>(null);
   const { data: user } = useUser();
-  const router = useRouter();
-  useEffect(() => {
-    if (!user) {
-      router.push("/auth/SignIn");
-    }
-  }, [user, router]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);

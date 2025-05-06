@@ -18,7 +18,7 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-        const decoded = verify(token, process.env.JWT_SECRET!);
+        const decoded = verify(token, process.env.JWT_SECRET!, { maxAge: '7d' });
         if (typeof decoded !== 'object' || !('id' in decoded) || !('email' in decoded)) {
           throw new UnauthorizedException('Malformed token');
         }

@@ -1,10 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/hooks/useAuth';
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
+  const { data: user } = useUser();
+
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (user?.token) {
+      router.push('/app/dashboard');
+    }
+  }, [user, router]);
+
+  if (user?.token) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

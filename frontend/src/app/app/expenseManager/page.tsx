@@ -311,7 +311,6 @@ function ExpenseManager() {
     );
   };
 
-  if (!user) return null;
 
   return (
     <div>

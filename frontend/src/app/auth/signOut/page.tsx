@@ -10,6 +10,10 @@ function SignOut() {
 
   useEffect(() => {
     const handleLogout = async () => {
+      if (!user) {
+        window.location.href = "/";
+        return;
+      }
       try {
         await signOut({
           callbackUrl: "/",
@@ -20,6 +24,11 @@ function SignOut() {
         setError("Failed to sign out. Please try again.");
       }
     };
+
+    if (!user) {
+      window.location.href = "/";
+      return;
+    }
 
     if (user) {
       handleLogout();
