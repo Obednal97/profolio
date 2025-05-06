@@ -116,7 +116,7 @@ function SignInPage() {
 
             <p className="text-center mt-6 text-white/60">
               Don’t have an account?{' '}
-              <a href="/auth/signup" className="text-green-400 hover:text-green-300 transition-colors">
+              <a href="/auth/signUp" className="text-green-400 hover:text-green-300 transition-colors">
                 Sign up
               </a>
             </p>
