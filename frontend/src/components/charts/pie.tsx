@@ -7,6 +7,7 @@ import {
   Cell,
   Tooltip,
   ResponsiveContainer,
+  Sector,
 } from "recharts";
 
 interface PieChartProps {
@@ -40,10 +41,10 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
-      <div className="bg-gray-900/90 backdrop-blur-xl border border-white/20 rounded-xl p-3 shadow-2xl">
-        <p className="text-white font-medium text-sm">{data.name}</p>
-        <p className="text-gray-300 text-sm">
-          Value: <span className="text-white font-semibold">${data.value.toLocaleString()}</span>
+      <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-gray-200/50 dark:border-white/20 rounded-xl p-3 shadow-2xl">
+        <p className="text-gray-900 dark:text-white font-medium text-sm">{data.name}</p>
+        <p className="text-gray-600 dark:text-gray-300 text-sm">
+          Value: <span className="text-gray-900 dark:text-white font-semibold">${data.value.toLocaleString()}</span>
         </p>
       </div>
     );
@@ -62,6 +63,7 @@ export default function PieChart({
     const {
       cx,
       cy,
+      innerRadius,
       outerRadius,
       startAngle,
       endAngle,
@@ -82,6 +84,19 @@ export default function PieChart({
 
     return (
       <g>
+        {/* Render the expanded pie segment */}
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 8}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          stroke="rgba(255,255,255,0.3)"
+          strokeWidth={2}
+        />
+        {/* Render the connecting line and label */}
         <path
           d={`M ${sx},${sy} L ${mx},${my} L ${ex},${ey}`}
           stroke={fill}
@@ -93,8 +108,8 @@ export default function PieChart({
           x={ex + (cos >= 0 ? 1 : -1) * 12} 
           y={ey} 
           textAnchor={textAnchor} 
-          fill="#fff"
-          className="text-sm font-medium"
+          fill="currentColor"
+          className="text-sm font-medium text-gray-900 dark:text-white"
         >
           {payload.name}
         </text>
@@ -103,8 +118,8 @@ export default function PieChart({
           y={ey} 
           dy={18} 
           textAnchor={textAnchor} 
-          fill="#9ca3af"
-          className="text-xs"
+          fill="currentColor"
+          className="text-xs text-gray-600 dark:text-gray-400"
         >
           ${payload.value.toLocaleString()}
         </text>

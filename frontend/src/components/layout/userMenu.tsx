@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTheme } from "@/providers/theme-provider";
+import { useTheme } from "../layout/layoutWrapper";
 
 interface UserMenuProps {
   user?: {
@@ -17,7 +17,7 @@ export default function UserMenu({
   unreadNotifications = 0,
 }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   const profileMenuItems = [
     { label: "Account Settings", path: "/app/settings", icon: "fa-cog" },
@@ -25,28 +25,18 @@ export default function UserMenu({
     { label: "Sign Out", path: "/auth/signOut", icon: "fa-sign-out-alt" },
   ];
 
-  const cycleTheme = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
-  };
-
   const getThemeIcon = () => {
-    if (theme === "light") return "fa-sun";
-    if (theme === "dark") return "fa-moon";
-    return "fa-adjust"; // system theme
+    return theme === "light" ? "fa-moon" : "fa-sun";
   };
 
   const getThemeTooltip = () => {
-    if (theme === "light") return "Switch to dark mode";
-    if (theme === "dark") return "Switch to system theme";
-    return "Switch to light mode";
+    return theme === "light" ? "Switch to dark mode" : "Switch to light mode";
   };
 
   return (
     <div className="flex items-center space-x-4">
       <button
-        onClick={cycleTheme}
+        onClick={toggleTheme}
         className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all shadow-sm"
         title={getThemeTooltip()}
       >
