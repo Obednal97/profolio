@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { User } from '@/types/global';
+import { useAppContext } from '@/components/layout/layoutWrapper';
 import { Tile } from '@/components/ui/tile/tile';
 import LineChart from '@/components/charts/line';
 import PieChart from '@/components/charts/pie';
@@ -12,6 +13,7 @@ const timeRanges = ["week", "month", "quarter", "year", "all"];
 
 function DashboardPage() {
   const { data: user } = useUser() as { data: User | null };
+  const { formatCurrency } = useAppContext();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,7 +190,7 @@ function DashboardPage() {
                 <div>
                   <p className="text-gray-600 dark:text-gray-400 text-sm">Net Worth</p>
                   <p className="text-3xl font-bold text-green-500 mt-1">
-                    £{(netWorth / 100).toLocaleString()}
+                    {formatCurrency(netWorth / 100)}
                   </p>
                 </div>
                 <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -236,7 +238,7 @@ function DashboardPage() {
                 <div>
                   <p className="text-gray-600 dark:text-gray-400 text-sm">Monthly Expenses</p>
                   <p className="text-3xl font-bold text-red-500 mt-1">
-                    £{(recentExpensesTotal / 100).toLocaleString()}
+                    {formatCurrency(recentExpensesTotal / 100)}
                   </p>
                 </div>
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
@@ -368,7 +370,7 @@ function DashboardPage() {
                       </div>
                     </div>
                     <span className="text-red-500 font-semibold">
-                      -£{(expense.amount / 100).toLocaleString()}
+                      -{formatCurrency(expense.amount / 100)}
                     </span>
                   </motion.div>
                 ))}
@@ -398,7 +400,7 @@ function DashboardPage() {
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium text-gray-900 dark:text-white">{category.category}</span>
                       <span className="text-orange-500 font-semibold">
-                        £{category.amount.toLocaleString()}
+                        {formatCurrency(category.amount)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
