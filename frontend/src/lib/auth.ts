@@ -1,7 +1,7 @@
 import { useRouter } from 'next/navigation';
 
-// Development bypass flag - set to true to bypass authentication
-const BYPASS_AUTH = true;
+// Development bypass flag - set to false for proper authentication
+const BYPASS_AUTH = false;
 
 interface SignInParams {
   email: string;

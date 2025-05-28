@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth'; 
 import { useUser } from '@/lib/user';
+import { useAuth as useAuthHook } from '@/hooks/useAuth';
 import type { User } from '@/types/global';
 import { AuthLayout } from "@/components/layout/authLayout";
 import Link from 'next/link';
@@ -12,10 +13,12 @@ import { motion } from 'framer-motion';
 function SignInPage() {
   const router = useRouter();
   const { signInWithCredentials } = useAuth();
+  const { signInWithDemo } = useAuthHook();
   const { data: user } = useUser() as { data: User | null };
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isFormValid = formData.email.trim() !== '' && formData.password.trim() !== '';
@@ -37,6 +40,22 @@ function SignInPage() {
       setError('Invalid email or password');
       setLoading(false);
       return;
+    }
+  };
+
+  const handleDemoMode = async () => {
+    setError(null);
+    setDemoLoading(true);
+
+    try {
+      await signInWithDemo({
+        callbackUrl: "/app/dashboard",
+        redirect: true,
+      });
+    } catch (err) {
+      console.error("Demo mode error:", err);
+      setError("Failed to start demo mode. Please try again.");
+      setDemoLoading(false);
     }
   };
 
@@ -73,6 +92,41 @@ function SignInPage() {
           </motion.div>
         )}
 
+        {/* Demo Mode Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mb-6"
+        >
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                Try Profolio Demo
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Explore all features with sample data - no signup required
+              </p>
+            </div>
+            <button
+              onClick={handleDemoMode}
+              disabled={demoLoading}
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+            >
+              {demoLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  Loading Demo...
+                </div>
+              ) : (
+                <>
+                  <i className="fas fa-play mr-2"></i>
+                  Try Demo Mode
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
+
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -90,17 +144,9 @@ function SignInPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Password
-                </label>
-                <Link
-                  href="/auth/forgotPassword"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Password
+              </label>
               <input
                 type="password"
                 value={formData.password}
@@ -109,6 +155,29 @@ function SignInPage() {
                 placeholder="••••••••"
                 required
               />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Remember me
+                </label>
+              </div>
+
+              <div className="text-sm">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
             </div>
 
             <button
