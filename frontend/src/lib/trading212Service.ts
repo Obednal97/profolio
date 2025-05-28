@@ -1,5 +1,9 @@
-// Trading 212 API Service
+// Trading 212 API Service - Enhanced Version
 // Based on the official API documentation: https://t212public-api-docs.redoc.ly/
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
 export interface Trading212Position {
   ticker: string;
@@ -40,6 +44,7 @@ export interface Trading212AccountCash {
   result: number;
   invested: number;
   pieCash: number;
+  blocked: number;
 }
 
 export interface Trading212Order {
@@ -83,6 +88,93 @@ export interface Trading212Dividend {
   type: string;
 }
 
+export interface Trading212Transaction {
+  amount: number;
+  dateTime: string;
+  reference: string;
+  type: 'WITHDRAW' | 'DEPOSIT' | 'DIVIDEND' | 'INTEREST' | 'OTHER';
+}
+
+export interface Trading212Exchange {
+  id: number;
+  name: string;
+  workingSchedules: Array<{
+    id: number;
+    timeEvents: Array<{
+      date: string;
+      type: 'OPEN' | 'CLOSE';
+    }>;
+  }>;
+}
+
+export interface Trading212Pie {
+  id: number;
+  cash: number;
+  progress: number;
+  status: 'AHEAD' | 'BEHIND' | 'ON_TRACK';
+  dividendDetails: {
+    gained: number;
+    inCash: number;
+    reinvested: number;
+  };
+  result: {
+    priceAvgInvestedValue: number;
+    priceAvgResult: number;
+    priceAvgResultCoef: number;
+    priceAvgValue: number;
+  };
+}
+
+export interface Trading212PieDetails {
+  instruments: Array<{
+    ticker: string;
+    currentShare: number;
+    expectedShare: number;
+    ownedQuantity: number;
+    issues: Array<{
+      name: string;
+      severity: 'IRREVERSIBLE' | 'WARNING' | 'INFO';
+    }>;
+    result: {
+      priceAvgInvestedValue: number;
+      priceAvgResult: number;
+      priceAvgResultCoef: number;
+      priceAvgValue: number;
+    };
+  }>;
+  settings: {
+    id: number;
+    name: string;
+    icon: string;
+    goal: number;
+    endDate: string;
+    creationDate: string;
+    dividendCashAction: 'REINVEST' | 'TO_ACCOUNT_CASH';
+    initialInvestment: number;
+    instrumentShares: Record<string, number>;
+    publicUrl: string;
+  };
+}
+
+export interface Trading212CurrentOrder {
+  id: number;
+  creationTime: string;
+  filledQuantity: number;
+  filledValue: number;
+  limitPrice: number;
+  quantity: number;
+  status: 'LOCAL' | 'SUBMITTED' | 'WORKING' | 'REJECTED' | 'CANCELLED' | 'FILLED';
+  stopPrice: number;
+  strategy: 'QUANTITY' | 'VALUE';
+  ticker: string;
+  type: 'LIMIT' | 'MARKET' | 'STOP' | 'STOP_LIMIT';
+  value: number;
+}
+
+// ============================================================================
+// MAIN SERVICE CLASS
+// ============================================================================
+
 export class Trading212Service {
   private apiKey: string;
   private baseUrl = 'https://live.trading212.com/api/v0';
@@ -91,64 +183,365 @@ export class Trading212Service {
     this.apiKey = apiKey;
   }
 
-  private async makeRequest<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+  // ============================================================================
+  // CORE API METHODS
+  // ============================================================================
+
+  private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    
+    const response = await fetch(url, {
+      ...options,
       headers: {
         'Authorization': this.apiKey,
         'Content-Type': 'application/json',
+        ...options?.headers,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Trading 212 API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      let errorMessage = `Trading 212 API error: ${response.status} ${response.statusText}`;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.message) errorMessage += ` - ${errorData.message}`;
+      } catch {
+        if (errorText) errorMessage += ` - ${errorText}`;
+      }
+
+      throw new Error(errorMessage);
     }
 
     return response.json();
   }
 
-  // Test API connection
+  // ============================================================================
+  // ACCOUNT & AUTHENTICATION
+  // ============================================================================
+
+  /**
+   * Test API connection and get account info
+   */
   async testConnection(): Promise<Trading212AccountInfo> {
     return this.makeRequest<Trading212AccountInfo>('/equity/account/info');
   }
 
-  // Get all portfolio positions
-  async getPortfolio(): Promise<Trading212Position[]> {
-    return this.makeRequest<Trading212Position[]>('/equity/portfolio');
-  }
-
-  // Get all available instruments
-  async getInstruments(): Promise<Trading212Instrument[]> {
-    return this.makeRequest<Trading212Instrument[]>('/equity/metadata/instruments');
-  }
-
-  // Get account cash information
+  /**
+   * Get account cash information
+   */
   async getAccountCash(): Promise<Trading212AccountCash> {
     return this.makeRequest<Trading212AccountCash>('/equity/account/cash');
   }
 
-  // Get historical orders
-  async getHistoricalOrders(limit = 50, cursor?: number): Promise<{
+  // ============================================================================
+  // PORTFOLIO & POSITIONS
+  // ============================================================================
+
+  /**
+   * Get all portfolio positions
+   */
+  async getPortfolio(): Promise<Trading212Position[]> {
+    return this.makeRequest<Trading212Position[]>('/equity/portfolio');
+  }
+
+  /**
+   * Get specific position by ticker
+   */
+  async getPosition(ticker: string): Promise<Trading212Position> {
+    return this.makeRequest<Trading212Position>(`/equity/portfolio/${encodeURIComponent(ticker)}`);
+  }
+
+  /**
+   * Search for a position by ticker (POST method)
+   */
+  async searchPosition(ticker: string): Promise<Trading212Position> {
+    return this.makeRequest<Trading212Position>('/equity/portfolio/ticker', {
+      method: 'POST',
+      body: JSON.stringify({ ticker }),
+    });
+  }
+
+  // ============================================================================
+  // INSTRUMENTS & METADATA
+  // ============================================================================
+
+  /**
+   * Get all available instruments
+   */
+  async getInstruments(): Promise<Trading212Instrument[]> {
+    return this.makeRequest<Trading212Instrument[]>('/equity/metadata/instruments');
+  }
+
+  /**
+   * Get all exchanges and working schedules
+   */
+  async getExchanges(): Promise<Trading212Exchange[]> {
+    return this.makeRequest<Trading212Exchange[]>('/equity/metadata/exchanges');
+  }
+
+  // ============================================================================
+  // PIES MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Get all pies
+   */
+  async getPies(): Promise<Trading212Pie[]> {
+    return this.makeRequest<Trading212Pie[]>('/equity/pies');
+  }
+
+  /**
+   * Get detailed pie information
+   */
+  async getPieDetails(pieId: number): Promise<Trading212PieDetails> {
+    return this.makeRequest<Trading212PieDetails>(`/equity/pies/${pieId}`);
+  }
+
+  /**
+   * Create a new pie
+   */
+  async createPie(pieData: {
+    name: string;
+    icon: string;
+    goal: number;
+    endDate: string;
+    dividendCashAction: 'REINVEST' | 'TO_ACCOUNT_CASH';
+    instrumentShares: Record<string, number>;
+  }): Promise<Trading212PieDetails> {
+    return this.makeRequest<Trading212PieDetails>('/equity/pies', {
+      method: 'POST',
+      body: JSON.stringify(pieData),
+    });
+  }
+
+  /**
+   * Update an existing pie
+   */
+  async updatePie(pieId: number, pieData: {
+    name: string;
+    icon: string;
+    goal: number;
+    endDate: string;
+    dividendCashAction: 'REINVEST' | 'TO_ACCOUNT_CASH';
+    instrumentShares: Record<string, number>;
+  }): Promise<Trading212PieDetails> {
+    return this.makeRequest<Trading212PieDetails>(`/equity/pies/${pieId}`, {
+      method: 'POST',
+      body: JSON.stringify(pieData),
+    });
+  }
+
+  /**
+   * Delete a pie
+   */
+  async deletePie(pieId: number): Promise<void> {
+    return this.makeRequest<void>(`/equity/pies/${pieId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Duplicate a pie
+   */
+  async duplicatePie(pieId: number, name: string, icon: string): Promise<Trading212PieDetails> {
+    return this.makeRequest<Trading212PieDetails>(`/equity/pies/${pieId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ name, icon }),
+    });
+  }
+
+  // ============================================================================
+  // ORDERS MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Get all current orders
+   */
+  async getCurrentOrders(): Promise<Trading212CurrentOrder[]> {
+    return this.makeRequest<Trading212CurrentOrder[]>('/equity/orders');
+  }
+
+  /**
+   * Get specific order by ID
+   */
+  async getOrder(orderId: number): Promise<Trading212CurrentOrder> {
+    return this.makeRequest<Trading212CurrentOrder>(`/equity/orders/${orderId}`);
+  }
+
+  /**
+   * Place a limit order
+   */
+  async placeLimitOrder(orderData: {
+    ticker: string;
+    quantity: number;
+    limitPrice: number;
+    timeValidity: 'DAY' | 'GOOD_TILL_CANCEL';
+  }): Promise<Trading212CurrentOrder> {
+    return this.makeRequest<Trading212CurrentOrder>('/equity/orders/limit', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  /**
+   * Place a market order
+   */
+  async placeMarketOrder(orderData: {
+    ticker: string;
+    quantity: number;
+  }): Promise<Trading212CurrentOrder> {
+    return this.makeRequest<Trading212CurrentOrder>('/equity/orders/market', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  /**
+   * Place a stop order
+   */
+  async placeStopOrder(orderData: {
+    ticker: string;
+    quantity: number;
+    stopPrice: number;
+    timeValidity: 'DAY' | 'GOOD_TILL_CANCEL';
+  }): Promise<Trading212CurrentOrder> {
+    return this.makeRequest<Trading212CurrentOrder>('/equity/orders/stop', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  /**
+   * Place a stop-limit order
+   */
+  async placeStopLimitOrder(orderData: {
+    ticker: string;
+    quantity: number;
+    limitPrice: number;
+    stopPrice: number;
+    timeValidity: 'DAY' | 'GOOD_TILL_CANCEL';
+  }): Promise<Trading212CurrentOrder> {
+    return this.makeRequest<Trading212CurrentOrder>('/equity/orders/stop_limit', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  /**
+   * Cancel an order
+   */
+  async cancelOrder(orderId: number): Promise<void> {
+    return this.makeRequest<void>(`/equity/orders/${orderId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================================================
+  // HISTORICAL DATA
+  // ============================================================================
+
+  /**
+   * Get historical orders with pagination
+   */
+  async getHistoricalOrders(options?: {
+    limit?: number;
+    cursor?: number;
+    ticker?: string;
+  }): Promise<{
     items: Trading212Order[];
     nextPagePath?: string;
   }> {
-    const params = new URLSearchParams({ limit: limit.toString() });
-    if (cursor) params.append('cursor', cursor.toString());
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.cursor) params.append('cursor', options.cursor.toString());
+    if (options?.ticker) params.append('ticker', options.ticker);
     
-    return this.makeRequest(`/equity/history/orders?${params}`);
+    const queryString = params.toString();
+    const endpoint = `/equity/history/orders${queryString ? `?${queryString}` : ''}`;
+    
+    return this.makeRequest(endpoint);
   }
 
-  // Get dividend history
-  async getDividends(limit = 50, cursor?: number): Promise<{
+  /**
+   * Get all historical orders (handles pagination automatically)
+   */
+  async getAllHistoricalOrders(ticker?: string): Promise<Trading212Order[]> {
+    const allOrders: Trading212Order[] = [];
+    let cursor: number | undefined;
+    
+    do {
+      const response = await this.getHistoricalOrders({
+        limit: 50,
+        cursor,
+        ticker,
+      });
+      
+      allOrders.push(...response.items);
+      
+      // Extract cursor from nextPagePath if it exists
+      if (response.nextPagePath) {
+        const match = response.nextPagePath.match(/cursor=(\d+)/);
+        cursor = match ? parseInt(match[1]) : undefined;
+      } else {
+        cursor = undefined;
+      }
+    } while (cursor);
+    
+    return allOrders;
+  }
+
+  /**
+   * Get dividend history with pagination
+   */
+  async getDividends(options?: {
+    limit?: number;
+    cursor?: number;
+    ticker?: string;
+  }): Promise<{
     items: Trading212Dividend[];
     nextPagePath?: string;
   }> {
-    const params = new URLSearchParams({ limit: limit.toString() });
-    if (cursor) params.append('cursor', cursor.toString());
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.cursor) params.append('cursor', options.cursor.toString());
+    if (options?.ticker) params.append('ticker', options.ticker);
     
-    return this.makeRequest(`/history/dividends?${params}`);
+    const queryString = params.toString();
+    const endpoint = `/history/dividends${queryString ? `?${queryString}` : ''}`;
+    
+    return this.makeRequest(endpoint);
   }
 
-  // Convert Trading 212 data to Profolio assets with historical data
+  /**
+   * Get transaction history with pagination
+   */
+  async getTransactions(options?: {
+    limit?: number;
+    cursor?: string;
+    time?: string;
+  }): Promise<{
+    items: Trading212Transaction[];
+    nextPagePath?: string;
+  }> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.cursor) params.append('cursor', options.cursor);
+    if (options?.time) params.append('time', options.time);
+    
+    const queryString = params.toString();
+    const endpoint = `/history/transactions${queryString ? `?${queryString}` : ''}`;
+    
+    return this.makeRequest(endpoint);
+  }
+
+  // ============================================================================
+  // PROFOLIO INTEGRATION METHODS
+  // ============================================================================
+
+  /**
+   * Convert Trading 212 data to Profolio assets with enhanced data
+   */
   async getProfolioAssets(): Promise<Array<{
     id: string;
     name: string;
@@ -160,13 +553,32 @@ export class Trading212Service {
     purchase_date: string;
     notes: string;
     price_history: Array<{ date: string; value: number }>;
+    pie_info?: {
+      pieId: number;
+      pieName: string;
+      pieShare: number;
+    };
   }>> {
-    const [positions, instruments, accountCash, historicalOrders] = await Promise.all([
+    const [positions, instruments, accountCash, historicalOrders, pies] = await Promise.all([
       this.getPortfolio(),
       this.getInstruments(),
-      this.getAccountCash().catch(() => ({ free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0 })),
-      this.getHistoricalOrders(200).catch(() => ({ items: [] })) // Get more historical data
+      this.getAccountCash().catch(() => ({ 
+        free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 
+      })),
+      this.getAllHistoricalOrders().catch(() => []),
+      this.getPies().catch(() => [])
     ]);
+
+    // Get detailed pie information
+    const pieDetails = new Map<number, Trading212PieDetails>();
+    for (const pie of pies) {
+      try {
+        const details = await this.getPieDetails(pie.id);
+        pieDetails.set(pie.id, details);
+      } catch (error) {
+        console.warn(`Failed to get details for pie ${pie.id}:`, error);
+      }
+    }
 
     // Create instrument lookup map
     const instrumentMap = new Map(
@@ -176,8 +588,7 @@ export class Trading212Service {
     // Create historical price data from orders
     const priceHistoryMap = new Map<string, Array<{ date: string; value: number }>>();
     
-    // Process historical orders to build price history
-    historicalOrders.items.forEach(order => {
+    historicalOrders.forEach(order => {
       if (order.status === 'FILLED' && order.fillPrice > 0) {
         const ticker = this.cleanTicker(order.ticker);
         if (!priceHistoryMap.has(ticker)) {
@@ -200,6 +611,21 @@ export class Trading212Service {
         );
       priceHistoryMap.set(ticker, sortedHistory);
     });
+
+    // Find pie information for each position
+    const findPieInfo = (ticker: string) => {
+      for (const [pieId, details] of Array.from(pieDetails.entries())) {
+        const instrument = details.instruments.find(inst => inst.ticker === ticker);
+        if (instrument) {
+          return {
+            pieId,
+            pieName: details.settings.name,
+            pieShare: instrument.expectedShare,
+          };
+        }
+      }
+      return undefined;
+    };
 
     // Convert positions to assets
     const assets = positions.map(position => {
@@ -226,6 +652,9 @@ export class Trading212Service {
         });
       }
 
+      // Get pie information
+      const pieInfo = findPieInfo(position.ticker);
+
       return {
         id: `t212_${position.ticker}`,
         name: instrument?.name || position.ticker,
@@ -235,8 +664,9 @@ export class Trading212Service {
         current_value: Math.round(currentValue),
         purchase_price: Math.round(purchasePrice),
         purchase_date: position.initialFillDate.split('T')[0],
-        notes: `Synced from Trading 212 (${instrument?.type || 'STOCK'})${instrument?.isin ? ` - ISIN: ${instrument.isin}` : ''}`,
+        notes: `Synced from Trading 212 (${instrument?.type || 'STOCK'})${instrument?.isin ? ` - ISIN: ${instrument.isin}` : ''}${pieInfo ? ` - Part of pie: ${pieInfo.pieName} (${pieInfo.pieShare.toFixed(1)}%)` : ''}`,
         price_history: priceHistory,
+        pie_info: pieInfo,
       };
     });
 
@@ -251,18 +681,21 @@ export class Trading212Service {
         current_value: Math.round(accountCash.free * 100),
         purchase_price: Math.round(accountCash.free * 100),
         purchase_date: new Date().toISOString().split('T')[0],
-        notes: `Cash balance from Trading 212. Total: ${accountCash.total}, Invested: ${accountCash.invested}`,
+        notes: `Cash balance from Trading 212. Total: ${accountCash.total}, Invested: ${accountCash.invested}, Pie Cash: ${accountCash.pieCash}`,
         price_history: [{ 
           date: new Date().toISOString().split('T')[0], 
           value: 1.0 // Cash always has value of 1
         }],
+        pie_info: undefined, // Cash is not part of any pie
       });
     }
 
     return assets;
   }
 
-  // Get portfolio summary statistics
+  /**
+   * Get comprehensive portfolio summary with pie information
+   */
   async getPortfolioSummary(): Promise<{
     totalValue: number;
     totalInvested: number;
@@ -270,18 +703,42 @@ export class Trading212Service {
     totalPnLPercentage: number;
     cashBalance: number;
     positionsCount: number;
+    piesCount: number;
     topHoldings: Array<{
       name: string;
       symbol: string;
       value: number;
       percentage: number;
+      pieInfo?: string;
+    }>;
+    piesSummary: Array<{
+      id: number;
+      name: string;
+      value: number;
+      progress: number;
+      status: string;
+      instrumentsCount: number;
     }>;
   }> {
-    const [positions, instruments, accountCash] = await Promise.all([
+    const [positions, instruments, accountCash, pies] = await Promise.all([
       this.getPortfolio(),
       this.getInstruments(),
-      this.getAccountCash().catch(() => ({ free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0 }))
+      this.getAccountCash().catch(() => ({ 
+        free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 
+      })),
+      this.getPies().catch(() => [])
     ]);
+
+    // Get detailed pie information
+    const pieDetails = new Map<number, Trading212PieDetails>();
+    for (const pie of pies) {
+      try {
+        const details = await this.getPieDetails(pie.id);
+        pieDetails.set(pie.id, details);
+      } catch (error) {
+        console.warn(`Failed to get details for pie ${pie.id}:`, error);
+      }
+    }
 
     const instrumentMap = new Map(
       instruments.map(instrument => [instrument.ticker, instrument])
@@ -292,20 +749,47 @@ export class Trading212Service {
     const totalPnL = accountCash.result;
     const totalPnLPercentage = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
 
-    // Calculate top holdings
+    // Find pie info for each position
+    const findPieInfo = (ticker: string) => {
+      for (const [, details] of Array.from(pieDetails.entries())) {
+        const instrument = details.instruments.find(inst => inst.ticker === ticker);
+        if (instrument) {
+          return details.settings.name;
+        }
+      }
+      return undefined;
+    };
+
+    // Calculate top holdings with pie information
     const holdings = positions
       .map(pos => {
         const instrument = instrumentMap.get(pos.ticker);
         const value = pos.quantity * pos.currentPrice;
+        const pieInfo = findPieInfo(pos.ticker);
+        
         return {
           name: instrument?.name || pos.ticker,
           symbol: this.cleanTicker(pos.ticker),
           value,
           percentage: totalValue > 0 ? (value / totalValue) * 100 : 0,
+          pieInfo,
         };
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
+
+    // Calculate pies summary - use pie data directly since detailed result is in pie object
+    const piesSummary = pies.map(pie => {
+      const details = pieDetails.get(pie.id);
+      return {
+        id: pie.id,
+        name: details?.settings.name || `Pie ${pie.id}`,
+        value: pie.result.priceAvgValue,
+        progress: pie.progress,
+        status: pie.status,
+        instrumentsCount: details?.instruments.length || 0,
+      };
+    });
 
     return {
       totalValue,
@@ -314,23 +798,15 @@ export class Trading212Service {
       totalPnLPercentage,
       cashBalance: accountCash.free,
       positionsCount: positions.length,
+      piesCount: pies.length,
       topHoldings: holdings,
+      piesSummary,
     };
   }
 
-  // Clean up ticker symbols (remove exchange suffixes)
-  private cleanTicker(ticker: string): string {
-    return ticker
-      .replace('_US_EQ', '')
-      .replace('_UK_EQ', '')
-      .replace('_DE_EQ', '')
-      .replace('_FR_EQ', '')
-      .replace('_NL_EQ', '')
-      .replace('_IT_EQ', '')
-      .replace('_ES_EQ', '');
-  }
-
-  // Get enhanced asset data with dividends
+  /**
+   * Get enhanced asset data with dividends and pie information
+   */
   async getEnhancedAssets(): Promise<Array<{
     id: string;
     name: string;
@@ -347,10 +823,15 @@ export class Trading212Service {
       date: string;
       grossAmountPerShare: number;
     }>;
+    pie_info?: {
+      pieId: number;
+      pieName: string;
+      pieShare: number;
+    };
   }>> {
     const [assets, dividends] = await Promise.all([
       this.getProfolioAssets(),
-      this.getDividends(100).catch(() => ({ items: [] }))
+      this.getDividends({ limit: 50 }).catch(() => ({ items: [] }))
     ]);
 
     // Group dividends by ticker
@@ -376,5 +857,59 @@ export class Trading212Service {
         })),
       };
     });
+  }
+
+  // ============================================================================
+  // UTILITY METHODS
+  // ============================================================================
+
+  /**
+   * Clean up ticker symbols (remove exchange suffixes)
+   */
+  private cleanTicker(ticker: string): string {
+    return ticker
+      .replace('_US_EQ', '')
+      .replace('_UK_EQ', '')
+      .replace('_DE_EQ', '')
+      .replace('_FR_EQ', '')
+      .replace('_NL_EQ', '')
+      .replace('_IT_EQ', '')
+      .replace('_ES_EQ', '')
+      .replace('_CA_EQ', '')
+      .replace('_AU_EQ', '')
+      .replace('_JP_EQ', '');
+  }
+
+  /**
+   * Get comprehensive account overview
+   */
+  async getAccountOverview(): Promise<{
+    accountInfo: Trading212AccountInfo;
+    cash: Trading212AccountCash;
+    positionsCount: number;
+    piesCount: number;
+    currentOrdersCount: number;
+    totalValue: number;
+    totalPnL: number;
+  }> {
+    const [accountInfo, cash, positions, pies, currentOrders] = await Promise.all([
+      this.testConnection(),
+      this.getAccountCash(),
+      this.getPortfolio(),
+      this.getPies().catch(() => []),
+      this.getCurrentOrders().catch(() => [])
+    ]);
+
+    const totalValue = positions.reduce((sum, pos) => sum + (pos.quantity * pos.currentPrice), 0) + cash.free;
+
+    return {
+      accountInfo,
+      cash,
+      positionsCount: positions.length,
+      piesCount: pies.length,
+      currentOrdersCount: currentOrders.length,
+      totalValue,
+      totalPnL: cash.result,
+    };
   }
 } 

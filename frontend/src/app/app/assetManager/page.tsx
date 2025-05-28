@@ -930,7 +930,31 @@ export default function AssetManager() {
               },
               body: JSON.stringify({ apiKey }),
             });
-            isValid = response.ok;
+            
+            if (response.ok) {
+              isValid = true;
+            } else {
+              const errorData = await response.json();
+              
+              // Handle specific Trading 212 errors
+              if (errorData.details?.includes('429') || errorData.details?.includes('Too Many Requests')) {
+                alert('⏱️ Trading 212 Rate Limit Exceeded\n\nYou\'ve made too many API requests recently. Please wait a few minutes before testing again.\n\nTip: Trading 212 has strict rate limits to protect their servers.');
+                setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+                return;
+              } else if (errorData.details?.includes('401') || errorData.details?.includes('Unauthorized')) {
+                alert('🔑 Invalid Trading 212 API Key\n\nPlease check that:\n• Your API key is correct\n• Your Trading 212 account has API access enabled\n• You\'re using the live Trading 212 API key (not demo/paper trading)');
+                setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+                return;
+              } else if (errorData.details?.includes('403') || errorData.details?.includes('Forbidden')) {
+                alert('🚫 Trading 212 API Access Denied\n\nYour API key doesn\'t have the required permissions. Please check your Trading 212 API settings.');
+                setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+                return;
+              } else {
+                alert(`❌ Trading 212 Connection Failed\n\n${errorData.details || errorData.error || 'Unknown error'}\n\nPlease try again in a few minutes.`);
+                setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+                return;
+              }
+            }
             break;
           
           case 'alphaVantage':
@@ -955,6 +979,14 @@ export default function AssetManager() {
         setConnectionStatus(prev => ({ ...prev, [provider]: isValid ? 'success' : 'error' }));
       } catch (error) {
         console.error(`Error testing ${provider} API:`, error);
+        
+        // Handle network errors
+        if (error instanceof Error && error.message.includes('fetch')) {
+          alert(`🌐 Network Error\n\nCouldn't connect to ${provider} API. Please check your internet connection and try again.`);
+        } else {
+          alert(`❌ ${provider} Test Failed\n\n${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        
         setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
       } finally {
         setIsTestingConnection(null);
@@ -983,7 +1015,20 @@ export default function AssetManager() {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.details || 'Failed to sync Trading 212 data');
+          
+          // Handle specific Trading 212 errors
+          if (errorData.details?.includes('429') || errorData.details?.includes('Too Many Requests')) {
+            alert('⏱️ Trading 212 Rate Limit Exceeded\n\nYou\'ve made too many API requests recently. Trading 212 has strict rate limits.\n\nPlease wait 5-10 minutes before trying to sync again.\n\nTip: Once synced successfully, your portfolio data will be cached and you won\'t need to sync frequently.');
+            return;
+          } else if (errorData.details?.includes('401') || errorData.details?.includes('Unauthorized')) {
+            alert('🔑 Invalid Trading 212 API Key\n\nPlease check that:\n• Your API key is correct\n• Your Trading 212 account has API access enabled\n• You\'re using the live Trading 212 API key (not demo/paper trading)\n\nYou can test your API key first using the "Test" button.');
+            return;
+          } else if (errorData.details?.includes('403') || errorData.details?.includes('Forbidden')) {
+            alert('🚫 Trading 212 API Access Denied\n\nYour API key doesn\'t have the required permissions for portfolio access.\n\nPlease check your Trading 212 API settings and ensure you have the necessary permissions.');
+            return;
+          } else {
+            throw new Error(errorData.details || errorData.error || 'Failed to sync Trading 212 data');
+          }
         }
 
         const data = await response.json();
@@ -993,26 +1038,34 @@ export default function AssetManager() {
         await fetchAssets();
         
         // Show detailed success message
-        const message = `Successfully synced ${data.assetsCount} assets from Trading 212!
+        const message = `✅ Successfully synced ${data.assetsCount} assets from Trading 212!
         
-Portfolio Summary:
+📊 Portfolio Summary:
 • Total Value: ${formatCurrency(data.totalValue)}
 • Total P&L: ${data.totalPnL >= 0 ? '+' : ''}${formatCurrency(data.totalPnL)} (${data.totalPnLPercentage.toFixed(2)}%)
 • Cash Balance: ${formatCurrency(data.cashBalance)}
 • Positions: ${data.positionsCount}
 
-Top Holdings:
+🏆 Top Holdings:
 ${data.topHoldings.slice(0, 3).map((holding: { name: string; value: number; percentage: number }) => 
   `• ${holding.name}: ${formatCurrency(holding.value)} (${holding.percentage.toFixed(1)}%)`
 ).join('\n')}
 
-Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
+🕒 Synced at: ${new Date(data.syncedAt).toLocaleString()}
+
+${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleared when you log out.' : ''}`;
         
         alert(message);
         onClose();
       } catch (error) {
         console.error('Error syncing Trading 212 data:', error);
-        alert(`Failed to sync Trading 212 data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        
+        // Handle network errors
+        if (error instanceof Error && error.message.includes('fetch')) {
+          alert('🌐 Network Error\n\nCouldn\'t connect to Trading 212. Please check your internet connection and try again.');
+        } else {
+          alert(`❌ Trading 212 Sync Failed\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nIf you\'re seeing rate limit errors, please wait a few minutes before trying again.`);
+        }
       } finally {
         setIsTestingConnection(null);
       }
