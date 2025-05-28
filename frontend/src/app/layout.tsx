@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import LayoutWrapper from "@/components/layout/layoutWrapper";
 import { DevTools } from '@/components/DevTools';
 import { ThemeProvider } from "@/providers/theme-provider";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -103,6 +104,23 @@ export default function RootLayout({
             `,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                      console.log('SW registration failed: ', registrationError);
+                    });
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased min-h-screen flex flex-col`}
@@ -110,6 +128,7 @@ export default function RootLayout({
         <ThemeProvider defaultTheme="system">
           <LayoutWrapper>{children}</LayoutWrapper>
           <DevTools />
+          <PWAInstallPrompt />
         </ThemeProvider>
       </body>
     </html>

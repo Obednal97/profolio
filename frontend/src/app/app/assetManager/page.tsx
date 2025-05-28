@@ -556,21 +556,21 @@ export default function AssetManager() {
     };
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl">
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl">
+        <div className="flex justify-between items-center mb-6 sm:mb-8">
+          <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             {initialData ? "Edit Asset" : "Add New Asset"}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
           >
-            <i className="fas fa-times text-xl"></i>
+            <i className="fas fa-times text-lg sm:text-xl"></i>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Asset Name
@@ -581,7 +581,7 @@ export default function AssetManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                 placeholder="e.g., Apple Stock"
                 required
               />
@@ -596,7 +596,7 @@ export default function AssetManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, type: e.target.value as AssetType })
                 }
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
               >
                 {Object.keys(assetTypeFields).map((type) => (
                   <option key={type} value={type} className="bg-white dark:bg-gray-800">
@@ -607,7 +607,7 @@ export default function AssetManager() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {assetTypeFields[formData.type].map((field) => (
               <div key={field.name}>{renderField(field)}</div>
             ))}
@@ -616,22 +616,22 @@ export default function AssetManager() {
           {loading && (
             <div className="flex items-center justify-center py-4">
               <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              <span className="ml-2 text-gray-600 dark:text-gray-400">Fetching market data...</span>
+              <span className="ml-2 text-gray-600 dark:text-gray-400 text-sm">Fetching market data...</span>
             </div>
           )}
 
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
             <Button
               type="button"
               onClick={onClose}
               variant="ghost"
-              className="px-6 py-3 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full sm:w-auto px-6 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 touch-manipulation"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg"
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg touch-manipulation"
             >
               {initialData ? "Update Asset" : "Add Asset"}
             </Button>
@@ -668,32 +668,34 @@ export default function AssetManager() {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
         whileHover={{ y: -4 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+        className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation"
       >
         <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center">
-            <div className={`p-3 bg-gradient-to-r ${config.gradient} rounded-lg mr-4 shadow-lg`}>
-              <i className={`fas ${config.icon} text-white text-xl`}></i>
+          <div className="flex items-center flex-1 min-w-0">
+            <div className={`p-2 sm:p-3 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 sm:mr-4 shadow-lg flex-shrink-0`}>
+              <i className={`fas ${config.icon} text-white text-lg sm:text-xl`}></i>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{asset.name}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{asset.name}</h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
                 {asset.symbol || asset.type?.charAt(0).toUpperCase() + asset.type?.slice(1)}
               </p>
             </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2 flex-shrink-0 ml-2">
             <button
               onClick={() => onEdit(asset)}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+              aria-label="Edit asset"
             >
-              <i className="fas fa-edit"></i>
+              <i className="fas fa-edit text-sm sm:text-base"></i>
             </button>
             <button
               onClick={() => asset.id && onDelete(asset.id)}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+              aria-label="Delete asset"
             >
-              <i className="fas fa-trash"></i>
+              <i className="fas fa-trash text-sm sm:text-base"></i>
             </button>
           </div>
         </div>
@@ -701,7 +703,7 @@ export default function AssetManager() {
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-gray-600 dark:text-gray-400 text-sm">Current Value</span>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">
+            <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(asset.current_value)}
             </span>
           </div>
@@ -709,7 +711,7 @@ export default function AssetManager() {
           {asset.quantity && (
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400 text-sm">Quantity</span>
-              <span className="text-gray-900 dark:text-white">{asset.quantity}</span>
+              <span className="text-gray-900 dark:text-white text-sm sm:text-base">{asset.quantity}</span>
             </div>
           )}
 
@@ -717,10 +719,10 @@ export default function AssetManager() {
             <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
               <span className="text-gray-600 dark:text-gray-400 text-sm">Gain/Loss</span>
               <div className="text-right">
-                <div className={`font-semibold ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className={`font-semibold text-sm sm:text-base ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {appreciation.gain >= 0 ? '+' : ''}{formatCurrency(appreciation.gain)}
                 </div>
-                <div className={`text-sm ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className={`text-xs sm:text-sm ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {appreciation.gain >= 0 ? '+' : ''}{appreciation.percentage.toFixed(2)}%
                 </div>
               </div>
@@ -750,18 +752,18 @@ export default function AssetManager() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Asset Manager
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">Track and manage your investment portfolio</p>
+              <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-base">Track and manage your investment portfolio</p>
             </div>
             <Button
               onClick={handleOpenModal}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3"
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-4 sm:px-6 py-3 touch-manipulation"
             >
               <i className="fas fa-plus mr-2"></i>
               Add Asset
@@ -787,46 +789,46 @@ export default function AssetManager() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400 transition-all duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400 transition-all duration-200">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Total Portfolio Value</p>
-                <p className="text-3xl font-bold text-green-500 mt-1">
+                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Total Portfolio Value</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-500 mt-1">
                   {formatCurrency(totalValue)}
                 </p>
               </div>
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <i className="fas fa-wallet text-green-500 text-xl"></i>
+              <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <i className="fas fa-wallet text-green-500 text-lg sm:text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400 transition-all duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400 transition-all duration-200">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Total Assets</p>
-                <p className="text-3xl font-bold text-blue-500 mt-1">
+                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Total Assets</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-500 mt-1">
                   {assets.length}
                 </p>
               </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <i className="fas fa-chart-pie text-blue-500 text-xl"></i>
+              <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <i className="fas fa-chart-pie text-blue-500 text-lg sm:text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className={`bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 dark:hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 transition-all duration-200`}>
+          <div className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 dark:hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 transition-all duration-200 sm:col-span-2 lg:col-span-1`}>
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Total Gain/Loss</p>
-                <p className={`text-3xl font-bold mt-1 ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Total Gain/Loss</p>
+                <p className={`text-2xl sm:text-3xl font-bold mt-1 ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {totalGainLoss >= 0 ? '+' : ''}{formatCurrency(totalGainLoss)}
                 </p>
               </div>
-              <div className={`p-3 ${totalGainLoss >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}>
-                <i className={`fas fa-chart-line ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'} text-xl`}></i>
+              <div className={`p-2 sm:p-3 ${totalGainLoss >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}>
+                <i className={`fas fa-chart-line ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'} text-lg sm:text-xl`}></i>
               </div>
             </div>
           </div>
@@ -837,17 +839,17 @@ export default function AssetManager() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Portfolio Performance</h3>
-              <div className="flex gap-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Portfolio Performance</h3>
+              <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-1">
                 {["7", "30", "90", "365", "max"].map((days) => (
                   <button
                     key={days}
                     onClick={() => setTimeframe(days)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap touch-manipulation ${
                       timeframe === days
                         ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
@@ -859,27 +861,31 @@ export default function AssetManager() {
               </div>
             </div>
             {chartLoading ? (
-              <div className="h-64 flex items-center justify-center">
+              <div className="h-48 sm:h-64 flex items-center justify-center">
                 <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
               </div>
             ) : (
-              <LineChart
-                data={chartDataFormatted}
-                xKey="date"
-                lines={[{ dataKey: "value", color: "#3b82f6" }]}
-              />
+              <div className="h-48 sm:h-64">
+                <LineChart
+                  data={chartDataFormatted}
+                  xKey="date"
+                  lines={[{ dataKey: "value", color: "#3b82f6" }]}
+                />
+              </div>
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Asset Distribution</h3>
-            <PieChart
-              data={Object.entries(assetsByType).map(([type, data]) => ({
-                name: type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' '),
-                value: data.value / 100,
-                color: assetTypeConfig[type as keyof typeof assetTypeConfig]?.color || "#gray",
-              }))}
-            />
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">Asset Distribution</h3>
+            <div className="h-48 sm:h-64">
+              <PieChart
+                data={Object.entries(assetsByType).map(([type, data]) => ({
+                  name: type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' '),
+                  value: data.value / 100,
+                  color: assetTypeConfig[type as keyof typeof assetTypeConfig]?.color || "#gray",
+                }))}
+              />
+            </div>
           </div>
         </motion.div>
 
@@ -888,12 +894,12 @@ export default function AssetManager() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"
+          className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4"
         >
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 w-full lg:w-auto">
             <button
               onClick={() => setFilterType("all")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap touch-manipulation ${
                 filterType === "all"
                   ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
@@ -905,7 +911,7 @@ export default function AssetManager() {
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap touch-manipulation ${
                   filterType === type
                     ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
@@ -916,26 +922,28 @@ export default function AssetManager() {
             ))}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 self-end lg:self-auto">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`p-2 sm:p-3 rounded-lg transition-all duration-200 touch-manipulation ${
                 viewMode === "grid"
                   ? 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
               }`}
+              aria-label="Grid view"
             >
-              <i className="fas fa-th"></i>
+              <i className="fas fa-th text-sm sm:text-base"></i>
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`p-2 sm:p-3 rounded-lg transition-all duration-200 touch-manipulation ${
                 viewMode === "list"
                   ? 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
               }`}
+              aria-label="List view"
             >
-              <i className="fas fa-list"></i>
+              <i className="fas fa-list text-sm sm:text-base"></i>
             </button>
           </div>
         </motion.div>
@@ -947,22 +955,22 @@ export default function AssetManager() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center py-16"
+              className="text-center py-12 sm:py-16 px-4"
             >
-              <div className="text-gray-500 text-6xl mb-4">
+              <div className="text-gray-500 text-4xl sm:text-6xl mb-4">
                 <i className="fas fa-wallet"></i>
               </div>
-              <h3 className="text-xl font-medium text-gray-600 dark:text-gray-400 mb-2">
+              <h3 className="text-lg sm:text-xl font-medium text-gray-600 dark:text-gray-400 mb-2">
                 {filterType === "all" ? "No Assets Yet" : `No ${filterType} assets`}
               </h3>
-              <p className="text-gray-500 dark:text-gray-500 mb-6">
+              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-500 mb-6 max-w-md mx-auto">
                 {filterType === "all" 
                   ? "Start building your portfolio by adding your first asset."
                   : "You don't have any assets of this type yet."}
               </p>
               <Button
                 onClick={handleOpenModal}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium touch-manipulation"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add Your First Asset
@@ -972,7 +980,7 @@ export default function AssetManager() {
             <motion.div
               layout
               className={viewMode === "grid" 
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6" 
                 : "space-y-4"
               }
             >
