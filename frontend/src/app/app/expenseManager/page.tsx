@@ -1,8 +1,12 @@
 "use client";
 import type { Expense, ExpenseFormData } from "@/types/global";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "@/lib/user";
 import { BaseModal as Modal } from "@/components/modals/modal";
+import { Button } from "@/components/ui/button/button";
+import { motion, AnimatePresence } from "framer-motion";
+import LineChart from "@/components/charts/line";
+import PieChart from "@/components/charts/pie";
 
 const categories = [
   "Housing",
@@ -16,6 +20,19 @@ const categories = [
   "Travel",
   "Other",
 ];
+
+const categoryConfig = {
+  Housing: { icon: "fa-home", color: "#3b82f6", gradient: "from-blue-500 to-blue-600" },
+  Transportation: { icon: "fa-car", color: "#10b981", gradient: "from-green-500 to-green-600" },
+  Food: { icon: "fa-utensils", color: "#f59e0b", gradient: "from-orange-500 to-orange-600" },
+  Utilities: { icon: "fa-bolt", color: "#eab308", gradient: "from-yellow-500 to-yellow-600" },
+  Healthcare: { icon: "fa-heartbeat", color: "#ef4444", gradient: "from-red-500 to-red-600" },
+  Entertainment: { icon: "fa-film", color: "#8b5cf6", gradient: "from-purple-500 to-purple-600" },
+  Shopping: { icon: "fa-shopping-bag", color: "#ec4899", gradient: "from-pink-500 to-pink-600" },
+  Education: { icon: "fa-graduation-cap", color: "#06b6d4", gradient: "from-cyan-500 to-cyan-600" },
+  Travel: { icon: "fa-plane", color: "#6366f1", gradient: "from-indigo-500 to-indigo-600" },
+  Other: { icon: "fa-ellipsis-h", color: "#6b7280", gradient: "from-gray-500 to-gray-600" },
+};
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -32,6 +49,9 @@ function ExpenseManager() {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [timeRange, setTimeRange] = useState("30");
   const { data: user } = useUser();
 
   const fetchExpenses = useCallback(async () => {
@@ -135,6 +155,51 @@ function ExpenseManager() {
     setShowModal(true);
   }, []);
 
+  // Calculate metrics
+  const totalExpenses = useMemo(() => {
+    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  }, [expenses]);
+
+  const expensesByCategory = useMemo(() => {
+    return expenses.reduce((acc, expense) => {
+      const category = expense.category || 'Other';
+      if (!acc[category]) acc[category] = { count: 0, amount: 0 };
+      acc[category].count++;
+      acc[category].amount += expense.amount;
+      return acc;
+    }, {} as Record<string, { count: number; amount: number }>);
+  }, [expenses]);
+
+  const filteredExpenses = useMemo(() => {
+    if (filterCategory === "all") return expenses;
+    return expenses.filter(expense => expense.category === filterCategory);
+  }, [expenses, filterCategory]);
+
+  const monthlyExpensesTrend = useMemo(() => {
+    const monthsCount = timeRange === "365" ? 12 : timeRange === "90" ? 3 : 1;
+    const months = Array.from({ length: monthsCount }, (_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      return date.toISOString().slice(0, 7);
+    }).reverse();
+
+    return months.map(month => {
+      const monthExpenses = expenses.filter(exp => 
+        exp.date.startsWith(month)
+      );
+      const total = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+      return {
+        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' }),
+        amount: total / 100
+      };
+    });
+  }, [expenses, timeRange]);
+
+  const averageMonthlyExpense = useMemo(() => {
+    const total = monthlyExpensesTrend.reduce((sum, month) => sum + month.amount, 0);
+    return total / (monthlyExpensesTrend.length || 1);
+  }, [monthlyExpensesTrend]);
+
   interface ExpenseModalProps {
     onClose: () => void;
     onSubmit: (expense: Expense) => void;
@@ -180,22 +245,22 @@ function ExpenseManager() {
     };
 
     return (
-      <div className="bg-[#2a2a2a] rounded-xl p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-white/80">
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
             {initialData ? "Edit Expense" : "Add New Expense"}
           </h3>
           <button
             onClick={onClose}
-            className="text-white/60 hover:text-white/80 transition-colors"
+            className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
           >
-            <i className="fas fa-times"></i>
+            <i className="fas fa-times text-xl"></i>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Category
             </label>
             <select
@@ -203,12 +268,12 @@ function ExpenseManager() {
               onChange={(e) =>
                 setFormData({ ...formData, category: e.target.value })
               }
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
+              className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 focus:bg-white/10 transition-all duration-200"
               required
             >
-              <option value="">Select Category</option>
+              <option value="" className="bg-gray-800">Select Category</option>
               {categories.map((category) => (
-                <option key={category} value={category}>
+                <option key={category} value={category} className="bg-gray-800">
                   {category}
                 </option>
               ))}
@@ -216,23 +281,27 @@ function ExpenseManager() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Amount
             </label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) =>
-                setFormData({ ...formData, amount: e.target.value })
-              }
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
-              required
-            />
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
+                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-red-500/50 focus:bg-white/10 transition-all duration-200"
+                placeholder="0.00"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Date
             </label>
             <input
@@ -241,13 +310,13 @@ function ExpenseManager() {
               onChange={(e) =>
                 setFormData({ ...formData, date: e.target.value })
               }
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
+              className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 focus:bg-white/10 transition-all duration-200"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Description
             </label>
             <input
@@ -256,13 +325,14 @@ function ExpenseManager() {
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
+              className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-red-500/50 focus:bg-white/10 transition-all duration-200"
+              placeholder="What was this expense for?"
               required
             />
           </div>
 
           <div>
-            <label className="inline-flex items-center text-white/60 space-x-2">
+            <label className="inline-flex items-center text-gray-300 space-x-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.recurrence === "recurring"}
@@ -273,15 +343,20 @@ function ExpenseManager() {
                     frequency: e.target.checked ? formData.frequency ?? "Monthly" : undefined,
                   })
                 }
-                className="form-checkbox h-4 w-4 text-green-500"
+                className="form-checkbox h-5 w-5 text-red-500 rounded border-gray-600 bg-white/10 focus:ring-red-500"
               />
               <span>Recurring Expense</span>
             </label>
           </div>
 
           {formData.recurrence === "recurring" && (
-            <div className="mt-2">
-              <label className="block text-sm font-medium text-white/60 mb-1">
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Recurrence Frequency
               </label>
               <select
@@ -289,113 +364,373 @@ function ExpenseManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, frequency: e.target.value as ExpenseFormData["frequency"] })
                 }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
+                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 focus:bg-white/10 transition-all duration-200"
               >
                 {["Daily", "Weekly", "Biweekly", "Monthly", "Quarterly", "Yearly"].map((f) => (
-                  <option key={f} value={f}>
+                  <option key={f} value={f} className="bg-gray-800">
                     {f}
                   </option>
                 ))}
               </select>
-            </div>
+            </motion.div>
           )}
 
-          <button
-            type="submit"
-            className="w-full p-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
-          >
-            {initialData ? "Update Expense" : "Add Expense"}
-          </button>
+          <div className="flex justify-end space-x-4 pt-6 border-t border-white/10">
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="ghost"
+              className="px-6 py-3 hover:bg-white/10"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg"
+            >
+              {initialData ? "Update Expense" : "Add Expense"}
+            </Button>
+          </div>
         </form>
       </div>
     );
   };
 
+  const ExpenseCard = ({
+    expense,
+    onEdit,
+    onDelete,
+  }: {
+    expense: Expense;
+    onEdit: (expense: Expense) => void;
+    onDelete: (id: string) => void;
+  }) => {
+    const config = categoryConfig[expense.category as keyof typeof categoryConfig] || categoryConfig.Other;
 
-  return (
-    <div>
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={handleOpenModal}
-            className="px-4 py-2 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
-          >
-            <i className="fas fa-plus mr-2"></i>
-            Add Expense
-          </button>
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        whileHover={{ y: -4 }}
+        className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-200 shadow-lg hover:shadow-xl"
+      >
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center">
+            <div className={`p-3 bg-gradient-to-r ${config.gradient} rounded-lg mr-4 shadow-lg`}>
+              <i className={`fas ${config.icon} text-white text-xl`}></i>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">{expense.description}</h3>
+              <p className="text-sm text-gray-400">{expense.category}</p>
+            </div>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => onEdit(expense)}
+              className="p-2 text-gray-400 hover:text-blue-400 transition-colors hover:bg-white/10 rounded-lg"
+            >
+              <i className="fas fa-edit"></i>
+            </button>
+            <button
+              onClick={() => expense.id && onDelete(expense.id)}
+              className="p-2 text-gray-400 hover:text-red-400 transition-colors hover:bg-white/10 rounded-lg"
+            >
+              <i className="fas fa-trash"></i>
+            </button>
+          </div>
         </div>
 
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 text-sm">Amount</span>
+            <span className="text-xl font-bold text-red-400">
+              -{formatCurrency(expense.amount)}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 text-sm">Date</span>
+            <span className="text-white">
+              {new Date(expense.date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </span>
+          </div>
+
+          {expense.recurrence === "recurring" && (
+            <div className="flex items-center text-sm text-purple-400 pt-2 border-t border-white/10">
+              <i className="fas fa-sync-alt mr-2"></i>
+              Recurring {expense.frequency?.toLowerCase()}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="h-12 w-12 border-4 border-red-500 border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
+      </div>
+
+      <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                Expense Manager
+              </h1>
+              <p className="text-gray-400 mt-2">Track and manage your spending</p>
+            </div>
+            <Button
+              onClick={handleOpenModal}
+              className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg px-6 py-3"
+            >
+              <i className="fas fa-plus mr-2"></i>
+              Add Expense
+            </Button>
+          </div>
+        </motion.div>
+
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-red-900/20 backdrop-blur-sm border border-red-800 rounded-xl p-4 mb-6"
+          >
             <p className="text-red-400 flex items-center">
               <i className="fas fa-exclamation-circle mr-2"></i>
               {error}
             </p>
-          </div>
+          </motion.div>
         )}
 
-        <div className="grid gap-6">
-          {loading ? (
-            <div className="flex justify-center p-12">
-              <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full shadow-[0_0_8px_#00ff88]"></div>
+        {/* Summary Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+        >
+          <div className="bg-gradient-to-br from-red-500/20 to-red-600/20 backdrop-blur-sm rounded-xl p-6 border border-red-500/30">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-gray-400 text-sm">Total Expenses</p>
+                <p className="text-3xl font-bold text-red-400 mt-1">
+                  {formatCurrency(totalExpenses)}
+                </p>
+              </div>
+              <div className="p-3 bg-red-500/20 rounded-lg">
+                <i className="fas fa-receipt text-red-400 text-xl"></i>
+              </div>
             </div>
-          ) : expenses.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-white/40 text-6xl mb-4">
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/30">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-gray-400 text-sm">Monthly Average</p>
+                <p className="text-3xl font-bold text-orange-400 mt-1">
+                  ${averageMonthlyExpense.toFixed(2)}
+                </p>
+              </div>
+              <div className="p-3 bg-orange-500/20 rounded-lg">
+                <i className="fas fa-calendar text-orange-400 text-xl"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-gray-400 text-sm">Total Transactions</p>
+                <p className="text-3xl font-bold text-purple-400 mt-1">
+                  {expenses.length}
+                </p>
+              </div>
+              <div className="p-3 bg-purple-500/20 rounded-lg">
+                <i className="fas fa-exchange-alt text-purple-400 text-xl"></i>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Charts Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
+        >
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-white">Spending Trend</h3>
+              <div className="flex gap-2">
+                {["30", "90", "365"].map((days) => (
+                  <button
+                    key={days}
+                    onClick={() => setTimeRange(days)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      timeRange === days
+                        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    }`}
+                  >
+                    {days === "365" ? "Year" : days === "90" ? "Quarter" : "Month"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <LineChart
+              data={monthlyExpensesTrend}
+              xKey="month"
+              lines={[{ dataKey: "amount", color: "#ef4444" }]}
+            />
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+            <h3 className="text-xl font-semibold text-white mb-6">Spending by Category</h3>
+            <PieChart
+              data={Object.entries(expensesByCategory).map(([category, data]) => ({
+                name: category,
+                value: data.amount / 100,
+                color: categoryConfig[category as keyof typeof categoryConfig]?.color || "#6b7280",
+              }))}
+            />
+          </div>
+        </motion.div>
+
+        {/* Filter and View Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"
+        >
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilterCategory("all")}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                filterCategory === "all"
+                  ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+              }`}
+            >
+              All Categories
+            </button>
+            {Object.keys(expensesByCategory).map((category) => (
+              <button
+                key={category}
+                onClick={() => setFilterCategory(category)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  filterCategory === category
+                    ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                }`}
+              >
+                {category} ({expensesByCategory[category].count})
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                viewMode === "grid"
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+              }`}
+            >
+              <i className="fas fa-th"></i>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                viewMode === "list"
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+              }`}
+            >
+              <i className="fas fa-list"></i>
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Expenses Grid/List */}
+        <AnimatePresence mode="wait">
+          {filteredExpenses.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-16"
+            >
+              <div className="text-gray-500 text-6xl mb-4">
                 <i className="fas fa-receipt"></i>
               </div>
-              <h3 className="text-xl font-medium text-white/80 mb-2">
-                No Expenses Yet
+              <h3 className="text-xl font-medium text-gray-400 mb-2">
+                {filterCategory === "all" ? "No Expenses Yet" : `No ${filterCategory} expenses`}
               </h3>
-              <p className="text-white/60">
-                Start tracking your expenses by adding your first expense.
+              <p className="text-gray-500 mb-6">
+                {filterCategory === "all" 
+                  ? "Start tracking your expenses by adding your first expense."
+                  : "You don't have any expenses in this category yet."}
               </p>
-            </div>
-          ) : (
-            expenses.map((expense) => (
-              <div
-                key={expense.id}
-                className="bg-[#2a2a2a] rounded-xl p-6 border border-white/10 hover:border-green-500/50 transition-all duration-200"
+              <Button
+                onClick={handleOpenModal}
+                className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium"
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-semibold text-white/80">
-                      {expense.description}
-                    </h3>
-                    <p className="text-white/60">
-                      <i className="fas fa-tag mr-2"></i>
-                      {expense.category}
-                    </p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(expense)}
-                      className="p-2 text-white/60 hover:text-white/80 transition-colors"
-                    >
-                      <i className="fas fa-edit"></i>
-                    </button>
-                    <button
-                      onClick={() => expense.id && handleDelete(expense.id)}
-                      className="p-2 text-white/60 hover:text-red-400 transition-colors"
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-between items-center">
-                  <span className="text-red-400 font-semibold text-xl">
-                    {formatCurrency(expense.amount)}
-                  </span>
-                  <span className="text-white/60">
-                    {new Date(expense.date).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            ))
+                <i className="fas fa-plus mr-2"></i>
+                Add Your First Expense
+              </Button>
+            </motion.div>
+          ) : (
+            <motion.div
+              layout
+              className={viewMode === "grid" 
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                : "space-y-4"
+              }
+            >
+              {filteredExpenses.map((expense) => (
+                <ExpenseCard
+                  key={expense.id}
+                  expense={expense}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
 
+      {/* Modal */}
       {(showModal || editingExpense) && (
         <Modal isOpen={true} onClose={handleCloseModal}>
           <ExpenseModal
