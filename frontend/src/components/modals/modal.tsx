@@ -84,12 +84,21 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <BaseModal isOpen={isOpen} onClose={onCancel} title={title} dismissible={dismissible}>
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 border border-white/10 shadow-2xl">
-        <p className="mb-6 text-sm text-gray-400">{description}</p>
-        <div className="flex justify-end gap-2">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
+          <button
+            onClick={onCancel}
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+        <div className="text-gray-700 dark:text-gray-300">{description}</div>
+        <div className="flex justify-end gap-2 mt-6">
           <button 
             onClick={onCancel} 
-            className="px-4 py-2 text-sm rounded-lg border border-white/10 text-gray-300 hover:bg-white/10 transition-all duration-200"
+            className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
           >
             Cancel
           </button>
@@ -151,7 +160,7 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
         <div onClick={handleBackdropClick} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
           <motion.div
             ref={modalRef}
-            className="relative h-full w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 overflow-auto"
+            className="relative h-full w-full bg-white dark:bg-gray-900 p-6 overflow-auto"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -160,14 +169,16 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
               transformOrigin: `${originStyle.originX * 100}% ${originStyle.originY * 100}%`
             }}
           >
-            <button
-              onClick={onClose}
-              className="absolute right-6 top-6 text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
-            >
-              <i className="fas fa-times text-xl"></i>
-            </button>
-            {title && <h2 className="mb-6 text-xl font-semibold text-white">{title}</h2>}
-            {children}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            <div className="text-gray-700 dark:text-gray-300">{children}</div>
           </motion.div>
         </div>
       )}
@@ -196,7 +207,16 @@ export const FormModal: React.FC<FormModalProps> = ({
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} title={title} dismissible={dismissible}>
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 border border-white/10 shadow-2xl">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -204,12 +224,12 @@ export const FormModal: React.FC<FormModalProps> = ({
           }}
           className="space-y-4"
         >
-          {children}
+          <div className="text-gray-700 dark:text-gray-300">{children}</div>
           <div className="flex justify-end gap-2 pt-4">
             <button 
               type="button" 
               onClick={onClose} 
-              className="px-4 py-2 text-sm rounded-lg border border-white/10 text-gray-300 hover:bg-white/10 transition-all duration-200"
+              className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
             >
               Cancel
             </button>
