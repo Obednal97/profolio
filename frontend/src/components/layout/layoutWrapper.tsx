@@ -74,8 +74,8 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     <ThemeContext.Provider value={themeValue}>
       <div className={`min-h-screen transition-colors duration-300 ${
         theme === 'dark' 
-          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white' 
-          : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
+          ? 'bg-gray-900 text-white' 
+          : 'bg-white text-gray-900'
       }`}>
         {!hideLayout && <Header user={headerUser} currentPath={pathname} />}
         <main className="relative z-10">

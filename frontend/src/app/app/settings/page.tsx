@@ -395,13 +395,7 @@ function SettingsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {/* Animated background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
-      </div>
-
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
