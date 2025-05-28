@@ -2,8 +2,8 @@ import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sign
 import { getFirebase } from '../lib/firebase';
 import { useEffect, useState } from 'react';
 
-// Development bypass flag - set to true to bypass authentication
-const BYPASS_AUTH = true;
+// Development bypass flag - set to false for proper authentication
+const BYPASS_AUTH = false;
 
 interface SignUpParams {
   name: string;
@@ -16,16 +16,16 @@ interface SignUpParams {
 interface User {
   id: string;
   email: string | null;
-  token: string;
+  token?: string;
   name?: string;
 }
 
-// Mock user for development
-const MOCK_USER: User = {
-  id: 'dev-user-123',
-  email: 'dev@profolio.com',
-  token: 'dev-token-123',
-  name: 'Dev User'
+// Demo user for development
+const DEMO_USER: User = {
+  id: 'demo-user-id',
+  email: 'demo@profolio.com',
+  token: 'demo-token-secure-123',
+  name: 'Demo User'
 };
 
 export function useAuth() {
@@ -54,6 +54,35 @@ export function useAuth() {
       });
       await new Promise((r) => setTimeout(r, 150));
     },
+    
+    // New demo mode function
+    signInWithDemo: async ({ callbackUrl = '/app/dashboard', redirect = true } = {}) => {
+      console.log('Demo mode: Creating demo user session');
+      
+      // Store demo user token in localStorage
+      localStorage.setItem('auth-token', DEMO_USER.token!);
+      localStorage.setItem('demo-mode', 'true');
+      
+      // Store demo user data
+      localStorage.setItem('user-data', JSON.stringify(DEMO_USER));
+      
+      // Populate demo data
+      try {
+        const { populateDemoData } = await import('@/lib/demoData');
+        await populateDemoData(DEMO_USER.id);
+        console.log('Demo data populated successfully');
+      } catch (error) {
+        console.error('Failed to populate demo data:', error);
+        // Don't fail the demo login if data population fails
+      }
+      
+      if (redirect) {
+        window.location.href = callbackUrl;
+      }
+      
+      return { success: true, user: DEMO_USER };
+    },
+    
     signOut: async ({ callbackUrl = "/", redirect = true } = {}) => {
       if (BYPASS_AUTH) {
         console.log('Dev mode: Mock signout');
@@ -62,6 +91,11 @@ export function useAuth() {
         }
         return;
       }
+      
+      // Clear demo mode data
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('demo-mode');
+      localStorage.removeItem('user-data');
       
       await fetch("/api/signout", { method: "POST" });
       if (redirect) {
@@ -74,6 +108,11 @@ export function useAuth() {
         return;
       }
       
+      // Clear demo mode data
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('demo-mode');
+      localStorage.removeItem('user-data');
+      
       const auth = (await getFirebase()).auth!;
       await firebaseSignOut(auth);
     },
@@ -85,9 +124,29 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for demo mode first
+    const isDemoMode = localStorage.getItem('demo-mode') === 'true';
+    const demoToken = localStorage.getItem('auth-token');
+    const userData = localStorage.getItem('user-data');
+    
+    if (isDemoMode && demoToken && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        setLoading(false);
+        return;
+      } catch (error) {
+        console.error('Error parsing demo user data:', error);
+        // Clear corrupted demo data
+        localStorage.removeItem('demo-mode');
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('user-data');
+      }
+    }
+
     if (BYPASS_AUTH) {
       // Return mock user for development
-      setUser(MOCK_USER);
+      setUser(DEMO_USER);
       setLoading(false);
       return;
     }
@@ -103,6 +162,7 @@ export function useUser() {
             id: firebaseUser.uid,
             email: firebaseUser.email,
             token,
+            name: firebaseUser.displayName || undefined,
           };
           setUser(userObj);
         } else {

@@ -58,7 +58,7 @@ export default function AssetManager() {
       const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "READ", userId: "demo-user-id" }),
+        body: JSON.stringify({ method: "READ", userId: user?.id || "demo-user-id" }),
       });
       
       const data = await response.json();
@@ -71,7 +71,7 @@ export default function AssetManager() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchAssets();
@@ -87,7 +87,7 @@ export default function AssetManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method: "GET_HISTORY",
-          userId: "demo-user-id",
+          userId: user?.id || "demo-user-id",
           days: timeframe === "max" ? null : parseInt(timeframe),
         }),
       });
@@ -102,7 +102,7 @@ export default function AssetManager() {
     } finally {
       setChartLoading(false);
     }
-  }, [timeframe]);
+  }, [timeframe, user?.id]);
 
   useEffect(() => {
     fetchChartData();
