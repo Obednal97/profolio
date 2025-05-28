@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth'; 
 import { useUser } from '@/lib/user';
 import type { User } from '@/types/global';
-import { Input } from '@/components/ui/input/input';
-import { Button } from '@/components/ui/button/button';
 import { AuthLayout } from "@/components/layout/authLayout";
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 function SignInPage() {
   const router = useRouter();
@@ -50,79 +50,124 @@ function SignInPage() {
 
   return (
     <AuthLayout>
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
-              Welcome to Profolio
-            </h1>
-            <p className="text-white/60 mt-2">Sign in to access your dashboard</p>
+      <div className="w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            Welcome back
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Sign in to your account to continue
+          </p>
+        </div>
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6"
+          >
+            <p className="text-red-600 dark:text-red-400 flex items-center text-sm">
+              <i className="fas fa-exclamation-circle mr-2"></i>
+              {error}
+            </p>
+          </motion.div>
+        )}
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="john@example.com"
+                required
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Password
+                </label>
+                <Link
+                  href="/auth/forgotPassword"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !isFormValid}
+              className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  Signing in...
+                </div>
+              ) : (
+                <>
+                  <i className="fas fa-sign-in-alt mr-2"></i>
+                  Sign In
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/auth/signUp"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg p-6 rounded-xl shadow-lg border border-white/20">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-                <p className="text-red-400 flex items-center gap-2">
-                  ⚠️ {error}
-                </p>
-              </div>
-            )}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                Or continue with
+              </span>
+            </div>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">Email Address</label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">Password</label>
-                <Input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
-                />
-              </div>
-
-              <div className="text-sm mt-1">
-                <p className="text-white/60">
-                  Forgot your password?{' '}
-                  <a href="/auth/forgotPassword" className="text-green-400 hover:text-green-300 font-medium">
-                    Reset it here
-                  </a>.
-                </p>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading || !isFormValid}
-                className="w-full bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl py-2 disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center space-x-1">
-                    <div className="w-2 h-2 rounded-full animate-pulse bg-black"></div>
-                    <div className="w-2 h-2 rounded-full animate-pulse bg-black delay-100"></div>
-                    <div className="w-2 h-2 rounded-full animate-pulse bg-black delay-200"></div>
-                  </div>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-            </form>
-
-            <p className="text-center mt-6 text-white/60">
-              Don’t have an account?{' '}
-              <a href="/auth/signUp" className="text-green-400 hover:text-green-300 transition-colors">
-                Sign up
-              </a>
-            </p>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <i className="fab fa-google mr-2"></i>
+              Google
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <i className="fab fa-github mr-2"></i>
+              GitHub
+            </button>
           </div>
         </div>
       </div>
