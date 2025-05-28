@@ -46,17 +46,18 @@ export default function AssetManager() {
     if (!user) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/assets", {
+      const { apiCall } = await import('@/lib/mockApi');
+      
+      const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ method: "READ", userId: user.id }),
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch assets");
-      }
+      
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setAssets(data.assets || []);
+      setError(null); // Clear any previous errors
     } catch (err) {
       console.error("Asset fetch error:", err);
       setError("Failed to load assets");
@@ -75,7 +76,9 @@ export default function AssetManager() {
     if (!user) return;
     setChartLoading(true);
     try {
-      const response = await fetch("/api/assets", {
+      const { apiCall } = await import('@/lib/mockApi');
+      
+      const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -84,10 +87,6 @@ export default function AssetManager() {
           days: timeframe === "max" ? null : parseInt(timeframe),
         }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch asset history");
-      }
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);

@@ -30,20 +30,30 @@ function DashboardPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      const { apiCall } = await import('@/lib/mockApi');
+      
       const [assetsRes, expensesRes] = await Promise.all([
-        fetch(`/api/assets?userId=${user?.id}`, { cache: 'no-store' }),
-        fetch(`/api/expenses?userId=${user?.id}`, { cache: 'no-store' }),
+        apiCall('/api/assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'READ', userId: user?.id }),
+        }),
+        apiCall('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'READ', userId: user?.id }),
+        }),
       ]);
 
       const assetsData = await assetsRes.json();
       const expensesData = await expensesRes.json();
 
-      if (!Array.isArray(assetsData) || !Array.isArray(expensesData)) {
-        throw new Error('Invalid data received from API');
-      }
+      if (assetsData.error) throw new Error(assetsData.error);
+      if (expensesData.error) throw new Error(expensesData.error);
 
-      setAssets(assetsData);
-      setExpenses(expensesData);
+      setAssets(assetsData.assets || []);
+      setExpenses(expensesData.expenses || []);
+      setError(null); // Clear any previous errors
     } catch (err: unknown) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data');
