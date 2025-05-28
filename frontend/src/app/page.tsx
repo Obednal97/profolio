@@ -160,7 +160,7 @@ export default function LandingPage() {
 
         {/* Scroll indicator - positioned within viewport */}
         <motion.div 
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30"
+          className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-30"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1, duration: 0.8 }}

@@ -179,10 +179,10 @@ export default function PricingPage() {
                 </p>
                 <div className="mb-6">
                   <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                    {plan.name === 'Cloud' ? '£95.90' : plan.price}
+                    {plan.price}
                   </span>
                   <span className="text-gray-600 dark:text-gray-400 ml-2">
-                    {plan.name === 'Cloud' ? 'per user/year' : plan.period}
+                    {plan.period}
                   </span>
                 </div>
                 <ul className="space-y-3 mb-8">
@@ -204,11 +204,11 @@ export default function PricingPage() {
                   size="lg"
                   className={`w-full ${
                     plan.popular
-                      ? ''
-                      : 'bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
+                      : 'bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white'
                   }`}
                 >
-                  <Link href={plan.ctaLink}>
+                  <Link href={plan.ctaLink} className="flex items-center justify-center">
                     {plan.cta}
                     <i className="fas fa-arrow-right ml-2" />
                   </Link>
