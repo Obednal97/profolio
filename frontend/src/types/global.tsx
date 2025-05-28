@@ -82,6 +82,16 @@ export type User = {
   name?: string;
   role?: "user" | "admin" | "super_admin";
   token?: string;
+  preferences?: {
+    currency?: string;
+    theme?: 'light' | 'dark' | 'system';
+    language?: string;
+    notifications?: {
+      email?: boolean;
+      push?: boolean;
+      marketing?: boolean;
+    };
+  };
 };
 
 export type Group = {

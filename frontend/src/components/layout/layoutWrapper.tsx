@@ -43,22 +43,53 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const { data: user } = useUser();
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [currency, setCurrencyState] = useState<string>('USD');
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
-  // Load theme and currency from localStorage on mount
+  // Load user preferences from API when user is available
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const savedCurrency = localStorage.getItem('currency') || 'USD';
-    
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      // Check system preference
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(systemPrefersDark ? 'dark' : 'light');
-    }
-    
-    setCurrencyState(savedCurrency);
-  }, []);
+    const loadUserPreferences = async () => {
+      if (user?.id && !preferencesLoaded) {
+        try {
+          const { apiCall } = await import('@/lib/mockApi');
+          const response = await apiCall('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ method: 'GET_PROFILE', userId: user.id }),
+          });
+          
+          const data = await response.json();
+          if (data.user?.preferences) {
+            const prefs = data.user.preferences;
+            if (prefs.currency) setCurrencyState(prefs.currency);
+            if (prefs.theme) setTheme(prefs.theme === 'system' ? 'dark' : prefs.theme);
+            setPreferencesLoaded(true);
+            return; // Don't load from localStorage if we have user preferences
+          }
+        } catch (error) {
+          console.error('Failed to load user preferences:', error);
+        }
+      }
+      
+      // Fallback to localStorage if no user or failed to load user preferences
+      if (!preferencesLoaded) {
+        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+        const savedCurrency = localStorage.getItem('currency') || 'USD';
+        
+        if (savedTheme) {
+          setTheme(savedTheme);
+        } else {
+          // Check system preference
+          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          setTheme(systemPrefersDark ? 'dark' : 'light');
+        }
+        
+        setCurrencyState(savedCurrency);
+        setPreferencesLoaded(true);
+      }
+    };
+
+    loadUserPreferences();
+  }, [user?.id, preferencesLoaded]);
 
   // Apply theme to document
   useEffect(() => {
@@ -76,8 +107,29 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const setCurrency = (newCurrency: string) => {
+  const setCurrency = async (newCurrency: string) => {
     setCurrencyState(newCurrency);
+    
+    // Save to localStorage as backup
+    localStorage.setItem('currency', newCurrency);
+    
+    // Save to user preferences if user is logged in
+    if (user?.id) {
+      try {
+        const { apiCall } = await import('@/lib/mockApi');
+        await apiCall('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            method: 'UPDATE_PREFERENCES', 
+            userId: user.id,
+            preferences: { currency: newCurrency }
+          }),
+        });
+      } catch (error) {
+        console.error('Failed to save currency preference:', error);
+      }
+    }
   };
 
   const formatCurrency = (amount: number) => {

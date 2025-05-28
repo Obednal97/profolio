@@ -112,9 +112,9 @@ function SettingsPage() {
     
     try {
       // Update global currency setting
-      setCurrency(preferences.currency);
+      await setCurrency(preferences.currency);
       
-      // Simulate API call
+      // Simulate API call for other preferences
       await new Promise(resolve => setTimeout(resolve, 1000));
       setSuccess("Preferences updated successfully");
     } catch (err) {
