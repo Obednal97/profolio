@@ -199,20 +199,17 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  asChild
-                  size="lg"
-                  className={`w-full ${
+                <Link
+                  href={plan.ctaLink}
+                  className={`w-full inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-all ${
                     plan.popular
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
                       : 'bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white'
                   }`}
                 >
-                  <Link href={plan.ctaLink} className="flex items-center justify-center">
-                    {plan.cta}
-                    <i className="fas fa-arrow-right ml-2" />
-                  </Link>
-                </Button>
+                  {plan.cta}
+                  <i className="fas fa-arrow-right ml-2" />
+                </Link>
               </div>
             </motion.div>
           ))}
