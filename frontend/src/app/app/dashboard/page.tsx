@@ -117,7 +117,7 @@ function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 bg-gradient-to-br from-gray-50 via-white to-gray-100 light:from-gray-50 light:via-white light:to-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -128,14 +128,7 @@ function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 light:from-gray-50 light:via-white light:to-gray-100 text-white dark:text-white light:text-gray-900 p-4 md:p-6">
-      {/* Animated background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
-      </div>
-
+    <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 md:p-6">
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
         <motion.div 
@@ -147,7 +140,7 @@ function DashboardPage() {
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Financial Dashboard
             </h1>
-            <p className="text-gray-400 dark:text-gray-400 light:text-gray-600">Welcome back, {user?.name || 'User'}</p>
+            <p className="text-gray-600 dark:text-gray-400">Welcome back, {user?.name || 'User'}</p>
           </div>
         </motion.div>
 
@@ -175,7 +168,7 @@ function DashboardPage() {
               className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                 timeRange === range
                   ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-white/10 dark:bg-white/10 light:bg-gray-200 hover:bg-white/20 dark:hover:bg-white/20 light:hover:bg-gray-300 text-gray-300 dark:text-gray-300 light:text-gray-700'
+                  : 'bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
               }`}
             >
               {range.charAt(0).toUpperCase() + range.slice(1)}
@@ -190,22 +183,22 @@ function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-sm rounded-xl p-6 border border-green-500/30 hover:border-green-400/50 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400 transition-all duration-200 hover:shadow-lg">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-gray-400 dark:text-gray-400 light:text-gray-600 text-sm">Net Worth</p>
-                  <p className="text-3xl font-bold text-green-400 mt-1">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Net Worth</p>
+                  <p className="text-3xl font-bold text-green-500 mt-1">
                     £{(netWorth / 100).toLocaleString()}
                   </p>
                 </div>
-                <div className="p-3 bg-green-500/20 rounded-lg">
-                  <i className="fas fa-chart-line text-green-400 text-xl"></i>
+                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <i className="fas fa-chart-line text-green-500 text-xl"></i>
                 </div>
               </div>
               <div className="flex items-center text-sm">
-                <i className="fas fa-arrow-up text-green-400 mr-1"></i>
-                <span className="text-green-400">12.5%</span>
-                <span className="text-gray-400 dark:text-gray-400 light:text-gray-600 ml-1">vs last month</span>
+                <i className="fas fa-arrow-up text-green-500 mr-1"></i>
+                <span className="text-green-500">12.5%</span>
+                <span className="text-gray-600 dark:text-gray-400 ml-1">vs last month</span>
               </div>
             </div>
           </motion.div>
@@ -215,20 +208,20 @@ function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30 hover:border-blue-400/50 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400 transition-all duration-200 hover:shadow-lg">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-gray-400 dark:text-gray-400 light:text-gray-600 text-sm">Total Assets</p>
-                  <p className="text-3xl font-bold text-blue-400 mt-1">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Total Assets</p>
+                  <p className="text-3xl font-bold text-blue-500 mt-1">
                     {assets.length}
                   </p>
                 </div>
-                <div className="p-3 bg-blue-500/20 rounded-lg">
-                  <i className="fas fa-wallet text-blue-400 text-xl"></i>
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <i className="fas fa-wallet text-blue-500 text-xl"></i>
                 </div>
               </div>
               <div className="flex items-center text-sm">
-                <span className="text-gray-400 dark:text-gray-400 light:text-gray-600">Across {Object.keys(assetsByType).length} categories</span>
+                <span className="text-gray-600 dark:text-gray-400">Across {Object.keys(assetsByType).length} categories</span>
               </div>
             </div>
           </motion.div>
@@ -238,22 +231,22 @@ function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="bg-gradient-to-br from-red-500/20 to-red-600/20 backdrop-blur-sm rounded-xl p-6 border border-red-500/30 hover:border-red-400/50 transition-all duration-200 hover:shadow-lg hover:shadow-red-500/20">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-red-400 dark:hover:border-red-400 transition-all duration-200 hover:shadow-lg">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-gray-400 dark:text-gray-400 light:text-gray-600 text-sm">Monthly Expenses</p>
-                  <p className="text-3xl font-bold text-red-400 mt-1">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Monthly Expenses</p>
+                  <p className="text-3xl font-bold text-red-500 mt-1">
                     £{(recentExpensesTotal / 100).toLocaleString()}
                   </p>
                 </div>
-                <div className="p-3 bg-red-500/20 rounded-lg">
-                  <i className="fas fa-receipt text-red-400 text-xl"></i>
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                  <i className="fas fa-receipt text-red-500 text-xl"></i>
                 </div>
               </div>
               <div className="flex items-center text-sm">
-                <i className="fas fa-arrow-down text-green-400 mr-1"></i>
-                <span className="text-green-400">8.2%</span>
-                <span className="text-gray-400 dark:text-gray-400 light:text-gray-600 ml-1">vs last month</span>
+                <i className="fas fa-arrow-down text-green-500 mr-1"></i>
+                <span className="text-green-500">8.2%</span>
+                <span className="text-gray-600 dark:text-gray-400 ml-1">vs last month</span>
               </div>
             </div>
           </motion.div>
@@ -263,20 +256,20 @@ function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30 hover:border-purple-400/50 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/20">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-400 transition-all duration-200 hover:shadow-lg">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-gray-400 dark:text-gray-400 light:text-gray-600 text-sm">Savings Rate</p>
-                  <p className="text-3xl font-bold text-purple-400 mt-1">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Savings Rate</p>
+                  <p className="text-3xl font-bold text-purple-500 mt-1">
                     32%
                   </p>
                 </div>
-                <div className="p-3 bg-purple-500/20 rounded-lg">
-                  <i className="fas fa-piggy-bank text-purple-400 text-xl"></i>
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                  <i className="fas fa-piggy-bank text-purple-500 text-xl"></i>
                 </div>
               </div>
               <div className="flex items-center text-sm">
-                <span className="text-gray-400 dark:text-gray-400 light:text-gray-600">Of monthly income</span>
+                <span className="text-gray-600 dark:text-gray-400">Of monthly income</span>
               </div>
             </div>
           </motion.div>
@@ -289,9 +282,9 @@ function DashboardPage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <Tile className="h-full bg-white/5 dark:bg-white/5 light:bg-white/80 backdrop-blur-sm border border-white/10 dark:border-white/10 light:border-gray-200 hover:border-blue-500/30">
-              <h3 className="text-xl font-semibold mb-6 text-white dark:text-white light:text-gray-900 flex items-center">
-                <i className="fas fa-chart-pie mr-2 text-blue-400"></i>
+            <Tile className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400">
+              <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white flex items-center">
+                <i className="fas fa-chart-pie mr-2 text-blue-500"></i>
                 Asset Distribution
               </h3>
               <div className="h-64">
@@ -320,9 +313,9 @@ function DashboardPage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6 }}
           >
-            <Tile className="h-full bg-white/5 dark:bg-white/5 light:bg-white/80 backdrop-blur-sm border border-white/10 dark:border-white/10 light:border-gray-200 hover:border-purple-500/30">
-              <h3 className="text-xl font-semibold mb-6 text-white dark:text-white light:text-gray-900 flex items-center">
-                <i className="fas fa-chart-line mr-2 text-purple-400"></i>
+            <Tile className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-400">
+              <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white flex items-center">
+                <i className="fas fa-chart-line mr-2 text-purple-500"></i>
                 Expense Trend
               </h3>
               <div className="h-64">
@@ -343,9 +336,9 @@ function DashboardPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <Tile className="bg-white/5 dark:bg-white/5 light:bg-white/80 backdrop-blur-sm border border-white/10 dark:border-white/10 light:border-gray-200 hover:border-green-500/30">
-              <h3 className="text-xl font-semibold mb-4 text-white dark:text-white light:text-gray-900 flex items-center">
-                <i className="fas fa-history mr-2 text-green-400"></i>
+            <Tile className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400">
+              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                <i className="fas fa-history mr-2 text-green-500"></i>
                 Recent Transactions
               </h3>
               <div className="space-y-3">
@@ -355,26 +348,26 @@ function DashboardPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.8 + index * 0.1 }}
-                    className="flex justify-between items-center p-3 rounded-lg bg-white/5 dark:bg-white/5 light:bg-gray-100 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-gray-200 transition-all duration-200"
+                    className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200"
                   >
                     <div className="flex items-center">
-                      <div className="p-2 bg-red-500/20 rounded-lg mr-3">
+                      <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg mr-3">
                         <i className={`fas ${
                           expense.category === 'Food' ? 'fa-utensils' :
                           expense.category === 'Transportation' ? 'fa-car' :
                           expense.category === 'Shopping' ? 'fa-shopping-bag' :
                           expense.category === 'Entertainment' ? 'fa-film' :
                           'fa-receipt'
-                        } text-red-400`}></i>
+                        } text-red-500`}></i>
                       </div>
                       <div>
-                        <p className="font-medium text-white dark:text-white light:text-gray-900">{expense.description}</p>
-                        <p className="text-sm text-gray-400 dark:text-gray-400 light:text-gray-600">
+                        <p className="font-medium text-gray-900 dark:text-white">{expense.description}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           {new Date(expense.date).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
-                    <span className="text-red-400 font-semibold">
+                    <span className="text-red-500 font-semibold">
                       -£{(expense.amount / 100).toLocaleString()}
                     </span>
                   </motion.div>
@@ -388,9 +381,9 @@ function DashboardPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.8 }}
           >
-            <Tile className="bg-white/5 dark:bg-white/5 light:bg-white/80 backdrop-blur-sm border border-white/10 dark:border-white/10 light:border-gray-200 hover:border-orange-500/30">
-              <h3 className="text-xl font-semibold mb-4 text-white dark:text-white light:text-gray-900 flex items-center">
-                <i className="fas fa-fire mr-2 text-orange-400"></i>
+            <Tile className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-400">
+              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                <i className="fas fa-fire mr-2 text-orange-500"></i>
                 Top Spending Categories
               </h3>
               <div className="space-y-3">
@@ -400,15 +393,15 @@ function DashboardPage() {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.9 + index * 0.1 }}
-                    className="p-3 rounded-lg bg-white/5 dark:bg-white/5 light:bg-gray-100 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-gray-200 transition-all duration-200"
+                    className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200"
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-white dark:text-white light:text-gray-900">{category.category}</span>
-                      <span className="text-orange-400 font-semibold">
+                      <span className="font-medium text-gray-900 dark:text-white">{category.category}</span>
+                      <span className="text-orange-500 font-semibold">
                         £{category.amount.toLocaleString()}
                       </span>
                     </div>
-                    <div className="w-full bg-white/10 dark:bg-white/10 light:bg-gray-300 rounded-full h-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${category.percentage}%` }}
@@ -416,7 +409,7 @@ function DashboardPage() {
                         className="bg-gradient-to-r from-orange-400 to-red-400 h-2 rounded-full"
                       />
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-400 light:text-gray-600 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       {category.percentage}% of total expenses
                     </p>
                   </motion.div>
