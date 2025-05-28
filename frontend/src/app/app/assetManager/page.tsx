@@ -116,7 +116,9 @@ export default function AssetManager() {
       if (!user) return;
       if (!confirm("Are you sure you want to delete this asset?")) return;
       try {
-        const response = await fetch("/api/assets", {
+        const { apiCall } = await import('@/lib/mockApi');
+        
+        const response = await apiCall("/api/assets", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -125,9 +127,7 @@ export default function AssetManager() {
             id: assetId,
           }),
         });
-        if (!response.ok) {
-          throw new Error("Failed to delete asset");
-        }
+        
         const data = await response.json();
         if (data.error) throw new Error(data.error);
         fetchAssets();
@@ -152,8 +152,10 @@ export default function AssetManager() {
     async (assetData: Asset) => {
       if (!user) return;
       try {
+        const { apiCall } = await import('@/lib/mockApi');
+        
         const method = editingAsset ? "UPDATE" : "CREATE";
-        const response = await fetch("/api/assets", {
+        const response = await apiCall("/api/assets", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -163,9 +165,7 @@ export default function AssetManager() {
             id: editingAsset?.id,
           }),
         });
-        if (!response.ok) {
-          throw new Error("Failed to save asset");
-        }
+        
         const data = await response.json();
         if (data.error) throw new Error(data.error);
         setShowAddModal(false);
