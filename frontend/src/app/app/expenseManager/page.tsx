@@ -57,7 +57,10 @@ function ExpenseManager() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const fetchExpenses = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -83,6 +86,8 @@ function ExpenseManager() {
   useEffect(() => {
     if (user) {
       fetchExpenses();
+    } else {
+      setLoading(false);
     }
   }, [user, fetchExpenses]);
 

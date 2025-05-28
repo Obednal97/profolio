@@ -34,7 +34,10 @@ export default function PropertyManager() {
   const { data: user } = useUser();
 
   const fetchProperties = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -60,6 +63,8 @@ export default function PropertyManager() {
   useEffect(() => {
     if (user) {
       fetchProperties();
+    } else {
+      setLoading(false);
     }
   }, [user, fetchProperties]);
 
