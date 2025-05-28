@@ -2,22 +2,13 @@
 
 import React, { useCallback, useMemo, useEffect, useState } from "react";
 import { useUser } from "@/lib/user";
+import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import type { Asset } from "@/types/global";
 import { motion, AnimatePresence } from "framer-motion";
 import LineChart from "@/components/charts/line";
 import PieChart from "@/components/charts/pie";
-
-// Memoized currency formatter for performance
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
-
-const formatCurrency = (cents: number) => {
-  return currencyFormatter.format(cents / 100);
-};
 
 // Asset type configuration
 const assetTypeConfig = {
@@ -32,6 +23,7 @@ const assetTypeConfig = {
 export default function AssetManager() {
   const [error, setError] = useState<string | null>(null);
   const { data: user } = useUser();
+  const { formatCurrency } = useAppContext();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);

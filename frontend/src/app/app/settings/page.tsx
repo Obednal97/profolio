@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useUser } from "@/lib/user";
+import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +17,7 @@ const tabs: Tab[] = [
 
 function SettingsPage() {
   const { data: user } = useUser();
+  const { theme, currency, setCurrency } = useAppContext();
   const [activeTab, setActiveTab] = useState<Tab["id"]>("profile");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -33,8 +35,8 @@ function SettingsPage() {
 
   // Preferences state
   const [preferences, setPreferences] = useState({
-    theme: "system",
-    currency: "USD",
+    theme: theme as 'light' | 'dark' | 'system',
+    currency: currency,
     language: "en",
     notifications: {
       email: true,
@@ -46,6 +48,15 @@ function SettingsPage() {
       dataSharing: false,
     },
   });
+
+  // Update preferences when global context changes
+  useEffect(() => {
+    setPreferences(prev => ({
+      ...prev,
+      theme: theme as 'light' | 'dark' | 'system',
+      currency: currency,
+    }));
+  }, [theme, currency]);
 
   // Clear notifications after delay
   useEffect(() => {
@@ -100,6 +111,9 @@ function SettingsPage() {
     setSuccess(null);
     
     try {
+      // Update global currency setting
+      setCurrency(preferences.currency);
+      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       setSuccess("Preferences updated successfully");
@@ -292,7 +306,7 @@ function SettingsPage() {
           </label>
           <select
             value={preferences.theme}
-            onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })}
+            onChange={(e) => setPreferences({ ...preferences, theme: e.target.value as 'light' | 'dark' | 'system' })}
             className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
           >
             <option value="light" className="bg-gray-800">Light</option>
