@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useAuth, useUser } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/layout/authLayout";
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 function SignOut() {
   const { signOut } = useAuth();
@@ -37,30 +39,50 @@ function SignOut() {
 
   return (
     <AuthLayout>
-      <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center space-y-6">
+      <div className="w-full">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           {error ? (
-            <>
-              <h2 className="text-2xl font-semibold bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto">
+                <i className="fas fa-exclamation-triangle text-2xl text-red-600 dark:text-red-400"></i>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Error Signing Out
               </h2>
-              <p className="text-white/60">{error}</p>
-              <a
+              <p className="text-gray-600 dark:text-gray-400">{error}</p>
+              <Link
                 href="/app/dashboard"
-                className="inline-block px-6 py-3 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
               >
                 <i className="fas fa-arrow-left mr-2"></i>
                 Return to Dashboard
-              </a>
-            </>
+              </Link>
+            </motion.div>
           ) : (
-            <>
-              <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full shadow-[0_0_8px_#00ff88] mx-auto" />
-              <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto">
+                <div className="animate-spin h-8 w-8 border-3 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Signing Out
               </h2>
-              <p className="text-white/60">Please wait while we sign you out...</p>
-            </>
+              <p className="text-gray-600 dark:text-gray-400">
+                Please wait while we sign you out securely...
+              </p>
+              <div className="flex justify-center gap-2 pt-4">
+                <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </motion.div>
           )}
         </div>
       </div>
