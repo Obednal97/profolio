@@ -20,6 +20,21 @@ const assetTypeConfig = {
   other: { icon: "fa-box", color: "gray", gradient: "from-gray-500 to-gray-600" },
 };
 
+// Crypto-specific icons
+const getCryptoIcon = (symbol: string) => {
+  const symbolUpper = symbol?.toUpperCase();
+  switch (symbolUpper) {
+    case 'BTC':
+    case 'BITCOIN':
+      return 'fa-bitcoin';
+    case 'ETH':
+    case 'ETHEREUM':
+      return 'fa-ethereum';
+    default:
+      return 'fa-bitcoin';
+  }
+};
+
 export default function AssetManager() {
   const [error, setError] = useState<string | null>(null);
   const { data: user } = useUser();
@@ -31,8 +46,9 @@ export default function AssetManager() {
   const [timeframe, setTimeframe] = useState("30");
   const [chartData, setChartData] = useState<{ date: string; total_value: number }[] | null>(null);
   const [chartLoading, setChartLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
   const [filterType, setFilterType] = useState<string>("all");
+  const [showApiConfig, setShowApiConfig] = useState(false);
 
   const fetchAssets = useCallback(async () => {
     setLoading(true);
@@ -393,8 +409,8 @@ export default function AssetManager() {
             name: initialData.name || "",
             type: (initialData.type as AssetType) || "stock",
             quantity: initialData.quantity?.toString() || "",
-            current_value: initialData.current_value.toString(),
-            purchase_price: initialData.purchase_price?.toString() || "",
+            current_value: (initialData.current_value / 100).toString(),
+            purchase_price: initialData.purchase_price ? (initialData.purchase_price / 100).toString() : "",
             purchase_date: initialData.purchase_date || "",
             symbol: initialData.symbol || "",
             notes: initialData.notes || "",
@@ -459,8 +475,8 @@ export default function AssetManager() {
       onSubmit({
         ...formData,
         quantity: parseFloat(formData.quantity),
-        current_value: parseFloat(formData.current_value),
-        purchase_price: parseFloat(formData.purchase_price),
+        current_value: parseFloat(formData.current_value) * 100,
+        purchase_price: parseFloat(formData.purchase_price) * 100,
         vesting_schedule: formData.vesting_schedule ?? undefined,
       });
     };
@@ -652,6 +668,11 @@ export default function AssetManager() {
   }) => {
     const config = assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other;
     
+    // Use crypto-specific icon if it's a crypto asset
+    const iconClass = asset.type === 'crypto' && asset.symbol 
+      ? getCryptoIcon(asset.symbol) 
+      : config.icon;
+    
     const calculateAppreciation = () => {
       if (!asset.purchase_price) return null;
       const gain = asset.current_value - asset.purchase_price;
@@ -673,7 +694,7 @@ export default function AssetManager() {
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center flex-1 min-w-0">
             <div className={`p-2 sm:p-3 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 sm:mr-4 shadow-lg flex-shrink-0`}>
-              <i className={`fas ${config.icon} text-white text-lg sm:text-xl`}></i>
+              <i className={`fas ${iconClass} text-white text-lg sm:text-xl`}></i>
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{asset.name}</h3>
@@ -704,7 +725,7 @@ export default function AssetManager() {
           <div className="flex justify-between items-center">
             <span className="text-gray-600 dark:text-gray-400 text-sm">Current Value</span>
             <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(asset.current_value)}
+              {formatCurrency(asset.current_value / 100)}
             </span>
           </div>
 
@@ -720,7 +741,7 @@ export default function AssetManager() {
               <span className="text-gray-600 dark:text-gray-400 text-sm">Gain/Loss</span>
               <div className="text-right">
                 <div className={`font-semibold text-sm sm:text-base ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {appreciation.gain >= 0 ? '+' : ''}{formatCurrency(appreciation.gain)}
+                  {appreciation.gain >= 0 ? '+' : ''}{formatCurrency(appreciation.gain / 100)}
                 </div>
                 <div className={`text-xs sm:text-sm ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {appreciation.gain >= 0 ? '+' : ''}{appreciation.percentage.toFixed(2)}%
@@ -730,6 +751,192 @@ export default function AssetManager() {
           )}
         </div>
       </motion.div>
+    );
+  };
+
+  // Table View Component
+  const AssetTable = ({
+    assets,
+    onEdit,
+    onDelete,
+  }: {
+    assets: Asset[];
+    onEdit: (asset: Asset) => void;
+    onDelete: (id: string) => void;
+  }) => {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Asset</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Symbol</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quantity</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Value</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gain/Loss</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {assets.map((asset) => {
+                const config = assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other;
+                const iconClass = asset.type === 'crypto' && asset.symbol 
+                  ? getCryptoIcon(asset.symbol) 
+                  : config.icon;
+                
+                const appreciation = asset.purchase_price ? {
+                  gain: asset.current_value - asset.purchase_price,
+                  percentage: ((asset.current_value - asset.purchase_price) / asset.purchase_price) * 100
+                } : null;
+
+                return (
+                  <tr key={asset.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center">
+                        <div className={`p-2 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 flex-shrink-0`}>
+                          <i className={`fas ${iconClass} text-white text-sm`}></i>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{asset.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                      {asset.type?.charAt(0).toUpperCase() + asset.type?.slice(1).replace('_', ' ')}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                      {asset.symbol || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900 dark:text-white text-right">
+                      {asset.quantity || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white text-right">
+                      {formatCurrency(asset.current_value / 100)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-right">
+                      {appreciation ? (
+                        <div>
+                          <div className={`font-medium ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {appreciation.gain >= 0 ? '+' : ''}{formatCurrency(appreciation.gain / 100)}
+                          </div>
+                          <div className={`text-xs ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {appreciation.gain >= 0 ? '+' : ''}{appreciation.percentage.toFixed(2)}%
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex justify-center space-x-2">
+                        <button
+                          onClick={() => onEdit(asset)}
+                          className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                          aria-label="Edit asset"
+                        >
+                          <i className="fas fa-edit text-sm"></i>
+                        </button>
+                        <button
+                          onClick={() => asset.id && onDelete(asset.id)}
+                          className="p-1 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                          aria-label="Delete asset"
+                        >
+                          <i className="fas fa-trash text-sm"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // API Configuration Modal
+  const ApiConfigModal = ({ onClose }: { onClose: () => void }) => {
+    const [apiKeys, setApiKeys] = useState({
+      alphaVantage: '',
+      coinGecko: '',
+      polygon: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      // In a real app, these would be encrypted and stored securely
+      localStorage.setItem('profolio-api-keys', JSON.stringify(apiKeys));
+      onClose();
+    };
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">API Configuration</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Alpha Vantage API Key
+            </label>
+            <input
+              type="password"
+              value={apiKeys.alphaVantage}
+              onChange={(e) => setApiKeys({ ...apiKeys, alphaVantage: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              placeholder="Enter your Alpha Vantage API key"
+            />
+            <p className="text-xs text-gray-500 mt-1">For stock market data</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              CoinGecko API Key
+            </label>
+            <input
+              type="password"
+              value={apiKeys.coinGecko}
+              onChange={(e) => setApiKeys({ ...apiKeys, coinGecko: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              placeholder="Enter your CoinGecko API key"
+            />
+            <p className="text-xs text-gray-500 mt-1">For cryptocurrency data</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Polygon API Key
+            </label>
+            <input
+              type="password"
+              value={apiKeys.polygon}
+              onChange={(e) => setApiKeys({ ...apiKeys, polygon: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              placeholder="Enter your Polygon API key"
+            />
+            <p className="text-xs text-gray-500 mt-1">For real-time market data</p>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button type="button" onClick={onClose} variant="ghost">
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
+              Save API Keys
+            </Button>
+          </div>
+        </form>
+      </div>
     );
   };
 
@@ -761,13 +968,23 @@ export default function AssetManager() {
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-base">Track and manage your investment portfolio</p>
             </div>
-            <Button
-              onClick={handleOpenModal}
-              className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-4 sm:px-6 py-3 touch-manipulation"
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Add Asset
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowApiConfig(true)}
+                variant="outline"
+                className="px-4 py-3 touch-manipulation"
+              >
+                <i className="fas fa-cog mr-2"></i>
+                API Config
+              </Button>
+              <Button
+                onClick={handleOpenModal}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-4 sm:px-6 py-3 touch-manipulation"
+              >
+                <i className="fas fa-plus mr-2"></i>
+                Add Asset
+              </Button>
+            </div>
           </div>
         </motion.div>
 
@@ -794,7 +1011,7 @@ export default function AssetManager() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400 transition-all duration-200">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Total Portfolio Value</p>
+                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Total Asset Value</p>
                 <p className="text-2xl sm:text-3xl font-bold text-green-500 mt-1">
                   {formatCurrency(totalValue)}
                 </p>
@@ -945,6 +1162,17 @@ export default function AssetManager() {
             >
               <i className="fas fa-list text-sm sm:text-base"></i>
             </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-2 sm:p-3 rounded-lg transition-all duration-200 touch-manipulation ${
+                viewMode === "table"
+                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+              aria-label="Table view"
+            >
+              <i className="fas fa-table text-sm sm:text-base"></i>
+            </button>
           </div>
         </motion.div>
 
@@ -981,17 +1209,36 @@ export default function AssetManager() {
               layout
               className={viewMode === "grid" 
                 ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6" 
-                : "space-y-4"
+                : viewMode === "list"
+                  ? "space-y-4"
+                  : "bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
               }
             >
-              {filteredAssets.map((asset) => (
-                <AssetCard
-                  key={asset.id}
-                  asset={asset}
+              {viewMode === "grid" ? (
+                filteredAssets.map((asset) => (
+                  <AssetCard
+                    key={asset.id}
+                    asset={asset}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))
+              ) : viewMode === "list" ? (
+                filteredAssets.map((asset) => (
+                  <AssetCard
+                    key={asset.id}
+                    asset={asset}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))
+              ) : (
+                <AssetTable
+                  assets={filteredAssets}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                 />
-              ))}
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1005,6 +1252,13 @@ export default function AssetManager() {
             onSubmit={handleSubmit}
             initialData={editingAsset}
           />
+        </Modal>
+      )}
+
+      {/* API Configuration Modal */}
+      {showApiConfig && (
+        <Modal isOpen={showApiConfig} onClose={() => setShowApiConfig(false)}>
+          <ApiConfigModal onClose={() => setShowApiConfig(false)} />
         </Modal>
       )}
     </div>

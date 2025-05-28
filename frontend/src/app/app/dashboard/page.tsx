@@ -46,7 +46,7 @@ function DashboardPage() {
 
       setAssets(assetsData.assets || []);
       setExpenses(expensesData.expenses || []);
-      setError(null); // Clear any previous errors
+      setError(null);
     } catch (err: unknown) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data');
@@ -59,13 +59,53 @@ function DashboardPage() {
     if (user?.id) fetchData();
   }, [user?.id, fetchData]);
 
+  // Filter data based on timeRange
+  const filteredData = useMemo(() => {
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (timeRange) {
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'quarter':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'all':
+        startDate = new Date(0); // Beginning of time
+        break;
+    }
+
+    const filteredExpenses = expenses.filter(expense => 
+      new Date(expense.date) >= startDate
+    );
+
+    return { filteredExpenses };
+  }, [expenses, timeRange]);
+
   const netWorth = useMemo(() => {
     return assets.reduce((total, asset) => total + (asset.current_value ?? 0), 0);
   }, [assets]);
 
+  const previousNetWorth = useMemo(() => {
+    // Mock previous period calculation - in real app this would come from historical data
+    return netWorth * 0.89; // Simulating 12.5% growth
+  }, [netWorth]);
+
+  const netWorthChange = useMemo(() => {
+    if (previousNetWorth === 0) return 0;
+    return ((netWorth - previousNetWorth) / previousNetWorth) * 100;
+  }, [netWorth, previousNetWorth]);
+
   const totalExpenses = useMemo(() => {
-    return expenses.reduce((total, exp) => total + (exp.amount ?? 0), 0);
-  }, [expenses]);
+    return filteredData.filteredExpenses.reduce((total, exp) => total + (exp.amount ?? 0), 0);
+  }, [filteredData.filteredExpenses]);
 
   const assetsByType = useMemo(() => {
     return assets.reduce((acc, asset) => {
@@ -76,35 +116,55 @@ function DashboardPage() {
   }, [assets]);
 
   const expensesByCategory = useMemo(() => {
-    return expenses.reduce((acc, expense) => {
+    return filteredData.filteredExpenses.reduce((acc, expense) => {
       const key = expense.category ?? 'Other';
       acc[key] = (acc[key] ?? 0) + (expense.amount ?? 0);
       return acc;
     }, {} as Record<string, number>);
-  }, [expenses]);
+  }, [filteredData.filteredExpenses]);
 
-  const recentExpensesTotal = useMemo(() => {
-    return expenses.slice(0, 5).reduce((total, exp) => total + (exp.amount ?? 0), 0);
-  }, [expenses]);
+  // Sort recent transactions by date descending
+  const recentTransactions = useMemo(() => {
+    return [...filteredData.filteredExpenses]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [filteredData.filteredExpenses]);
 
   const monthlyExpensesTrend = useMemo(() => {
-    const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const periods = timeRange === 'week' ? 7 : timeRange === 'month' ? 6 : timeRange === 'quarter' ? 12 : 24;
+    const periodType = timeRange === 'week' ? 'day' : 'month';
+    
+    const data = Array.from({ length: periods }, (_, i) => {
       const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      return date.toISOString().slice(0, 7);
+      if (periodType === 'day') {
+        date.setDate(date.getDate() - i);
+      } else {
+        date.setMonth(date.getMonth() - i);
+      }
+      return date;
     }).reverse();
 
-    return last6Months.map(month => {
-      const monthExpenses = expenses.filter(exp => 
-        exp.date.startsWith(month)
+    return data.map(date => {
+      const dateStr = periodType === 'day' 
+        ? date.toISOString().slice(0, 10)
+        : date.toISOString().slice(0, 7);
+      
+      const periodExpenses = filteredData.filteredExpenses.filter(exp => 
+        periodType === 'day' 
+          ? exp.date.startsWith(dateStr)
+          : exp.date.startsWith(dateStr)
       );
-      const total = monthExpenses.reduce((sum, exp) => sum + (exp.amount ?? 0), 0);
+      
+      const total = periodExpenses.reduce((sum, exp) => sum + (exp.amount ?? 0), 0);
+      
       return {
-        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' }),
+        period: periodType === 'day' 
+          ? date.toLocaleDateString('en-US', { weekday: 'short' })
+          : date.toLocaleDateString('en-US', { month: 'short' }),
         amount: total / 100
       };
     });
-  }, [expenses]);
+  }, [filteredData.filteredExpenses, timeRange]);
 
   const topExpenseCategories = useMemo(() => {
     return Object.entries(expensesByCategory)
@@ -113,9 +173,15 @@ function DashboardPage() {
       .map(([category, amount]) => ({
         category,
         amount: amount / 100,
-        percentage: ((amount / totalExpenses) * 100).toFixed(1)
+        percentage: totalExpenses > 0 ? ((amount / totalExpenses) * 100).toFixed(1) : '0'
       }));
   }, [expensesByCategory, totalExpenses]);
+
+  const propertyValue = useMemo(() => {
+    return assets
+      .filter(asset => asset.type === 'property')
+      .reduce((total, asset) => total + (asset.current_value ?? 0), 0);
+  }, [assets]);
 
   if (loading) {
     return (
@@ -178,133 +244,86 @@ function DashboardPage() {
           ))}
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400 transition-all duration-200 hover:shadow-lg">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Net Worth</p>
-                  <p className="text-3xl font-bold text-green-500 mt-1">
-                    {formatCurrency(netWorth / 100)}
-                  </p>
-                </div>
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <i className="fas fa-chart-line text-green-500 text-xl"></i>
-                </div>
+        {/* Priority 1: Net Worth - Emphasized */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-8 border-2 border-green-200 dark:border-green-800 shadow-xl">
+            <div className="text-center">
+              <p className="text-green-600 dark:text-green-400 text-lg font-medium mb-2">Total Net Worth</p>
+              <p className="text-5xl md:text-6xl font-bold text-green-600 dark:text-green-400 mb-4">
+                {formatCurrency(netWorth / 100)}
+              </p>
+              <div className="flex items-center justify-center text-lg">
+                <i className={`fas ${netWorthChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'} ${netWorthChange >= 0 ? 'text-green-500' : 'text-red-500'} mr-2`}></i>
+                <span className={netWorthChange >= 0 ? 'text-green-500' : 'text-red-500'}>
+                  {Math.abs(netWorthChange).toFixed(1)}%
+                </span>
+                <span className="text-gray-600 dark:text-gray-400 ml-2">vs previous {timeRange}</span>
               </div>
-              <div className="flex items-center text-sm">
-                <i className="fas fa-arrow-up text-green-500 mr-1"></i>
-                <span className="text-green-500">12.5%</span>
-                <span className="text-gray-600 dark:text-gray-400 ml-1">vs last month</span>
-              </div>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
+                Previous: {formatCurrency(previousNetWorth / 100)}
+              </p>
             </div>
-          </motion.div>
+          </div>
+        </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400 transition-all duration-200 hover:shadow-lg">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Total Assets</p>
-                  <p className="text-3xl font-bold text-blue-500 mt-1">
-                    {assets.length}
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <i className="fas fa-wallet text-blue-500 text-xl"></i>
-                </div>
-              </div>
-              <div className="flex items-center text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Across {Object.keys(assetsByType).length} categories</span>
-              </div>
+        {/* Priority 2: Asset Distribution (Pie Chart) */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mb-8"
+        >
+          <Tile className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400">
+            <h3 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-white flex items-center">
+              <i className="fas fa-chart-pie mr-3 text-blue-500"></i>
+              Asset Distribution
+            </h3>
+            <div className="h-80">
+              <PieChart
+                data={Object.entries(assetsByType).map(([type, value]) => ({
+                  name: type.charAt(0).toUpperCase() + type.slice(1),
+                  value: value / 100,
+                  color:
+                    type === "stock"
+                      ? "#3b82f6"
+                      : type === "crypto"
+                      ? "#f59e0b"
+                      : type === "property"
+                      ? "#10b981"
+                      : type === "cash"
+                      ? "#8b5cf6"
+                      : "#ec4899",
+                }))}
+              />
             </div>
-          </motion.div>
+          </Tile>
+        </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-red-400 dark:hover:border-red-400 transition-all duration-200 hover:shadow-lg">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Monthly Expenses</p>
-                  <p className="text-3xl font-bold text-red-500 mt-1">
-                    {formatCurrency(recentExpensesTotal / 100)}
-                  </p>
-                </div>
-                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                  <i className="fas fa-receipt text-red-500 text-xl"></i>
-                </div>
-              </div>
-              <div className="flex items-center text-sm">
-                <i className="fas fa-arrow-down text-green-500 mr-1"></i>
-                <span className="text-green-500">8.2%</span>
-                <span className="text-gray-600 dark:text-gray-400 ml-1">vs last month</span>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-400 transition-all duration-200 hover:shadow-lg">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Savings Rate</p>
-                  <p className="text-3xl font-bold text-purple-500 mt-1">
-                    32%
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <i className="fas fa-piggy-bank text-purple-500 text-xl"></i>
-                </div>
-              </div>
-              <div className="flex items-center text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Of monthly income</span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Charts and Insights */}
+        {/* Priority 3 & 4: Asset Growth and Expense Trend */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.3 }}
           >
-            <Tile className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400">
+            <Tile className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400">
               <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white flex items-center">
-                <i className="fas fa-chart-pie mr-2 text-blue-500"></i>
-                Asset Distribution
+                <i className="fas fa-chart-line mr-2 text-green-500"></i>
+                Asset Growth
               </h3>
               <div className="h-64">
-                <PieChart
-                  data={Object.entries(assetsByType).map(([type, value]) => ({
-                    name: type.charAt(0).toUpperCase() + type.slice(1),
-                    value: value / 100,
-                    color:
-                      type === "stock"
-                        ? "#3b82f6"
-                        : type === "crypto"
-                        ? "#f59e0b"
-                        : type === "property"
-                        ? "#10b981"
-                        : type === "cash"
-                        ? "#8b5cf6"
-                        : "#ec4899",
+                {/* Mock asset growth data - in real app this would be historical asset values */}
+                <LineChart
+                  data={monthlyExpensesTrend.map((item, index) => ({
+                    period: item.period,
+                    value: (netWorth / 100) * (0.8 + (index * 0.05)) // Mock growth trend
                   }))}
+                  xKey="period"
+                  lines={[{ dataKey: "value", color: "#10b981" }]}
                 />
               </div>
             </Tile>
@@ -313,17 +332,17 @@ function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.4 }}
           >
             <Tile className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-400">
               <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white flex items-center">
                 <i className="fas fa-chart-line mr-2 text-purple-500"></i>
-                Expense Trend
+                Expense Trend ({timeRange})
               </h3>
               <div className="h-64">
                 <LineChart
                   data={monthlyExpensesTrend}
-                  xKey="month"
+                  xKey="period"
                   lines={[{ dataKey: "amount", color: "#a855f7" }]}
                 />
               </div>
@@ -331,8 +350,78 @@ function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Priority 5: Property Portfolio Value */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mb-8"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400 transition-all duration-200 hover:shadow-lg">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center mb-2">
+                  <i className="fas fa-home mr-2 text-green-500"></i>
+                  Property Portfolio Value
+                </h3>
+                <p className="text-3xl font-bold text-green-500">
+                  {formatCurrency(propertyValue / 100)}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {assets.filter(a => a.type === 'property').length} properties
+                </p>
+              </div>
+              <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <i className="fas fa-building text-green-500 text-2xl"></i>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Priority 6: Top Spending Categories & Recent Transactions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Tile className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-400">
+              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                <i className="fas fa-fire mr-2 text-orange-500"></i>
+                Top Spending Categories ({timeRange})
+              </h3>
+              <div className="space-y-3">
+                {topExpenseCategories.map((category, index) => (
+                  <motion.div
+                    key={category.category}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.7 + index * 0.1 }}
+                    className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium text-gray-900 dark:text-white">{category.category}</span>
+                      <span className="text-orange-500 font-semibold">
+                        {formatCurrency(category.amount)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${category.percentage}%` }}
+                        transition={{ delay: 0.8 + index * 0.1, duration: 0.5 }}
+                        className="bg-gradient-to-r from-orange-400 to-red-400 h-2 rounded-full"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {category.percentage}% of total expenses
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+            </Tile>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -341,10 +430,10 @@ function DashboardPage() {
             <Tile className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400">
               <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
                 <i className="fas fa-history mr-2 text-green-500"></i>
-                Recent Transactions
+                Recent Transactions ({timeRange})
               </h3>
               <div className="space-y-3">
-                {expenses.slice(0, 5).map((expense, index) => (
+                {recentTransactions.map((expense, index) => (
                   <motion.div
                     key={expense.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -372,48 +461,6 @@ function DashboardPage() {
                     <span className="text-red-500 font-semibold">
                       -{formatCurrency(expense.amount / 100)}
                     </span>
-                  </motion.div>
-                ))}
-              </div>
-            </Tile>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.8 }}
-          >
-            <Tile className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-400">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
-                <i className="fas fa-fire mr-2 text-orange-500"></i>
-                Top Spending Categories
-              </h3>
-              <div className="space-y-3">
-                {topExpenseCategories.map((category, index) => (
-                  <motion.div
-                    key={category.category}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.9 + index * 0.1 }}
-                    className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-gray-900 dark:text-white">{category.category}</span>
-                      <span className="text-orange-500 font-semibold">
-                        {formatCurrency(category.amount)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${category.percentage}%` }}
-                        transition={{ delay: 1 + index * 0.1, duration: 0.5 }}
-                        className="bg-gradient-to-r from-orange-400 to-red-400 h-2 rounded-full"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {category.percentage}% of total expenses
-                    </p>
                   </motion.div>
                 ))}
               </div>
