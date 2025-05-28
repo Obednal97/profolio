@@ -51,26 +51,86 @@ export type Property = {
     address: string;
     purchasePrice: number;
     currentValue: number;
-    mortgageAmount?: number;
-    mortgageRate?: number;
-    monthlyPayment?: number;
-    rentalIncome?: number;
     propertyType: string;
     status: string;
     notes?: string;
+    
+    // Ownership details
+    ownershipType: 'owned' | 'rented' | 'leased';
+    
+    // Rental-specific fields
+    rentalStartDate?: string;
+    rentalEndDate?: string;
+    monthlyRent?: number;
+    securityDeposit?: number;
+    
+    // Owned property fields
+    purchaseDate?: string;
+    
+    // Mortgage details (for owned properties)
+    mortgageAmount?: number;
+    mortgageRate?: number;
+    mortgageTerm?: number; // in years
+    monthlyPayment?: number;
+    mortgageStartDate?: string;
+    mortgageProvider?: string;
+    
+    // Property details
+    bedrooms?: number;
+    bathrooms?: number;
+    squareFootage?: number;
+    yearBuilt?: number;
+    lotSize?: number;
+    
+    // Financial details
+    rentalIncome?: number;
+    propertyTaxes?: number;
+    insurance?: number;
+    maintenanceCosts?: number;
+    hoa?: number;
   };
 
 export type PropertyFormData = {
     address: string;
     purchasePrice: string;
     currentValue: string;
-    mortgageAmount?: string;
-    mortgageRate?: string;
-    monthlyPayment?: string;
-    rentalIncome?: string;
     propertyType: string;
     status: string;
     notes?: string;
+    
+    // Ownership details
+    ownershipType: 'owned' | 'rented' | 'leased';
+    
+    // Rental-specific fields
+    rentalStartDate?: string;
+    rentalEndDate?: string;
+    monthlyRent?: string;
+    securityDeposit?: string;
+    
+    // Owned property fields
+    purchaseDate?: string;
+    
+    // Mortgage details (for owned properties)
+    mortgageAmount?: string;
+    mortgageRate?: string;
+    mortgageTerm?: string;
+    monthlyPayment?: string;
+    mortgageStartDate?: string;
+    mortgageProvider?: string;
+    
+    // Property details
+    bedrooms?: string;
+    bathrooms?: string;
+    squareFootage?: string;
+    yearBuilt?: string;
+    lotSize?: string;
+    
+    // Financial details
+    rentalIncome?: string;
+    propertyTaxes?: string;
+    insurance?: string;
+    maintenanceCosts?: string;
+    hoa?: string;
   };
 
 // --------------------

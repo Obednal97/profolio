@@ -31,7 +31,7 @@ const getCryptoIcon = (symbol: string) => {
     case 'ETHEREUM':
       return 'fa-ethereum';
     default:
-      return 'fa-bitcoin';
+      return 'fa-coins'; // Generic crypto icon for other cryptocurrencies
   }
 };
 
@@ -496,8 +496,8 @@ export default function AssetManager() {
 
       const tooltips: Partial<Record<keyof AssetFormData, string>> = {
         current_value:
-          "The total current market value of this asset (Price × Quantity for stocks/crypto)",
-        purchase_price: "The price you paid per unit when acquiring this asset",
+          "Enter the total current market value in dollars (e.g., 1000 for $1,000.00)",
+        purchase_price: "Enter the price you paid per unit in dollars (e.g., 150 for $150.00)",
         quantity:
           "Number of units you own (shares for stocks, coins for crypto)",
         amount: "The total amount of cash in this account",
@@ -863,6 +863,7 @@ export default function AssetManager() {
       alphaVantage: '',
       coinGecko: '',
       polygon: '',
+      trading212: '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -925,6 +926,20 @@ export default function AssetManager() {
               placeholder="Enter your Polygon API key"
             />
             <p className="text-xs text-gray-500 mt-1">For real-time market data</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Trading 212 API Key
+            </label>
+            <input
+              type="password"
+              value={apiKeys.trading212}
+              onChange={(e) => setApiKeys({ ...apiKeys, trading212: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              placeholder="Enter your Trading 212 API key"
+            />
+            <p className="text-xs text-gray-500 mt-1">For Trading 212 portfolio sync</p>
           </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
