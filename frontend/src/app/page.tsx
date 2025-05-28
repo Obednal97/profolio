@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Tile } from '@/components/ui/tile/tile';
 import { Button } from '@/components/ui/button/button';
 import { motion, useAnimationFrame } from 'framer-motion';
@@ -91,16 +92,25 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section
         aria-label="Hero"
-        className="relative min-h-screen w-full flex items-center justify-center overflow-hidden"
+        className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900"
       >
-        {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
+        {/* Background Image */}
+        <Image
+          src="/hero.png"
+          alt="Hero background"
+          fill
+          className="object-cover opacity-10 dark:opacity-20"
+          priority
+        />
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-gray-50/80 to-white/90 dark:from-gray-900/90 dark:via-gray-800/80 dark:to-gray-900/90" />
         
         {/* Animated gradient orbs */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-          <div className="absolute top-40 left-40 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-20 dark:opacity-10 animate-blob" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-20 dark:opacity-10 animate-blob animation-delay-2000" />
+          <div className="absolute top-40 left-40 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-20 dark:opacity-10 animate-blob animation-delay-4000" />
         </div>
 
         <motion.div
@@ -110,26 +120,26 @@ export default function LandingPage() {
           variants={container}
         >
           <motion.div 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-8"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm mb-8"
             variants={fadeUp}
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-sm text-gray-300">Trusted by 10,000+ investors</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Trusted by 10,000+ investors</span>
           </motion.div>
 
           <motion.h1 
-            className="text-6xl sm:text-7xl lg:text-8xl font-bold text-white mb-6 tracking-tight"
+            className="text-6xl sm:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight"
             variants={fadeUp}
           >
             Your Wealth,
-            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"> Unified</span>
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Unified</span>
           </motion.h1>
           
           <motion.p
-            className="text-xl sm:text-2xl text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed"
+            className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed"
             variants={fadeUp}
           >
             The modern dashboard for tracking your entire financial portfolio. 
@@ -159,8 +169,8 @@ export default function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1, duration: 0.8 }}
         >
-          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-bounce" />
+          <div className="w-6 h-10 border-2 border-gray-300 dark:border-white/30 rounded-full flex justify-center">
+            <div className="w-1 h-3 bg-gray-400 dark:bg-white/50 rounded-full mt-2 animate-bounce" />
           </div>
         </motion.div>
       </section>
@@ -177,17 +187,17 @@ export default function LandingPage() {
           className="relative group"
           variants={fadeUp}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-xl opacity-30 group-hover:opacity-40 transition-opacity" />
-          <div className="relative p-8 bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-xl opacity-20 dark:opacity-30 group-hover:opacity-30 dark:group-hover:opacity-40 transition-opacity" />
+          <div className="relative p-8 bg-white dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <i className="fas fa-chart-line text-2xl text-blue-400" />
-              <h2 className="text-2xl font-bold text-white">Live Portfolio Value</h2>
+              <i className="fas fa-chart-line text-2xl text-blue-600 dark:text-blue-400" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Live Portfolio Value</h2>
             </div>
-            <p className="text-5xl font-bold text-white mb-2">
+            <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
               ${formatCompactNumber(liveNetWorth)}
             </p>
-            <p className="text-sm text-gray-400">
-              <span className="text-green-400">↑ 12.5%</span> this month • Updated in real-time
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-green-600 dark:text-green-400">↑ 12.5%</span> this month • Updated in real-time
             </p>
           </div>
         </motion.div>
@@ -201,25 +211,25 @@ export default function LandingPage() {
         viewport={{ once: true }}
         variants={container}
       >
-        <motion.h2 className="text-3xl font-bold text-center text-white mb-4" variants={fadeUp}>
+        <motion.h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-4" variants={fadeUp}>
           Loved by Founders & Investors
         </motion.h2>
-        <motion.p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto" variants={fadeUp}>
+        <motion.p className="text-center text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto" variants={fadeUp}>
           Join thousands who&apos;ve simplified their wealth management
         </motion.p>
         <div className="grid md:grid-cols-2 gap-8">
           {TESTIMONIALS.map((testimonial, i) => (
             <motion.div key={i} variants={fadeUp}>
-              <Tile className="p-8 bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:border-gray-700 transition-all">
+              <Tile className="p-8 bg-white dark:bg-gray-900/50 backdrop-blur-sm border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-all">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="text-4xl text-gray-600">&quot;</div>
-                  <p className="text-lg text-gray-300 italic flex-1">{testimonial.quote}</p>
+                  <div className="text-4xl text-gray-300 dark:text-gray-600">&quot;</div>
+                  <p className="text-lg text-gray-700 dark:text-gray-300 italic flex-1">{testimonial.quote}</p>
                 </div>
                 <div className="flex items-center gap-3 ml-12">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-400" />
                   <div>
-                    <p className="font-semibold text-white">{testimonial.author}</p>
-                    <p className="text-sm text-gray-500">{testimonial.role}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{testimonial.author}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-500">{testimonial.role}</p>
                   </div>
                 </div>
               </Tile>
@@ -230,28 +240,28 @@ export default function LandingPage() {
 
       {/* Features Section */}
       <motion.section
-        className="py-20 bg-gray-900/50 px-6 sm:px-12"
+        className="py-20 bg-gray-50 dark:bg-gray-900/50 px-6 sm:px-12"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
         variants={container}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.h2 className="text-3xl font-bold text-center text-white mb-4" variants={fadeUp}>
+          <motion.h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-4" variants={fadeUp}>
             Everything You Need
           </motion.h2>
-          <motion.p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto" variants={fadeUp}>
+          <motion.p className="text-center text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto" variants={fadeUp}>
             A complete financial dashboard designed for the modern investor
           </motion.p>
           <div className="grid md:grid-cols-3 gap-8">
             {FEATURES.map(({ title, desc, icon }) => (
               <motion.div key={title} variants={fadeUp}>
-                <Tile className="p-8 h-full bg-gray-800/50 backdrop-blur-sm border-gray-700 hover:border-blue-500/50 transition-all group">
-                  <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center mb-6 group-hover:bg-blue-500/20 transition-colors">
-                    <i className={`fas ${icon} text-2xl text-blue-400`} />
+                <Tile className="p-8 h-full bg-white dark:bg-gray-800/50 backdrop-blur-sm border-gray-200 dark:border-gray-700 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all group">
+                  <div className="w-14 h-14 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center mb-6 group-hover:bg-blue-200 dark:group-hover:bg-blue-500/20 transition-colors">
+                    <i className={`fas ${icon} text-2xl text-blue-600 dark:text-blue-400`} />
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-white">{title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{desc}</p>
+                  <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{title}</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
                 </Tile>
               </motion.div>
             ))}
@@ -268,7 +278,7 @@ export default function LandingPage() {
         variants={container}
       >
         <motion.h2
-          className="text-3xl font-bold text-center text-white mb-12"
+          className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12"
           variants={fadeUp}
         >
           Built for Power Users
@@ -277,11 +287,11 @@ export default function LandingPage() {
           {FEATURE_HIGHLIGHTS.map(({ title, desc, icon }) => (
             <motion.div key={title} variants={fadeUp}>
               <div className="text-center group cursor-pointer">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/10 to-blue-500/10 flex items-center justify-center mx-auto mb-6 group-hover:from-purple-500/20 group-hover:to-blue-500/20 transition-all">
-                  <i className={`fas ${icon} text-3xl text-purple-400`} />
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-500/10 dark:to-blue-500/10 flex items-center justify-center mx-auto mb-6 group-hover:from-purple-200 group-hover:to-blue-200 dark:group-hover:from-purple-500/20 dark:group-hover:to-blue-500/20 transition-all">
+                  <i className={`fas ${icon} text-3xl text-purple-600 dark:text-purple-400`} />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
-                <p className="text-gray-400 leading-relaxed">{desc}</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
               </div>
             </motion.div>
           ))}
@@ -298,13 +308,13 @@ export default function LandingPage() {
       >
         <div className="max-w-4xl mx-auto text-center">
           <motion.div 
-            className="p-12 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-3xl border border-white/10 backdrop-blur-sm"
+            className="p-12 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-600/10 dark:to-purple-600/10 rounded-3xl border border-gray-200 dark:border-white/10 backdrop-blur-sm"
             variants={fadeUp}
           >
-            <h2 className="text-3xl font-bold text-white mb-4">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Ready to Take Control?
             </h2>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
               Join thousands of investors who&apos;ve simplified their wealth tracking with Profolio.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -320,7 +330,7 @@ export default function LandingPage() {
                 </Link>
               </Button>
             </div>
-            <p className="text-sm text-gray-500 mt-6">
+            <p className="text-sm text-gray-600 dark:text-gray-500 mt-6">
               No credit card required • 14-day free trial
             </p>
           </motion.div>

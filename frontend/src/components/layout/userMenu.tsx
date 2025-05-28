@@ -47,22 +47,22 @@ export default function UserMenu({
     <div className="flex items-center space-x-4">
       <button
         onClick={cycleTheme}
-        className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2"
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
         title={getThemeTooltip()}
       >
-        <i className={`fas ${getThemeIcon()}`}></i>
+        <i className={`fas ${getThemeIcon()} text-lg`}></i>
       </button>
 
       {user ? (
         <>
           <button
-            className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="relative w-10 h-10 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
             onClick={() => (window.location.href = "/notifications")}
             title="Notifications"
           >
             <i className="fas fa-bell text-lg"></i>
             {unreadNotifications > 0 && (
-              <span className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                 {unreadNotifications}
               </span>
             )}
@@ -71,12 +71,12 @@ export default function UserMenu({
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
             >
               <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
                 {user?.name?.charAt(0) || "?"}
               </div>
-              <span>{user?.name}</span>
+              <span className="hidden sm:inline">{user?.name}</span>
               <i className="fas fa-chevron-down text-xs"></i>
             </button>
 
@@ -104,13 +104,13 @@ export default function UserMenu({
         <>
           <Link
             href="/auth/signIn"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
           >
             Log In
           </Link>
           <Link
             href="/auth/signUp"
-            className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition"
+            className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all"
           >
             Sign Up
           </Link>
