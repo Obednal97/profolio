@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Tile } from '@/components/ui/tile/tile';
 import { Button } from '@/components/ui/button/button';
 import { motion, useAnimationFrame } from 'framer-motion';
@@ -94,23 +93,16 @@ export default function LandingPage() {
         aria-label="Hero"
         className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900"
       >
-        {/* Background Image */}
-        <Image
-          src="/hero.png"
-          alt="Hero background"
-          fill
-          className="object-cover opacity-10 dark:opacity-20"
-          priority
-        />
+        {/* Background Image - using a gradient as fallback if image doesn't exist */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+          {/* Remove Image component for now since hero.png might not exist */}
+        </div>
         
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-gray-50/80 to-white/90 dark:from-gray-900/90 dark:via-gray-800/80 dark:to-gray-900/90" />
-        
-        {/* Animated gradient orbs */}
+        {/* Animated gradient orbs - make them more visible */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-20 dark:opacity-10 animate-blob" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-20 dark:opacity-10 animate-blob animation-delay-2000" />
-          <div className="absolute top-40 left-40 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-20 dark:opacity-10 animate-blob animation-delay-4000" />
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-30 dark:opacity-20 animate-blob" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-30 dark:opacity-20 animate-blob animation-delay-2000" />
+          <div className="absolute top-40 left-40 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-30 dark:opacity-20 animate-blob animation-delay-4000" />
         </div>
 
         <motion.div
@@ -120,7 +112,7 @@ export default function LandingPage() {
           variants={container}
         >
           <motion.div 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm mb-8"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm mb-8"
             variants={fadeUp}
           >
             <span className="relative flex h-2 w-2">
@@ -131,7 +123,7 @@ export default function LandingPage() {
           </motion.div>
 
           <motion.h1 
-            className="text-6xl sm:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight"
+            className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight"
             variants={fadeUp}
           >
             Your Wealth,
@@ -139,7 +131,7 @@ export default function LandingPage() {
           </motion.h1>
           
           <motion.p
-            className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed"
+            className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed"
             variants={fadeUp}
           >
             The modern dashboard for tracking your entire financial portfolio. 
@@ -147,13 +139,13 @@ export default function LandingPage() {
           </motion.p>
 
           <motion.div className="flex flex-col sm:flex-row gap-4 justify-center" variants={fadeUp}>
-            <Button asChild size="lg" className="text-lg px-8 py-6">
+            <Button asChild size="lg" className="text-lg px-8 py-6 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200">
               <Link href="/auth/signUp">
                 Start Free Trial
                 <i className="fas fa-arrow-right ml-2" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6">
+            <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6 border-gray-300 dark:border-gray-600">
               <Link href="/how-it-works">
                 See How It Works
                 <i className="fas fa-play-circle ml-2" />
@@ -162,15 +154,19 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
 
-        {/* Scroll indicator */}
+        {/* Scroll indicator - make it more visible */}
         <motion.div 
           className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1, duration: 0.8 }}
         >
-          <div className="w-6 h-10 border-2 border-gray-300 dark:border-white/30 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-gray-400 dark:bg-white/50 rounded-full mt-2 animate-bounce" />
+          <div className="w-8 h-12 border-2 border-gray-400 dark:border-gray-600 rounded-full flex justify-center">
+            <motion.div 
+              className="w-2 h-3 bg-gray-600 dark:bg-gray-400 rounded-full mt-2"
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
           </div>
         </motion.div>
       </section>

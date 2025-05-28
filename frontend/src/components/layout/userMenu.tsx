@@ -47,7 +47,7 @@ export default function UserMenu({
     <div className="flex items-center space-x-4">
       <button
         onClick={cycleTheme}
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all shadow-sm"
         title={getThemeTooltip()}
       >
         <i className={`fas ${getThemeIcon()} text-lg`}></i>
