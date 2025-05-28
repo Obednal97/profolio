@@ -1,0 +1,32 @@
+{
+  "name": "profolio-landing",
+  "version": "1.0.0",
+  "description": "Modern landing page for Profolio - Your Personal Finance OS",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx serve .",
+    "dev": "npx live-server .",
+    "build": "echo 'No build step required for static site'",
+    "deploy": "echo 'Deploy to your preferred hosting platform'"
+  },
+  "keywords": [
+    "profolio",
+    "finance",
+    "portfolio",
+    "landing-page",
+    "wealth-management",
+    "financial-planning"
+  ],
+  "author": "Profolio Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/profolio-landing.git"
+  },
+  "homepage": "https://yourusername.github.io/profolio-landing",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
+  }
+} 
