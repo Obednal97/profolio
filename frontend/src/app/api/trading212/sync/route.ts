@@ -8,7 +8,7 @@ interface UserJwtPayload extends JwtPayload {
   email: string;
 }
 
-function getUserFromToken(request: NextRequest): { userId: string; email: string } | null {
+function getUserFromToken(request: NextRequest): { userId: string; email: string; isDemo: boolean } | null {
   try {
     const authHeader = request.headers.get('authorization');
     
@@ -22,7 +22,8 @@ function getUserFromToken(request: NextRequest): { userId: string; email: string
     if (token === 'demo-token-secure-123') {
       return {
         userId: 'demo-user-id',
-        email: 'demo@profolio.com'
+        email: 'demo@profolio.com',
+        isDemo: true
       };
     }
 
@@ -30,7 +31,8 @@ function getUserFromToken(request: NextRequest): { userId: string; email: string
     
     return {
       userId: decoded.userId || decoded.id || '',
-      email: decoded.email
+      email: decoded.email,
+      isDemo: false
     };
   } catch (error) {
     console.error('Token verification failed:', error);
@@ -106,6 +108,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       userId: user.userId,
+      isDemo: user.isDemo,
       assetsCount: savedCount,
       totalValue: summary.totalValue,
       totalInvested: summary.totalInvested,

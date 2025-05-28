@@ -22,6 +22,25 @@ const DEMO_USER = {
 };
 ```
 
+## 🔒 **NEW: API Key Storage Security**
+
+### **Demo Mode: localStorage Only**
+- ✅ **API keys stored in browser localStorage only**
+- ✅ **No server-side storage for demo users**
+- ✅ **Keys cleared when logging out**
+- ✅ **Session-based storage - private to user**
+
+### **Real Users: Secure Server Storage**
+- ✅ **AES-256-GCM encryption**
+- ✅ **Server-side encrypted storage**
+- ✅ **JWT authentication required**
+- ✅ **Database persistence**
+
+### **All Existing API Keys: WIPED**
+- 🧹 **Server storage completely cleared**
+- 🧹 **Fresh start for all users**
+- 🧹 **No legacy API keys remaining**
+
 ## 🚀 Using Demo Mode
 
 ### Step 1: Access Demo Mode
@@ -48,11 +67,13 @@ The demo mode automatically creates:
 - **Investment Property**: $450K rental condo in Austin
 - **Vacation Rental**: Rented condo in Miami
 
-### Step 3: Test Trading 212 Integration
+### Step 3: Test Trading 212 Integration (Demo Mode)
 1. Go to Asset Manager → API Config
-2. Enter your real Trading 212 API key
-3. Test and sync your actual portfolio
-4. Data will be associated with the demo user for testing
+2. Notice the blue "Demo Mode: Keys stored locally in browser only" indicator
+3. Enter your real Trading 212 API key
+4. Click "Save Keys Locally" - keys stored in localStorage only
+5. Test and sync your actual portfolio safely
+6. Keys are automatically cleared when you log out
 
 ## 📊 Demo Portfolio Summary
 
@@ -77,11 +98,32 @@ The demo mode automatically creates:
 - All API endpoints validate authentication
 - Demo user data is isolated and secure
 
-### API Key Storage
-- Trading 212 API keys encrypted with AES-256-GCM
-- Server-side storage (not localStorage)
-- Associated with authenticated user ID
-- Demo mode supports real API key testing
+### **Enhanced API Key Security**
+
+#### **Demo Mode Security**
+```javascript
+// Demo users - localStorage only
+if (isDemoMode) {
+  localStorage.setItem('demo-api-keys', JSON.stringify(apiKeys));
+  // No server transmission
+  // Cleared on logout
+}
+```
+
+#### **Real User Security**
+```javascript
+// Real users - encrypted server storage
+const encryptedKeys = encrypt(apiKeys); // AES-256-GCM
+await saveToSecureServer(encryptedKeys);
+```
+
+#### **Logout Cleanup**
+```javascript
+// All demo data cleared on logout
+localStorage.removeItem('demo-api-keys');
+localStorage.removeItem('demo-mode');
+localStorage.removeItem('user-data');
+```
 
 ## 🎯 Features Available in Demo Mode
 
@@ -94,11 +136,12 @@ The demo mode automatically creates:
 - ✅ Dashboard with live metrics
 - ✅ All CRUD operations
 
-### Real Data Integration
-- ✅ Test real Trading 212 API keys
-- ✅ Sync actual portfolio data
-- ✅ All data associated with demo user
-- ✅ Safe testing environment
+### **Safe API Key Testing**
+- ✅ Test real Trading 212 API keys safely
+- ✅ Keys stored in browser localStorage only
+- ✅ No server-side storage for demo users
+- ✅ Automatic cleanup on logout
+- ✅ Session-isolated storage
 
 ## 🔧 Technical Implementation
 
@@ -113,6 +156,23 @@ signInWithDemo() → {
 }
 ```
 
+### **API Key Storage Flow**
+```javascript
+// Demo mode detection
+const isDemoMode = localStorage.getItem('demo-mode') === 'true';
+
+if (isDemoMode) {
+  // Store in localStorage only
+  localStorage.setItem('demo-api-keys', JSON.stringify(keys));
+} else {
+  // Encrypt and store on server
+  await fetch('/api/user/api-keys', { 
+    method: 'POST',
+    body: JSON.stringify({ apiKeys: encryptedKeys })
+  });
+}
+```
+
 ### API Endpoint Authentication
 ```javascript
 // All endpoints validate tokens
@@ -120,7 +180,11 @@ function getUserFromToken(request) {
   const token = getAuthToken(request);
   
   if (token === 'demo-token-secure-123') {
-    return { userId: 'demo-user-id', email: 'demo@profolio.com' };
+    return { 
+      userId: 'demo-user-id', 
+      email: 'demo@profolio.com',
+      isDemo: true 
+    };
   }
   
   return verifyJWT(token); // Real user validation
@@ -132,21 +196,28 @@ function getUserFromToken(request) {
 ### For Users
 - **Instant Access**: No signup friction
 - **Real Experience**: Full feature set with realistic data
-- **Safe Testing**: Isolated demo environment
-- **API Testing**: Test real Trading 212 integration
+- **Safe Testing**: Isolated demo environment with localStorage-only API keys
+- **Privacy**: Demo API keys never leave the browser
 
 ### For Development
 - **Proper Auth**: Real authentication system
 - **Clean Architecture**: No bypass flags or hacks
-- **Secure**: Encrypted API keys and proper validation
+- **Enhanced Security**: Demo keys isolated from server storage
 - **Scalable**: Easy to add more demo features
+
+### **Security Improvements**
+- **Zero Server Risk**: Demo API keys never stored on server
+- **Session Isolation**: Each demo session is independent
+- **Automatic Cleanup**: Keys cleared on logout
+- **No Data Leakage**: Demo and real user data completely separated
 
 ## 🚀 Getting Started
 
 1. **Visit**: Navigate to `/auth/signUp`
 2. **Click**: "Try Demo Mode" button
 3. **Explore**: Full portfolio with sample data
-4. **Test**: Real Trading 212 API integration
-5. **Upgrade**: Sign up for real account anytime
+4. **Test**: Real Trading 212 API integration (localStorage only)
+5. **Logout**: All demo data and API keys automatically cleared
+6. **Upgrade**: Sign up for real account anytime
 
-The demo mode provides a complete, secure way to explore Profolio's features with realistic data while maintaining proper authentication architecture. 
+The demo mode provides a **complete, secure way** to explore Profolio's features with realistic data while maintaining **proper authentication architecture** and **enhanced API key security** through localStorage-only storage for demo users. 
