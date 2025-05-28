@@ -1,8 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
 import { useUser } from "@/lib/user";
-import { HeaderLayout } from "@/components/layout/headerLayout";
-import { FooterLayout } from "@/components/layout/footerLayout";
+import React, { useState, useEffect } from "react";
 import type { User, Group, Permission, Invitation } from "@/types/global";
 
 function AdminManager() {

@@ -1,5 +1,3 @@
-import { HeaderLayout } from "@/components/layout/headerLayout";
-import { FooterLayout } from "@/components/layout/footerLayout";
 import React, { useState, useEffect } from "react";
 import { useUser } from "@/lib/user";
 import ProfileSection from "@/components/settings/profileSection";
