@@ -872,8 +872,8 @@ export default function AssetManager() {
     useEffect(() => {
       const loadApiKeys = async () => {
         try {
-          const token = localStorage.getItem('auth-token');
-          if (!token) return;
+          // Try to get auth token, but don't require it for demo mode
+          const token = localStorage.getItem('auth-token') || 'demo-token';
 
           const response = await fetch('/api/user/api-keys', {
             headers: {
@@ -885,6 +885,8 @@ export default function AssetManager() {
           if (response.ok) {
             const data = await response.json();
             setApiKeys(prev => ({ ...prev, ...data.apiKeys }));
+          } else {
+            console.log('API keys not found, starting with empty keys (demo mode)');
           }
         } catch (error) {
           console.error('Error loading API keys:', error);
@@ -902,7 +904,7 @@ export default function AssetManager() {
 
       try {
         let isValid = false;
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem('auth-token') || 'demo-token';
         
         switch (provider) {
           case 'trading212':
@@ -954,7 +956,7 @@ export default function AssetManager() {
 
       try {
         setIsTestingConnection('trading212-sync');
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem('auth-token') || 'demo-token';
         
         // Fetch Trading 212 portfolio data
         const response = await fetch('/api/trading212/sync', {
@@ -1007,11 +1009,7 @@ Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
       e.preventDefault();
       
       try {
-        const token = localStorage.getItem('auth-token');
-        if (!token) {
-          alert('Please log in to save API keys');
-          return;
-        }
+        const token = localStorage.getItem('auth-token') || 'demo-token';
 
         // Save API keys securely to server
         const response = await fetch('/api/user/api-keys', {
