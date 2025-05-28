@@ -56,23 +56,25 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
       {isOpen && (
         <div 
           onClick={handleBackdropClick} 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto"
         >
-          <motion.div
-            ref={modalRef}
-            className="relative w-full max-w-4xl mx-auto my-8"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              transformOrigin: `${originStyle.originX * 100}% ${originStyle.originY * 100}%`
-            }}
-          >
-            {title && <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>}
-            {description && <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">{description}</p>}
-            {children}
-          </motion.div>
+          <div className="min-h-full flex items-center justify-center p-4">
+            <motion.div
+              ref={modalRef}
+              className="relative w-full max-w-4xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                transformOrigin: `${originStyle.originX * 100}% ${originStyle.originY * 100}%`
+              }}
+            >
+              {title && <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>}
+              {description && <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">{description}</p>}
+              {children}
+            </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>
