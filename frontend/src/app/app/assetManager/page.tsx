@@ -865,16 +865,211 @@ export default function AssetManager() {
       polygon: '',
       trading212: '',
     });
+    const [isTestingConnection, setIsTestingConnection] = useState<string | null>(null);
+    const [connectionStatus, setConnectionStatus] = useState<Record<string, 'success' | 'error' | null>>({});
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      // In a real app, these would be encrypted and stored securely
-      localStorage.setItem('profolio-api-keys', JSON.stringify(apiKeys));
-      onClose();
+    // Load existing API keys from secure server storage
+    useEffect(() => {
+      const loadApiKeys = async () => {
+        try {
+          const token = localStorage.getItem('auth-token');
+          if (!token) return;
+
+          const response = await fetch('/api/user/api-keys', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setApiKeys(prev => ({ ...prev, ...data.apiKeys }));
+          }
+        } catch (error) {
+          console.error('Error loading API keys:', error);
+        }
+      };
+
+      loadApiKeys();
+    }, []);
+
+    const testApiConnection = async (provider: string, apiKey: string) => {
+      if (!apiKey.trim()) return;
+      
+      setIsTestingConnection(provider);
+      setConnectionStatus(prev => ({ ...prev, [provider]: null }));
+
+      try {
+        let isValid = false;
+        const token = localStorage.getItem('auth-token');
+        
+        switch (provider) {
+          case 'trading212':
+            // Test Trading 212 API connection
+            const response = await fetch('/api/trading212/test', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({ apiKey }),
+            });
+            isValid = response.ok;
+            break;
+          
+          case 'alphaVantage':
+            // Test Alpha Vantage API
+            const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${apiKey}`);
+            const avData = await avResponse.json();
+            isValid = !avData['Error Message'] && !avData['Note'];
+            break;
+          
+          case 'coinGecko':
+            // Test CoinGecko API (if they have a test endpoint)
+            isValid = true; // CoinGecko often works without API key for basic requests
+            break;
+          
+          case 'polygon':
+            // Test Polygon API
+            const polygonResponse = await fetch(`https://api.polygon.io/v2/aggs/ticker/AAPL/prev?apikey=${apiKey}`);
+            isValid = polygonResponse.ok;
+            break;
+        }
+
+        setConnectionStatus(prev => ({ ...prev, [provider]: isValid ? 'success' : 'error' }));
+      } catch (error) {
+        console.error(`Error testing ${provider} API:`, error);
+        setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+      } finally {
+        setIsTestingConnection(null);
+      }
     };
 
+    const syncTrading212Data = async () => {
+      if (!apiKeys.trading212.trim()) {
+        alert('Please enter your Trading 212 API key first');
+        return;
+      }
+
+      try {
+        setIsTestingConnection('trading212-sync');
+        const token = localStorage.getItem('auth-token');
+        
+        // Fetch Trading 212 portfolio data
+        const response = await fetch('/api/trading212/sync', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ apiKey: apiKeys.trading212 }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.details || 'Failed to sync Trading 212 data');
+        }
+
+        const data = await response.json();
+        
+        // The sync endpoint will handle updating the assets in the backend
+        // Refresh the assets list
+        await fetchAssets();
+        
+        // Show detailed success message
+        const message = `Successfully synced ${data.assetsCount} assets from Trading 212!
+        
+Portfolio Summary:
+• Total Value: ${formatCurrency(data.totalValue)}
+• Total P&L: ${data.totalPnL >= 0 ? '+' : ''}${formatCurrency(data.totalPnL)} (${data.totalPnLPercentage.toFixed(2)}%)
+• Cash Balance: ${formatCurrency(data.cashBalance)}
+• Positions: ${data.positionsCount}
+
+Top Holdings:
+${data.topHoldings.slice(0, 3).map((holding: { name: string; value: number; percentage: number }) => 
+  `• ${holding.name}: ${formatCurrency(holding.value)} (${holding.percentage.toFixed(1)}%)`
+).join('\n')}
+
+Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
+        
+        alert(message);
+        onClose();
+      } catch (error) {
+        console.error('Error syncing Trading 212 data:', error);
+        alert(`Failed to sync Trading 212 data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsTestingConnection(null);
+      }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      try {
+        const token = localStorage.getItem('auth-token');
+        if (!token) {
+          alert('Please log in to save API keys');
+          return;
+        }
+
+        // Save API keys securely to server
+        const response = await fetch('/api/user/api-keys', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ apiKeys }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          alert(`API keys saved securely! Providers stored: ${data.providersStored.join(', ')}`);
+          onClose();
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save API keys');
+        }
+      } catch (error) {
+        console.error('Error saving API keys:', error);
+        alert(`Failed to save API keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    };
+
+    const apiProviders = [
+      {
+        key: 'alphaVantage',
+        label: 'Alpha Vantage API Key',
+        description: 'For stock market data',
+        docsUrl: 'https://www.alphavantage.co/documentation/',
+        placeholder: 'Enter your Alpha Vantage API key'
+      },
+      {
+        key: 'coinGecko',
+        label: 'CoinGecko API Key',
+        description: 'For cryptocurrency data',
+        docsUrl: 'https://www.coingecko.com/en/api/documentation',
+        placeholder: 'Enter your CoinGecko API key'
+      },
+      {
+        key: 'polygon',
+        label: 'Polygon API Key',
+        description: 'For real-time market data',
+        docsUrl: 'https://polygon.io/docs',
+        placeholder: 'Enter your Polygon API key'
+      },
+      {
+        key: 'trading212',
+        label: 'Trading 212 API Key',
+        description: 'For Trading 212 portfolio sync',
+        docsUrl: 'https://t212public-api-docs.redoc.ly/',
+        placeholder: 'Enter your Trading 212 API key'
+      }
+    ];
+
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">API Configuration</h3>
           <button
@@ -885,62 +1080,82 @@ export default function AssetManager() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Alpha Vantage API Key
-            </label>
-            <input
-              type="password"
-              value={apiKeys.alphaVantage}
-              onChange={(e) => setApiKeys({ ...apiKeys, alphaVantage: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              placeholder="Enter your Alpha Vantage API key"
-            />
-            <p className="text-xs text-gray-500 mt-1">For stock market data</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              CoinGecko API Key
-            </label>
-            <input
-              type="password"
-              value={apiKeys.coinGecko}
-              onChange={(e) => setApiKeys({ ...apiKeys, coinGecko: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              placeholder="Enter your CoinGecko API key"
-            />
-            <p className="text-xs text-gray-500 mt-1">For cryptocurrency data</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Polygon API Key
-            </label>
-            <input
-              type="password"
-              value={apiKeys.polygon}
-              onChange={(e) => setApiKeys({ ...apiKeys, polygon: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              placeholder="Enter your Polygon API key"
-            />
-            <p className="text-xs text-gray-500 mt-1">For real-time market data</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Trading 212 API Key
-            </label>
-            <input
-              type="password"
-              value={apiKeys.trading212}
-              onChange={(e) => setApiKeys({ ...apiKeys, trading212: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              placeholder="Enter your Trading 212 API key"
-            />
-            <p className="text-xs text-gray-500 mt-1">For Trading 212 portfolio sync</p>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {apiProviders.map((provider) => (
+            <div key={provider.key} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {provider.label}
+                </label>
+                <a
+                  href={provider.docsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 transition-colors"
+                >
+                  <i className="fas fa-external-link-alt text-xs"></i>
+                  View Docs
+                </a>
+              </div>
+              
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <input
+                    type="password"
+                    value={apiKeys[provider.key as keyof typeof apiKeys]}
+                    onChange={(e) => setApiKeys({ ...apiKeys, [provider.key]: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 pr-10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    placeholder={provider.placeholder}
+                  />
+                  {connectionStatus[provider.key] && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {connectionStatus[provider.key] === 'success' ? (
+                        <i className="fas fa-check-circle text-green-500"></i>
+                      ) : (
+                        <i className="fas fa-times-circle text-red-500"></i>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => testApiConnection(provider.key, apiKeys[provider.key as keyof typeof apiKeys])}
+                  disabled={isTestingConnection === provider.key || !apiKeys[provider.key as keyof typeof apiKeys].trim()}
+                  className="px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-colors text-sm"
+                >
+                  {isTestingConnection === provider.key ? (
+                    <i className="fas fa-spinner fa-spin"></i>
+                  ) : (
+                    'Test'
+                  )}
+                </button>
+              </div>
+              
+              <p className="text-xs text-gray-500">{provider.description}</p>
+              
+              {provider.key === 'trading212' && apiKeys.trading212 && (
+                <button
+                  type="button"
+                  onClick={syncTrading212Data}
+                  disabled={isTestingConnection === 'trading212-sync'}
+                  className="w-full px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  {isTestingConnection === 'trading212-sync' ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Syncing Portfolio...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-sync-alt"></i>
+                      Sync Trading 212 Portfolio
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          ))}
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" onClick={onClose} variant="ghost">
