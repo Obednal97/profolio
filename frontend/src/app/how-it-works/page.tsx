@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useAnimationFrame } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button/button';
 import Link from 'next/link';
@@ -26,6 +26,7 @@ const staggerChildren = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getLiveNetWorth = () => {
   const base = 700_000; // Start at 700k
   const ratePerSecond = 0.01; // +0.01 per second
@@ -33,6 +34,7 @@ const getLiveNetWorth = () => {
   return base + ratePerSecond * (now - 1700000000);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const formatCompactNumber = (num: number) =>
   Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
 
@@ -118,12 +120,7 @@ const FAQS = [
 ];
 
 export default function HowItWorksPage() {
-  const [liveNetWorth, setLiveNetWorth] = useState(getLiveNetWorth());
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  useAnimationFrame(() => {
-    setLiveNetWorth(getLiveNetWorth());
-  });
 
   return (
     <main className="min-h-screen">
@@ -155,23 +152,6 @@ export default function HowItWorksPage() {
               From scattered spreadsheets to complete financial clarity in minutes. 
               See how Profolio transforms your wealth management.
             </p>
-          </motion.div>
-
-          {/* Live Demo */}
-          <motion.div variants={fadeUp} className="relative group max-w-2xl mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-xl opacity-20 dark:opacity-30 group-hover:opacity-30 dark:group-hover:opacity-40 transition-opacity" />
-            <div className="relative p-8 bg-white dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <i className="fas fa-chart-line text-2xl text-blue-600 dark:text-blue-400" />
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Live Portfolio Demo</h2>
-              </div>
-              <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
-                ${formatCompactNumber(liveNetWorth)}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-green-600 dark:text-green-400">↑ Growing</span> in real-time • Updated every second
-              </p>
-            </div>
           </motion.div>
         </motion.div>
       </section>

@@ -13,9 +13,9 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = ({ user, currentPath })
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
+      <div className="flex items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
         {/* Logo */}
-        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
           <Link href={user ? '/app/dashboard' : '/'} className="flex flex-col leading-tight min-w-0">
             <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white hover:underline truncate">
               Profolio
@@ -26,13 +26,13 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = ({ user, currentPath })
           </Link>
         </div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex">
+        {/* Desktop Navigation - Centered */}
+        <div className="hidden md:flex flex-1 justify-center">
           <Navbar user={user} currentPath={currentPath} />
         </div>
 
         {/* Right side - User menu and mobile menu button */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-1 justify-end">
           <UserMenu user={user} />
           
           {/* Mobile menu button */}
