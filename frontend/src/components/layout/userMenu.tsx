@@ -106,23 +106,17 @@ export default function UserMenu({
         <>
           <Link
             href="/auth/signIn"
-            className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all touch-manipulation"
+            className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all touch-manipulation flex items-center gap-2"
           >
-            <span className="hidden sm:inline flex items-center">
-              <i className="fas fa-sign-in-alt mr-2"></i>
-              Log In
-            </span>
-            <i className="fas fa-sign-in-alt sm:hidden"></i>
+            <i className="fas fa-sign-in-alt"></i>
+            <span className="hidden sm:inline">Log In</span>
           </Link>
           <Link
             href="/auth/signUp"
-            className="px-3 sm:px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all touch-manipulation"
+            className="px-3 sm:px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all touch-manipulation flex items-center gap-2"
           >
-            <span className="hidden sm:inline flex items-center">
-              <i className="fas fa-user-plus mr-2"></i>
-              Sign Up
-            </span>
-            <i className="fas fa-user-plus sm:hidden"></i>
+            <i className="fas fa-user-plus"></i>
+            <span className="hidden sm:inline">Sign Up</span>
           </Link>
         </>
       )}
