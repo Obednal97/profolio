@@ -118,10 +118,9 @@ export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         
         {/* Multi-layer fade for smooth transition */}
         <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none">
@@ -173,7 +172,7 @@ export default function PricingPage() {
       </section>
 
       {/* Pricing Cards */}
-      <section className="px-6 sm:px-12 -mt-8 pb-20">
+      <section className="px-6 sm:px-12 -mt-8 pb-20 bg-gray-50 dark:bg-gray-900">
         <motion.div
           initial="hidden"
           whileInView="visible"

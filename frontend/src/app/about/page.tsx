@@ -45,11 +45,10 @@ const VALUES = [
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        {/* Background gradient - removed since it's now on the section */}
         
         {/* Animated blobs */}
         <div className="absolute inset-0 overflow-hidden">
@@ -80,7 +79,7 @@ export default function AboutPage() {
       </section>
 
       {/* Values Section */}
-      <section className="py-20 px-6 sm:px-12">
+      <section className="py-20 px-6 sm:px-12 bg-gray-50 dark:bg-gray-900">
         <motion.div
           initial="hidden"
           whileInView="visible"
