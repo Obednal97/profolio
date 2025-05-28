@@ -34,8 +34,8 @@ export default function Navbar({
           href={link.path}
           className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
             currentPath === link.path
-              ? "bg-white/10 text-white"
-              : "text-white/60 hover:text-white hover:bg-white/5"
+              ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
         >
           <i className={`fas ${link.icon}`}></i>
