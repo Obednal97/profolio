@@ -933,7 +933,7 @@ export default function PropertyManager() {
         </AnimatePresence>
       </div>
 
-      {/* Modal */}
+      {/* Modal - Moved outside the relative z-10 container */}
       {showModal && (
         <Modal isOpen={showModal} onClose={handleCloseModal}>
           <PropertyModal

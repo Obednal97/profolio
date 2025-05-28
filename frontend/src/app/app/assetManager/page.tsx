@@ -989,9 +989,9 @@ export default function AssetManager() {
         </AnimatePresence>
       </div>
 
-      {/* Modal */}
+      {/* Modal - Moved outside the relative z-10 container */}
       {(showAddModal || editingAsset) && (
-        <Modal isOpen={true} onClose={handleCloseModal}>
+        <Modal isOpen={showAddModal || !!editingAsset} onClose={handleCloseModal}>
           <AssetModal
             onClose={handleCloseModal}
             onSubmit={handleSubmit}
