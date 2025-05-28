@@ -886,7 +886,7 @@ export default function AssetManager() {
           }
 
           // For real users, load from secure server storage
-          const token = localStorage.getItem('auth-token') || 'demo-token';
+          const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
 
           const response = await fetch('/api/user/api-keys', {
             headers: {
@@ -917,7 +917,7 @@ export default function AssetManager() {
 
       try {
         let isValid = false;
-        const token = localStorage.getItem('auth-token') || 'demo-token';
+        const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
         
         switch (provider) {
           case 'trading212':
@@ -969,7 +969,7 @@ export default function AssetManager() {
 
       try {
         setIsTestingConnection('trading212-sync');
-        const token = localStorage.getItem('auth-token') || 'demo-token';
+        const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
         
         // Fetch Trading 212 portfolio data
         const response = await fetch('/api/trading212/sync', {
@@ -1031,7 +1031,7 @@ Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
         }
 
         // For real users, save to secure server storage
-        const token = localStorage.getItem('auth-token') || 'demo-token';
+        const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
 
         const response = await fetch('/api/user/api-keys', {
           method: 'POST',
