@@ -44,10 +44,10 @@ function decrypt(encryptedData: EncryptedData): string {
   return decrypted;
 }
 
-// In-memory storage for demo (in production, use database)
+// WIPED: In-memory storage cleared - starting fresh
 const userApiKeys = new Map<string, Record<string, EncryptedData>>();
 
-function getUserFromToken(request: NextRequest): { userId: string; email: string } | null {
+function getUserFromToken(request: NextRequest): { userId: string; email: string; isDemo: boolean } | null {
   try {
     const authHeader = request.headers.get('authorization');
     
@@ -57,11 +57,12 @@ function getUserFromToken(request: NextRequest): { userId: string; email: string
 
     const token = authHeader.slice(7);
     
-    // Handle demo token specifically
+    // Handle demo token specifically - demo users use localStorage only
     if (token === 'demo-token-secure-123') {
       return {
         userId: 'demo-user-id',
-        email: 'demo@profolio.com'
+        email: 'demo@profolio.com',
+        isDemo: true
       };
     }
 
@@ -69,7 +70,8 @@ function getUserFromToken(request: NextRequest): { userId: string; email: string
     
     return {
       userId: decoded.userId || decoded.id || '',
-      email: decoded.email
+      email: decoded.email,
+      isDemo: false
     };
   } catch (error) {
     console.error('Token verification failed:', error);
@@ -84,6 +86,15 @@ export async function GET(request: NextRequest) {
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Demo users should use localStorage only
+    if (user.isDemo) {
+      return NextResponse.json({ 
+        apiKeys: {},
+        message: 'Demo mode: API keys stored in localStorage only',
+        isDemo: true
+      });
     }
 
     const encryptedKeys = userApiKeys.get(user.userId) || {};
@@ -121,7 +132,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid API keys format' }, { status: 400 });
     }
 
-    // Encrypt API keys before storage
+    // Demo users should use localStorage only - don't store on server
+    if (user.isDemo) {
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Demo mode: API keys stored in localStorage only',
+        providersStored: Object.keys(apiKeys),
+        isDemo: true
+      });
+    }
+
+    // Encrypt API keys before storage for real users
     const encryptedKeys: Record<string, EncryptedData> = {};
     for (const [provider, apiKey] of Object.entries(apiKeys)) {
       if (typeof apiKey === 'string' && apiKey.trim()) {
@@ -157,6 +178,15 @@ export async function DELETE(request: NextRequest) {
 
     if (!provider) {
       return NextResponse.json({ error: 'Provider parameter required' }, { status: 400 });
+    }
+
+    // Demo users should use localStorage only
+    if (user.isDemo) {
+      return NextResponse.json({ 
+        success: true, 
+        message: `Demo mode: ${provider} API key removed from localStorage only`,
+        isDemo: true
+      });
     }
 
     const userKeys = userApiKeys.get(user.userId) || {};

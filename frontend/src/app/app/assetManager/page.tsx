@@ -868,11 +868,24 @@ export default function AssetManager() {
     const [isTestingConnection, setIsTestingConnection] = useState<string | null>(null);
     const [connectionStatus, setConnectionStatus] = useState<Record<string, 'success' | 'error' | null>>({});
 
-    // Load existing API keys from secure server storage
+    // Check if user is in demo mode
+    const isDemoMode = localStorage.getItem('demo-mode') === 'true';
+
+    // Load existing API keys
     useEffect(() => {
       const loadApiKeys = async () => {
         try {
-          // Try to get auth token, but don't require it for demo mode
+          if (isDemoMode) {
+            // For demo mode, load from localStorage
+            const demoApiKeys = localStorage.getItem('demo-api-keys');
+            if (demoApiKeys) {
+              const parsedKeys = JSON.parse(demoApiKeys);
+              setApiKeys(prev => ({ ...prev, ...parsedKeys }));
+            }
+            return;
+          }
+
+          // For real users, load from secure server storage
           const token = localStorage.getItem('auth-token') || 'demo-token';
 
           const response = await fetch('/api/user/api-keys', {
@@ -886,7 +899,7 @@ export default function AssetManager() {
             const data = await response.json();
             setApiKeys(prev => ({ ...prev, ...data.apiKeys }));
           } else {
-            console.log('API keys not found, starting with empty keys (demo mode)');
+            console.log('API keys not found, starting with empty keys');
           }
         } catch (error) {
           console.error('Error loading API keys:', error);
@@ -894,7 +907,7 @@ export default function AssetManager() {
       };
 
       loadApiKeys();
-    }, []);
+    }, [isDemoMode]);
 
     const testApiConnection = async (provider: string, apiKey: string) => {
       if (!apiKey.trim()) return;
@@ -1009,9 +1022,17 @@ Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
       e.preventDefault();
       
       try {
+        if (isDemoMode) {
+          // For demo mode, store in localStorage only
+          localStorage.setItem('demo-api-keys', JSON.stringify(apiKeys));
+          alert(`Demo Mode: API keys saved locally in your browser session only!\n\nProviders stored: ${Object.keys(apiKeys).filter(key => apiKeys[key as keyof typeof apiKeys].trim()).join(', ')}\n\nNote: These keys are only stored in your browser and will be cleared when you log out.`);
+          onClose();
+          return;
+        }
+
+        // For real users, save to secure server storage
         const token = localStorage.getItem('auth-token') || 'demo-token';
 
-        // Save API keys securely to server
         const response = await fetch('/api/user/api-keys', {
           method: 'POST',
           headers: {
@@ -1069,7 +1090,15 @@ Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">API Configuration</h3>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">API Configuration</h3>
+            {isDemoMode && (
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                <i className="fas fa-info-circle mr-1"></i>
+                Demo Mode: Keys stored locally in browser only
+              </p>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -1129,7 +1158,7 @@ Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
                   )}
                 </button>
               </div>
-              
+
               <p className="text-xs text-gray-500">{provider.description}</p>
               
               {provider.key === 'trading212' && apiKeys.trading212 && (
@@ -1160,7 +1189,7 @@ Synced at: ${new Date(data.syncedAt).toLocaleString()}`;
               Cancel
             </Button>
             <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
-              Save API Keys
+              {isDemoMode ? 'Save Keys Locally' : 'Save API Keys'}
             </Button>
           </div>
         </form>

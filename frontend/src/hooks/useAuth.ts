@@ -92,10 +92,11 @@ export function useAuth() {
         return;
       }
       
-      // Clear demo mode data
+      // Clear demo mode data and API keys
       localStorage.removeItem('auth-token');
       localStorage.removeItem('demo-mode');
       localStorage.removeItem('user-data');
+      localStorage.removeItem('demo-api-keys'); // Clear demo API keys
       
       await fetch("/api/signout", { method: "POST" });
       if (redirect) {
@@ -108,10 +109,11 @@ export function useAuth() {
         return;
       }
       
-      // Clear demo mode data
+      // Clear demo mode data and API keys
       localStorage.removeItem('auth-token');
       localStorage.removeItem('demo-mode');
       localStorage.removeItem('user-data');
+      localStorage.removeItem('demo-api-keys'); // Clear demo API keys
       
       const auth = (await getFirebase()).auth!;
       await firebaseSignOut(auth);
