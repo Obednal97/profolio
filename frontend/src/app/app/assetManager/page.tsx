@@ -43,7 +43,6 @@ export default function AssetManager() {
   const [filterType, setFilterType] = useState<string>("all");
 
   const fetchAssets = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -51,7 +50,7 @@ export default function AssetManager() {
       const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "READ", userId: user.id }),
+        body: JSON.stringify({ method: "READ", userId: "demo-user-id" }),
       });
       
       const data = await response.json();
@@ -64,16 +63,17 @@ export default function AssetManager() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
-    if (user) {
-      fetchAssets();
-    }
-  }, [user, fetchAssets]);
+    fetchAssets();
+  }, [fetchAssets]);
 
   const fetchChartData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setChartLoading(false);
+      return;
+    }
     setChartLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
