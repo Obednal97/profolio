@@ -70,10 +70,6 @@ export default function AssetManager() {
   }, [fetchAssets]);
 
   const fetchChartData = useCallback(async () => {
-    if (!user) {
-      setChartLoading(false);
-      return;
-    }
     setChartLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -83,7 +79,7 @@ export default function AssetManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method: "GET_HISTORY",
-          userId: user.id,
+          userId: "demo-user-id",
           days: timeframe === "max" ? null : parseInt(timeframe),
         }),
       });
@@ -98,13 +94,11 @@ export default function AssetManager() {
     } finally {
       setChartLoading(false);
     }
-  }, [user, timeframe]);
+  }, [timeframe]);
 
   useEffect(() => {
-    if (user) {
-      fetchChartData();
-    }
-  }, [user, timeframe, fetchChartData]);
+    fetchChartData();
+  }, [timeframe, fetchChartData]);
 
   const handleEdit = useCallback((asset: Asset) => {
     setEditingAsset(asset);
