@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Tile } from '@/components/ui/tile/tile';
 import { Button } from '@/components/ui/button/button';
@@ -10,11 +9,6 @@ import { useState } from 'react';
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut' } },
-};
-
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 1, ease: 'easeOut' } },
 };
 
 const container = {
@@ -28,12 +22,12 @@ const container = {
 
 const TESTIMONIALS = [
   {
-    quote: '"Finally a dashboard that actually pulls everything into one place."',
+    quote: '&quot;Finally a dashboard that actually pulls everything into one place.&quot;',
     author: 'Sarah Chen',
     role: 'Startup Founder',
   },
   {
-    quote: '"Feels like Notion met my bank account and had a baby."',
+    quote: '&quot;Feels like Notion met my bank account and had a baby.&quot;',
     author: 'Alex Rivera',
     role: 'Angel Investor',
   },
@@ -211,14 +205,14 @@ export default function LandingPage() {
           Loved by Founders & Investors
         </motion.h2>
         <motion.p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto" variants={fadeUp}>
-          Join thousands who've simplified their wealth management
+          Join thousands who&apos;ve simplified their wealth management
         </motion.p>
         <div className="grid md:grid-cols-2 gap-8">
           {TESTIMONIALS.map((testimonial, i) => (
             <motion.div key={i} variants={fadeUp}>
               <Tile className="p-8 bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:border-gray-700 transition-all">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="text-4xl text-gray-600">"</div>
+                  <div className="text-4xl text-gray-600">&quot;</div>
                   <p className="text-lg text-gray-300 italic flex-1">{testimonial.quote}</p>
                 </div>
                 <div className="flex items-center gap-3 ml-12">
@@ -311,7 +305,7 @@ export default function LandingPage() {
               Ready to Take Control?
             </h2>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Join thousands of investors who've simplified their wealth tracking with Profolio.
+              Join thousands of investors who&apos;ve simplified their wealth tracking with Profolio.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" className="text-lg px-8 py-6">
