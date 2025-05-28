@@ -7,17 +7,22 @@ interface NavigationProps {
   };
   unreadNotifications?: number;
   currentPath?: string;
+  isMobile?: boolean;
+  onNavigate?: () => void;
 }
 
 export default function Navbar({
   user,
   currentPath = "/",
+  isMobile = false,
+  onNavigate,
 }: NavigationProps) {
   // Debug logging
   console.log("Navbar Debug:", {
     user,
     currentPath,
-    hasUser: !!user
+    hasUser: !!user,
+    isMobile
   });
 
   const navigationLinks = user
@@ -33,19 +38,30 @@ export default function Navbar({
         { path: "/pricing", label: "Pricing", icon: "fa-tags" },
       ];
 
+  const handleLinkClick = () => {
+    if (onNavigate) {
+      onNavigate();
+    }
+  };
+
   return (
-    <nav className="flex items-center space-x-6">
+    <nav className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-6'}`}>
       {navigationLinks.map((link) => (
         <Link
           key={link.path}
           href={link.path}
-          className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+          onClick={handleLinkClick}
+          className={`${
+            isMobile 
+              ? 'px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 transition-colors touch-manipulation' 
+              : 'px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors'
+          } ${
             currentPath === link.path
               ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
         >
-          <i className={`fas ${link.icon}`}></i>
+          <i className={`fas ${link.icon} ${isMobile ? 'text-lg' : ''}`}></i>
           {link.label}
         </Link>
       ))}

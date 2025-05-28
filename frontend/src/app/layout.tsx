@@ -17,7 +17,58 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Profolio",
-  description: "Your personal finance OS",
+  description: "Your personal finance OS - Track assets, expenses, and properties",
+  keywords: ["finance", "portfolio", "assets", "expenses", "properties", "wealth management"],
+  authors: [{ name: "Profolio Team" }],
+  creator: "Profolio",
+  publisher: "Profolio",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://profolio.app'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: "Profolio - Your Personal Finance OS",
+    description: "Track and manage your assets, expenses, and properties in one place",
+    url: 'https://profolio.app',
+    siteName: 'Profolio',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Profolio - Your Personal Finance OS",
+    description: "Track and manage your assets, expenses, and properties in one place",
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#111827' },
+  ],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Profolio',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'apple-mobile-web-app-title': 'Profolio',
+    'application-name': 'Profolio',
+    'msapplication-TileColor': '#3b82f6',
+    'msapplication-config': '/browserconfig.xml',
+  },
 };
 
 export default function RootLayout({
