@@ -10,30 +10,45 @@ interface LayoutWrapperProps {
   children: React.ReactNode;
 }
 
-// Theme context
-interface ThemeContextType {
+// App context for theme and currency
+interface AppContextType {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  currency: string;
+  setCurrency: (currency: string) => void;
+  formatCurrency: (amount: number) => string;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
+export const useAppContext = () => {
+  const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
+};
+
+// For backward compatibility
+export const useTheme = () => {
+  const context = useAppContext();
+  return {
+    theme: context.theme,
+    toggleTheme: context.toggleTheme,
+  };
 };
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname();
   const { data: user } = useUser();
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [currency, setCurrencyState] = useState<string>('USD');
 
-  // Load theme from localStorage on mount
+  // Load theme and currency from localStorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    const savedCurrency = localStorage.getItem('currency') || 'USD';
+    
     if (savedTheme) {
       setTheme(savedTheme);
     } else {
@@ -41,6 +56,8 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
       const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       setTheme(systemPrefersDark ? 'dark' : 'light');
     }
+    
+    setCurrencyState(savedCurrency);
   }, []);
 
   // Apply theme to document
@@ -50,13 +67,36 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Save currency to localStorage
+  useEffect(() => {
+    localStorage.setItem('currency', currency);
+  }, [currency]);
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const themeValue = {
+  const setCurrency = (newCurrency: string) => {
+    setCurrencyState(newCurrency);
+  };
+
+  const formatCurrency = (amount: number) => {
+    // Convert cents to currency units if amount is large (assuming it's in cents)
+    const value = amount > 1000 ? amount / 100 : amount;
+    
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      currencyDisplay: 'symbol',
+    }).format(value);
+  };
+
+  const appValue = {
     theme,
     toggleTheme,
+    currency,
+    setCurrency,
+    formatCurrency,
   };
 
   const hideLayout = ["/login", "/signup", "/signout"].some((path) =>
@@ -71,7 +111,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const headerUser = isAppSection ? (user || { name: "Demo User", email: "demo@example.com" }) : undefined;
 
   return (
-    <ThemeContext.Provider value={themeValue}>
+    <AppContext.Provider value={appValue}>
       <div className={`min-h-screen transition-colors duration-300 ${
         theme === 'dark' 
           ? 'bg-gray-900 text-white' 
@@ -83,6 +123,6 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
         </main>
         {!hideLayout && <Footer />}
       </div>
-    </ThemeContext.Provider>
+    </AppContext.Provider>
   );
 }

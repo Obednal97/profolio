@@ -2,6 +2,7 @@
 import type { Expense, ExpenseFormData } from "@/types/global";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "@/lib/user";
+import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,16 +35,8 @@ const categoryConfig = {
   Other: { icon: "fa-ellipsis-h", color: "#6b7280", gradient: "from-gray-500 to-gray-600" },
 };
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
-
-function formatCurrency(cents: number) {
-  return currencyFormatter.format(cents / 100);
-}
-
 function ExpenseManager() {
+  const { formatCurrency } = useAppContext();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

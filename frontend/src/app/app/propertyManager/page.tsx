@@ -4,6 +4,7 @@ import type { PropertyFormData, Property } from "@/types/global";
 import React, { useState, useCallback, useMemo } from "react";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { useUser } from "@/lib/user";
+import { useAppContext } from "@/components/layout/layoutWrapper";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
 import PieChart from "@/components/charts/pie";
@@ -32,6 +33,7 @@ export default function PropertyManager() {
   const [filterType, setFilterType] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"value_desc" | "value_asc" | "rental_desc" | "rental_asc">("value_desc");
   const { data: user } = useUser();
+  const { formatCurrency } = useAppContext();
 
   const fetchProperties = useCallback(async () => {
     setLoading(true);
@@ -585,14 +587,14 @@ export default function PropertyManager() {
             <div>
               <p className="text-gray-400 text-sm">Current Value</p>
               <p className="text-xl font-bold text-white">
-                ${(property.currentValue ?? 0).toLocaleString()}
+                {formatCurrency(property.currentValue ?? 0)}
               </p>
             </div>
             {property.rentalIncome && (
               <div>
                 <p className="text-gray-400 text-sm">Monthly Income</p>
                 <p className="text-xl font-bold text-green-400">
-                  ${property.rentalIncome.toLocaleString()}
+                  {formatCurrency(property.rentalIncome)}
                 </p>
               </div>
             )}
@@ -622,7 +624,7 @@ export default function PropertyManager() {
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm">Mortgage</span>
               <span className="text-orange-400">
-                ${property.mortgageAmount.toLocaleString()}
+                {formatCurrency(property.mortgageAmount)}
               </span>
             </div>
           )}
@@ -694,7 +696,7 @@ export default function PropertyManager() {
               <div>
                 <p className="text-gray-400 text-sm">Total Value</p>
                 <p className="text-3xl font-bold text-green-400 mt-1">
-                  ${totalValue.toLocaleString()}
+                  {formatCurrency(totalValue)}
                 </p>
               </div>
               <div className="p-3 bg-green-500/20 rounded-lg">
@@ -722,7 +724,7 @@ export default function PropertyManager() {
               <div>
                 <p className="text-gray-400 text-sm">Monthly Income</p>
                 <p className="text-3xl font-bold text-purple-400 mt-1">
-                  ${totalRentalIncome.toLocaleString()}
+                  {formatCurrency(totalRentalIncome)}
                 </p>
               </div>
               <div className="p-3 bg-purple-500/20 rounded-lg">
@@ -736,7 +738,7 @@ export default function PropertyManager() {
               <div>
                 <p className="text-gray-400 text-sm">Total Mortgage</p>
                 <p className="text-3xl font-bold text-orange-400 mt-1">
-                  ${totalMortgage.toLocaleString()}
+                  {formatCurrency(totalMortgage)}
                 </p>
               </div>
               <div className="p-3 bg-orange-500/20 rounded-lg">
@@ -771,13 +773,13 @@ export default function PropertyManager() {
                 <div className="p-4 bg-white/5 rounded-lg">
                   <p className="text-gray-400 text-sm mb-1">Average Property Value</p>
                   <p className="text-2xl font-bold text-white">
-                    ${properties.length > 0 ? Math.round(totalValue / properties.length).toLocaleString() : 0}
+                    {formatCurrency(properties.length > 0 ? totalValue / properties.length : 0)}
                   </p>
                 </div>
                 <div className="p-4 bg-white/5 rounded-lg">
                   <p className="text-gray-400 text-sm mb-1">Total Annual Income</p>
                   <p className="text-2xl font-bold text-green-400">
-                    ${(totalRentalIncome * 12).toLocaleString()}
+                    {formatCurrency(totalRentalIncome * 12)}
                   </p>
                 </div>
                 <div className="p-4 bg-white/5 rounded-lg">
