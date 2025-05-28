@@ -37,17 +37,18 @@ export default function PropertyManager() {
     if (!user) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/properties", {
+      const { apiCall } = await import('@/lib/mockApi');
+      
+      const response = await apiCall("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ method: "READ", userId: user.id }),
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch properties");
-      }
+      
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setProperties(data.properties || []);
+      setError(null); // Clear any previous errors
     } catch (err) {
       console.error("Property fetch error:", err);
       setError("Failed to load properties");

@@ -58,17 +58,18 @@ function ExpenseManager() {
     if (!user) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/expenses", {
+      const { apiCall } = await import('@/lib/mockApi');
+      
+      const response = await apiCall("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ method: "READ", userId: user.id }),
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch expenses");
-      }
+      
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setExpenses(data.expenses || []);
+      setError(null); // Clear any previous errors
     } catch (err) {
       console.error("Expense fetch error:", err);
       setError("Failed to load expenses");
