@@ -70,10 +70,10 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
       {isOpen && (
         <div 
           onClick={handleBackdropClick} 
-          className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
           style={{ 
             margin: 0, 
-            padding: '1rem',
+            padding: '0.5rem',
             minHeight: '100vh',
             minWidth: '100vw',
             top: 0,
@@ -84,7 +84,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
         >
           <motion.div
             ref={modalRef}
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="relative w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
