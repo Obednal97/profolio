@@ -67,8 +67,10 @@ export default function PropertyManager() {
     if (!user) return;
     setModalError(null);
     try {
+      const { apiCall } = await import('@/lib/mockApi');
+      
       const method = editingProperty ? "UPDATE" : "CREATE";
-      const response = await fetch("/api/properties", {
+      const response = await apiCall("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -78,10 +80,6 @@ export default function PropertyManager() {
           ...(editingProperty?.id ? { id: editingProperty.id } : {}),
         }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save property");
-      }
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
@@ -100,7 +98,9 @@ export default function PropertyManager() {
     if (!confirm("Are you sure you want to delete this property?")) return;
 
     try {
-      const response = await fetch("/api/properties", {
+      const { apiCall } = await import('@/lib/mockApi');
+      
+      const response = await apiCall("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,10 +109,6 @@ export default function PropertyManager() {
           id: propertyId,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete property");
-      }
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);

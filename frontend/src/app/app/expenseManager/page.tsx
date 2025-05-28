@@ -47,12 +47,14 @@ function ExpenseManager() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [timeRange, setTimeRange] = useState("30");
   const { data: user } = useUser();
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const fetchExpenses = useCallback(async () => {
     if (!user) return;
@@ -84,12 +86,25 @@ function ExpenseManager() {
     }
   }, [user, fetchExpenses]);
 
+  // Auto-clear notifications
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError(null);
+        setSuccess(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, success]);
+
   const handleSubmit = useCallback(
     async (expenseData: Expense) => {
       if (!user) return;
       try {
+        const { apiCall } = await import('@/lib/mockApi');
+        
         const method = editingExpense ? "UPDATE" : "CREATE";
-        const response = await fetch("/api/expenses", {
+        const response = await apiCall("/api/expenses", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -98,9 +113,7 @@ function ExpenseManager() {
             id: editingExpense?.id,
           }),
         });
-        if (!response.ok) {
-          throw new Error("Failed to save expense");
-        }
+        
         const data = await response.json();
         if (data.error) throw new Error(data.error);
         setShowModal(false);
@@ -119,7 +132,9 @@ function ExpenseManager() {
       if (!user) return;
       if (!confirm("Are you sure you want to delete this expense?")) return;
       try {
-        const response = await fetch("/api/expenses", {
+        const { apiCall } = await import('@/lib/mockApi');
+        
+        const response = await apiCall("/api/expenses", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -128,9 +143,7 @@ function ExpenseManager() {
             id: expenseId,
           }),
         });
-        if (!response.ok) {
-          throw new Error("Failed to delete expense");
-        }
+        
         const data = await response.json();
         if (data.error) throw new Error(data.error);
         fetchExpenses();
@@ -155,6 +168,61 @@ function ExpenseManager() {
     setEditingExpense(expense);
     setShowModal(true);
   }, []);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadProgress(0);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        // Handle CSV upload
+        const text = await file.text();
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        const expenses: Expense[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',');
+          if (values.length >= 3) {
+            const expense: Expense = {
+              id: Date.now().toString() + i,
+              userId: user?.id || '',
+              category: values[headers.indexOf('category')] || 'Other',
+              amount: parseFloat(values[headers.indexOf('amount')] || '0') * 100,
+              date: values[headers.indexOf('date')] || new Date().toISOString().split('T')[0],
+              description: values[headers.indexOf('description')] || 'Imported expense',
+              recurrence: 'one-time'
+            };
+            expenses.push(expense);
+          }
+        }
+
+        // Upload expenses in batches
+        for (let i = 0; i < expenses.length; i++) {
+          await handleSubmit(expenses[i]);
+          setUploadProgress(Math.round(((i + 1) / expenses.length) * 100));
+        }
+
+        setSuccess(`Successfully imported ${expenses.length} expenses from CSV`);
+      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        // For PDF, show a message that it's not yet supported
+        setError('PDF parsing is not yet implemented. Please use CSV format for now.');
+      } else {
+        setError('Please upload a CSV or PDF file');
+      }
+    } catch (err) {
+      console.error('File upload error:', err);
+      setError('Failed to process uploaded file');
+    } finally {
+      setUploadProgress(null);
+      // Reset file input
+      e.target.value = '';
+    }
+  }, [user, handleSubmit, setError, setSuccess, setUploadProgress]);
 
   // Calculate metrics
   const totalExpenses = useMemo(() => {
@@ -507,13 +575,30 @@ function ExpenseManager() {
               </h1>
               <p className="text-gray-400 mt-2">Track and manage your spending</p>
             </div>
-            <Button
-              onClick={handleOpenModal}
-              className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg px-6 py-3"
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Add Expense
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".csv,.pdf"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  id="file-upload"
+                />
+                <Button
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium shadow-lg px-6 py-3"
+                >
+                  <i className="fas fa-upload mr-2"></i>
+                  Upload CSV/PDF
+                </Button>
+              </div>
+              <Button
+                onClick={handleOpenModal}
+                className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg px-6 py-3"
+              >
+                <i className="fas fa-plus mr-2"></i>
+                Add Expense
+              </Button>
+            </div>
           </div>
         </motion.div>
 
@@ -527,6 +612,41 @@ function ExpenseManager() {
               <i className="fas fa-exclamation-circle mr-2"></i>
               {error}
             </p>
+          </motion.div>
+        )}
+
+        {success && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-green-900/20 backdrop-blur-sm border border-green-800 rounded-xl p-4 mb-6"
+          >
+            <p className="text-green-400 flex items-center">
+              <i className="fas fa-check-circle mr-2"></i>
+              {success}
+            </p>
+          </motion.div>
+        )}
+
+        {uploadProgress !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-blue-900/20 backdrop-blur-sm border border-blue-800 rounded-xl p-4 mb-6"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-blue-400 flex items-center">
+                <i className="fas fa-upload mr-2"></i>
+                Uploading expenses...
+              </p>
+              <span className="text-blue-400 font-semibold">{uploadProgress}%</span>
+            </div>
+            <div className="w-full bg-blue-900/30 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-blue-400 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
           </motion.div>
         )}
 
