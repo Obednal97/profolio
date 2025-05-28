@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useTheme } from "@/providers/theme-provider";
 
 interface UserMenuProps {
   user?: {
@@ -16,11 +17,7 @@ export default function UserMenu({
   unreadNotifications = 0,
 }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
+  const { theme, setTheme } = useTheme();
 
   const profileMenuItems = [
     { label: "Account Settings", path: "/app/settings", icon: "fa-cog" },
@@ -28,26 +25,44 @@ export default function UserMenu({
     { label: "Sign Out", path: "/auth/signOut", icon: "fa-sign-out-alt" },
   ];
 
+  const cycleTheme = () => {
+    if (theme === "light") setTheme("dark");
+    else if (theme === "dark") setTheme("system");
+    else setTheme("light");
+  };
+
+  const getThemeIcon = () => {
+    if (theme === "light") return "fa-sun";
+    if (theme === "dark") return "fa-moon";
+    return "fa-adjust"; // system theme
+  };
+
+  const getThemeTooltip = () => {
+    if (theme === "light") return "Switch to dark mode";
+    if (theme === "dark") return "Switch to system theme";
+    return "Switch to light mode";
+  };
+
   return (
     <div className="flex items-center space-x-4">
       <button
-        onClick={() => setDarkMode(!darkMode)}
-        className="text-white/60 hover:text-white transition-colors"
-        title="Toggle theme"
+        onClick={cycleTheme}
+        className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2"
+        title={getThemeTooltip()}
       >
-        <i className={`fas ${darkMode ? "fa-moon" : "fa-sun"}`}></i>
+        <i className={`fas ${getThemeIcon()}`}></i>
       </button>
 
       {user ? (
         <>
           <button
-            className="relative p-2 text-white/60 hover:text-white transition-colors"
+            className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             onClick={() => (window.location.href = "/notifications")}
             title="Notifications"
           >
             <i className="fas fa-bell text-lg"></i>
             {unreadNotifications > 0 && (
-              <span className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-green-500 text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              <span className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                 {unreadNotifications}
               </span>
             )}
@@ -56,9 +71,9 @@ export default function UserMenu({
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-black font-medium">
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
                 {user?.name?.charAt(0) || "?"}
               </div>
               <span>{user?.name}</span>
@@ -66,16 +81,16 @@ export default function UserMenu({
             </button>
 
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-[#2a2a2a] rounded-xl border border-white/10 shadow-lg py-1 z-50">
-                <div className="px-4 py-2 border-b border-white/10">
-                  <p className="text-sm font-medium text-white">{user?.name}</p>
-                  <p className="text-xs text-white/60">{user?.email}</p>
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50">
+                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                 </div>
                 {profileMenuItems.map((item) => (
                   <Link
                     key={item.path}
                     href={item.path}
-                    className="block px-4 py-2 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <i className={`fas ${item.icon} mr-2`}></i>
                     {item.label}
@@ -89,13 +104,13 @@ export default function UserMenu({
         <>
           <Link
             href="/auth/signIn"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             Log In
           </Link>
           <Link
             href="/auth/signUp"
-            className="px-4 py-2 bg-green-500 text-black rounded-lg font-semibold hover:bg-green-400 transition"
+            className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition"
           >
             Sign Up
           </Link>
