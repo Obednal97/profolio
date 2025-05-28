@@ -87,16 +87,13 @@ export default function LandingPage() {
   });
 
   return (
-    <div className="text-foreground bg-background min-h-screen">
+    <div className="text-foreground min-h-screen">
       {/* Hero Section */}
       <section
         aria-label="Hero"
-        className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900"
+        className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
       >
-        {/* Background Image - using a gradient as fallback if image doesn't exist */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-          {/* Remove Image component for now since hero.png might not exist */}
-        </div>
+        {/* Background Image - removed since gradient is now on section */}
         
         {/* Animated gradient orbs - make them more visible */}
         <div className="absolute inset-0 overflow-hidden">
@@ -177,32 +174,34 @@ export default function LandingPage() {
       </section>
 
       {/* Live Net Worth Section */}
-      <motion.section
-        className="w-full max-w-5xl mx-auto text-center py-20 px-6"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={container}
-      >
-        <motion.div 
-          className="relative group"
-          variants={fadeUp}
+      <div className="bg-gray-50 dark:bg-gray-900">
+        <motion.section
+          className="w-full max-w-5xl mx-auto text-center py-20 px-6"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={container}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-xl opacity-20 dark:opacity-30 group-hover:opacity-30 dark:group-hover:opacity-40 transition-opacity" />
-          <div className="relative p-8 bg-white dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <i className="fas fa-chart-line text-2xl text-blue-600 dark:text-blue-400" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Live Portfolio Value</h2>
+          <motion.div 
+            className="relative group"
+            variants={fadeUp}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-xl opacity-20 dark:opacity-30 group-hover:opacity-30 dark:group-hover:opacity-40 transition-opacity" />
+            <div className="relative p-8 bg-white dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <i className="fas fa-chart-line text-2xl text-blue-600 dark:text-blue-400" />
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Live Portfolio Value</h2>
+              </div>
+              <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                ${formatCompactNumber(liveNetWorth)}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-green-600 dark:text-green-400">↑ 12.5%</span> this month • Updated in real-time
+              </p>
             </div>
-            <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
-              ${formatCompactNumber(liveNetWorth)}
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <span className="text-green-600 dark:text-green-400">↑ 12.5%</span> this month • Updated in real-time
-            </p>
-          </div>
-        </motion.div>
-      </motion.section>
+          </motion.div>
+        </motion.section>
+      </div>
 
       {/* Testimonials Section */}
       <motion.section
