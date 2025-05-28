@@ -57,18 +57,46 @@ export async function POST(request: NextRequest) {
     // Initialize Trading 212 service
     const trading212 = new Trading212Service(apiKey);
 
-    // Test connection first
+    // Test connection and get account info
+    let accountInfo;
     try {
-      await trading212.testConnection();
+      accountInfo = await trading212.testConnection();
     } catch (connectionError) {
       console.error('Trading 212 connection failed:', connectionError);
-      return NextResponse.json({ error: 'Invalid API key or connection failed' }, { status: 401 });
+      
+      // Enhanced error handling for specific Trading 212 errors
+      const errorMessage = connectionError instanceof Error ? connectionError.message : 'Unknown error';
+      
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        return NextResponse.json({ 
+          error: 'Invalid Trading 212 API key', 
+          details: 'Please check that your API key is correct and has the required permissions.'
+        }, { status: 401 });
+      } else if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests')) {
+        return NextResponse.json({ 
+          error: 'Trading 212 rate limit exceeded', 
+          details: 'Please wait a few minutes before trying again. Trading 212 has strict rate limits.'
+        }, { status: 429 });
+      } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+        return NextResponse.json({ 
+          error: 'Trading 212 API access denied', 
+          details: 'Your API key does not have the required permissions for portfolio access.'
+        }, { status: 403 });
+      } else {
+        return NextResponse.json({ 
+          error: 'Trading 212 connection failed', 
+          details: errorMessage
+        }, { status: 500 });
+      }
     }
 
-    // Get enhanced assets with dividends
+    // Get comprehensive account overview
+    const accountOverview = await trading212.getAccountOverview();
+    
+    // Get enhanced assets with dividends and pie information
     const assets = await trading212.getEnhancedAssets();
     
-    // Get portfolio summary for additional insights
+    // Get comprehensive portfolio summary with pie information
     const summary = await trading212.getPortfolioSummary();
 
     // Save assets to the mock API with proper user ID
@@ -98,6 +126,10 @@ export async function POST(request: NextRequest) {
             value: asset.current_value / 100,
             quantity: asset.quantity,
             dividends: asset.dividends?.length || 0,
+            pieInfo: asset.pie_info ? {
+              pieName: asset.pie_info.pieName,
+              pieShare: asset.pie_info.pieShare
+            } : undefined,
           });
         }
       } catch (saveError) {
@@ -105,10 +137,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Enhanced response with comprehensive Trading 212 data
     return NextResponse.json({
       success: true,
       userId: user.userId,
       isDemo: user.isDemo,
+      
+      // Account Information
+      accountInfo: {
+        id: accountInfo.id,
+        currency: accountInfo.currencyCode,
+      },
+      
+      // Portfolio Summary
       assetsCount: savedCount,
       totalValue: summary.totalValue,
       totalInvested: summary.totalInvested,
@@ -116,15 +157,56 @@ export async function POST(request: NextRequest) {
       totalPnLPercentage: summary.totalPnLPercentage,
       cashBalance: summary.cashBalance,
       positionsCount: summary.positionsCount,
+      
+      // Pie Information
+      piesCount: summary.piesCount,
+      piesSummary: summary.piesSummary,
+      
+      // Top Holdings
       topHoldings: summary.topHoldings,
+      
+      // Account Overview
+      currentOrdersCount: accountOverview.currentOrdersCount,
+      
+      // Saved Assets Details
       assets: savedAssets,
+      
+      // Metadata
       syncedAt: new Date().toISOString(),
+      
+      // Additional insights
+      insights: {
+        hasActivePies: summary.piesCount > 0,
+        hasPendingOrders: accountOverview.currentOrdersCount > 0,
+        portfolioPerformance: summary.totalPnLPercentage >= 0 ? 'positive' : 'negative',
+        diversification: {
+          assetsCount: savedCount,
+          piesCount: summary.piesCount,
+          topHoldingPercentage: summary.topHoldings[0]?.percentage || 0,
+        }
+      }
     });
   } catch (error) {
     console.error('Trading 212 sync error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to sync portfolio data', 
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    
+    // Enhanced error handling
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests')) {
+      return NextResponse.json({ 
+        error: 'Trading 212 rate limit exceeded', 
+        details: 'You have made too many API requests recently. Please wait 5-10 minutes before trying again.'
+      }, { status: 429 });
+    } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+      return NextResponse.json({ 
+        error: 'Trading 212 authentication failed', 
+        details: 'Your API key may have expired or been revoked. Please check your Trading 212 API settings.'
+      }, { status: 401 });
+    } else {
+      return NextResponse.json({ 
+        error: 'Failed to sync portfolio data', 
+        details: errorMessage
+      }, { status: 500 });
+    }
   }
 } 
