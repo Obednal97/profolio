@@ -2,12 +2,16 @@
 'use client';
 
 import LayoutWrapper from "@/components/layout/layoutWrapper";
-import { useUser } from "@/lib/user";
-import type { User } from '@/types/global';
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+// DEVELOPMENT: Authentication imports commented out for testing
+// import { useUser } from "@/lib/user";
+// import type { User } from '@/types/global';
+// import { useRouter } from "next/navigation";
+// import { useEffect } from "react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  // DEVELOPMENT: Authentication code disabled for testing
+  // Uncomment the following block to re-enable authentication
+  /*
   const { data: user, loading } = useUser() as { data: User | null; loading: boolean };
   const router = useRouter();
 
@@ -18,6 +22,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, [user, loading, router]);
 
   if (loading || !user?.token) return null;
+  */
 
   return (
     <LayoutWrapper>
