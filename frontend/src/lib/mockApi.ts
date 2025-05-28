@@ -1,12 +1,30 @@
 // Mock API service for development
 import { mockAssets, mockExpenses, mockProperties, generateHistoricalData } from './mockData';
-import type { Asset, Expense, Property } from '@/types/global';
+import type { Asset, Expense, Property, User } from '@/types/global';
 
 // Enable mock API by setting this to true
 const USE_MOCK_API = true;
 
 // Simulate API delay
 const API_DELAY = 300;
+
+// Mock user data with preferences
+const mockUser: User = {
+  id: 'demo-user-id',
+  email: 'demo@example.com',
+  name: 'Demo User',
+  role: 'user',
+  preferences: {
+    currency: 'USD',
+    theme: 'dark',
+    language: 'en',
+    notifications: {
+      email: true,
+      push: true,
+      marketing: false,
+    },
+  },
+};
 
 // Mock API handlers
 export const mockApi = {
@@ -116,6 +134,23 @@ export const mockApi = {
       }
       return { success: false, error: 'Property not found' };
     }
+  },
+
+  user: {
+    async getProfile() {
+      await new Promise(resolve => setTimeout(resolve, API_DELAY));
+      return { user: mockUser, error: null };
+    },
+    
+    async updatePreferences(preferences: User['preferences']) {
+      await new Promise(resolve => setTimeout(resolve, API_DELAY));
+      if (mockUser.preferences) {
+        mockUser.preferences = { ...mockUser.preferences, ...preferences };
+      } else {
+        mockUser.preferences = preferences;
+      }
+      return { user: mockUser, error: null };
+    }
   }
 };
 
@@ -172,6 +207,17 @@ export async function apiCall(url: string, options: RequestInit) {
         return { json: async () => mockApi.properties.update(body.id, body) };
       case 'DELETE':
         return { json: async () => mockApi.properties.delete(body.id) };
+      default:
+        return { json: async () => ({ error: 'Unknown method' }) };
+    }
+  }
+
+  if (url.includes('/api/user')) {
+    switch (method) {
+      case 'GET_PROFILE':
+        return { json: async () => mockApi.user.getProfile() };
+      case 'UPDATE_PREFERENCES':
+        return { json: async () => mockApi.user.updatePreferences(body.preferences) };
       default:
         return { json: async () => ({ error: 'Unknown method' }) };
     }
