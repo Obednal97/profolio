@@ -5,6 +5,9 @@ import { useUser } from "@/lib/user";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import type { Asset } from "@/types/global";
+import { motion, AnimatePresence } from "framer-motion";
+import LineChart from "@/components/charts/line";
+import PieChart from "@/components/charts/pie";
 
 // Memoized currency formatter for performance
 const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -14,6 +17,16 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 
 const formatCurrency = (cents: number) => {
   return currencyFormatter.format(cents / 100);
+};
+
+// Asset type configuration
+const assetTypeConfig = {
+  stock: { icon: "fa-chart-line", color: "blue", gradient: "from-blue-500 to-blue-600" },
+  crypto: { icon: "fa-bitcoin", color: "orange", gradient: "from-orange-500 to-orange-600" },
+  property: { icon: "fa-home", color: "green", gradient: "from-green-500 to-green-600" },
+  cash: { icon: "fa-dollar-sign", color: "purple", gradient: "from-purple-500 to-purple-600" },
+  stock_options: { icon: "fa-certificate", color: "pink", gradient: "from-pink-500 to-pink-600" },
+  other: { icon: "fa-box", color: "gray", gradient: "from-gray-500 to-gray-600" },
 };
 
 export default function AssetManager() {
@@ -26,12 +39,13 @@ export default function AssetManager() {
   const [timeframe, setTimeframe] = useState("30");
   const [chartData, setChartData] = useState<{ date: string; total_value: number }[] | null>(null);
   const [chartLoading, setChartLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [filterType, setFilterType] = useState<string>("all");
 
   const fetchAssets = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-
       const response = await fetch("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,7 +70,6 @@ export default function AssetManager() {
       fetchAssets();
     }
   }, [user, fetchAssets]);
-
 
   const fetchChartData = useCallback(async () => {
     if (!user) return;
@@ -94,13 +107,10 @@ export default function AssetManager() {
     }
   }, [user, timeframe, fetchChartData]);
 
-  const handleEdit = useCallback(
-    (asset: Asset) => {
-      setEditingAsset(asset);
-      setShowAddModal(true);
-    },
-    []
-  );
+  const handleEdit = useCallback((asset: Asset) => {
+    setEditingAsset(asset);
+    setShowAddModal(true);
+  }, []);
 
   const handleDelete = useCallback(
     async (assetId: string) => {
@@ -169,6 +179,42 @@ export default function AssetManager() {
     },
     [editingAsset, user, fetchAssets]
   );
+
+  // Calculate metrics
+  const totalValue = useMemo(() => {
+    return assets.reduce((sum, asset) => sum + (asset.current_value ?? 0), 0);
+  }, [assets]);
+
+  const totalGainLoss = useMemo(() => {
+    return assets.reduce((sum, asset) => {
+      const purchasePrice = asset.purchase_price ?? 0;
+      const currentValue = asset.current_value ?? 0;
+      return sum + (currentValue - purchasePrice);
+    }, 0);
+  }, [assets]);
+
+  const assetsByType = useMemo(() => {
+    return assets.reduce((acc, asset) => {
+      const type = asset.type ?? 'other';
+      if (!acc[type]) acc[type] = { count: 0, value: 0 };
+      acc[type].count++;
+      acc[type].value += asset.current_value ?? 0;
+      return acc;
+    }, {} as Record<string, { count: number; value: number }>);
+  }, [assets]);
+
+  const filteredAssets = useMemo(() => {
+    if (filterType === "all") return assets;
+    return assets.filter(asset => asset.type === filterType);
+  }, [assets, filterType]);
+
+  const chartDataFormatted = useMemo(() => {
+    if (!chartData) return [];
+    return chartData.map(item => ({
+      date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: item.total_value / 100
+    }));
+  }, [chartData]);
 
   interface AssetModalProps {
     onClose: () => void;
@@ -386,11 +432,6 @@ export default function AssetManager() {
           }
     );
 
-    interface SymbolData {
-      offer: { price: string };
-      typical_price_range?: [string, string];
-    }
-    const [symbolData, setSymbolData] = useState<SymbolData | null>(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -408,7 +449,6 @@ export default function AssetManager() {
           const data = await response.json();
 
           if (data.status === "OK" && data.data.length > 0) {
-            setSymbolData(data.data[0]);
             const price = parseFloat(
               data.data[0].offer.price.replace(/[^0-9.]/g, "")
             );
@@ -440,7 +480,6 @@ export default function AssetManager() {
       });
     };
 
-
     interface Field {
       name: string;
       label: string;
@@ -452,7 +491,7 @@ export default function AssetManager() {
 
     const renderField = (field: Field) => {
       const commonClasses =
-        "w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-green-500/50";
+        "w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200";
 
       const tooltips: Partial<Record<keyof AssetFormData, string>> = {
         current_value:
@@ -475,16 +514,16 @@ export default function AssetManager() {
 
       return (
         <div className="relative">
-          <div className="flex items-center gap-2 mb-1">
-            <label className="block text-sm font-medium text-gray-500 dark:text-white/60">
+          <div className="flex items-center gap-2 mb-2">
+            <label className="block text-sm font-medium text-gray-300">
               {field.label}
             </label>
             {tooltips[field.name] && (
               <div className="group relative">
-                <i className="fas fa-info-circle text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 cursor-help"></i>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 dark:bg-white/10 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 backdrop-blur-xl z-50">
+                <i className="fas fa-info-circle text-gray-500 hover:text-gray-400 cursor-help text-xs"></i>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 backdrop-blur-xl z-50 shadow-xl border border-white/10">
                   {tooltips[field.name]}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-white/10"></div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                 </div>
               </div>
             )}
@@ -498,228 +537,119 @@ export default function AssetManager() {
                     : ""
                   : (formData[field.name] as string) || ""
               }
-              onChange={(e) => {
-                let value = e.target.value;
-                if (field.name === "vesting_schedule") {
-                  try {
-                    value = JSON.parse(value);
-                  } catch (error) {
-                    console.error("Error parsing vesting_schedule JSON:", error);
-                  }
-                }
-                setFormData({ ...formData, [field.name]: value });
-              }}
-              placeholder={field.placeholder}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  [field.name]:
+                    field.name === "vesting_schedule"
+                      ? e.target.value
+                        ? JSON.parse(e.target.value)
+                        : null
+                      : e.target.value,
+                })
+              }
               className={commonClasses}
-              rows={3}
+              placeholder={field.placeholder}
               required={field.required}
+              rows={3}
             />
           ) : (
             <input
               type={field.type}
-              value={
-                formData[field.name] !== null &&
-                (typeof formData[field.name] === "string" || typeof formData[field.name] === "number")
-                  ? (formData[field.name] as string | number)
-                  : ""
+              value={(formData[field.name] as string) || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, [field.name]: e.target.value })
               }
-              onChange={(e) => {
-                let value = e.target.value;
-                if (field.name === "symbol") {
-                  value = value.toUpperCase();
-                }
-                setFormData({ ...formData, [field.name]: value });
-              }}
-              step={field.step}
-              placeholder={field.placeholder}
               className={commonClasses}
+              placeholder={field.placeholder}
               required={field.required}
+              step={field.step}
             />
           )}
-          {(field.name === "current_value" || field.name === "symbol") &&
-            loading && (
-              <div className="absolute right-3 top-2">
-                <div className="animate-spin h-6 w-6 border-2 border-green-500 border-t-transparent rounded-full"></div>
-              </div>
-            )}
         </div>
       );
     };
 
     return (
-      <div className="bg-[#2a2a2a] rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-white/80">
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             {initialData ? "Edit Asset" : "Add New Asset"}
           </h3>
           <button
             onClick={onClose}
-            className="text-white/60 hover:text-white/80 transition-colors"
+            className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
           >
-            <i className="fas fa-times"></i>
+            <i className="fas fa-times text-xl"></i>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-1">
-                <label className="block text-sm font-medium text-gray-500 dark:text-white/60">
-                  Asset Name
-                </label>
-                <div className="group relative">
-                  <i className="fas fa-info-circle text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 cursor-help"></i>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 dark:bg-white/10 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 backdrop-blur-xl z-50">
-                    A descriptive name for your asset (e.g., &quot;Apple Stock&quot;, &quot;Bitcoin Investment&quot;, &quot;Rental Property&quot;)
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-white/10"></div>
-                  </div>
-                </div>
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Asset Name
+              </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
+                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+                placeholder="e.g., Apple Stock"
                 required
               />
             </div>
 
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-1">
-                <label className="block text-sm font-medium text-gray-500 dark:text-white/60">
-                  Type
-                </label>
-                <div className="group relative">
-                  <i className="fas fa-info-circle text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 cursor-help"></i>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 dark:bg-white/10 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 backdrop-blur-xl z-50">
-                    Select the type of asset you&apos;re adding. Different types
-                    have different required information.
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-white/10"></div>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Asset Type
+              </label>
               <select
                 value={formData.type}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    type: e.target.value as AssetType,
-                    symbol: "",
-                    quantity: "",
-                    vesting_schedule: null,
-                    vesting_start_date: "",
-                    vesting_end_date: "",
-                  });
-                  setSymbolData(null);
-                }}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
+                onChange={(e) =>
+                  setFormData({ ...formData, type: e.target.value as AssetType })
+                }
+                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
               >
-                <option value="stock">Stock</option>
-                <option value="crypto">Cryptocurrency</option>
-                <option value="stock_options">Stock Options</option>
-                <option value="property">Property</option>
-                <option value="cash">Cash</option>
-                <option value="other">Other</option>
+                {Object.keys(assetTypeFields).map((type) => (
+                  <option key={type} value={type} className="bg-gray-800">
+                    {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
+                  </option>
+                ))}
               </select>
             </div>
-
-            {assetTypeFields[formData.type].map((field) => (
-              <div
-                key={field.name}
-                className={
-                  field.name === "address" ||
-                  field.name === "vesting_schedule"
-                    ? "md:col-span-2"
-                    : ""
-                }
-              >
-                <label className="block text-sm font-medium text-gray-500 dark:text-white/60 mb-1">
-                  {field.label}
-                </label>
-                <div className="relative">
-                  {renderField(field)}
-                  {(field.name === "current_value" ||
-                    field.name === "symbol") &&
-                    loading && (
-                      <div className="absolute right-3 top-2">
-                        <div className="animate-spin h-6 w-6 border-2 border-green-500 border-t-transparent rounded-full"></div>
-                      </div>
-                    )}
-                </div>
-              </div>
-            ))}
-
-            {formData.type !== "cash" && (
-              <div className="md:col-span-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <label className="block text-sm font-medium text-gray-500 dark:text-white/60">
-                    Notes
-                  </label>
-                  <div className="group relative">
-                    <i className="fas fa-info-circle text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 cursor-help"></i>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 dark:bg-white/10 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 backdrop-blur-xl z-50">
-                      Additional information or comments about this asset
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-white/10"></div>
-                    </div>
-                  </div>
-                </div>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-green-500/50"
-                  rows={3}
-                />
-              </div>
-            )}
           </div>
 
-          {symbolData && ["stock", "crypto"].includes(formData.type) && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-              <h4 className="text-sm font-medium text-green-400 mb-2">
-                Live Market Data
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-white/60">
-                    Current Price
-                  </p>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {symbolData.offer.price}
-                  </p>
-                </div>
-                {symbolData.typical_price_range && (
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-white/60">
-                      Price Range
-                    </p>
-                    <p className="text-gray-900 dark:text-white font-medium">
-                      {symbolData.typical_price_range[0]} -{" "}
-                      {symbolData.typical_price_range[1]}
-                    </p>
-                  </div>
-                )}
-              </div>
+          <div className="space-y-6">
+            {assetTypeFields[formData.type].map((field) => (
+              <div key={field.name}>{renderField(field)}</div>
+            ))}
+          </div>
+
+          {loading && (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              <span className="ml-2 text-gray-400">Fetching market data...</span>
             </div>
           )}
 
-          <div className="flex justify-end space-x-4 mt-6">
-            <button
+          <div className="flex justify-end space-x-4 pt-6 border-t border-white/10">
+            <Button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-white/60 hover:text-white/80 transition-colors"
+              variant="ghost"
+              className="px-6 py-3 hover:bg-white/10"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 bg-green-500 text-black rounded-xl font-medium hover:bg-green-400 shadow-[0_0_8px_#00ff88] hover:shadow-[0_0_12px_#00ff88] transition-all duration-200"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg"
             >
               {initialData ? "Update Asset" : "Add Asset"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -735,304 +665,354 @@ export default function AssetManager() {
     onEdit: (asset: Asset) => void;
     onDelete: (id: string) => void;
   }) => {
+    const config = assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other;
+    
     const calculateAppreciation = () => {
-      if (!asset.purchase_price || !asset.current_value) return null;
-      const diff = asset.current_value - asset.purchase_price;
-      const percentage = (diff / asset.purchase_price) * 100;
-      return {
-        value: diff,
-        percentage: percentage.toFixed(2),
-      };
+      if (!asset.purchase_price) return null;
+      const gain = asset.current_value - asset.purchase_price;
+      const percentage = (gain / asset.purchase_price) * 100;
+      return { gain, percentage };
     };
 
     const appreciation = calculateAppreciation();
 
     return (
-      <div className="bg-[#2a2a2a] rounded-xl p-6 border border-white/10 hover:border-green-500/50 transition-all duration-200">
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        whileHover={{ y: -4 }}
+        className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-200 shadow-lg hover:shadow-xl"
+      >
         <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-xl font-semibold text-white/80">
-              {asset.name}
-            </h3>
-            <p className="text-white/60">
-              <i
-                className={`fas ${
-                  asset.type === "stock"
-                    ? "fa-chart-line"
-                    : asset.type === "crypto"
-                    ? "fa-coins"
-                    : asset.type === "stock_options"
-                    ? "fa-certificate"
-                    : asset.type === "property"
-                    ? "fa-home"
-                    : asset.type === "cash"
-                    ? "fa-dollar-sign"
-                    : "fa-cube"
-                } mr-2`}
-              ></i>
-              <span className="capitalize">{asset.type.replace("_", " ")}</span>
-              {asset.symbol && ` • ${asset.symbol}`}
-              {asset.quantity && ` • ${asset.quantity} units`}
-            </p>
+          <div className="flex items-center">
+            <div className={`p-3 bg-gradient-to-r ${config.gradient} rounded-lg mr-4 shadow-lg`}>
+              <i className={`fas ${config.icon} text-white text-xl`}></i>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">{asset.name}</h3>
+              <p className="text-sm text-gray-400">
+                {asset.symbol || asset.type?.charAt(0).toUpperCase() + asset.type?.slice(1)}
+              </p>
+            </div>
           </div>
           <div className="flex space-x-2">
             <button
               onClick={() => onEdit(asset)}
-              className="p-2 text-white/60 hover:text-white/80 transition-colors"
-              title="Edit"
+              className="p-2 text-gray-400 hover:text-blue-400 transition-colors hover:bg-white/10 rounded-lg"
             >
               <i className="fas fa-edit"></i>
             </button>
             <button
               onClick={() => asset.id && onDelete(asset.id)}
-              className="p-2 text-white/60 hover:text-red-400 transition-colors"
-              title="Delete"
+              className="p-2 text-gray-400 hover:text-red-400 transition-colors hover:bg-white/10 rounded-lg"
             >
               <i className="fas fa-trash"></i>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="bg-white/5 rounded-lg p-3">
-            <p className="text-white/60 text-sm">Current Value</p>
-            <p className="text-green-400 font-semibold">
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 text-sm">Current Value</span>
+            <span className="text-xl font-bold text-white">
               {formatCurrency(asset.current_value)}
-            </p>
+            </span>
           </div>
 
-          {asset.purchase_price && (
-            <div className="bg-white/5 rounded-lg p-3">
-              <p className="text-white/60 text-sm">Purchase Price</p>
-              <p className="text-white/80 font-semibold">
-                {formatCurrency(asset.purchase_price)}
-              </p>
+          {asset.quantity && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400 text-sm">Quantity</span>
+              <span className="text-white">{asset.quantity}</span>
             </div>
           )}
 
           {appreciation && (
-            <div className="bg-white/5 rounded-lg p-3">
-              <p className="text-white/60 text-sm">Appreciation</p>
-              <p
-                className={`font-semibold ${
-                  appreciation.value >= 0 ? "text-green-400" : "text-red-400"
-                }`}
-              >
-                {formatCurrency(appreciation.value)}
-                <span className="text-sm ml-1">
-                  ({appreciation.percentage}%)
-                </span>
-              </p>
-            </div>
-          )}
-
-          {asset.purchase_date && (
-            <div className="bg-white/5 rounded-lg p-3">
-              <p className="text-white/60 text-sm">Purchase Date</p>
-              <p className="text-white/80 font-semibold">
-                {new Date(asset.purchase_date).toLocaleDateString()}
-              </p>
-            </div>
-          )}
-
-          {asset.type === "stock_options" && (
-            <>
-              <div className="bg-white/5 rounded-lg p-3">
-                <p className="text-white/60 text-sm">Vesting Period</p>
-                <p className="text-white/80 font-semibold">
-                  {asset.vesting_start_date
-                    ? new Date(asset.vesting_start_date).toLocaleDateString()
-                    : ""}
-                  {" - "}
-                  {asset.vesting_end_date
-                    ? new Date(asset.vesting_end_date).toLocaleDateString()
-                    : ""}
-                </p>
+            <div className="flex justify-between items-center pt-3 border-t border-white/10">
+              <span className="text-gray-400 text-sm">Gain/Loss</span>
+              <div className="text-right">
+                <div className={`font-semibold ${appreciation.gain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {appreciation.gain >= 0 ? '+' : ''}{formatCurrency(appreciation.gain)}
+                </div>
+                <div className={`text-sm ${appreciation.gain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {appreciation.gain >= 0 ? '+' : ''}{appreciation.percentage.toFixed(2)}%
+                </div>
               </div>
-              <div className="bg-white/5 rounded-lg p-3">
-                <p className="text-white/60 text-sm">Vesting Schedule</p>
-                <p className="text-white/80 font-semibold">
-                  {asset.vesting_schedule && (
-                    <>
-                      Initial: {asset.vesting_schedule.initial}%
-                      {asset.vesting_schedule.monthly && (
-                        <>
-                          , Monthly: {asset.vesting_schedule.monthly}%
-                        </>
-                      )}
-                    </>
-                  )}
-                </p>
-              </div>
-            </>
+            </div>
           )}
         </div>
-
-        {asset.notes && (
-          <p className="mt-4 text-white/60 text-sm">{asset.notes}</p>
-        )}
-
-        {asset.price_history && asset.price_history.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <p className="text-sm font-medium text-white/60 mb-2">
-              Price History
-            </p>
-            <div className="h-24 w-full"></div>
-          </div>
-        )}
-      </div>
+      </motion.div>
     );
   };
 
-  const AssetSummaryChart = () => {
-    const chartCurrencyFormatter = useMemo(
-      () =>
-        new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }),
-      []
-    );
-
-    if (!chartData || chartData.length === 0) return null;
-
-    const data = chartData.map((point) => ({
-      date: new Date(point.date),
-      value: point.total_value / 100,
-    }));
-
-    const minValue = Math.min(...data.map((d) => d.value));
-    const maxValue = Math.max(...data.map((d) => d.value));
-    // const valueRange = maxValue - minValue;
-    // const padding = valueRange * 0.1;
-
-    const chartHeight = 300;
-    const chartWidth = 100;
-
-    const points = data
-      .map((point, i) => {
-        const x = (i / (data.length - 1)) * chartWidth;
-        const y =
-          ((maxValue - point.value) / (maxValue - minValue)) * chartHeight;
-        return `${x},${y}`;
-      })
-      .join(" ");
-
-    const fillPoints = `0,${chartHeight} ${points} ${chartWidth},${chartHeight}`;
-
+  if (loading) {
     return (
-      <div className="bg-white dark:bg-white/5 backdrop-blur-xl rounded-xl p-6 border border-gray-200 dark:border-white/10">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white/80">
-              Net Asset Value
-            </h2>
-            <p className="text-3xl font-bold text-green-400">
-              {chartCurrencyFormatter.format(data[data.length - 1].value)}
-            </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
+      </div>
+
+      <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Asset Manager
+              </h1>
+              <p className="text-gray-400 mt-2">Track and manage your investment portfolio</p>
+            </div>
+            <Button
+              onClick={handleOpenModal}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3"
+            >
+              <i className="fas fa-plus mr-2"></i>
+              Add Asset
+            </Button>
           </div>
-          <div className="flex gap-2">
-            {["7", "30", "365", "max"].map((period) => (
+        </motion.div>
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-red-900/20 backdrop-blur-sm border border-red-800 rounded-xl p-4 mb-6"
+          >
+            <p className="text-red-400 flex items-center">
+              <i className="fas fa-exclamation-circle mr-2"></i>
+              {error}
+            </p>
+          </motion.div>
+        )}
+
+        {/* Summary Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+        >
+          <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-sm rounded-xl p-6 border border-green-500/30">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-gray-400 text-sm">Total Portfolio Value</p>
+                <p className="text-3xl font-bold text-green-400 mt-1">
+                  {formatCurrency(totalValue)}
+                </p>
+              </div>
+              <div className="p-3 bg-green-500/20 rounded-lg">
+                <i className="fas fa-wallet text-green-400 text-xl"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-gray-400 text-sm">Total Assets</p>
+                <p className="text-3xl font-bold text-blue-400 mt-1">
+                  {assets.length}
+                </p>
+              </div>
+              <div className="p-3 bg-blue-500/20 rounded-lg">
+                <i className="fas fa-chart-pie text-blue-400 text-xl"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className={`bg-gradient-to-br ${totalGainLoss >= 0 ? 'from-green-500/20 to-green-600/20 border-green-500/30' : 'from-red-500/20 to-red-600/20 border-red-500/30'} backdrop-blur-sm rounded-xl p-6 border`}>
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-gray-400 text-sm">Total Gain/Loss</p>
+                <p className={`text-3xl font-bold mt-1 ${totalGainLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {totalGainLoss >= 0 ? '+' : ''}{formatCurrency(totalGainLoss)}
+                </p>
+              </div>
+              <div className={`p-3 ${totalGainLoss >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'} rounded-lg`}>
+                <i className={`fas fa-chart-line ${totalGainLoss >= 0 ? 'text-green-400' : 'text-red-400'} text-xl`}></i>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Charts Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
+        >
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-white">Portfolio Performance</h3>
+              <div className="flex gap-2">
+                {["7", "30", "90", "365", "max"].map((days) => (
+                  <button
+                    key={days}
+                    onClick={() => setTimeframe(days)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      timeframe === days
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    }`}
+                  >
+                    {days === "max" ? "Max" : `${days}D`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {chartLoading ? (
+              <div className="h-64 flex items-center justify-center">
+                <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              </div>
+            ) : (
+              <LineChart
+                data={chartDataFormatted}
+                xKey="date"
+                lines={[{ dataKey: "value", color: "#3b82f6" }]}
+              />
+            )}
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+            <h3 className="text-xl font-semibold text-white mb-6">Asset Distribution</h3>
+            <PieChart
+              data={Object.entries(assetsByType).map(([type, data]) => ({
+                name: type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' '),
+                value: data.value / 100,
+                color: assetTypeConfig[type as keyof typeof assetTypeConfig]?.color || "#gray",
+              }))}
+            />
+          </div>
+        </motion.div>
+
+        {/* Filter and View Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"
+        >
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilterType("all")}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                filterType === "all"
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+              }`}
+            >
+              All Assets
+            </button>
+            {Object.keys(assetsByType).map((type) => (
               <button
-                key={period}
-                onClick={() => setTimeframe(period)}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  timeframe === period
-                    ? "bg-green-500 text-black shadow-[0_0_8px_#00ff88]"
-                    : "text-gray-500 dark:text-white/60 hover:text-gray-700 dark:hover:text-white/80"
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  filterType === type
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
                 }`}
               >
-                {period === "max" ? "Max" : `${period}D`}
+                {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} ({assetsByType[type].count})
               </button>
             ))}
           </div>
-        </div>
 
-        {chartLoading ? (
-          <div className="h-[300px] flex items-center justify-center">
-            <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full"></div>
-          </div>
-        ) : (
-          <div className="relative h-[300px] w-full">
-            <svg
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              preserveAspectRatio="none"
-              className="absolute inset-0 w-full h-full"
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                viewMode === "grid"
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+              }`}
             >
-              <defs>
-                <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor="rgb(34,197,94)"
-                    stopOpacity="0.2"
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor="rgb(34,197,94)"
-                    stopOpacity="0"
-                  />
-                </linearGradient>
-              </defs>
-
-              <path
-                d={`M ${fillPoints}`}
-                fill="url(#gradient)"
-                className="transition-all duration-300"
-              />
-
-              <polyline
-                points={points}
-                fill="none"
-                stroke="rgb(34,197,94)"
-                strokeWidth="0.5"
-                className="transition-all duration-300"
-              />
-            </svg>
-
-            <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 dark:text-white/60 mt-2">
-              <span>{data[0].date.toLocaleDateString()}</span>
-              <span>{data[data.length - 1].date.toLocaleDateString()}</span>
-            </div>
+              <i className="fas fa-th"></i>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                viewMode === "list"
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+              }`}
+            >
+              <i className="fas fa-list"></i>
+            </button>
           </div>
-        )}
+        </motion.div>
+
+        {/* Assets Grid/List */}
+        <AnimatePresence mode="wait">
+          {filteredAssets.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-16"
+            >
+              <div className="text-gray-500 text-6xl mb-4">
+                <i className="fas fa-wallet"></i>
+              </div>
+              <h3 className="text-xl font-medium text-gray-400 mb-2">
+                {filterType === "all" ? "No Assets Yet" : `No ${filterType} assets`}
+              </h3>
+              <p className="text-gray-500 mb-6">
+                {filterType === "all" 
+                  ? "Start building your portfolio by adding your first asset."
+                  : "You don't have any assets of this type yet."}
+              </p>
+              <Button
+                onClick={handleOpenModal}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
+              >
+                <i className="fas fa-plus mr-2"></i>
+                Add Your First Asset
+              </Button>
+            </motion.div>
+          ) : (
+            <motion.div
+              layout
+              className={viewMode === "grid" 
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                : "space-y-4"
+              }
+            >
+              {filteredAssets.map((asset) => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    );
-  };
-  return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white/80">Asset Manager</h1>
-        <Button onClick={handleOpenModal}>Add Asset</Button>
-      </div>
 
-      {error && (
-        <p className="text-red-500 font-medium">{error}</p>
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full"></div>
-        </div>
-      ) : (
-        <>
-          <AssetSummaryChart />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {assets.map(asset => (
-              <AssetCard
-                key={asset.id}
-                asset={asset}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
-      {showAddModal && (
-        <Modal isOpen={showAddModal} onClose={handleCloseModal}>
+      {/* Modal */}
+      {(showAddModal || editingAsset) && (
+        <Modal isOpen={true} onClose={handleCloseModal}>
           <AssetModal
             onClose={handleCloseModal}
             onSubmit={handleSubmit}
@@ -1042,4 +1022,4 @@ export default function AssetManager() {
       )}
     </div>
   );
-};
+}
