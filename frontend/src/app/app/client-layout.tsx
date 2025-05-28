@@ -1,7 +1,6 @@
 // /app/app/client-layout.tsx (CLIENT component)
 'use client';
 
-import LayoutWrapper from "@/components/layout/layoutWrapper";
 // DEVELOPMENT: Authentication imports commented out for testing
 // import { useUser } from "@/lib/user";
 // import type { User } from '@/types/global';
@@ -24,9 +23,5 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   if (loading || !user?.token) return null;
   */
 
-  return (
-    <LayoutWrapper>
-      {children}
-    </LayoutWrapper>
-  );
+  return <>{children}</>;
 }

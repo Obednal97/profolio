@@ -13,6 +13,13 @@ export default function Navbar({
   user,
   currentPath = "/",
 }: NavigationProps) {
+  // Debug logging
+  console.log("Navbar Debug:", {
+    user,
+    currentPath,
+    hasUser: !!user
+  });
+
   const navigationLinks = user
     ? [
         { path: "/app/dashboard", label: "Dashboard", icon: "fa-chart-pie" },
