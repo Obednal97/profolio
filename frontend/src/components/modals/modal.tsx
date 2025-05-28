@@ -27,6 +27,19 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose, dismissible]);
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (dismissible && modalRef.current && !modalRef.current.contains(e.target as Node)) {
       onClose();
@@ -41,10 +54,13 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
   return (
     <AnimatePresence>
       {isOpen && (
-        <div onClick={handleBackdropClick} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div 
+          onClick={handleBackdropClick} 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
+        >
           <motion.div
             ref={modalRef}
-            className="relative w-full max-w-md mx-4"
+            className="relative w-full max-w-4xl mx-auto my-8"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -53,8 +69,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
               transformOrigin: `${originStyle.originX * 100}% ${originStyle.originY * 100}%`
             }}
           >
-            {title && <h2 className="mb-2 text-lg font-semibold text-white">{title}</h2>}
-            {description && <p className="mb-4 text-sm text-gray-400">{description}</p>}
+            {title && <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>}
+            {description && <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">{description}</p>}
             {children}
           </motion.div>
         </div>

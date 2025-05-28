@@ -59,7 +59,7 @@ export default function PropertyManager() {
   }, []);
 
   useEffect(() => {
-    fetchProperties();
+      fetchProperties();
   }, [fetchProperties]);
 
   const handleSubmit = async (propertyData: Property) => {
@@ -249,14 +249,14 @@ export default function PropertyManager() {
     };
 
     return (
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl">
         <div className="flex justify-between items-center mb-8">
           <h3 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
             {initialData ? "Edit Property" : "Add New Property"}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             aria-label="Close Modal"
           >
             <i className="fas fa-times text-xl"></i>
@@ -272,7 +272,7 @@ export default function PropertyManager() {
             >
               <p className="text-red-400 flex items-center">
                 <i className="fas fa-exclamation-circle mr-2"></i>
-                {error}
+              {error}
               </p>
             </motion.div>
           )}
@@ -281,7 +281,7 @@ export default function PropertyManager() {
             <div>
               <label
                 htmlFor="propertyType"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Property Type
               </label>
@@ -291,19 +291,19 @@ export default function PropertyManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, propertyType: e.target.value })
                 }
-                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
               >
-                <option value="residential" className="bg-gray-800">Residential</option>
-                <option value="commercial" className="bg-gray-800">Commercial</option>
-                <option value="industrial" className="bg-gray-800">Industrial</option>
-                <option value="land" className="bg-gray-800">Land</option>
+                <option value="residential" className="bg-white dark:bg-gray-800">Residential</option>
+                <option value="commercial" className="bg-white dark:bg-gray-800">Commercial</option>
+                <option value="industrial" className="bg-white dark:bg-gray-800">Industrial</option>
+                <option value="land" className="bg-white dark:bg-gray-800">Land</option>
               </select>
             </div>
 
             <div>
               <label
                 htmlFor="status"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Status
               </label>
@@ -313,18 +313,18 @@ export default function PropertyManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, status: e.target.value })
                 }
-                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
               >
-                <option value="owned" className="bg-gray-800">Owned</option>
-                <option value="rented" className="bg-gray-800">Rented Out</option>
-                <option value="listed" className="bg-gray-800">Listed for Sale</option>
+                <option value="owned" className="bg-white dark:bg-gray-800">Owned</option>
+                <option value="rented" className="bg-white dark:bg-gray-800">Rented Out</option>
+                <option value="listed" className="bg-white dark:bg-gray-800">Listed for Sale</option>
               </select>
             </div>
 
             <div className="md:col-span-2">
               <label
                 htmlFor="address"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Address
               </label>
@@ -334,7 +334,7 @@ export default function PropertyManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, address: e.target.value })
                 }
-                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                 rows={2}
                 placeholder="123 Main St, City, State ZIP"
                 required
@@ -344,78 +344,78 @@ export default function PropertyManager() {
             <div>
               <label
                 htmlFor="purchasePrice"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Purchase Price
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  id="purchasePrice"
-                  type="number"
-                  min="0"
-                  value={formData.purchasePrice}
-                  onChange={(e) =>
-                    setFormData({ ...formData, purchasePrice: e.target.value })
-                  }
-                  className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+              <input
+                id="purchasePrice"
+                type="number"
+                min="0"
+                value={formData.purchasePrice}
+                onChange={(e) =>
+                  setFormData({ ...formData, purchasePrice: e.target.value })
+                }
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                   placeholder="0"
-                  required
-                />
+                required
+              />
               </div>
             </div>
 
             <div>
               <label
                 htmlFor="currentValue"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Current Value
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  id="currentValue"
-                  type="number"
-                  min="0"
-                  value={formData.currentValue}
-                  onChange={(e) =>
-                    setFormData({ ...formData, currentValue: e.target.value })
-                  }
-                  className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+              <input
+                id="currentValue"
+                type="number"
+                min="0"
+                value={formData.currentValue}
+                onChange={(e) =>
+                  setFormData({ ...formData, currentValue: e.target.value })
+                }
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                   placeholder="0"
-                  required
-                />
+                required
+              />
               </div>
             </div>
 
             <div>
               <label
                 htmlFor="mortgageAmount"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Mortgage Amount
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  id="mortgageAmount"
-                  type="number"
-                  min="0"
-                  value={formData.mortgageAmount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, mortgageAmount: e.target.value })
-                  }
-                  className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+              <input
+                id="mortgageAmount"
+                type="number"
+                min="0"
+                value={formData.mortgageAmount}
+                onChange={(e) =>
+                  setFormData({ ...formData, mortgageAmount: e.target.value })
+                }
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                   placeholder="0"
-                />
+              />
               </div>
             </div>
 
             <div>
               <label
                 htmlFor="mortgageRate"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Mortgage Rate (%)
               </label>
@@ -427,7 +427,7 @@ export default function PropertyManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, mortgageRate: e.target.value })
                 }
-                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                 placeholder="3.5"
               />
             </div>
@@ -435,53 +435,53 @@ export default function PropertyManager() {
             <div>
               <label
                 htmlFor="monthlyPayment"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Monthly Payment
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  id="monthlyPayment"
-                  type="number"
-                  min="0"
-                  value={formData.monthlyPayment}
-                  onChange={(e) =>
-                    setFormData({ ...formData, monthlyPayment: e.target.value })
-                  }
-                  className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+              <input
+                id="monthlyPayment"
+                type="number"
+                min="0"
+                value={formData.monthlyPayment}
+                onChange={(e) =>
+                  setFormData({ ...formData, monthlyPayment: e.target.value })
+                }
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                   placeholder="0"
-                />
+              />
               </div>
             </div>
 
             <div>
               <label
                 htmlFor="rentalIncome"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Monthly Rental Income
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  id="rentalIncome"
-                  type="number"
-                  min="0"
-                  value={formData.rentalIncome}
-                  onChange={(e) =>
-                    setFormData({ ...formData, rentalIncome: e.target.value })
-                  }
-                  className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+              <input
+                id="rentalIncome"
+                type="number"
+                min="0"
+                value={formData.rentalIncome}
+                onChange={(e) =>
+                  setFormData({ ...formData, rentalIncome: e.target.value })
+                }
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                   placeholder="0"
-                />
+              />
               </div>
             </div>
 
             <div className="md:col-span-2">
               <label
                 htmlFor="notes"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Notes
               </label>
@@ -491,19 +491,19 @@ export default function PropertyManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, notes: e.target.value })
                 }
-                className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-500/50 focus:bg-white/10 transition-all duration-200"
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                 rows={3}
                 placeholder="Additional information about the property..."
               />
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4 pt-6 border-t border-white/10">
+          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
             <Button
               type="button"
               onClick={onClose}
               variant="ghost"
-              className="px-6 py-3 hover:bg-white/10"
+              className="px-6 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               aria-label="Cancel"
             >
               Cancel
@@ -735,7 +735,7 @@ export default function PropertyManager() {
 
           <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/30">
             <div className="flex justify-between items-start">
-              <div>
+    <div>
                 <p className="text-gray-400 text-sm">Total Mortgage</p>
                 <p className="text-3xl font-bold text-orange-400 mt-1">
                   {formatCurrency(totalMortgage)}
@@ -806,7 +806,7 @@ export default function PropertyManager() {
               className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                 filterType === "all"
                   ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
-                  : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
             >
               All Properties
@@ -818,7 +818,7 @@ export default function PropertyManager() {
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                   filterType === type
                     ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
-                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                 }`}
               >
                 {type.charAt(0).toUpperCase() + type.slice(1)} ({propertiesByType[type].count})
@@ -830,12 +830,12 @@ export default function PropertyManager() {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-              className="bg-white/10 text-white rounded-lg px-4 py-2 focus:outline-none focus:bg-white/20 transition-all duration-200"
+              className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
             >
-              <option value="value_desc" className="bg-gray-800">Value: High to Low</option>
-              <option value="value_asc" className="bg-gray-800">Value: Low to High</option>
-              <option value="rental_desc" className="bg-gray-800">Rental: High to Low</option>
-              <option value="rental_asc" className="bg-gray-800">Rental: Low to High</option>
+              <option value="value_desc" className="bg-white dark:bg-gray-800">Value: High to Low</option>
+              <option value="value_asc" className="bg-white dark:bg-gray-800">Value: Low to High</option>
+              <option value="rental_desc" className="bg-white dark:bg-gray-800">Rental: High to Low</option>
+              <option value="rental_asc" className="bg-white dark:bg-gray-800">Rental: Low to High</option>
             </select>
 
             <div className="flex gap-2">
@@ -843,8 +843,8 @@ export default function PropertyManager() {
                 onClick={() => setViewMode("grid")}
                 className={`p-2 rounded-lg transition-all duration-200 ${
                   viewMode === "grid"
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <i className="fas fa-th"></i>
@@ -853,8 +853,8 @@ export default function PropertyManager() {
                 onClick={() => setViewMode("list")}
                 className={`p-2 rounded-lg transition-all duration-200 ${
                   viewMode === "list"
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <i className="fas fa-list"></i>
@@ -863,8 +863,8 @@ export default function PropertyManager() {
                 onClick={() => setViewMode("map")}
                 className={`p-2 rounded-lg transition-all duration-200 ${
                   viewMode === "map"
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <i className="fas fa-map"></i>
