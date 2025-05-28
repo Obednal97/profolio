@@ -36,7 +36,7 @@ const PLANS = [
       { text: 'Automated updates', included: false },
     ],
     cta: 'Get Started',
-    ctaLink: 'https://github.com/profolio/profolio',
+    ctaLink: 'https://github.com/profolio/profolio#installation',
     popular: false,
   },
   {
@@ -115,7 +115,6 @@ const FAQS = [
 
 export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
   return (
     <main className="min-h-screen">
@@ -140,33 +139,6 @@ export default function PricingPage() {
             <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
               Start free with self-hosting. Upgrade to cloud when you need collaboration and convenience.
             </p>
-          </motion.div>
-
-          {/* Billing Toggle */}
-          <motion.div variants={fadeUp} className="flex justify-center mb-12">
-            <div className="bg-white dark:bg-gray-800 rounded-full p-1 shadow-lg">
-              <button
-                onClick={() => setBillingPeriod('monthly')}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                  billingPeriod === 'monthly'
-                    ? 'bg-black dark:bg-white text-white dark:text-black'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingPeriod('annual')}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                  billingPeriod === 'annual'
-                    ? 'bg-black dark:bg-white text-white dark:text-black'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                Annual
-                <span className="ml-2 text-green-600 dark:text-green-400 text-xs">Save 20%</span>
-              </button>
-            </div>
           </motion.div>
         </motion.div>
       </section>
@@ -207,10 +179,10 @@ export default function PricingPage() {
                 </p>
                 <div className="mb-6">
                   <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                    {billingPeriod === 'annual' && plan.name === 'Cloud' ? '£95.90' : plan.price}
+                    {plan.name === 'Cloud' ? '£95.90' : plan.price}
                   </span>
                   <span className="text-gray-600 dark:text-gray-400 ml-2">
-                    {billingPeriod === 'annual' && plan.name === 'Cloud' ? 'per user/year' : plan.period}
+                    {plan.name === 'Cloud' ? 'per user/year' : plan.period}
                   </span>
                 </div>
                 <ul className="space-y-3 mb-8">

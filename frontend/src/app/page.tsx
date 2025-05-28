@@ -22,14 +22,16 @@ const container = {
 
 const TESTIMONIALS = [
   {
-    quote: '&quot;Finally a dashboard that actually pulls everything into one place.&quot;',
-    author: 'Sarah Chen',
-    role: 'Startup Founder',
+    name: 'Sarah Chen',
+    role: 'Product Manager',
+    quote: '"Finally a dashboard that actually pulls everything into one place."',
+    avatar: '/avatars/sarah.jpg'
   },
   {
-    quote: '&quot;Feels like Notion met my bank account and had a baby.&quot;',
-    author: 'Alex Rivera',
-    role: 'Angel Investor',
+    name: 'Marcus Rodriguez',
+    role: 'Software Engineer',
+    quote: '"Feels like Notion met my bank account and had a baby."',
+    avatar: '/avatars/marcus.jpg'
   },
 ];
 
@@ -156,14 +158,14 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
 
-        {/* Scroll indicator - make it more visible */}
+        {/* Scroll indicator - positioned within viewport */}
         <motion.div 
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1, duration: 0.8 }}
         >
-          <div className="w-8 h-12 border-2 border-gray-400 dark:border-gray-600 rounded-full flex justify-center">
+          <div className="w-8 h-12 border-2 border-gray-400 dark:border-gray-600 rounded-full flex justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
             <motion.div 
               className="w-2 h-3 bg-gray-600 dark:bg-gray-400 rounded-full mt-2"
               animate={{ y: [0, 8, 0] }}
@@ -222,13 +224,13 @@ export default function LandingPage() {
             <motion.div key={i} variants={fadeUp}>
               <Tile className="p-8 bg-white dark:bg-gray-900/50 backdrop-blur-sm border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-all">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="text-4xl text-gray-300 dark:text-gray-600">&quot;</div>
+                  <div className="text-4xl text-gray-300 dark:text-gray-600">&ldquo;</div>
                   <p className="text-lg text-gray-700 dark:text-gray-300 italic flex-1">{testimonial.quote}</p>
                 </div>
                 <div className="flex items-center gap-3 ml-12">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-400" />
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{testimonial.author}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{testimonial.name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-500">{testimonial.role}</p>
                   </div>
                 </div>

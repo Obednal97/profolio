@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import LayoutWrapper from "@/components/layout/layoutWrapper";
-import { DevTools } from '@/components/DevTools';
 import { ThemeProvider } from "@/providers/theme-provider";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import "./globals.css";
@@ -127,7 +126,6 @@ export default function RootLayout({
       >
         <ThemeProvider defaultTheme="system">
           <LayoutWrapper>{children}</LayoutWrapper>
-          <DevTools />
           <PWAInstallPrompt />
         </ThemeProvider>
       </body>

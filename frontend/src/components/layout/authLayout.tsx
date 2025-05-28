@@ -1,5 +1,4 @@
 import React from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 
 interface AuthLayoutProps {
@@ -20,15 +19,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="p-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-gray-900 dark:text-white hover:opacity-80 transition-opacity">
-            <i className="fas fa-arrow-left" />
-            <span className="text-2xl font-bold">Profolio</span>
-          </Link>
-        </header>
-
+      <div className="relative z-10 min-h-screen flex items-center justify-center">
         {/* Main content */}
         <main className="flex-1 flex items-center justify-center px-6 py-12">
           <motion.div
