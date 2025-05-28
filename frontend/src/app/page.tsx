@@ -105,6 +105,9 @@ export default function LandingPage() {
           <div className="absolute top-40 left-40 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-30 dark:opacity-20 animate-blob animation-delay-4000" />
         </div>
 
+        {/* Bottom fade gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 dark:from-gray-900 to-transparent pointer-events-none" />
+
         <motion.div
           className="z-20 relative px-6 sm:px-12 max-w-6xl mx-auto text-center"
           initial="hidden"

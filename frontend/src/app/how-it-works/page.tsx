@@ -137,6 +137,9 @@ export default function HowItWorksPage() {
           <div className="absolute bottom-20 left-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-20 dark:opacity-10 animate-blob animation-delay-2000" />
         </div>
 
+        {/* Bottom fade gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 dark:from-gray-900 to-transparent pointer-events-none" />
+
         <motion.div
           initial="hidden"
           animate="visible"
