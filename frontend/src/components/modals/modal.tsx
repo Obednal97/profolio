@@ -30,13 +30,27 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      // Store current scroll position
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
     } else {
-      document.body.style.overflow = 'unset';
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
     
     return () => {
-      document.body.style.overflow = 'unset';
+      // Cleanup on unmount
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
     };
   }, [isOpen]);
 
@@ -56,25 +70,33 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
       {isOpen && (
         <div 
           onClick={handleBackdropClick} 
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto"
+          className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          style={{ 
+            margin: 0, 
+            padding: '1rem',
+            minHeight: '100vh',
+            minWidth: '100vw',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
         >
-          <div className="min-h-full flex items-center justify-center p-4">
-            <motion.div
-              ref={modalRef}
-              className="relative w-full max-w-4xl"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                transformOrigin: `${originStyle.originX * 100}% ${originStyle.originY * 100}%`
-              }}
-            >
-              {title && <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>}
-              {description && <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">{description}</p>}
-              {children}
-            </motion.div>
-          </div>
+          <motion.div
+            ref={modalRef}
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              transformOrigin: `${originStyle.originX * 100}% ${originStyle.originY * 100}%`
+            }}
+          >
+            {title && <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>}
+            {description && <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">{description}</p>}
+            {children}
+          </motion.div>
         </div>
       )}
     </AnimatePresence>

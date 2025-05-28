@@ -835,9 +835,9 @@ function ExpenseManager() {
         </AnimatePresence>
       </div>
 
-      {/* Modal */}
+      {/* Modal - Moved outside the relative z-10 container */}
       {(showModal || editingExpense) && (
-        <Modal isOpen={true} onClose={handleCloseModal}>
+        <Modal isOpen={showModal || !!editingExpense} onClose={handleCloseModal}>
           <ExpenseModal
             onClose={handleCloseModal}
             onSubmit={handleSubmit}
