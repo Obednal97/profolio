@@ -123,8 +123,10 @@ export default function PricingPage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
         
-        {/* Bottom fade gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 dark:from-gray-900 to-transparent pointer-events-none" />
+        {/* Multi-layer fade for smooth transition */}
+        <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-50 via-gray-50/95 via-gray-50/80 via-gray-50/60 via-gray-50/40 via-gray-50/20 via-gray-50/10 to-transparent dark:from-gray-900 dark:via-gray-900/95 dark:via-gray-900/80 dark:via-gray-900/60 dark:via-gray-900/40 dark:via-gray-900/20 dark:via-gray-900/10 dark:to-transparent" />
+        </div>
         
         <motion.div
           initial="hidden"
