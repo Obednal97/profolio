@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import LayoutWrapper from "@/components/layout/layoutWrapper";
-import { ThemeProvider } from "@/providers/theme-provider";
-import { ClientProviders } from "@/components/providers/ClientProviders";
+import { ClientProviders } from "@/providers/client-providers";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import "./globals.css";
 
@@ -125,12 +123,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased min-h-screen flex flex-col`}
       >
-        <ThemeProvider defaultTheme="system">
-          <ClientProviders>
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </ClientProviders>
-          <PWAInstallPrompt />
-        </ThemeProvider>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
+        <PWAInstallPrompt />
       </body>
     </html>
   );

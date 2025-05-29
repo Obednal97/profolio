@@ -10,10 +10,8 @@ interface LayoutWrapperProps {
   children: React.ReactNode;
 }
 
-// App context for theme and currency
+// App context for currency only (theme is handled by theme-provider)
 interface AppContextType {
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
   currency: string;
   setCurrency: (currency: string) => void;
   formatCurrency: (amount: number) => string;
@@ -29,21 +27,16 @@ export const useAppContext = () => {
   return context;
 };
 
-// For backward compatibility
-export const useTheme = () => {
-  const context = useAppContext();
-  return {
-    theme: context.theme,
-    toggleTheme: context.toggleTheme,
-  };
-};
-
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname();
-  const { user } = useAuth(); // Use Firebase authentication
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const { user } = useAuth();
   const [currency, setCurrencyState] = useState<string>('USD');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
@@ -68,6 +61,8 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   // Load user preferences from API when user is available
   useEffect(() => {
+    if (!mounted) return;
+
     const loadUserPreferences = async () => {
       if (currentUser?.id && !preferencesLoaded) {
         try {
@@ -79,12 +74,10 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
           });
           
           const data = await response.json();
-          if (data.user?.preferences) {
-            const prefs = data.user.preferences;
-            if (prefs.currency) setCurrencyState(prefs.currency);
-            if (prefs.theme) setTheme(prefs.theme === 'system' ? 'dark' : prefs.theme);
+          if (data.user?.preferences?.currency) {
+            setCurrencyState(data.user.preferences.currency);
             setPreferencesLoaded(true);
-            return; // Don't load from localStorage if we have user preferences
+            return;
           }
         } catch (error) {
           console.error('Failed to load user preferences:', error);
@@ -93,46 +86,22 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
       
       // Fallback to localStorage if no user or failed to load user preferences
       if (!preferencesLoaded) {
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
         const savedCurrency = localStorage.getItem('currency') || 'USD';
-        
-        if (savedTheme) {
-          setTheme(savedTheme);
-        } else {
-          // Check system preference
-          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          setTheme(systemPrefersDark ? 'dark' : 'light');
-        }
-        
         setCurrencyState(savedCurrency);
         setPreferencesLoaded(true);
       }
     };
 
     loadUserPreferences();
-  }, [currentUser?.id, preferencesLoaded]);
-
-  // Apply theme to document
-  useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  // Save currency to localStorage
-  useEffect(() => {
-    localStorage.setItem('currency', currency);
-  }, [currency]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
+  }, [currentUser?.id, preferencesLoaded, mounted]);
 
   const setCurrency = async (newCurrency: string) => {
     setCurrencyState(newCurrency);
     
     // Save to localStorage as backup
-    localStorage.setItem('currency', newCurrency);
+    if (mounted) {
+      localStorage.setItem('currency', newCurrency);
+    }
     
     // Save to user preferences if user is logged in
     if (currentUser?.id) {
@@ -165,8 +134,6 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   };
 
   const appValue = {
-    theme,
-    toggleTheme,
     currency,
     setCurrency,
     formatCurrency,
@@ -183,19 +150,20 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   // For public pages, show no user
   const headerUser = isAppSection && currentUser ? currentUser : undefined;
 
+  // Don't render layout until mounted to prevent hydration issues
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
   return (
     <AppContext.Provider value={appValue}>
-      <div className={`min-h-screen transition-colors duration-300 ${
-        theme === 'dark' 
-          ? 'bg-gray-900 text-white' 
-          : 'bg-white text-gray-900'
-      }`}>
+      <>
         {!hideLayout && <Header user={headerUser} currentPath={pathname} />}
         <main className="relative z-10">
           {children}
         </main>
         {!hideLayout && <Footer />}
-      </div>
+      </>
     </AppContext.Provider>
   );
 }
