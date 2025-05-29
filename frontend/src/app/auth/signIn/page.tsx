@@ -25,7 +25,8 @@ function SignInPage() {
 
   // Redirect if already authenticated (Firebase user or demo mode)
   useEffect(() => {
-    if ((user && !authLoading) || isDemoMode) {
+    // Only redirect if we have a valid user AND we're not in a loading state
+    if (!authLoading && ((user && user.uid) || isDemoMode)) {
       router.push('/app/dashboard');
     }
   }, [user, authLoading, isDemoMode, router]);
@@ -89,7 +90,7 @@ function SignInPage() {
   }
 
   // Don't render if user is already authenticated or in demo mode
-  if (user || isDemoMode) return null;
+  if (!authLoading && ((user && user.uid) || isDemoMode)) return null;
 
   return (
     <AuthLayout>

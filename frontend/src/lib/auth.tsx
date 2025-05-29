@@ -162,19 +162,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      setLoading(true);
+      
       // Clear any demo mode data first
       localStorage.removeItem('auth-token');
       localStorage.removeItem('demo-mode');
       localStorage.removeItem('user-data');
       localStorage.removeItem('demo-api-keys');
+      localStorage.removeItem('userToken');
+      
+      // Clear any other potential auth-related localStorage items
+      localStorage.removeItem('firebase:authUser:AIzaSyBvQvlrGjGjGjGjGjGjGjGjGjGjGjGjGjG:[DEFAULT]');
       
       // Sign out from Firebase
       await signOutUser();
       
-      // Force redirect to sign-in page
-      window.location.href = '/auth/signIn';
+      // Clear user state immediately
+      setUser(null);
+      setToken(null);
+      
+      // Force a complete page reload to clear any cached state
+      window.location.replace('/auth/signIn');
     } catch (error: unknown) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to sign out');
+      console.error('Sign out error:', error);
+      
+      // Even if Firebase sign out fails, clear local state and redirect
+      setUser(null);
+      setToken(null);
+      localStorage.clear(); // Clear all localStorage as a last resort
+      window.location.replace('/auth/signIn');
+    } finally {
+      setLoading(false);
     }
   };
 

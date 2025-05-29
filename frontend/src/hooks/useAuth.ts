@@ -92,15 +92,40 @@ export function useAuth() {
         return;
       }
       
-      // Clear demo mode data and API keys
+      // Clear all authentication-related localStorage items
       localStorage.removeItem('auth-token');
       localStorage.removeItem('demo-mode');
       localStorage.removeItem('user-data');
-      localStorage.removeItem('demo-api-keys'); // Clear demo API keys
+      localStorage.removeItem('demo-api-keys');
+      localStorage.removeItem('userToken');
       
-      await fetch("/api/signout", { method: "POST" });
+      // Clear any Firebase auth cache
+      const firebaseKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('firebase:') || key.includes('authUser')
+      );
+      firebaseKeys.forEach(key => localStorage.removeItem(key));
+      
+      // Sign out from Firebase if available
+      try {
+        const { getFirebase } = await import('@/lib/firebase');
+        const { auth } = await getFirebase();
+        if (auth) {
+          await firebaseSignOut(auth);
+        }
+      } catch (error) {
+        console.error('Firebase sign out error:', error);
+      }
+      
+      // Call backend signout endpoint
+      try {
+        await fetch("/api/signout", { method: "POST" });
+      } catch (error) {
+        console.error('Backend signout error:', error);
+      }
+      
       if (redirect) {
-        window.location.href = callbackUrl;
+        // Use replace to prevent back button issues
+        window.location.replace(callbackUrl);
       }
     },
     forceLogout: async () => {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTheme } from "../layout/layoutWrapper";
+import { useAuth } from "@/lib/auth";
 
 interface UserMenuProps {
   user?: {
@@ -18,11 +19,23 @@ export default function UserMenu({
 }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      setIsProfileOpen(false);
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Force redirect even if sign out fails
+      window.location.href = '/auth/signIn';
+    }
+  };
 
   const profileMenuItems = [
-    { label: "Account Settings", path: "/app/settings", icon: "fa-cog" },
-    { label: "Notifications", path: "/app/notifications", icon: "fa-bell" },
-    { label: "Sign Out", path: "/auth/signOut", icon: "fa-sign-out-alt" },
+    { label: "Account Settings", path: "/app/settings", icon: "fa-cog", action: null },
+    { label: "Notifications", path: "/app/notifications", icon: "fa-bell", action: null },
+    { label: "Sign Out", path: null, icon: "fa-sign-out-alt", action: handleSignOut },
   ];
 
   const getThemeIcon = () => {
@@ -87,15 +100,26 @@ export default function UserMenu({
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                   </div>
                   {profileMenuItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      href={item.path}
-                      onClick={() => setIsProfileOpen(false)}
-                      className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation"
-                    >
-                      <i className={`fas ${item.icon} mr-3 w-4`}></i>
-                      {item.label}
-                    </Link>
+                    item.path ? (
+                      <Link
+                        key={item.path}
+                        href={item.path}
+                        onClick={() => setIsProfileOpen(false)}
+                        className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                      >
+                        <i className={`fas ${item.icon} mr-3 w-4`}></i>
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <button
+                        key={item.label}
+                        onClick={item.action || undefined}
+                        className="block w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                      >
+                        <i className={`fas ${item.icon} mr-3 w-4`}></i>
+                        {item.label}
+                      </button>
+                    )
                   ))}
                 </div>
               </>
