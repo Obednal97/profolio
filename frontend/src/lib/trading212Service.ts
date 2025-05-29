@@ -186,6 +186,8 @@ export class Trading212Service {
   private baseUrl = 'https://live.trading212.com/api/v0';
   private requestQueue: Promise<unknown> = Promise.resolve();
   private requestTimeout = 30000; // 30 seconds timeout for each request
+  private lastRequestTime = 0;
+  private minRequestInterval = 2500; // 2.5 seconds between requests (Trading 212 limit is 2s)
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -196,8 +198,17 @@ export class Trading212Service {
   // ============================================================================
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    // Queue requests to ensure they run in series
+    // Queue requests to ensure they run in series with minimum delay
     return this.requestQueue = this.requestQueue.then(async () => {
+      // Ensure minimum time between requests
+      const now = Date.now();
+      const timeSinceLastRequest = now - this.lastRequestTime;
+      if (timeSinceLastRequest < this.minRequestInterval) {
+        const delay = this.minRequestInterval - timeSinceLastRequest;
+        console.log(`⏱️ Rate limiting: waiting ${delay}ms before ${endpoint}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
       const url = `${this.baseUrl}${endpoint}`;
       console.log(`🔄 Making request to: ${endpoint}`);
       
@@ -233,6 +244,7 @@ export class Trading212Service {
         });
 
         clearTimeout(timeoutId);
+        this.lastRequestTime = Date.now(); // Update last request time after successful request
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -273,7 +285,9 @@ export class Trading212Service {
             
             console.error(`🚫 Rate limit exceeded on ${endpoint}:`, {
               retryAfter,
-              rateLimitReset
+              rateLimitReset,
+              timeSinceLastRequest,
+              minInterval: this.minRequestInterval
             });
             
             errorMessage = `Rate limit exceeded on ${endpoint}. `;
@@ -283,7 +297,7 @@ export class Trading212Service {
             if (rateLimitReset) {
               errorMessage += `Rate limit resets at ${new Date(parseInt(rateLimitReset) * 1000).toISOString()}. `;
             }
-            errorMessage += `Requests are now queued sequentially to prevent further rate limiting.`;
+            errorMessage += `Requests are queued with ${this.minRequestInterval}ms intervals to prevent rate limiting.`;
           }
 
           const error = new Error(errorMessage) as Trading212ApiError;
