@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Property } from '@/types/global';
-// import PropertyCard from '@/components/propertyCard/propertyCard';
-// import PropertyModal from '@/components/propertyModal/propertyModal';
+import PropertyCard from '@/components/propertyCard/propertyCard';
+import PropertyModal from '@/components/propertyModal/propertyModal';
 import { useAuth } from '@/lib/auth';
 import {
   SkeletonCard,
@@ -11,6 +11,7 @@ import {
   SkeletonStat,
   SkeletonButton
 } from '@/components/ui/skeleton';
+import { FullScreenModal } from '@/components/modals/modal';
 
 // Skeleton component for properties page
 function PropertiesSkeleton() {
@@ -49,9 +50,8 @@ function PropertiesSkeleton() {
 export default function PropertiesPage() {
   const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
-  // Temporarily disabled until PropertyModal component is created
-  // const [showModal, setShowModal] = useState(false);
-  // const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,61 +106,93 @@ export default function PropertiesPage() {
     }
   }, [currentUser?.id, fetchProperties]);
 
-  // Temporarily disabled until PropertyModal component is created
-  /*
-  const handleSaveProperty = async (property: Property) => {
-    if (!currentUser?.id) return;
-    
+  const handleAddProperty = () => {
+    setSelectedProperty(null);
+    setShowModal(true);
+  };
+
+  const handleEditProperty = (property: Property) => {
+    setSelectedProperty(property);
+    setShowModal(true);
+  };
+
+  const handleSaveProperty = async (propertyData: Property) => {
     try {
-      const { apiCall } = await import('@/lib/mockApi');
-      const method = property.id ? 'UPDATE' : 'CREATE';
-      const response = await apiCall('/api/properties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method,
-          userId: currentUser.id,
-          data: property,
-        }),
-      });
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
+      if (isDemoMode) {
+        // In demo mode, just update local state
+        if (propertyData.id) {
+          // Edit existing property
+          setProperties(prev => prev.map(p => p.id === propertyData.id ? propertyData : p));
+        } else {
+          // Add new property
+          const newProperty = {
+            ...propertyData,
+            id: `demo-property-${Date.now()}`,
+            userId: 'demo-user'
+          };
+          setProperties(prev => [...prev, newProperty]);
+        }
+        setShowModal(false);
+        setSelectedProperty(null);
+      } else {
+        // Real user - save to backend
+        const endpoint = propertyData.id ? '/api/properties/update' : '/api/properties/create';
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...propertyData,
+            userId: currentUser?.id || ''
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save property');
+        }
+
+        const savedProperty = await response.json();
+        
+        if (propertyData.id) {
+          setProperties(prev => prev.map(p => p.id === propertyData.id ? savedProperty : p));
+        } else {
+          setProperties(prev => [...prev, savedProperty]);
+        }
+        
+        setShowModal(false);
+        setSelectedProperty(null);
       }
-      
-      setShowModal(false);
-      setSelectedProperty(null);
-      fetchProperties();
     } catch (err) {
       console.error('Error saving property:', err);
+      setError('Failed to save property');
     }
   };
-  */
 
-  const handleDeleteProperty = async (propertyId: string) => {
-    if (!currentUser?.id) return;
-    
+  const handleDeleteProperty = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this property?')) return;
+
     try {
-      const { apiCall } = await import('@/lib/mockApi');
-      const response = await apiCall('/api/properties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: 'DELETE',
-          userId: currentUser.id,
-          id: propertyId,
-        }),
-      });
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
+      if (isDemoMode) {
+        setProperties(prev => prev.filter(p => p.id !== id));
+      } else {
+        const response = await fetch('/api/properties/delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id, userId: currentUser?.id || '' }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete property');
+        }
+
+        setProperties(prev => prev.filter(p => p.id !== id));
       }
-      
-      fetchProperties();
     } catch (err) {
       console.error('Error deleting property:', err);
+      setError('Failed to delete property');
     }
   };
 
@@ -207,12 +239,8 @@ export default function PropertiesPage() {
           </p>
         </div>
         <button
-          onClick={() => {
-            // setSelectedProperty(null);
-            // setShowModal(true);
-            alert('Property Modal not implemented yet');
-          }}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+          onClick={handleAddProperty}
+          className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2 px-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl flex items-center gap-2"
         >
           <i className="fas fa-plus"></i>
           Add Property
@@ -252,92 +280,57 @@ export default function PropertiesPage() {
         Your Properties
       </h2>
       
-      {properties.length === 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {properties.map((property) => (
+          <PropertyCard
+            key={property.id}
+            property={property}
+            onEdit={handleEditProperty}
+            onDelete={handleDeleteProperty}
+          />
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {properties.length === 0 && !loading && (
         <div className="text-center py-12">
           <i className="fas fa-home text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
-          <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-            No properties found
+          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            No Properties Yet
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            Add your first property to start tracking your real estate portfolio
           </p>
           <button
-            onClick={() => {
-              // setSelectedProperty(null);
-              // setShowModal(true);
-              alert('Property Modal not implemented yet');
-            }}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            onClick={handleAddProperty}
+            className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl"
           >
+            <i className="fas fa-plus mr-2"></i>
             Add Your First Property
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
-            <div
-              key={property.id}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                {property.address}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {property.propertyType ? property.propertyType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Property'}
-              </p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Current Value</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    ${property.currentValue?.toLocaleString() || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Purchase Price</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    ${property.purchasePrice?.toLocaleString() || 0}
-                  </span>
-                </div>
-                {property.rentalIncome && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Monthly Rental</span>
-                    <span className="text-sm font-medium text-purple-600">
-                      ${property.rentalIncome.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end space-x-2 mt-4">
-                <button
-                  onClick={() => {
-                    // setSelectedProperty(property);
-                    // setShowModal(true);
-                    alert('Property Modal not implemented yet');
-                  }}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  <i className="fas fa-edit"></i>
-                </button>
-                <button
-                  onClick={() => handleDeleteProperty(property.id!)}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
       )}
 
-      {/* Property Modal - Temporarily disabled until component is created */}
-      {/* {showModal && (
-        <PropertyModal
-          property={selectedProperty}
-          onSave={handleSaveProperty}
+      {/* Property Modal */}
+      {showModal && (
+        <FullScreenModal
+          isOpen={showModal}
           onClose={() => {
             setShowModal(false);
             setSelectedProperty(null);
           }}
-        />
-      )} */}
+          title=""
+        >
+          <PropertyModal
+            property={selectedProperty}
+            onSave={handleSaveProperty}
+            onClose={() => {
+              setShowModal(false);
+              setSelectedProperty(null);
+            }}
+          />
+        </FullScreenModal>
+      )}
     </div>
   );
 } 
