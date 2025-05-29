@@ -35,18 +35,16 @@ async function extractAndPersistGoogleProfile(user: User) {
       return; // Not a Google sign-in, skip
     }
 
-    // Extract additional profile data from Google
+    // Extract basic profile data from Google (only what's readily available)
     const profileData = {
       id: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'User',
       email: user.email || '',
-      phone: (user as { phoneNumber?: string }).phoneNumber || '',
       photoURL: user.photoURL || '',
-      // Try to extract additional data if available
-      ...(user.providerData?.[0] && {
-        // Some additional Google profile data might be available
-        location: (user as { customClaims?: { location?: string } }).customClaims?.location || '',
-      })
+      // Phone number is optional - only include if user granted permission
+      ...(user.phoneNumber && { phone: user.phoneNumber }),
+      // We don't extract location/address from basic Google profile
+      // Users can manually add their country in settings if they want
     };
 
     // Check if we already have this profile data stored
@@ -62,7 +60,7 @@ async function extractAndPersistGoogleProfile(user: User) {
         ...profileData,
         lastUpdated: Date.now(),
         provider: 'google',
-        // Add any additional fields that might be useful
+        // Add authentication metadata
         emailVerified: user.emailVerified,
         createdAt: user.metadata.creationTime,
         lastSignIn: user.metadata.lastSignInTime,

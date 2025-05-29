@@ -55,11 +55,13 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
   const auth = await getFirebaseAuth();
   const provider = new GoogleAuthProvider();
   
-  // Request additional scopes for more profile information
+  // Request basic profile information (required)
   provider.addScope('email');
   provider.addScope('profile');
+  
+  // Optional: Request additional profile information
+  // Note: These are optional and users can deny them
   provider.addScope('https://www.googleapis.com/auth/user.phonenumbers.read');
-  provider.addScope('https://www.googleapis.com/auth/user.addresses.read');
   
   // Set custom parameters to get additional profile info
   provider.setCustomParameters({

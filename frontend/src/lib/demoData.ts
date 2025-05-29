@@ -191,39 +191,78 @@ export async function populateDemoData(userId: string) {
       }
     }
 
-    console.log('Demo data populated successfully');
+    console.log('✅ Demo data populated successfully for user:', userId);
     return { success: true, assetsCount: demoAssets.length, propertiesCount: demoProperties.length };
   } catch (error) {
-    console.error('Failed to populate demo data:', error);
+    console.error('❌ Failed to populate demo data:', error);
     throw error;
+  }
+}
+
+// Function to check if user has any data
+export async function hasUserData(userId: string): Promise<boolean> {
+  try {
+    const { apiCall } = await import('@/lib/mockApi');
+    
+    const [assetsRes, propertiesRes] = await Promise.all([
+      apiCall('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'READ', userId }),
+      }),
+      apiCall('/api/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'READ', userId }),
+      }),
+    ]);
+
+    const assetsData = await assetsRes.json();
+    const propertiesData = await propertiesRes.json();
+
+    const hasAssets = assetsData.assets && assetsData.assets.length > 0;
+    const hasProperties = propertiesData.properties && propertiesData.properties.length > 0;
+
+    return hasAssets || hasProperties;
+  } catch (error) {
+    console.error('Failed to check user data:', error);
+    return false;
   }
 }
 
 // Calculate demo portfolio summary
 export function getDemoPortfolioSummary() {
-  const totalValue = demoAssets.reduce((sum, asset) => sum + asset.current_value, 0);
-  const totalInvested = demoAssets.reduce((sum, asset) => sum + (asset.purchase_price || 0), 0);
-  const totalPnL = totalValue - totalInvested;
-  const totalPnLPercentage = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
+  const totalValue = demoAssets.reduce((sum, asset) => {
+    return sum + (asset.current_value || 0);
+  }, 0);
 
-  const topHoldings = demoAssets
+  const totalInvested = demoAssets.reduce((sum, asset) => {
+    return sum + (asset.purchase_price || 0);
+  }, 0);
+
+  const totalPL = totalValue - totalInvested;
+  const percentageChange = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
+
+  // Calculate top holdings
+  const holdings = demoAssets
     .map(asset => ({
       name: asset.name,
-      value: asset.current_value,
-      percentage: (asset.current_value / totalValue) * 100
+      value: asset.current_value || 0,
+      percentage: totalValue > 0 ? ((asset.current_value || 0) / totalValue) * 100 : 0
     }))
-    .sort((a, b) => b.value - a.value)
+    .sort((a, b) => (b.value || 0) - (a.value || 0))
     .slice(0, 5);
 
   return {
-    totalValue: totalValue / 100, // Convert to dollars
-    totalInvested: totalInvested / 100,
-    totalPnL: totalPnL / 100,
-    totalPnLPercentage,
-    assetsCount: demoAssets.length,
-    topHoldings: topHoldings.map(holding => ({
+    totalValue,
+    totalInvested,
+    totalPL,
+    percentageChange,
+    assetCount: demoAssets.length,
+    propertyCount: demoProperties.length,
+    topHoldings: holdings.map(holding => ({
       ...holding,
-      value: holding.value / 100
+      percentage: Math.round((holding.value || 0) / totalValue * 100 * 10) / 10
     }))
   };
 } 
