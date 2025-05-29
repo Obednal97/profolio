@@ -20,6 +20,172 @@ const tabs: Tab[] = [
   { id: "account", label: "Account", icon: "fa-user-cog" },
 ];
 
+// Country list for dropdown
+const countries = [
+  { code: "", name: "Select Country" },
+  { code: "US", name: "United States" },
+  { code: "CA", name: "Canada" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "AU", name: "Australia" },
+  { code: "DE", name: "Germany" },
+  { code: "FR", name: "France" },
+  { code: "IT", name: "Italy" },
+  { code: "ES", name: "Spain" },
+  { code: "NL", name: "Netherlands" },
+  { code: "BE", name: "Belgium" },
+  { code: "CH", name: "Switzerland" },
+  { code: "AT", name: "Austria" },
+  { code: "SE", name: "Sweden" },
+  { code: "NO", name: "Norway" },
+  { code: "DK", name: "Denmark" },
+  { code: "FI", name: "Finland" },
+  { code: "IE", name: "Ireland" },
+  { code: "PT", name: "Portugal" },
+  { code: "GR", name: "Greece" },
+  { code: "PL", name: "Poland" },
+  { code: "CZ", name: "Czech Republic" },
+  { code: "HU", name: "Hungary" },
+  { code: "SK", name: "Slovakia" },
+  { code: "SI", name: "Slovenia" },
+  { code: "HR", name: "Croatia" },
+  { code: "BG", name: "Bulgaria" },
+  { code: "RO", name: "Romania" },
+  { code: "EE", name: "Estonia" },
+  { code: "LV", name: "Latvia" },
+  { code: "LT", name: "Lithuania" },
+  { code: "LU", name: "Luxembourg" },
+  { code: "MT", name: "Malta" },
+  { code: "CY", name: "Cyprus" },
+  { code: "IS", name: "Iceland" },
+  { code: "LI", name: "Liechtenstein" },
+  { code: "MC", name: "Monaco" },
+  { code: "SM", name: "San Marino" },
+  { code: "VA", name: "Vatican City" },
+  { code: "AD", name: "Andorra" },
+  { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" },
+  { code: "CN", name: "China" },
+  { code: "IN", name: "India" },
+  { code: "SG", name: "Singapore" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "TW", name: "Taiwan" },
+  { code: "MY", name: "Malaysia" },
+  { code: "TH", name: "Thailand" },
+  { code: "ID", name: "Indonesia" },
+  { code: "PH", name: "Philippines" },
+  { code: "VN", name: "Vietnam" },
+  { code: "NZ", name: "New Zealand" },
+  { code: "MX", name: "Mexico" },
+  { code: "BR", name: "Brazil" },
+  { code: "AR", name: "Argentina" },
+  { code: "CL", name: "Chile" },
+  { code: "CO", name: "Colombia" },
+  { code: "PE", name: "Peru" },
+  { code: "UY", name: "Uruguay" },
+  { code: "PY", name: "Paraguay" },
+  { code: "BO", name: "Bolivia" },
+  { code: "EC", name: "Ecuador" },
+  { code: "VE", name: "Venezuela" },
+  { code: "GY", name: "Guyana" },
+  { code: "SR", name: "Suriname" },
+  { code: "ZA", name: "South Africa" },
+  { code: "EG", name: "Egypt" },
+  { code: "MA", name: "Morocco" },
+  { code: "TN", name: "Tunisia" },
+  { code: "DZ", name: "Algeria" },
+  { code: "LY", name: "Libya" },
+  { code: "SD", name: "Sudan" },
+  { code: "ET", name: "Ethiopia" },
+  { code: "KE", name: "Kenya" },
+  { code: "UG", name: "Uganda" },
+  { code: "TZ", name: "Tanzania" },
+  { code: "RW", name: "Rwanda" },
+  { code: "NG", name: "Nigeria" },
+  { code: "GH", name: "Ghana" },
+  { code: "CI", name: "Côte d'Ivoire" },
+  { code: "SN", name: "Senegal" },
+  { code: "ML", name: "Mali" },
+  { code: "BF", name: "Burkina Faso" },
+  { code: "NE", name: "Niger" },
+  { code: "TD", name: "Chad" },
+  { code: "CM", name: "Cameroon" },
+  { code: "CF", name: "Central African Republic" },
+  { code: "CG", name: "Republic of the Congo" },
+  { code: "CD", name: "Democratic Republic of the Congo" },
+  { code: "GA", name: "Gabon" },
+  { code: "GQ", name: "Equatorial Guinea" },
+  { code: "ST", name: "São Tomé and Príncipe" },
+  { code: "AO", name: "Angola" },
+  { code: "ZM", name: "Zambia" },
+  { code: "ZW", name: "Zimbabwe" },
+  { code: "BW", name: "Botswana" },
+  { code: "NA", name: "Namibia" },
+  { code: "SZ", name: "Eswatini" },
+  { code: "LS", name: "Lesotho" },
+  { code: "MG", name: "Madagascar" },
+  { code: "MU", name: "Mauritius" },
+  { code: "SC", name: "Seychelles" },
+  { code: "KM", name: "Comoros" },
+  { code: "DJ", name: "Djibouti" },
+  { code: "SO", name: "Somalia" },
+  { code: "ER", name: "Eritrea" },
+  { code: "IL", name: "Israel" },
+  { code: "PS", name: "Palestine" },
+  { code: "JO", name: "Jordan" },
+  { code: "LB", name: "Lebanon" },
+  { code: "SY", name: "Syria" },
+  { code: "IQ", name: "Iraq" },
+  { code: "IR", name: "Iran" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "AE", name: "United Arab Emirates" },
+  { code: "QA", name: "Qatar" },
+  { code: "BH", name: "Bahrain" },
+  { code: "KW", name: "Kuwait" },
+  { code: "OM", name: "Oman" },
+  { code: "YE", name: "Yemen" },
+  { code: "TR", name: "Turkey" },
+  { code: "AM", name: "Armenia" },
+  { code: "AZ", name: "Azerbaijan" },
+  { code: "GE", name: "Georgia" },
+  { code: "KZ", name: "Kazakhstan" },
+  { code: "KG", name: "Kyrgyzstan" },
+  { code: "TJ", name: "Tajikistan" },
+  { code: "TM", name: "Turkmenistan" },
+  { code: "UZ", name: "Uzbekistan" },
+  { code: "AF", name: "Afghanistan" },
+  { code: "PK", name: "Pakistan" },
+  { code: "BD", name: "Bangladesh" },
+  { code: "LK", name: "Sri Lanka" },
+  { code: "MV", name: "Maldives" },
+  { code: "BT", name: "Bhutan" },
+  { code: "NP", name: "Nepal" },
+  { code: "MM", name: "Myanmar" },
+  { code: "LA", name: "Laos" },
+  { code: "KH", name: "Cambodia" },
+  { code: "BN", name: "Brunei" },
+  { code: "TL", name: "Timor-Leste" },
+  { code: "PG", name: "Papua New Guinea" },
+  { code: "SB", name: "Solomon Islands" },
+  { code: "VU", name: "Vanuatu" },
+  { code: "FJ", name: "Fiji" },
+  { code: "NC", name: "New Caledonia" },
+  { code: "PF", name: "French Polynesia" },
+  { code: "WS", name: "Samoa" },
+  { code: "TO", name: "Tonga" },
+  { code: "KI", name: "Kiribati" },
+  { code: "TV", name: "Tuvalu" },
+  { code: "NR", name: "Nauru" },
+  { code: "PW", name: "Palau" },
+  { code: "FM", name: "Micronesia" },
+  { code: "MH", name: "Marshall Islands" },
+  { code: "RU", name: "Russia" },
+  { code: "BY", name: "Belarus" },
+  { code: "UA", name: "Ukraine" },
+  { code: "MD", name: "Moldova" },
+  { code: "MN", name: "Mongolia" },
+  { code: "KP", name: "North Korea" },
+];
+
 function SettingsPage() {
   const { user } = useAuth(); // Use Firebase authentication
   const { theme, currency, setCurrency } = useAppContext();
@@ -112,7 +278,7 @@ function SettingsPage() {
     };
 
     loadProfileData();
-  }, [currentUser?.id, profileDataLoaded]);
+  }, [currentUser?.id]);
 
   // Preferences state
   const [preferences, setPreferences] = useState({
@@ -297,13 +463,17 @@ function SettingsPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Location <span className="text-gray-500 text-xs">(optional)</span>
             </label>
-            <input
-              type="text"
+            <select
               value={profileData.location}
               onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-              placeholder="Country or City, Country"
-            />
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+            >
+              {countries.map((country) => (
+                <option key={country.code} value={country.name}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         

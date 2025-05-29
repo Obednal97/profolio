@@ -165,7 +165,7 @@ export default function AssetManager() {
   }, []);
 
   const handleSubmit = useCallback(
-    async (assetData: Asset) => {
+    async (assetData: Partial<Asset>) => {
       if (!currentUser) return;
       try {
         const { apiCall } = await import('@/lib/mockApi');
@@ -348,13 +348,17 @@ export default function AssetManager() {
         required: true,
       },
     ],
-    property: [
+    cash: [
       {
-        name: "address",
-        label: "Property Address",
-        type: "textarea",
+        name: "current_value",
+        label: "Amount",
+        type: "number",
+        step: "0.01",
         required: true,
       },
+      { name: "notes", label: "Account Details", type: "textarea" },
+    ],
+    bond: [
       {
         name: "current_value",
         label: "Current Value",
@@ -369,16 +373,6 @@ export default function AssetManager() {
         step: "0.01",
       },
       { name: "purchase_date", label: "Purchase Date", type: "date" },
-    ],
-    cash: [
-      {
-        name: "current_value",
-        label: "Amount",
-        type: "number",
-        step: "0.01",
-        required: true,
-      },
-      { name: "notes", label: "Account Details", type: "textarea" },
     ],
     other: [
       {
@@ -423,7 +417,7 @@ export default function AssetManager() {
             name: initialData.name || "",
             type: (initialData.type as AssetType) || "stock",
             quantity: initialData.quantity?.toString() || "",
-            current_value: (initialData.current_value / 100).toString(),
+            current_value: ((initialData.current_value || 0) / 100).toString(),
             purchase_price: initialData.purchase_price ? (initialData.purchase_price / 100).toString() : "",
             purchase_date: initialData.purchase_date || "",
             symbol: initialData.symbol || "",
@@ -486,13 +480,22 @@ export default function AssetManager() {
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      onSubmit({
+      const assetData: Partial<Asset> = {
         ...formData,
         quantity: parseFloat(formData.quantity),
         current_value: parseFloat(formData.current_value) * 100,
         purchase_price: parseFloat(formData.purchase_price) * 100,
-        vesting_schedule: formData.vesting_schedule ?? undefined,
-      });
+        vesting_schedule: formData.vesting_schedule && 
+          typeof formData.vesting_schedule === 'object' &&
+          formData.vesting_schedule.initial &&
+          formData.vesting_schedule.monthly
+          ? {
+              initial: formData.vesting_schedule.initial,
+              monthly: formData.vesting_schedule.monthly
+            }
+          : undefined,
+      };
+      onSubmit(assetData as Asset);
     };
 
     interface Field {
@@ -580,7 +583,7 @@ export default function AssetManager() {
               required={field.required}
               step={field.step}
             />
-            )}
+          )}
         </div>
       );
     };
@@ -688,7 +691,7 @@ export default function AssetManager() {
       : config.icon;
     
     const calculateAppreciation = () => {
-      if (!asset.purchase_price) return null;
+      if (!asset.purchase_price || !asset.current_value) return null;
       const gain = asset.current_value - asset.purchase_price;
       const percentage = (gain / asset.purchase_price) * 100;
       return { gain, percentage };
@@ -739,7 +742,7 @@ export default function AssetManager() {
           <div className="flex justify-between items-center">
             <span className="text-gray-600 dark:text-gray-400 text-sm">Current Value</span>
             <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(asset.current_value / 100)}
+              {formatCurrency((asset.current_value || 0) / 100)}
             </span>
           </div>
 
@@ -800,7 +803,7 @@ export default function AssetManager() {
                   ? getCryptoIcon(asset.symbol) 
                   : config.icon;
                 
-                const appreciation = asset.purchase_price ? {
+                const appreciation = asset.purchase_price && asset.current_value ? {
                   gain: asset.current_value - asset.purchase_price,
                   percentage: ((asset.current_value - asset.purchase_price) / asset.purchase_price) * 100
                 } : null;
@@ -827,7 +830,7 @@ export default function AssetManager() {
                       {asset.quantity || '-'}
                     </td>
                     <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white text-right">
-                      {formatCurrency(asset.current_value / 100)}
+                      {formatCurrency((asset.current_value || 0) / 100)}
                     </td>
                     <td className="px-4 py-4 text-sm text-right">
                       {appreciation ? (
