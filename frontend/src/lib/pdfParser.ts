@@ -423,6 +423,15 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
       
       // Pattern 5: Handle single date format (transaction date only)
       /([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm,
+      
+      // Pattern 6: Lines that end with just an amount (common in PDF extraction)
+      /(.+?)\s+(\d+\.\d{2})$/gm,
+      
+      // Pattern 7: Handle cases where dates might be on separate lines or merged
+      /([A-Z][a-z]{2} \d{1,2}).*?([A-Z][A-Z\s&']+).*?(\d+\.\d{2})/gm,
+      
+      // Pattern 8: Very loose pattern for anything with merchant-like text and amount
+      /((?:[A-Z][A-Z\s&']{2,}|[A-Z][a-z]+(?:\s+[A-Z][a-z]*)*)).*?(\d+\.\d{2})$/gm,
     ];
     
     for (const [patternIndex, pattern] of patterns.entries()) {
@@ -442,6 +451,10 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
         } else if (match.length === 4) {
           // Simplified format with single date
           [, transactionDate, description, amountStr] = match;
+        } else if (match.length === 3) {
+          // Very simple format: description and amount only
+          [, description, amountStr] = match;
+          transactionDate = 'Apr 15'; // Default date for now
         } else {
           continue;
         }
@@ -529,6 +542,89 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
     }
     
     console.log(`Total Amex transactions found: ${transactions.length}`);
+    
+    // If still no transactions found, try line-by-line parsing
+    if (transactions.length === 0) {
+      console.log('No transactions found with regex patterns, trying line-by-line parsing...');
+      
+      const lines = text.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Look for lines that contain an amount at the end
+        const amountMatch = line.match(/(\d+\.\d{2})$/);
+        if (amountMatch) {
+          const amount = parseFloat(amountMatch[1]);
+          
+          // Skip very small amounts (likely not real transactions)
+          if (amount < 0.5) continue;
+          
+          // Extract description (everything before the amount)
+          const description = line.replace(/\s+\d+\.\d{2}$/, '').trim();
+          
+          // Skip if description is too short or looks like a header
+          if (description.length < 3 || 
+              description.match(/total|balance|summary|statement|page|date|amount|foreign|spend/i)) {
+            continue;
+          }
+          
+          // Look for a date in the current line or nearby lines
+          let transactionDate = 'Apr 15'; // Default
+          const dateInLine = line.match(/([A-Z][a-z]{2} \d{1,2})/);
+          if (dateInLine) {
+            transactionDate = dateInLine[1];
+          } else {
+            // Check previous few lines for a date
+            for (let j = Math.max(0, i - 3); j < i; j++) {
+              const prevLineDate = lines[j].match(/([A-Z][a-z]{2} \d{1,2})/);
+              if (prevLineDate) {
+                transactionDate = prevLineDate[1];
+                break;
+              }
+            }
+          }
+          
+          // Clean description
+          let cleanDescription = description.replace(/[A-Z][a-z]{2} \d{1,2}/g, '').trim();
+          cleanDescription = cleanDescription.replace(/\s+/g, ' ');
+          
+          if (cleanDescription.length >= 3) {
+            try {
+              const classification = classifyTransaction(cleanDescription, amount * 100, 'debit');
+              
+              const transaction: ParsedTransaction = {
+                id: `${Date.now()}_${transactions.length}`,
+                date: formatDate(transactionDate),
+                description: cleanDescription,
+                amount: amount * 100, // Convert to cents
+                type: 'debit',
+                category: classification.category,
+                merchant: classification.merchant?.name,
+                isSubscription: classification.isSubscription,
+                confidence: 0.7, // Lower confidence for line-by-line parsing
+                rawText: line,
+              };
+              
+              // Check for duplicates
+              const isDuplicate = transactions.some(t => 
+                t.amount === transaction.amount && 
+                t.description.substring(0, 15) === transaction.description.substring(0, 15)
+              );
+              
+              if (!isDuplicate) {
+                transactions.push(transaction);
+                console.log('Added line-parsed transaction:', cleanDescription, amount);
+              }
+            } catch (error) {
+              console.warn('Failed to parse line transaction:', error);
+            }
+          }
+        }
+      }
+      
+      console.log(`Line-by-line parsing added ${transactions.length} more transactions`);
+    }
+    
     return transactions;
   }
   
@@ -701,6 +797,24 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
           console.log(section);
         }
       });
+      
+      // Show line-by-line breakdown to understand format
+      console.log('=== LINE BY LINE ANALYSIS ===');
+      const lines = text.split('\n');
+      for (let i = 0; i < Math.min(200, lines.length); i++) {
+        const line = lines[i].trim();
+        if (line && line.match(/\d+\.\d{2}/)) {
+          console.log(`Line ${i}: "${line}"`);
+        }
+      }
+      
+      // Look for specific patterns in the text
+      console.log('=== PATTERN ANALYSIS ===');
+      const amountMatches = text.match(/\d+\.\d{2}/g);
+      console.log('All amounts found:', amountMatches?.slice(0, 20));
+      
+      const dateMatches = text.match(/[A-Z][a-z]{2} \d{1,2}/g);
+      console.log('All dates found:', dateMatches?.slice(0, 20));
     }
     
     if (!text || text.length < 100) {
