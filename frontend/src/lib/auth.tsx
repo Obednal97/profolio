@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
+import { User, UserCredential } from 'firebase/auth';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -17,7 +17,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
-  signInWithGoogleProvider: () => Promise<void>;
+  signInWithGoogleProvider: () => Promise<UserCredential>;
   signOut: () => Promise<void>;
   resetUserPassword: (email: string) => Promise<void>;
   token: string | null;
@@ -152,8 +152,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogleProvider = async () => {
     try {
       setLoading(true);
-      await signInWithGoogle();
-      // User state will be updated by the auth listener
+      const result = await signInWithGoogle();
+      
+      // Don't set loading to false here - let the auth state listener handle it
+      // The auth state listener will update the user state and loading will be set to false
+      
+      return result;
     } catch (error: unknown) {
       setLoading(false);
       throw new Error(error instanceof Error ? error.message : 'Failed to sign in with Google');

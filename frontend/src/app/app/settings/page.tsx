@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
@@ -218,7 +218,7 @@ function SettingsPage() {
       };
     }
     return null;
-  }, [user, isDemoMode]);
+  }, [user?.uid, user?.displayName, user?.email, user?.phoneNumber, user?.photoURL, isDemoMode]);
 
   // Profile form state - initialize directly from currentUser
   const [profileData, setProfileData] = useState(() => ({
@@ -228,11 +228,21 @@ function SettingsPage() {
     bio: "",
     location: "",
   }));
+  
+  // Track if profile data has been initialized to prevent re-renders
+  const profileInitialized = useRef(false);
+  const lastUserId = useRef<string | null>(null);
 
-  // Update profile data when currentUser changes
+  // Update profile data when currentUser changes (only once per user)
   useEffect(() => {
-    if (currentUser) {
-      console.log('Updating profile data for user:', currentUser.id);
+    // Reset initialization flag if user changed
+    if (currentUser?.id !== lastUserId.current) {
+      profileInitialized.current = false;
+      lastUserId.current = currentUser?.id || null;
+    }
+    
+    if (currentUser && !profileInitialized.current) {
+      console.log('Initializing profile data for user:', currentUser.id);
       setProfileData({
         name: currentUser.name || "User",
         email: currentUser.email || "",
@@ -240,6 +250,7 @@ function SettingsPage() {
         location: currentUser.location || "",
         bio: "",
       });
+      profileInitialized.current = true;
     }
   }, [currentUser]);
 
