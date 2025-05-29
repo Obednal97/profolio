@@ -318,7 +318,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
                     </p>
                     
                     <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
-                      <p>• PDF: Chase, Bank of America, Wells Fargo, Citi, Capital One, RBS, Monzo</p>
+                      <p>• PDF: Chase, Bank of America, Wells Fargo, Citi, Capital One, American Express, RBS, Monzo</p>
                       <p>• CSV: Monzo export format</p>
                       <p>• Maximum file size: 10MB</p>
                     </div>
