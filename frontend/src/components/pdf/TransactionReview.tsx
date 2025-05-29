@@ -5,23 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ParsedTransaction, ParseResult } from '@/lib/pdfParser';
 import { Button } from '@/components/ui/button/button';
 import { useAppContext } from '@/components/layout/layoutWrapper';
+import { getAllCategories, getSubcategories } from '@/lib/transactionClassifier';
 
 interface TransactionReviewProps {
   parseResult: ParseResult;
   onSave: (transactions: ParsedTransaction[]) => Promise<void>;
   onCancel: () => void;
 }
-
-const EXPENSE_CATEGORIES = [
-  'Food & Dining',
-  'Transportation', 
-  'Shopping',
-  'Utilities',
-  'Entertainment',
-  'Healthcare',
-  'Banking',
-  'Other'
-];
 
 const TransactionReview: React.FC<TransactionReviewProps> = ({ 
   parseResult, 
@@ -36,10 +26,15 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
   const [saving, setSaving] = useState(false);
   const [expandedTransaction, setExpandedTransaction] = useState<string | null>(null);
 
+  // Get all available categories
+  const allCategories = getAllCategories();
+
   const totalAmount = useMemo(() => {
     return transactions
-      .filter(t => selectedTransactions.has(t.id) && t.type === 'debit')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => selectedTransactions.has(t.id))
+      .reduce((sum, t) => {
+        return sum + (t.type === 'debit' ? t.amount : -t.amount);
+      }, 0);
   }, [transactions, selectedTransactions]);
 
   const handleTransactionUpdate = (id: string, updates: Partial<ParsedTransaction>) => {
@@ -70,7 +65,7 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
     setSaving(true);
     try {
       const selectedTransactionsList = transactions.filter(t => 
-        selectedTransactions.has(t.id) && t.type === 'debit'
+        selectedTransactions.has(t.id)
       );
       await onSave(selectedTransactionsList);
     } catch (error) {
@@ -123,15 +118,15 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Net Total</p>
             <p className="font-semibold text-gray-900 dark:text-white">
               {formatCurrency(totalAmount)}
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-            <p className="text-sm text-gray-600 dark:text-gray-400">High Confidence</p>
-            <p className="font-semibold text-green-600 dark:text-green-400">
-              {transactions.filter(t => t.confidence >= 0.8).length}
+            <p className="text-sm text-gray-600 dark:text-gray-400">Subscriptions</p>
+            <p className="font-semibold text-purple-600 dark:text-purple-400">
+              {transactions.filter(t => t.isSubscription).length}
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
@@ -174,7 +169,6 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                   ? 'border-blue-200 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/5'
                   : 'border-gray-200 dark:border-gray-700'
                 }
-                ${transaction.type === 'credit' ? 'opacity-60' : ''}
               `}
             >
               <div className="p-4">
@@ -185,16 +179,28 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                         type="checkbox"
                         checked={selectedTransactions.has(transaction.id)}
                         onChange={() => handleSelectTransaction(transaction.id)}
-                        disabled={transaction.type === 'credit'}
                         className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600"
                       />
                     </label>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                          {transaction.description}
-                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                            {transaction.merchant || transaction.description}
+                          </h3>
+                          {transaction.isSubscription && (
+                            <span className="bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs px-2 py-1 rounded-full font-medium">
+                              <i className="fas fa-sync-alt mr-1"></i>
+                              Subscription
+                            </span>
+                          )}
+                          {transaction.merchant && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {transaction.description}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-3">
                           <span className={`text-sm font-medium ${getConfidenceColor(transaction.confidence)}`}>
                             {getConfidenceLabel(transaction.confidence)} ({Math.round(transaction.confidence * 100)}%)
@@ -213,8 +219,15 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                             onChange={(e) => handleTransactionUpdate(transaction.id, { category: e.target.value })}
                             className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs"
                           >
-                            {EXPENSE_CATEGORIES.map(category => (
-                              <option key={category} value={category}>{category}</option>
+                            {allCategories.map(category => (
+                              <optgroup key={category.id} label={category.name}>
+                                <option value={category.id}>{category.name}</option>
+                                {getSubcategories(category.id).map(sub => (
+                                  <option key={sub.id} value={sub.id}>
+                                    &nbsp;&nbsp;{sub.name}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                           <button
@@ -252,6 +265,21 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                             className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm"
                           />
                         </div>
+                        
+                        {transaction.merchant && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Merchant
+                            </label>
+                            <input
+                              type="text"
+                              value={transaction.merchant}
+                              onChange={(e) => handleTransactionUpdate(transaction.id, { merchant: e.target.value })}
+                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                        
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -277,6 +305,19 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                             />
                           </div>
                         </div>
+                        
+                        <div className="flex items-center space-x-4">
+                          <label className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <input
+                              type="checkbox"
+                              checked={transaction.isSubscription || false}
+                              onChange={(e) => handleTransactionUpdate(transaction.id, { isSubscription: e.target.checked })}
+                              className="form-checkbox h-4 w-4 text-purple-500 rounded border-gray-300 dark:border-gray-600 mr-2"
+                            />
+                            Mark as subscription
+                          </label>
+                        </div>
+                        
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Raw Text
@@ -308,7 +349,7 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
           
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              {selectedTransactions.size} transactions • {formatCurrency(totalAmount)} total
+              {selectedTransactions.size} transactions • {formatCurrency(totalAmount)} net total
             </span>
             <Button
               onClick={handleSave}
