@@ -78,19 +78,28 @@ const BANK_PATTERNS = {
     indicators: ['capital one', 'capitalone'],
   },
   
-  // RBS (Royal Bank of Scotland) patterns
+  // RBS (Royal Bank of Scotland) patterns - Updated
   rbs: {
     name: 'RBS',
+    transactionPattern: /(\d{2}\s+\w{3}\s+\d{2,4})\s+(.+?)\s+([\d,]+\.\d{2})\s*(CR|DR)?/gm,
+    accountPattern: /(?:Account|Sort Code)[:\s]*(\d+(?:\s*-\s*\d+)*)/i,
+    periodPattern: /(?:Statement\s+)?(?:Period|From)[:\s]*(\d{1,2}\s+\w{3,}\s+\d{2,4})\s*(?:to|-)\s*(\d{1,2}\s+\w{3,}\s+\d{2,4})/i,
+    indicators: ['rbs', 'royal bank of scotland', 'royal bank', 'natwest'],
+  },
+  
+  // Starling Bank patterns
+  starling: {
+    name: 'Starling Bank',
     transactionPattern: /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([-]?£?[\d,]+\.?\d{0,2})/gm,
     accountPattern: /Account[:\s]*(\d+)/i,
-    periodPattern: /(?:Statement\s+)?Period[:\s]*(\d{2}\/\d{2}\/\d{4})\s*(?:to|-)\s*(\d{2}\/\d{2}\/\d{4})/i,
-    indicators: ['rbs', 'royal bank of scotland', 'natwest'],
+    periodPattern: /Statement\s+(?:from|period)[:\s]*(\d{2}\/\d{2}\/\d{4})\s*(?:to|-)\s*(\d{2}\/\d{2}\/\d{4})/i,
+    indicators: ['starling', 'starling bank'],
   },
   
   // Monzo patterns
   monzo: {
     name: 'Monzo',
-    transactionPattern: /(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})\s+(.+?)\s+([-]?£?[\d,]+\.?\d{0,2})/gm,
+    transactionPattern: /(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})?\s*(.+?)\s+([-]?£?[\d,]+\.?\d{0,2})/gm,
     accountPattern: /Account[:\s]*(\d+)/i,
     periodPattern: /(?:Statement\s+)?(?:from|period)[:\s]*(\d{2}\/\d{2}\/\d{4})\s*(?:to|-)\s*(\d{2}\/\d{2}\/\d{4})/i,
     indicators: ['monzo', 'monzo bank'],
@@ -99,9 +108,9 @@ const BANK_PATTERNS = {
   // Generic patterns for unknown banks
   generic: {
     name: 'Unknown Bank',
-    transactionPattern: /(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.+?)\s+([-]?[£$]?[\d,]+\.?\d{0,2})/gm,
+    transactionPattern: /(\d{1,2}[\/\s]\w{3}[\/\s]\d{2,4}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.+?)\s+([-]?[£$]?[\d,]+\.?\d{0,2})/gm,
     accountPattern: /(?:Account|Acct)(?:\s+Number)?[:\s]*(\d+)/i,
-    periodPattern: /(?:Statement\s+)?Period[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:to|-)?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i,
+    periodPattern: /(?:Statement\s+)?Period[:\s]*(\d{1,2}[\/\s]\w{3}[\/\s]\d{2,4}|\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:to|-)?\s*(\d{1,2}[\/\s]\w{3}[\/\s]\d{2,4}|\d{1,2}\/\d{1,2}\/\d{2,4})/i,
     indicators: [],
   },
 };
@@ -119,29 +128,86 @@ function parseAmount(amountStr: string): number {
 }
 
 function formatDate(dateStr: string): string {
-  // Convert MM/DD/YYYY to YYYY-MM-DD
-  const parts = dateStr.split('/');
-  if (parts.length === 3) {
-    const [month, day, year] = parts;
-    const fullYear = year.length === 2 ? `20${year}` : year;
-    return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  // Handle different date formats
+  dateStr = dateStr.trim();
+  
+  // MM/DD/YYYY or DD/MM/YYYY format
+  if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const [first, second, year] = parts;
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      
+      // Assume DD/MM/YYYY for UK banks if day > 12
+      if (parseInt(first) > 12) {
+        return `${fullYear}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+      }
+      // Otherwise assume MM/DD/YYYY for US banks
+      return `${fullYear}-${first.padStart(2, '0')}-${second.padStart(2, '0')}`;
+    }
   }
+  
+  // DD MMM YYYY format (e.g., "15 May 2025")
+  if (dateStr.match(/^\d{1,2}\s+\w{3,}\s+\d{2,4}$/)) {
+    const months: Record<string, string> = {
+      'jan': '01', 'january': '01',
+      'feb': '02', 'february': '02',
+      'mar': '03', 'march': '03',
+      'apr': '04', 'april': '04',
+      'may': '05',
+      'jun': '06', 'june': '06',
+      'jul': '07', 'july': '07',
+      'aug': '08', 'august': '08',
+      'sep': '09', 'september': '09',
+      'oct': '10', 'october': '10',
+      'nov': '11', 'november': '11',
+      'dec': '12', 'december': '12'
+    };
+    
+    const parts = dateStr.split(/\s+/);
+    if (parts.length === 3) {
+      const [day, monthStr, year] = parts;
+      const month = months[monthStr.toLowerCase()];
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      
+      if (month) {
+        return `${fullYear}-${month}-${day.padStart(2, '0')}`;
+      }
+    }
+  }
+  
   return dateStr;
 }
 
 function detectBank(text: string): string {
   const normalizedText = normalizeText(text);
   
+  // Check for bank indicators in the first 500 characters
+  const headerText = normalizedText.substring(0, 500);
+  
   for (const [bankKey, bank] of Object.entries(BANK_PATTERNS)) {
     if (bankKey === 'generic') continue;
     
     for (const indicator of bank.indicators) {
-      if (normalizedText.includes(indicator)) {
+      if (headerText.includes(indicator) || normalizedText.includes(indicator)) {
+        console.log(`Detected bank: ${bank.name} (matched: ${indicator})`);
         return bankKey;
       }
     }
   }
   
+  // Additional bank detection heuristics
+  if (normalizedText.includes('starling bank') || normalizedText.includes('starlingbank')) {
+    console.log('Detected bank: Starling (heuristic)');
+    return 'starling';
+  }
+  
+  if (normalizedText.includes('royal bank of scotland') || normalizedText.includes('rbs')) {
+    console.log('Detected bank: RBS (heuristic)');
+    return 'rbs';
+  }
+  
+  console.log('Could not detect bank, using generic patterns');
   return 'generic';
 }
 
@@ -149,30 +215,165 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
   const bank = BANK_PATTERNS[bankKey as keyof typeof BANK_PATTERNS];
   const transactions: ParsedTransaction[] = [];
   
+  console.log(`Parsing transactions for ${bankKey} bank with pattern:`, bank.transactionPattern);
+  
+  // For RBS, try multiple patterns
+  if (bankKey === 'rbs') {
+    // Pattern 1: Standard RBS format with CR/DR
+    const pattern1 = /(\d{2}\s+\w{3}\s+\d{2,4})\s+(.+?)\s+([\d,]+\.\d{2})\s*(CR|DR)?/gm;
+    // Pattern 2: More flexible for descriptions with multiple spaces
+    const pattern2 = /(\d{2}\s+\w{3})\s+(.+?)\s{2,}([\d,]+\.\d{2})/gm;
+    // Pattern 3: Even more flexible
+    const pattern3 = /(\d{2}\s+\w{3})\s+(\S.+?)\s+([\d,]+\.\d{2})(?:\s+(CR|DR))?/gm;
+    
+    const patterns = [pattern1, pattern2, pattern3];
+    
+    for (const pattern of patterns) {
+      console.log('Trying RBS pattern...');
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const [fullMatch, dateStr, description, amountStr, crdrIndicator] = match;
+        
+        // Skip headers and totals
+        if (description.match(/balance|total|statement|opening|closing|forward/i)) {
+          continue;
+        }
+        
+        try {
+          const amount = parseAmount(amountStr);
+          if (amount === 0 || isNaN(amount)) continue;
+          
+          const isDebit = crdrIndicator ? crdrIndicator === 'DR' : !description.includes('CREDIT');
+          const type = isDebit ? 'debit' : 'credit';
+          
+          const classification = classifyTransaction(description, Math.abs(amount), type);
+          
+          const transaction: ParsedTransaction = {
+            id: `${Date.now()}_${transactions.length}`,
+            date: formatDate(dateStr),
+            description: description.trim(),
+            amount: Math.abs(amount),
+            type,
+            category: classification.category,
+            merchant: classification.merchant?.name,
+            isSubscription: classification.isSubscription,
+            confidence: classification.confidence,
+            rawText: fullMatch.trim(),
+          };
+          
+          // Check for duplicates
+          const isDuplicate = transactions.some(t => 
+            t.date === transaction.date && 
+            t.amount === transaction.amount && 
+            t.description.substring(0, 20) === transaction.description.substring(0, 20)
+          );
+          
+          if (!isDuplicate) {
+            transactions.push(transaction);
+          }
+        } catch (error) {
+          console.warn('Failed to parse RBS transaction:', error);
+        }
+      }
+    }
+    
+    console.log(`Found ${transactions.length} RBS transactions`);
+    return transactions;
+  }
+  
+  // For Starling, try specific patterns
+  if (bankKey === 'starling') {
+    // Pattern 1: DD/MM/YYYY Description Amount
+    const pattern1 = /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([-]?£?[\d,]+\.\d{2})/gm;
+    // Pattern 2: More flexible
+    const pattern2 = /(\d{2}\/\d{2}\/\d{4})\s+(\S.+?)\s+([-]?[\d,]+\.\d{2})/gm;
+    
+    const patterns = [pattern1, pattern2];
+    
+    for (const pattern of patterns) {
+      console.log('Trying Starling pattern...');
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const [fullMatch, dateStr, description, amountStr] = match;
+        
+        // Skip headers and totals
+        if (description.match(/balance|total|statement|opening|closing/i)) {
+          continue;
+        }
+        
+        try {
+          const amount = parseAmount(amountStr);
+          if (amount === 0 || isNaN(amount)) continue;
+          
+          const isDebit = amountStr.includes('-') || !description.includes('CREDIT');
+          const type = isDebit ? 'debit' : 'credit';
+          
+          const classification = classifyTransaction(description, Math.abs(amount), type);
+          
+          const transaction: ParsedTransaction = {
+            id: `${Date.now()}_${transactions.length}`,
+            date: formatDate(dateStr),
+            description: description.trim(),
+            amount: Math.abs(amount),
+            type,
+            category: classification.category,
+            merchant: classification.merchant?.name,
+            isSubscription: classification.isSubscription,
+            confidence: classification.confidence,
+            rawText: fullMatch.trim(),
+          };
+          
+          // Check for duplicates
+          const isDuplicate = transactions.some(t => 
+            t.date === transaction.date && 
+            t.amount === transaction.amount && 
+            t.description.substring(0, 20) === transaction.description.substring(0, 20)
+          );
+          
+          if (!isDuplicate) {
+            transactions.push(transaction);
+          }
+        } catch (error) {
+          console.warn('Failed to parse Starling transaction:', error);
+        }
+      }
+    }
+    
+    console.log(`Found ${transactions.length} Starling transactions`);
+    return transactions;
+  }
+  
+  // Original parsing logic for other banks
   let match;
+  let matchCount = 0;
   while ((match = bank.transactionPattern.exec(text)) !== null) {
+    matchCount++;
     let dateStr, description, amountStr, fullMatch;
     
     if (bankKey === 'monzo') {
-      // Monzo format: date, time, description, amount
-      [fullMatch, dateStr, , description, amountStr] = match;
+      // Monzo format: date, optional time, description, amount
+      const [full, date, , desc, amount] = match;
+      fullMatch = full;
+      dateStr = date;
+      description = desc;
+      amountStr = amount;
     } else {
       // Standard format: date, description, amount
       [fullMatch, dateStr, description, amountStr] = match;
     }
     
     // Skip if this looks like a header or total line
-    if (normalizeText(description).includes('total') || 
-        normalizeText(description).includes('balance') ||
-        normalizeText(description).includes('statement') ||
-        normalizeText(description).includes('opening') ||
-        normalizeText(description).includes('closing')) {
+    const skipKeywords = ['total', 'balance', 'statement', 'opening', 'closing', 'brought forward', 'carried forward'];
+    if (skipKeywords.some(keyword => normalizeText(description).includes(keyword))) {
       continue;
     }
     
     try {
       const amount = parseAmount(amountStr);
-      const isDebit = amountStr.includes('-') || amount < 0;
+      
+      // Determine debit/credit
+      const isDebit = amountStr.includes('-');
+      
       const type = isDebit ? 'debit' : 'credit';
       
       // Use advanced classification
@@ -196,6 +397,8 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
       console.warn('Failed to parse transaction:', fullMatch, error);
     }
   }
+  
+  console.log(`Regex matched ${matchCount} times, parsed ${transactions.length} transactions`);
   
   return transactions;
 }
@@ -243,15 +446,55 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
     
     let text = '';
     
-    // Extract text from all pages
+    // Extract text from all pages with better formatting
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item) => (item as TextItem).str)
-        .join(' ');
-      text += pageText + '\n';
+      
+      // Group text items by Y position to preserve line structure
+      const textByLine = new Map<number, Array<{str: string, x: number}>>();
+      
+      textContent.items.forEach((item) => {
+        const textItem = item as TextItem;
+        // Round Y position to group items on the same line
+        const y = Math.round(textItem.transform[5]);
+        const x = textItem.transform[4];
+        
+        if (!textByLine.has(y)) {
+          textByLine.set(y, []);
+        }
+        textByLine.get(y)!.push({ str: textItem.str, x });
+      });
+      
+      // Sort lines by Y position (top to bottom)
+      const sortedLines = Array.from(textByLine.entries())
+        .sort((a, b) => b[0] - a[0]); // PDF Y coordinates are bottom-up
+      
+      // Reconstruct text preserving line structure
+      for (const [, items] of sortedLines) {
+        // Sort items by X position (left to right)
+        items.sort((a, b) => a.x - b.x);
+        
+        // Join items with appropriate spacing
+        let lineText = '';
+        let lastX = 0;
+        items.forEach(item => {
+          // Add space if there's a gap between items
+          if (lastX > 0 && item.x - lastX > 10) {
+            lineText += '  '; // Add extra space for column separation
+          }
+          lineText += item.str;
+          lastX = item.x + item.str.length * 5; // Approximate width
+        });
+        
+        text += lineText + '\n';
+      }
+      
+      text += '\n--- PAGE BREAK ---\n';
     }
+    
+    console.log('Extracted text preview (first 1000 chars):', text.substring(0, 1000));
+    console.log('Total text length:', text.length);
     
     if (!text || text.length < 100) {
       throw new Error('PDF appears to be empty or contains no readable text');
@@ -261,10 +504,16 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
     const bankKey = detectBank(text);
     const bankName = BANK_PATTERNS[bankKey as keyof typeof BANK_PATTERNS].name;
     
+    console.log('Detected bank:', bankName);
+    
     // Parse transactions
     const transactions = parseTransactions(text, bankKey);
     
+    console.log('Found transactions:', transactions.length);
+    
     if (transactions.length === 0) {
+      // Log some text to help debug
+      console.log('No transactions found. Text sample:', text.substring(0, 500));
       throw new Error('No transactions found in the PDF. Please check the format.');
     }
     

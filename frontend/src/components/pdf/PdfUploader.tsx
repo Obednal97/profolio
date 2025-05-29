@@ -25,42 +25,74 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
     const transactions: ParsedTransaction[] = [];
     
-    // Map Monzo CSV headers
-    const dateIndex = headers.findIndex(h => h.includes('date'));
-    const typeIndex = headers.findIndex(h => h.includes('type'));
-    const nameIndex = headers.findIndex(h => h.includes('name'));
-    const categoryIndex = headers.findIndex(h => h.includes('category'));
-    const moneyOutIndex = headers.findIndex(h => h.includes('money out'));
-    const moneyInIndex = headers.findIndex(h => h.includes('money in'));
+    console.log('CSV headers:', headers);
+    
+    // Map headers to indices (handle different CSV formats)
+    const dateIndex = headers.findIndex(h => h.includes('date') || h.includes('time'));
+    const typeIndex = headers.findIndex(h => h.includes('type') || h.includes('transaction type'));
+    const nameIndex = headers.findIndex(h => h.includes('name') || h.includes('description') || h.includes('merchant'));
+    const moneyOutIndex = headers.findIndex(h => h.includes('money out') || h.includes('debit') || h.includes('amount out'));
+    const moneyInIndex = headers.findIndex(h => h.includes('money in') || h.includes('credit') || h.includes('amount in'));
+    const amountIndex = headers.findIndex(h => h.includes('amount') && !h.includes('out') && !h.includes('in'));
+
+    console.log('Column indices:', { dateIndex, nameIndex, moneyOutIndex, moneyInIndex, amountIndex });
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      // Handle CSV with potential quoted values
+      const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+      const cleanValues = values.map(v => v.trim().replace(/^"|"$/g, ''));
       
-      if (values.length < headers.length) continue;
+      if (cleanValues.length < headers.length - 1) continue; // Skip incomplete rows
 
       try {
-        const dateStr = values[dateIndex] || '';
-        const type = values[typeIndex] || '';
-        const name = values[nameIndex] || '';
-        const category = values[categoryIndex] || 'Other';
-        const moneyOut = parseFloat(values[moneyOutIndex] || '0');
-        const moneyIn = parseFloat(values[moneyInIndex] || '0');
+        const dateStr = cleanValues[dateIndex] || '';
+        const type = cleanValues[typeIndex] || '';
+        const name = cleanValues[nameIndex] || '';
+        
+        // Determine amount and type
+        let transactionAmount = 0;
+        let isDebit = true;
+        
+        if (moneyOutIndex >= 0 && moneyInIndex >= 0) {
+          // Separate debit/credit columns (Monzo style)
+          const moneyOut = parseFloat(cleanValues[moneyOutIndex] || '0');
+          const moneyIn = parseFloat(cleanValues[moneyInIndex] || '0');
+          
+          if (moneyOut > 0) {
+            transactionAmount = moneyOut * 100;
+            isDebit = true;
+          } else if (moneyIn > 0) {
+            transactionAmount = moneyIn * 100;
+            isDebit = false;
+          }
+        } else if (amountIndex >= 0) {
+          // Single amount column (positive/negative)
+          const amount = parseFloat(cleanValues[amountIndex] || '0');
+          transactionAmount = Math.abs(amount) * 100;
+          isDebit = amount < 0;
+        }
 
         // Skip pot transfers and other non-spending transactions
-        if (type.toLowerCase().includes('pot transfer')) continue;
+        if (type.toLowerCase().includes('pot transfer') || 
+            type.toLowerCase().includes('active card check') ||
+            transactionAmount === 0) {
+          continue;
+        }
 
-        // Determine if it's a debit or credit based on money out/in
-        const isDebit = moneyOut > 0;
-        const transactionAmount = Math.abs(isDebit ? moneyOut : moneyIn) * 100; // Convert to pence
-
-        if (transactionAmount > 0 && name) {
+        if (name) {
+          // Use the classifier for better categorization
+          const { classifyTransaction } = await import('@/lib/transactionClassifier');
+          const classification = classifyTransaction(name, transactionAmount, isDebit ? 'debit' : 'credit');
+          
           const transaction: ParsedTransaction = {
             id: `csv_${Date.now()}_${i}`,
             date: formatDateFromCSV(dateStr),
             description: name,
             amount: transactionAmount,
             type: isDebit ? 'debit' : 'credit',
-            category: category || 'Other',
+            category: classification.category,
+            merchant: classification.merchant?.name,
+            isSubscription: classification.isSubscription,
             confidence: 0.9, // High confidence for CSV data
             rawText: lines[i],
           };
@@ -71,6 +103,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
         console.warn('Failed to parse CSV line:', lines[i], error);
       }
     }
+
+    console.log(`Parsed ${transactions.length} transactions from CSV`);
 
     return {
       transactions,
@@ -86,6 +120,12 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
       const [day, month, year] = dateStr.split('/');
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
+    
+    // Handle ISO format YYYY-MM-DD
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+      return dateStr.split('T')[0]; // Remove time if present
+    }
+    
     return dateStr;
   };
 
