@@ -23,15 +23,24 @@ Trading 212 implements strict rate limits to protect their servers and ensure fa
 
 ## 🔧 **How Profolio Handles Rate Limits**
 
-### **Smart Error Handling**
-```javascript
-// Profolio detects rate limit errors and shows helpful messages
-if (error.includes('429') || error.includes('Too Many Requests')) {
-  // Show user-friendly rate limit message
-  // Suggest waiting period
-  // Provide tips for avoiding future limits
-}
+### **Built-in Rate Limiting (NEW!)**
+Profolio now includes intelligent rate limiting to prevent hitting Trading 212's limits:
+
+```typescript
+// Automatic 2.5-second spacing between requests (Trading 212 limit is 2s)
+private minRequestInterval = 2500; // 2.5 seconds between requests
+
+// Sequential API calls instead of concurrent bursts
+const positions = await this.getPortfolio();
+const instruments = await this.getInstruments();
+const accountCash = await this.getAccountCash();
 ```
+
+### **Smart Request Management**
+- ✅ **Sequential Requests** - No more concurrent API call bursts
+- ✅ **Automatic Delays** - 2.5-second minimum between requests
+- ✅ **Intelligent Batching** - Groups related requests efficiently
+- ✅ **Graceful Fallbacks** - Continues if non-critical requests fail
 
 ### **User-Friendly Messages**
 - ⏱️ **Clear explanation** of what happened
@@ -79,11 +88,13 @@ Tip: Trading 212 has strict rate limits to protect their servers.
 
 ## 📊 **Rate Limit Monitoring**
 
-### **What Profolio Does**
-- ✅ **Detects rate limit errors** automatically
-- ✅ **Shows helpful error messages** with wait times
-- ✅ **Prevents unnecessary retries** that waste your quota
-- ✅ **Caches successful data** to reduce API calls
+### **What Profolio Does (ENHANCED!)**
+- ✅ **Built-in rate limiting** - 2.5-second minimum between requests
+- ✅ **Sequential processing** - No concurrent request bursts
+- ✅ **Smart error detection** - Identifies rate limit issues
+- ✅ **Automatic delays** - Prevents overwhelming the API
+- ✅ **Progress logging** - Shows sync progress in console
+- ✅ **Graceful degradation** - Continues if optional data fails
 
 ### **What You Should Do**
 - ✅ **Test API keys once** when setting up
@@ -104,6 +115,7 @@ Tip: Trading 212 has strict rate limits to protect their servers.
 - 🚫 **Don't sync repeatedly** - Your data is cached locally
 - 🚫 **Don't share API keys** - Each key has its own limits
 - ✅ **Do wait when prompted** - Respect the rate limits
+- ✅ **Trust Profolio's rate limiting** - Built-in protection prevents issues
 
 ## 🔗 **Additional Resources**
 
@@ -113,4 +125,4 @@ Tip: Trading 212 has strict rate limits to protect their servers.
 
 ---
 
-**Remember**: Rate limits are there to protect the service. Working with them (not against them) ensures a better experience for everyone! 🤝 
+**Remember**: Rate limits are there to protect the service. Profolio now includes built-in rate limiting to work with them automatically! 🤝 
