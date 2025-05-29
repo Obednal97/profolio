@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { HeaderLayout as Header } from "@/components/layout/headerLayout";
 import { FooterLayout as Footer } from "@/components/layout/footerLayout";
@@ -47,18 +47,24 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
-  const demoUser = isDemoMode ? {
-    id: 'demo-user-id',
-    name: 'Demo User',
-    email: 'demo@profolio.com'
-  } : null;
-
-  // Use Firebase user or demo user
-  const currentUser = user ? {
-    id: user.uid,
-    name: user.displayName || user.email?.split('@')[0] || 'User',
-    email: user.email || ''
-  } : demoUser;
+  
+  // Use Firebase user or demo user - memoized to prevent re-renders
+  const currentUser = useMemo(() => {
+    if (user) {
+      return {
+        id: user.uid,
+        name: user.displayName || user.email?.split('@')[0] || 'User',
+        email: user.email || ''
+      };
+    } else if (isDemoMode) {
+      return {
+        id: 'demo-user-id',
+        name: 'Demo User',
+        email: 'demo@profolio.com'
+      };
+    }
+    return null;
+  }, [user, isDemoMode]);
 
   // Load user preferences from API when user is available
   useEffect(() => {
