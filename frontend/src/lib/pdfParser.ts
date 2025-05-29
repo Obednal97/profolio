@@ -195,6 +195,26 @@ function formatDate(dateStr: string): string {
     }
   }
   
+  // MMM DD format (e.g., "Apr 15") - assume current year
+  if (dateStr.match(/^\w{3}\s+\d{1,2}$/)) {
+    const months: Record<string, string> = {
+      'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+      'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+      'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+    };
+    
+    const parts = dateStr.split(/\s+/);
+    if (parts.length === 2) {
+      const [monthStr, day] = parts;
+      const month = months[monthStr.toLowerCase()];
+      const currentYear = new Date().getFullYear();
+      
+      if (month) {
+        return `${currentYear}-${month}-${day.padStart(2, '0')}`;
+      }
+    }
+  }
+  
   return dateStr;
 }
 
@@ -387,90 +407,138 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
   if (bankKey === 'amex') {
     console.log('Parsing American Express statement...');
     
-    // Pattern 1: Standard UK Amex format: DD/MM/YY description £amount
-    const pattern1 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+£([\d,]+\.\d{2})/gm;
-    // Pattern 2: US Amex format: MM/DD/YY description $amount
-    const pattern2 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+\$([\d,]+\.\d{2})/gm;
-    // Pattern 3: With posting date: DD/MM/YY DD/MM/YY description amount
-    const pattern3 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\s+(.+?)\s+[£$]([\d,]+\.\d{2})/gm;
-    // Pattern 4: Flexible format with optional CR indicator
-    const pattern4 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+[£$]?([\d,]+\.\d{2})(?:\s+CR)?/gm;
-    // Pattern 5: Transaction lines without currency symbol
-    const pattern5 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+([\d,]+\.\d{2})\s*$/gm;
+    // ChatGPT's proven pattern for Amex: Transaction Date + Process Date + Description + Amount
+    // Pattern matches: "Apr 15 Apr 16 TFL TRAVEL CHARGE TFL.GOV.UK/CP 2.90"
+    const amexPattern = /([A-Z][a-z]{2} \d{1,2}) ([A-Z][a-z]{2} \d{1,2}) (.+?) (\d+\.\d{2})$/gm;
     
-    const patterns = [pattern1, pattern2, pattern3, pattern4, pattern5];
+    console.log('Using ChatGPT-proven Amex pattern...');
+    let match;
+    let patternMatches = 0;
     
-    for (const [index, pattern] of patterns.entries()) {
-      console.log(`Trying Amex pattern ${index + 1}...`);
-      let match;
-      let patternMatches = 0;
+    while ((match = amexPattern.exec(text)) !== null) {
+      patternMatches++;
+      const [fullMatch, transactionDate, , description, amountStr] = match;
       
-      while ((match = pattern.exec(text)) !== null) {
-        patternMatches++;
-        const [fullMatch, dateStr, description, amountStr] = match;
-        
-        console.log(`Pattern ${index + 1} matched:`, fullMatch);
-        
-        // Skip headers, totals, and common non-transaction lines
-        if (description.match(/balance|total|payment|thank you|previous balance|new balance|minimum|credit limit|available credit|finance charge|membership|annual fee|summary|statement|page|prepared for|account|closing date|direct debit/i)) {
-          console.log('Skipping header/summary line:', description);
+      console.log(`Amex pattern matched:`, fullMatch);
+      
+      // Clean up description by removing extra whitespace and URLs
+      let cleanDescription = description.trim().replace(/\s+/g, ' ');
+      
+      // Remove common URL patterns from description
+      cleanDescription = cleanDescription.replace(/\s+[A-Z]+\.[A-Z]+\.[A-Z]+\/.*$/, '').trim();
+      cleanDescription = cleanDescription.replace(/\s+WWW\..*$/, '').trim();
+      
+      // Skip if description is too short or looks like a header
+      if (cleanDescription.length < 3) {
+        console.log('Skipping short description:', cleanDescription);
+        continue;
+      }
+      
+      // Skip headers and summary lines
+      if (cleanDescription.match(/balance|total|payment|thank you|previous balance|new balance|minimum|credit limit|available credit|finance charge|membership|annual fee|summary|statement|page|prepared for|account|closing date|direct debit|cardholder|section|continued/i)) {
+        console.log('Skipping header/summary line:', cleanDescription);
+        continue;
+      }
+      
+      try {
+        const amount = parseAmount(amountStr);
+        if (amount === 0 || isNaN(amount)) {
+          console.log('Skipping zero/invalid amount:', amountStr);
           continue;
         }
         
-        // Skip very short descriptions that are likely not transactions
-        if (description.trim().length < 3) {
-          console.log('Skipping short description:', description);
-          continue;
-        }
+        // For Amex, most transactions are debits (purchases)
+        // Credits are usually payments, refunds, or credits
+        const isCredit = cleanDescription.toUpperCase().includes('PAYMENT') || 
+                        cleanDescription.toUpperCase().includes('CREDIT') || 
+                        cleanDescription.toUpperCase().includes('REFUND') ||
+                        cleanDescription.toUpperCase().includes('CASHBACK');
+        const type = isCredit ? 'credit' : 'debit';
         
-        try {
-          const amount = parseAmount(amountStr);
-          if (amount === 0 || isNaN(amount)) {
-            console.log('Skipping zero/invalid amount:', amountStr);
-            continue;
+        const classification = classifyTransaction(cleanDescription, Math.abs(amount), type);
+        
+        const transaction: ParsedTransaction = {
+          id: `${Date.now()}_${transactions.length}`,
+          date: formatDate(transactionDate), // Use transaction date, not process date
+          description: cleanDescription,
+          amount: Math.abs(amount),
+          type,
+          category: classification.category,
+          merchant: classification.merchant?.name,
+          isSubscription: classification.isSubscription,
+          confidence: classification.confidence,
+          rawText: fullMatch.trim(),
+        };
+        
+        // Check for duplicates
+        const isDuplicate = transactions.some(t => 
+          t.date === transaction.date && 
+          t.amount === transaction.amount && 
+          t.description.substring(0, 20) === transaction.description.substring(0, 20)
+        );
+        
+        if (!isDuplicate) {
+          transactions.push(transaction);
+          console.log('Added Amex transaction:', transaction);
+        } else {
+          console.log('Skipping duplicate transaction');
+        }
+      } catch (error) {
+        console.warn('Failed to parse Amex transaction:', error);
+      }
+    }
+    
+    console.log(`Amex pattern found ${patternMatches} matches, added ${transactions.length} transactions`);
+    
+    // If no transactions found with the primary pattern, try a more flexible fallback
+    if (transactions.length === 0) {
+      console.log('No transactions found with primary Amex pattern, trying fallback...');
+      
+      // Fallback pattern for lines that might have slight variations
+      const fallbackPattern = /([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm;
+      
+      let fallbackMatch;
+      while ((fallbackMatch = fallbackPattern.exec(text)) !== null) {
+        const [fullMatch, dateStr, description, amountStr] = fallbackMatch;
+        
+        console.log(`Fallback pattern matched:`, fullMatch);
+        
+        // Clean description
+        let cleanDescription = description.trim().replace(/\s+/g, ' ');
+        cleanDescription = cleanDescription.replace(/\s+[A-Z]+\.[A-Z]+\.[A-Z]+\/.*$/, '').trim();
+        
+        if (cleanDescription.length >= 3 && 
+            !cleanDescription.match(/balance|total|summary|statement|page|account|date|cardholder/i)) {
+          
+          try {
+            const amount = parseAmount(amountStr);
+            if (amount > 0) {
+              const classification = classifyTransaction(cleanDescription, amount, 'debit');
+              
+              transactions.push({
+                id: `${Date.now()}_${transactions.length}`,
+                date: formatDate(dateStr),
+                description: cleanDescription,
+                amount: amount,
+                type: 'debit',
+                category: classification.category,
+                merchant: classification.merchant?.name,
+                isSubscription: classification.isSubscription,
+                confidence: classification.confidence * 0.8, // Lower confidence for fallback
+                rawText: fullMatch.trim(),
+              });
+              
+              console.log('Added fallback Amex transaction:', cleanDescription, amount);
+            }
+          } catch (error) {
+            console.warn('Failed to parse fallback transaction:', error);
           }
-          
-          // For Amex, payments/credits often have "CR" or contain "PAYMENT"
-          const isCredit = fullMatch.includes('CR') || description.toUpperCase().includes('PAYMENT') || description.toUpperCase().includes('CREDIT') || description.toUpperCase().includes('REFUND');
-          const type = isCredit ? 'credit' : 'debit';
-          
-          const classification = classifyTransaction(description, Math.abs(amount), type);
-          
-          const transaction: ParsedTransaction = {
-            id: `${Date.now()}_${transactions.length}`,
-            date: formatDate(dateStr),
-            description: description.trim(),
-            amount: Math.abs(amount),
-            type,
-            category: classification.category,
-            merchant: classification.merchant?.name,
-            isSubscription: classification.isSubscription,
-            confidence: classification.confidence,
-            rawText: fullMatch.trim(),
-          };
-          
-          // Check for duplicates
-          const isDuplicate = transactions.some(t => 
-            t.date === transaction.date && 
-            t.amount === transaction.amount && 
-            t.description.substring(0, 20) === transaction.description.substring(0, 20)
-          );
-          
-          if (!isDuplicate) {
-            transactions.push(transaction);
-            console.log('Added Amex transaction:', transaction);
-          } else {
-            console.log('Skipping duplicate transaction');
-          }
-        } catch (error) {
-          console.warn('Failed to parse Amex transaction:', error);
         }
       }
       
-      console.log(`Pattern ${index + 1} found ${patternMatches} matches`);
+      console.log(`Fallback pattern added ${transactions.length} more transactions`);
     }
     
-    console.log(`Found ${transactions.length} Amex transactions total`);
     return transactions;
   }
   
@@ -626,6 +694,24 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
     
     console.log('Extracted text preview (first 1000 chars):', text.substring(0, 1000));
     console.log('Total text length:', text.length);
+    
+    // Add debugging for Amex - show more text sections
+    if (text.toLowerCase().includes('american express')) {
+      console.log('=== AMEX DEBUGGING - More text sections ===');
+      const sections = [
+        text.substring(1000, 2000),
+        text.substring(2000, 3000),
+        text.substring(3000, 4000),
+        text.substring(4000, 5000)
+      ];
+      
+      sections.forEach((section, index) => {
+        if (section.trim()) {
+          console.log(`--- Section ${index + 2} (chars ${1000 + (index * 1000)}-${2000 + (index * 1000)}) ---`);
+          console.log(section);
+        }
+      });
+    }
     
     if (!text || text.length < 100) {
       throw new Error('PDF appears to be empty or contains no readable text');
