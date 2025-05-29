@@ -8,32 +8,8 @@ import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
 import LineChart from "@/components/charts/line";
 import PieChart from "@/components/charts/pie";
-
-const categories = [
-  "Housing",
-  "Transportation",
-  "Food",
-  "Utilities",
-  "Healthcare",
-  "Entertainment",
-  "Shopping",
-  "Education",
-  "Travel",
-  "Other",
-];
-
-const categoryConfig = {
-  Housing: { icon: "fa-home", color: "#3b82f6", gradient: "from-blue-500 to-blue-600" },
-  Transportation: { icon: "fa-car", color: "#10b981", gradient: "from-green-500 to-green-600" },
-  Food: { icon: "fa-utensils", color: "#f59e0b", gradient: "from-orange-500 to-orange-600" },
-  Utilities: { icon: "fa-bolt", color: "#eab308", gradient: "from-yellow-500 to-yellow-600" },
-  Healthcare: { icon: "fa-heartbeat", color: "#ef4444", gradient: "from-red-500 to-red-600" },
-  Entertainment: { icon: "fa-film", color: "#8b5cf6", gradient: "from-purple-500 to-purple-600" },
-  Shopping: { icon: "fa-shopping-bag", color: "#ec4899", gradient: "from-pink-500 to-pink-600" },
-  Education: { icon: "fa-graduation-cap", color: "#06b6d4", gradient: "from-cyan-500 to-cyan-600" },
-  Travel: { icon: "fa-plane", color: "#6366f1", gradient: "from-indigo-500 to-indigo-600" },
-  Other: { icon: "fa-ellipsis-h", color: "#6b7280", gradient: "from-gray-500 to-gray-600" },
-};
+import FinancialInsights from "@/components/insights/FinancialInsights";
+import { getAllCategories, getSubcategories, getCategoryInfo } from "@/lib/transactionClassifier";
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
@@ -46,8 +22,11 @@ function ExpenseManager() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [timeRange, setTimeRange] = useState("30");
+  const [activeTab, setActiveTab] = useState<"expenses" | "insights">("expenses");
   const { user } = useAuth();
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  // Get all available categories
+  const allCategories = getAllCategories();
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
@@ -108,20 +87,27 @@ function ExpenseManager() {
     }
   }, [error, success]);
 
-  const handleSubmit = useCallback(async (expenseData: Expense) => {
+  const handleSubmit = useCallback(async (expenseData: Omit<Expense, 'id'> & { id?: string }) => {
     if (!currentUser) return;
     
     try {
       const { apiCall } = await import('@/lib/mockApi');
       
       const method = editingExpense ? 'UPDATE' : 'CREATE';
+      
+      // For new expenses, we need to add an id if it doesn't exist
+      const expenseWithId: Expense = {
+        ...expenseData,
+        id: expenseData.id || Date.now().toString(),
+        userId: currentUser.id,
+      };
+      
       const response = await apiCall('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           method,
-          ...expenseData,
-          userId: currentUser.id,
+          ...expenseWithId,
           ...(editingExpense?.id ? { id: editingExpense.id } : {}),
         }),
       });
@@ -179,64 +165,6 @@ function ExpenseManager() {
     setShowModal(true);
   }, []);
 
-  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadProgress(0);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
-        // Handle CSV upload locally
-        const text = await file.text();
-        const lines = text.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-        
-        const expenses: Expense[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',');
-          if (values.length >= 3) {
-            const expense: Expense = {
-              id: Date.now().toString() + i,
-              userId: currentUser?.id || '',
-              category: values[headers.indexOf('category')] || 'Other',
-              amount: parseFloat(values[headers.indexOf('amount')] || '0') * 100,
-              date: values[headers.indexOf('date')] || new Date().toISOString().split('T')[0],
-              description: values[headers.indexOf('description')] || 'Imported expense',
-              recurrence: 'one-time'
-            };
-            expenses.push(expense);
-          }
-        }
-
-        // Upload expenses in batches
-        for (let i = 0; i < expenses.length; i++) {
-          await handleSubmit(expenses[i]);
-          setUploadProgress(Math.round(((i + 1) / expenses.length) * 100));
-        }
-
-        setSuccess(`Successfully imported ${expenses.length} expenses from CSV`);
-      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        // For PDF files, redirect to the import page
-        setSuccess('Redirecting to PDF import page...');
-        setTimeout(() => {
-          window.location.href = '/app/expenses/import';
-        }, 1000);
-      } else {
-        setError('Please upload a CSV or PDF file');
-      }
-    } catch (err) {
-      console.error('File upload error:', err);
-      setError('Failed to process uploaded file');
-    } finally {
-      setUploadProgress(null);
-      // Reset file input
-      e.target.value = '';
-    }
-  }, [currentUser, handleSubmit, setError, setSuccess, setUploadProgress]);
-
   // Calculate metrics
   const totalExpenses = useMemo(() => {
     return expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -244,7 +172,7 @@ function ExpenseManager() {
 
   const expensesByCategory = useMemo(() => {
     return expenses.reduce((acc, expense) => {
-      const category = expense.category || 'Other';
+      const category = expense.category || 'other';
       if (!acc[category]) acc[category] = { count: 0, amount: 0 };
       acc[category].count++;
       acc[category].amount += expense.amount;
@@ -277,14 +205,14 @@ function ExpenseManager() {
     });
   }, [expenses, timeRange]);
 
-  const averageMonthlyExpense = useMemo(() => {
-    const total = monthlyExpensesTrend.reduce((sum, month) => sum + month.amount, 0);
-    return total / (monthlyExpensesTrend.length || 1);
-  }, [monthlyExpensesTrend]);
+  // Count subscriptions
+  const subscriptionCount = useMemo(() => {
+    return expenses.filter(e => e.recurrence === 'recurring' || e.frequency).length;
+  }, [expenses]);
 
   interface ExpenseModalProps {
     onClose: () => void;
-    onSubmit: (expense: Expense) => void;
+    onSubmit: (expense: Omit<Expense, 'id'> & { id?: string }) => void;
     initialData: Expense | null;
   }
 
@@ -352,10 +280,15 @@ function ExpenseManager() {
               required
             >
               <option value="" className="bg-white dark:bg-gray-800">Select Category</option>
-              {categories.map((category) => (
-                <option key={category} value={category} className="bg-white dark:bg-gray-800">
-                  {category}
-                </option>
+              {allCategories.map((category) => (
+                <optgroup key={category.id} label={category.name}>
+                  <option value={category.id}>{category.name}</option>
+                  {getSubcategories(category.id).map(sub => (
+                    <option key={sub.id} value={sub.id}>
+                      &nbsp;&nbsp;{sub.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -485,7 +418,7 @@ function ExpenseManager() {
     onEdit: (expense: Expense) => void;
     onDelete: (id: string) => void;
   }) => {
-    const config = categoryConfig[expense.category as keyof typeof categoryConfig] || categoryConfig.Other;
+    const categoryInfo = getCategoryInfo(expense.category);
 
     return (
       <motion.div
@@ -498,12 +431,12 @@ function ExpenseManager() {
       >
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center">
-            <div className={`p-3 bg-gradient-to-r ${config.gradient} rounded-lg mr-4 shadow-lg`}>
-              <i className={`fas ${config.icon} text-white text-xl`}></i>
+            <div className={`p-3 bg-gradient-to-r ${categoryInfo.gradient} rounded-lg mr-4 shadow-lg`}>
+              <i className={`fas ${categoryInfo.icon} text-white text-xl`}></i>
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">{expense.description}</h3>
-              <p className="text-sm text-gray-400">{expense.category}</p>
+              <p className="text-sm text-gray-400">{categoryInfo.name}</p>
             </div>
           </div>
           <div className="flex space-x-2">
@@ -581,21 +514,13 @@ function ExpenseManager() {
               <p className="text-gray-400 mt-2">Track and manage your spending</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".csv,.pdf,application/pdf,text/csv"
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  id="file-upload"
-                />
-                <Button
-                  className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200"
-                >
-                  <i className="fas fa-upload mr-2"></i>
-                  Import Expenses
-                </Button>
-              </div>
+              <a
+                href="/app/expenses/import"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200 inline-flex items-center justify-center"
+              >
+                <i className="fas fa-upload mr-2"></i>
+                Import Expenses
+              </a>
               <Button
                 onClick={handleOpenModal}
                 className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200"
@@ -633,224 +558,255 @@ function ExpenseManager() {
           </motion.div>
         )}
 
-        {uploadProgress !== null && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-blue-900/20 backdrop-blur-sm border border-blue-800 rounded-xl p-4 mb-6"
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+          <button
+            onClick={() => setActiveTab("expenses")}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              activeTab === "expenses"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            }`}
           >
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-blue-400 flex items-center">
-                <i className="fas fa-upload mr-2"></i>
-                Uploading expenses...
-              </p>
-              <span className="text-blue-400 font-semibold">{uploadProgress}%</span>
-            </div>
-            <div className="w-full bg-blue-900/30 rounded-full h-2">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-blue-400 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-          </motion.div>
-        )}
+            <i className="fas fa-receipt mr-2"></i>
+            Expenses
+          </button>
+          <button
+            onClick={() => setActiveTab("insights")}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              activeTab === "insights"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            }`}
+          >
+            <i className="fas fa-chart-line mr-2"></i>
+            Insights
+          </button>
+        </div>
 
-        {/* Summary Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-        >
-          <div className="bg-gradient-to-br from-red-500/20 to-red-600/20 backdrop-blur-sm rounded-xl p-6 border border-red-500/30">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-sm">Total Expenses</p>
-                <p className="text-3xl font-bold text-red-400 mt-1">
-                  {formatCurrency(totalExpenses)}
-                </p>
-              </div>
-              <div className="p-3 bg-red-500/20 rounded-lg">
-                <i className="fas fa-receipt text-red-400 text-xl"></i>
-              </div>
-            </div>
-          </div>
+        {/* Tab Content */}
+        <AnimatePresence mode="wait">
+          {activeTab === "expenses" ? (
+            <motion.div
+              key="expenses"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              {/* Summary Cards */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+              >
+                <div className="bg-gradient-to-br from-red-500/20 to-red-600/20 backdrop-blur-sm rounded-xl p-6 border border-red-500/30">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-gray-400 text-sm">Total Expenses</p>
+                      <p className="text-3xl font-bold text-red-400 mt-1">
+                        {formatCurrency(totalExpenses)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-red-500/20 rounded-lg">
+                      <i className="fas fa-receipt text-red-400 text-xl"></i>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/30">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-sm">Monthly Average</p>
-                <p className="text-3xl font-bold text-orange-400 mt-1">
-                  ${averageMonthlyExpense.toFixed(2)}
-                </p>
-              </div>
-              <div className="p-3 bg-orange-500/20 rounded-lg">
-                <i className="fas fa-calendar text-orange-400 text-xl"></i>
-              </div>
-            </div>
-          </div>
+                <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-gray-400 text-sm">Subscriptions</p>
+                      <p className="text-3xl font-bold text-purple-400 mt-1">
+                        {subscriptionCount}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-purple-500/20 rounded-lg">
+                      <i className="fas fa-sync-alt text-purple-400 text-xl"></i>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-sm">Total Transactions</p>
-                <p className="text-3xl font-bold text-purple-400 mt-1">
-                  {expenses.length}
-                </p>
-              </div>
-              <div className="p-3 bg-purple-500/20 rounded-lg">
-                <i className="fas fa-exchange-alt text-purple-400 text-xl"></i>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+                <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/30">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-gray-400 text-sm">Total Transactions</p>
+                      <p className="text-3xl font-bold text-orange-400 mt-1">
+                        {expenses.length}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-orange-500/20 rounded-lg">
+                      <i className="fas fa-exchange-alt text-orange-400 text-xl"></i>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
 
-        {/* Charts Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
-        >
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-white">Spending Trend</h3>
-              <div className="flex gap-2">
-                {["30", "90", "365"].map((days) => (
+              {/* Charts Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
+              >
+                <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-semibold text-white">Spending Trend</h3>
+                    <div className="flex gap-2">
+                      {["30", "90", "365"].map((days) => (
+                        <button
+                          key={days}
+                          onClick={() => setTimeRange(days)}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            timeRange === days
+                              ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                              : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          }`}
+                        >
+                          {days === "365" ? "Year" : days === "90" ? "Quarter" : "Month"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <LineChart
+                    data={monthlyExpensesTrend}
+                    xKey="month"
+                    lines={[{ dataKey: "amount", color: "#ef4444" }]}
+                  />
+                </div>
+
+                <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+                  <h3 className="text-xl font-semibold text-white mb-6">Spending by Category</h3>
+                  <PieChart
+                    data={Object.entries(expensesByCategory).map(([category, data]) => {
+                      const categoryInfo = getCategoryInfo(category);
+                      return {
+                        name: categoryInfo.name,
+                        value: data.amount / 100,
+                        color: categoryInfo.color,
+                      };
+                    })}
+                  />
+                </div>
+              </motion.div>
+
+              {/* Filter and View Controls */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"
+              >
+                <div className="flex flex-wrap gap-2">
                   <button
-                    key={days}
-                    onClick={() => setTimeRange(days)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      timeRange === days
+                    onClick={() => setFilterCategory("all")}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                      filterCategory === "all"
                         ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                        : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
-                    {days === "365" ? "Year" : days === "90" ? "Quarter" : "Month"}
+                    All Categories
                   </button>
-                ))}
-              </div>
-            </div>
-            <LineChart
-              data={monthlyExpensesTrend}
-              xKey="month"
-              lines={[{ dataKey: "amount", color: "#ef4444" }]}
-            />
-          </div>
+                  {Object.keys(expensesByCategory).map((category) => {
+                    const categoryInfo = getCategoryInfo(category);
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => setFilterCategory(category)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                          filterCategory === category
+                            ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                            : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {categoryInfo.name} ({expensesByCategory[category].count})
+                      </button>
+                    );
+                  })}
+                </div>
 
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-            <h3 className="text-xl font-semibold text-white mb-6">Spending by Category</h3>
-            <PieChart
-              data={Object.entries(expensesByCategory).map(([category, data]) => ({
-                name: category,
-                value: data.amount / 100,
-                color: categoryConfig[category as keyof typeof categoryConfig]?.color || "#6b7280",
-              }))}
-            />
-          </div>
-        </motion.div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      viewMode === "grid"
+                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                        : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <i className="fas fa-th"></i>
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      viewMode === "list"
+                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                        : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <i className="fas fa-list"></i>
+                  </button>
+                </div>
+              </motion.div>
 
-        {/* Filter and View Controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"
-        >
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterCategory("all")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                filterCategory === "all"
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                  : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-              }`}
-            >
-              All Categories
-            </button>
-            {Object.keys(expensesByCategory).map((category) => (
-              <button
-                key={category}
-                onClick={() => setFilterCategory(category)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  filterCategory === category
-                    ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                    : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                }`}
-              >
-                {category} ({expensesByCategory[category].count})
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-2 rounded-lg transition-all duration-200 ${
-                viewMode === "grid"
-                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                  : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-              }`}
-            >
-              <i className="fas fa-th"></i>
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 rounded-lg transition-all duration-200 ${
-                viewMode === "list"
-                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                  : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-              }`}
-            >
-              <i className="fas fa-list"></i>
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Expenses Grid/List */}
-        <AnimatePresence mode="wait">
-          {filteredExpenses.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center py-16"
-            >
-              <div className="text-gray-500 text-6xl mb-4">
-                <i className="fas fa-receipt"></i>
-              </div>
-              <h3 className="text-xl font-medium text-gray-400 mb-2">
-                {filterCategory === "all" ? "No Expenses Yet" : `No ${filterCategory} expenses`}
-              </h3>
-              <p className="text-gray-500 mb-6">
-                {filterCategory === "all" 
-                  ? "Start tracking your expenses by adding your first expense."
-                  : "You don't have any expenses in this category yet."}
-              </p>
-              <Button
-                onClick={handleOpenModal}
-                className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium"
-              >
-                <i className="fas fa-plus mr-2"></i>
-                Add Your First Expense
-              </Button>
+              {/* Expenses Grid/List */}
+              <AnimatePresence mode="wait">
+                {filteredExpenses.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center py-16"
+                  >
+                    <div className="text-gray-500 text-6xl mb-4">
+                      <i className="fas fa-receipt"></i>
+                    </div>
+                    <h3 className="text-xl font-medium text-gray-400 mb-2">
+                      {filterCategory === "all" ? "No Expenses Yet" : `No ${getCategoryInfo(filterCategory).name} expenses`}
+                    </h3>
+                    <p className="text-gray-500 mb-6">
+                      {filterCategory === "all" 
+                        ? "Start tracking your expenses by adding your first expense."
+                        : "You don't have any expenses in this category yet."}
+                    </p>
+                    <Button
+                      onClick={handleOpenModal}
+                      className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium"
+                    >
+                      <i className="fas fa-plus mr-2"></i>
+                      Add Your First Expense
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    layout
+                    className={viewMode === "grid" 
+                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                      : "space-y-4"
+                    }
+                  >
+                    {filteredExpenses.map((expense) => (
+                      <ExpenseCard
+                        key={expense.id}
+                        expense={expense}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           ) : (
             <motion.div
-              layout
-              className={viewMode === "grid" 
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
-                : "space-y-4"
-              }
+              key="insights"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
             >
-              {filteredExpenses.map((expense) => (
-                <ExpenseCard
-                  key={expense.id}
-                  expense={expense}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
+              <FinancialInsights expenses={expenses} timeRange={timeRange} />
             </motion.div>
           )}
         </AnimatePresence>

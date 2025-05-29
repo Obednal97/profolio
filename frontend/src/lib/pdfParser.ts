@@ -1,5 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
+import { classifyTransaction, detectRecurringTransactions } from './transactionClassifier';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
@@ -12,6 +13,8 @@ export interface ParsedTransaction {
   amount: number; // in cents
   type: 'debit' | 'credit';
   category?: string;
+  merchant?: string;
+  isSubscription?: boolean;
   confidence: number; // 0-1, how confident we are in the parsing
   rawText: string; // original text for manual review
 }
@@ -75,46 +78,32 @@ const BANK_PATTERNS = {
     indicators: ['capital one', 'capitalone'],
   },
   
+  // RBS (Royal Bank of Scotland) patterns
+  rbs: {
+    name: 'RBS',
+    transactionPattern: /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([-]?£?[\d,]+\.?\d{0,2})/gm,
+    accountPattern: /Account[:\s]*(\d+)/i,
+    periodPattern: /(?:Statement\s+)?Period[:\s]*(\d{2}\/\d{2}\/\d{4})\s*(?:to|-)\s*(\d{2}\/\d{2}\/\d{4})/i,
+    indicators: ['rbs', 'royal bank of scotland', 'natwest'],
+  },
+  
+  // Monzo patterns
+  monzo: {
+    name: 'Monzo',
+    transactionPattern: /(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})\s+(.+?)\s+([-]?£?[\d,]+\.?\d{0,2})/gm,
+    accountPattern: /Account[:\s]*(\d+)/i,
+    periodPattern: /(?:Statement\s+)?(?:from|period)[:\s]*(\d{2}\/\d{2}\/\d{4})\s*(?:to|-)\s*(\d{2}\/\d{2}\/\d{4})/i,
+    indicators: ['monzo', 'monzo bank'],
+  },
+  
   // Generic patterns for unknown banks
   generic: {
     name: 'Unknown Bank',
-    transactionPattern: /(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.+?)\s+([-]?\$?[\d,]+\.?\d{0,2})/gm,
+    transactionPattern: /(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.+?)\s+([-]?[£$]?[\d,]+\.?\d{0,2})/gm,
     accountPattern: /(?:Account|Acct)(?:\s+Number)?[:\s]*(\d+)/i,
     periodPattern: /(?:Statement\s+)?Period[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:to|-)?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i,
     indicators: [],
   },
-};
-
-// Common expense categories based on transaction descriptions
-const CATEGORY_PATTERNS = {
-  'Food & Dining': [
-    'restaurant', 'cafe', 'coffee', 'starbucks', 'mcdonalds', 'burger', 'pizza',
-    'food', 'dining', 'uber eats', 'doordash', 'grubhub', 'delivery'
-  ],
-  'Transportation': [
-    'gas', 'fuel', 'uber', 'lyft', 'taxi', 'parking', 'metro', 'bus',
-    'train', 'airline', 'flight', 'car rental', 'auto'
-  ],
-  'Shopping': [
-    'amazon', 'walmart', 'target', 'costco', 'shopping', 'store',
-    'retail', 'purchase', 'buy'
-  ],
-  'Utilities': [
-    'electric', 'gas company', 'water', 'internet', 'phone', 'cable',
-    'utility', 'power', 'energy'
-  ],
-  'Entertainment': [
-    'netflix', 'spotify', 'movie', 'theater', 'concert', 'game',
-    'entertainment', 'streaming', 'subscription'
-  ],
-  'Healthcare': [
-    'doctor', 'dentist', 'pharmacy', 'medical', 'hospital', 'clinic',
-    'health', 'medicine', 'prescription'
-  ],
-  'Banking': [
-    'fee', 'charge', 'interest', 'transfer', 'atm', 'bank',
-    'overdraft', 'maintenance'
-  ],
 };
 
 // Utility functions
@@ -123,10 +112,10 @@ function normalizeText(text: string): string {
 }
 
 function parseAmount(amountStr: string): number {
-  // Remove currency symbols and convert to number
-  const cleanAmount = amountStr.replace(/[$,\s]/g, '');
+  // Remove currency symbols (both $ and £) and convert to number
+  const cleanAmount = amountStr.replace(/[£$,\s]/g, '');
   const amount = parseFloat(cleanAmount);
-  return Math.round(amount * 100); // Convert to cents
+  return Math.round(amount * 100); // Convert to cents/pence
 }
 
 function formatDate(dateStr: string): string {
@@ -138,20 +127,6 @@ function formatDate(dateStr: string): string {
     return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
   return dateStr;
-}
-
-function categorizeTransaction(description: string): string {
-  const normalizedDesc = normalizeText(description);
-  
-  for (const [category, keywords] of Object.entries(CATEGORY_PATTERNS)) {
-    for (const keyword of keywords) {
-      if (normalizedDesc.includes(keyword)) {
-        return category;
-      }
-    }
-  }
-  
-  return 'Other';
 }
 
 function detectBank(text: string): string {
@@ -176,34 +151,45 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
   
   let match;
   while ((match = bank.transactionPattern.exec(text)) !== null) {
-    const [fullMatch, dateStr, description, amountStr] = match;
+    let dateStr, description, amountStr, fullMatch;
+    
+    if (bankKey === 'monzo') {
+      // Monzo format: date, time, description, amount
+      [fullMatch, dateStr, , description, amountStr] = match;
+    } else {
+      // Standard format: date, description, amount
+      [fullMatch, dateStr, description, amountStr] = match;
+    }
     
     // Skip if this looks like a header or total line
     if (normalizeText(description).includes('total') || 
         normalizeText(description).includes('balance') ||
-        normalizeText(description).includes('statement')) {
+        normalizeText(description).includes('statement') ||
+        normalizeText(description).includes('opening') ||
+        normalizeText(description).includes('closing')) {
       continue;
     }
     
     try {
       const amount = parseAmount(amountStr);
       const isDebit = amountStr.includes('-') || amount < 0;
+      const type = isDebit ? 'debit' : 'credit';
+      
+      // Use advanced classification
+      const classification = classifyTransaction(description, Math.abs(amount), type);
       
       const transaction: ParsedTransaction = {
         id: `${Date.now()}_${transactions.length}`,
         date: formatDate(dateStr),
         description: description.trim(),
         amount: Math.abs(amount),
-        type: isDebit ? 'debit' : 'credit',
-        category: categorizeTransaction(description),
-        confidence: 0.8, // Base confidence
+        type,
+        category: classification.category,
+        merchant: classification.merchant?.name,
+        isSubscription: classification.isSubscription,
+        confidence: classification.confidence,
         rawText: fullMatch.trim(),
       };
-      
-      // Adjust confidence based on data quality
-      if (transaction.amount > 0 && transaction.description.length > 3) {
-        transaction.confidence = Math.min(0.95, transaction.confidence + 0.1);
-      }
       
       transactions.push(transaction);
     } catch (error) {
@@ -281,6 +267,18 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
     if (transactions.length === 0) {
       throw new Error('No transactions found in the PDF. Please check the format.');
     }
+    
+    // Detect recurring transactions
+    const recurringPatterns = detectRecurringTransactions(transactions);
+    
+    // Update transactions with recurring info
+    transactions.forEach(transaction => {
+      const key = `${transaction.description.toLowerCase().slice(0, 20)}_${Math.round(transaction.amount / 100)}`;
+      const recurringInfo = recurringPatterns.get(key);
+      if (recurringInfo && recurringInfo.confidence > 0.7) {
+        transaction.isSubscription = true;
+      }
+    });
     
     // Extract metadata
     const metadata = extractMetadata(text, bankKey);

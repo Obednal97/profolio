@@ -33,6 +33,9 @@ export type Expense = {
   description: string;
   recurrence: "one-time" | "recurring";
   frequency?: "Daily" | "Weekly" | "Biweekly" | "Monthly" | "Quarterly" | "Yearly";
+  merchant?: string;
+  isSubscription?: boolean;
+  notes?: string;
 };
 
 export type ExpenseFormData = {

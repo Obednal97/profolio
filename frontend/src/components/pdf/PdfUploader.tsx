@@ -3,16 +3,91 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { parseBankStatementPDF, ParseResult } from '@/lib/pdfParser';
+import { parseBankStatementPDF, ParseResult, ParsedTransaction } from '@/lib/pdfParser';
 
-interface PdfUploaderProps {
+interface FileUploaderProps {
   onParsed: (result: ParseResult) => void;
   onError: (error: string) => void;
 }
 
-const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
+const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const parseCSV = async (file: File): Promise<ParseResult> => {
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    if (lines.length < 2) {
+      throw new Error('CSV file appears to be empty or invalid');
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+    const transactions: ParsedTransaction[] = [];
+    
+    // Map Monzo CSV headers
+    const dateIndex = headers.findIndex(h => h.includes('date'));
+    const typeIndex = headers.findIndex(h => h.includes('type'));
+    const nameIndex = headers.findIndex(h => h.includes('name'));
+    const categoryIndex = headers.findIndex(h => h.includes('category'));
+    const moneyOutIndex = headers.findIndex(h => h.includes('money out'));
+    const moneyInIndex = headers.findIndex(h => h.includes('money in'));
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      
+      if (values.length < headers.length) continue;
+
+      try {
+        const dateStr = values[dateIndex] || '';
+        const type = values[typeIndex] || '';
+        const name = values[nameIndex] || '';
+        const category = values[categoryIndex] || 'Other';
+        const moneyOut = parseFloat(values[moneyOutIndex] || '0');
+        const moneyIn = parseFloat(values[moneyInIndex] || '0');
+
+        // Skip pot transfers and other non-spending transactions
+        if (type.toLowerCase().includes('pot transfer')) continue;
+
+        // Determine if it's a debit or credit based on money out/in
+        const isDebit = moneyOut > 0;
+        const transactionAmount = Math.abs(isDebit ? moneyOut : moneyIn) * 100; // Convert to pence
+
+        if (transactionAmount > 0 && name) {
+          const transaction: ParsedTransaction = {
+            id: `csv_${Date.now()}_${i}`,
+            date: formatDateFromCSV(dateStr),
+            description: name,
+            amount: transactionAmount,
+            type: isDebit ? 'debit' : 'credit',
+            category: category || 'Other',
+            confidence: 0.9, // High confidence for CSV data
+            rawText: lines[i],
+          };
+          
+          transactions.push(transaction);
+        }
+      } catch (error) {
+        console.warn('Failed to parse CSV line:', lines[i], error);
+      }
+    }
+
+    return {
+      transactions,
+      bankName: 'CSV Import',
+      totalTransactions: transactions.length,
+      errors: transactions.length === 0 ? ['No valid transactions found in CSV'] : [],
+    };
+  };
+
+  const formatDateFromCSV = (dateStr: string): string => {
+    // Handle DD/MM/YYYY format (UK)
+    if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      const [day, month, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return dateStr;
+  };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -20,14 +95,17 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
     if (!file) return;
 
     // Validate file type
-    if (file.type !== 'application/pdf') {
-      onError('Please upload a PDF file');
+    const isCSV = file.type === 'text/csv' || file.name.endsWith('.csv');
+    const isPDF = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+    
+    if (!isCSV && !isPDF) {
+      onError('Please upload a PDF or CSV file');
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      onError('PDF file must be smaller than 10MB');
+      onError('File must be smaller than 10MB');
       return;
     }
 
@@ -46,8 +124,14 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
         });
       }, 200);
 
-      // Parse the PDF
-      const result = await parseBankStatementPDF(file);
+      // Parse the file based on type
+      let result: ParseResult;
+      
+      if (isCSV) {
+        result = await parseCSV(file);
+      } else {
+        result = await parseBankStatementPDF(file);
+      }
       
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -66,14 +150,15 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
     } catch (error) {
       setUploading(false);
       setUploadProgress(0);
-      onError(error instanceof Error ? error.message : 'Failed to parse PDF');
+      onError(error instanceof Error ? error.message : 'Failed to parse file');
     }
   }, [onParsed, onError]);
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf'],
+      'text/csv': ['.csv']
     },
     multiple: false,
     disabled: uploading,
@@ -132,14 +217,14 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <i className="fas fa-file-pdf text-red-500 text-lg"></i>
+                      <i className="fas fa-file text-gray-500 text-lg"></i>
                     </div>
                   </div>
                 </div>
                 
                 <div>
                   <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    Processing PDF...
+                    Processing File...
                   </p>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <motion.div
@@ -168,7 +253,7 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
                 {isDragActive ? (
                   <div>
                     <p className="text-lg font-medium text-blue-600 dark:text-blue-400 mb-2">
-                      Drop your bank statement here
+                      Drop your file here
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       We&apos;ll automatically extract transactions
@@ -180,21 +265,21 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
                       Invalid file type
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Please upload a PDF file
+                      Please upload a PDF or CSV file
                     </p>
                   </div>
                 ) : (
                   <div>
                     <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                      Upload Bank Statement PDF
+                      Upload Bank Statement
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Drag and drop your PDF here, or click to browse
+                      Drag and drop your file here, or click to browse
                     </p>
                     
                     <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
-                      <p>• Supports Chase, Bank of America, Wells Fargo, Citi, Capital One</p>
-                      <p>• Automatically categorizes transactions</p>
+                      <p>• PDF: Chase, Bank of America, Wells Fargo, Citi, Capital One, RBS, Monzo</p>
+                      <p>• CSV: Monzo export format</p>
                       <p>• Maximum file size: 10MB</p>
                     </div>
                   </div>
@@ -208,4 +293,4 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({ onParsed, onError }) => {
   );
 };
 
-export default PdfUploader; 
+export default FileUploader; 

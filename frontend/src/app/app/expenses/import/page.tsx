@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/auth';
 import { ParseResult, ParsedTransaction } from '@/lib/pdfParser';
-import PdfUploader from '@/components/pdf/PdfUploader';
+import FileUploader from '@/components/pdf/PdfUploader';
 import TransactionReview from '@/components/pdf/TransactionReview';
 
 type ImportStep = 'upload' | 'review' | 'success';
@@ -31,59 +31,56 @@ export default function ExpenseImportPage() {
     setParseResult(null);
   };
 
-  const handleSaveTransactions = async (transactions: ParsedTransaction[]) => {
-    if (!currentUser?.uid) {
-      setError('User not authenticated');
-      return;
-    }
+  const handleSave = useCallback(async (selectedTransactions: ParsedTransaction[]) => {
+    if (!currentUser?.uid) return;
 
     try {
       const { apiCall } = await import('@/lib/mockApi');
       
-      // Convert ParsedTransactions to Expense format
-      const expenses = transactions.map(transaction => ({
-        id: transaction.id,
+      // Convert transactions to expenses
+      const expenses = selectedTransactions.map(transaction => ({
+        id: `imported_${transaction.id}`,
         userId: currentUser.uid,
-        category: transaction.category || 'Other',
+        category: transaction.category,
         amount: transaction.amount, // Already in cents
-        description: transaction.description,
         date: transaction.date,
-        notes: `Imported from ${parseResult?.bankName || 'bank statement'} - Confidence: ${Math.round(transaction.confidence * 100)}%`,
+        description: transaction.description,
+        recurrence: 'one-time' as const,
+        // Add a note to indicate this was imported and whether it's income or expense
+        notes: `Imported from bank statement - ${transaction.type === 'credit' ? 'Income' : 'Expense'}`,
       }));
 
       // Save each expense
-      let successCount = 0;
       for (const expense of expenses) {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { userId, ...expenseData } = expense;
-          const response = await apiCall('/api/expenses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              method: 'CREATE',
-              userId: currentUser.uid,
-              ...expenseData
-            }),
-          });
-          
-          const result = await response.json();
-          if (!result.error) {
-            successCount++;
-          }
-        } catch (expenseError) {
-          console.error('Failed to save expense:', expense, expenseError);
+        const response = await apiCall('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            method: 'CREATE',
+            ...expense,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(`Failed to save expense: ${data.error}`);
         }
       }
 
-      setSavedCount(successCount);
       setCurrentStep('success');
-      
+      setSavedCount(expenses.length);
+      setParseResult(prev => prev ? {
+        ...prev,
+        savedCount: expenses.length,
+        totalAmount: selectedTransactions.reduce((sum, t) => 
+          sum + (t.type === 'debit' ? t.amount : -t.amount), 0
+        )
+      } : null);
     } catch (error) {
-      console.error('Failed to save transactions:', error);
-      setError('Failed to save transactions. Please try again.');
+      console.error('Failed to save expenses:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save expenses');
     }
-  };
+  }, [currentUser]);
 
   const handleStartOver = () => {
     setCurrentStep('upload');
@@ -206,7 +203,7 @@ export default function ExpenseImportPage() {
               exit={{ opacity: 0, x: 20 }}
               className="max-w-2xl mx-auto"
             >
-              <PdfUploader onParsed={handleParsed} onError={handleError} />
+              <FileUploader onParsed={handleParsed} onError={handleError} />
               
               {/* Help Section */}
               <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
@@ -217,7 +214,7 @@ export default function ExpenseImportPage() {
                 <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
                   <div className="flex items-start space-x-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">1</span>
-                    <p>Upload your bank statement PDF (Chase, BofA, Wells Fargo, Citi, Capital One supported)</p>
+                    <p>Upload your bank statement (PDF: Chase, BofA, Wells Fargo, Citi, Capital One, RBS, Monzo | CSV: Monzo format)</p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">2</span>
@@ -241,7 +238,7 @@ export default function ExpenseImportPage() {
             >
               <TransactionReview
                 parseResult={parseResult}
-                onSave={handleSaveTransactions}
+                onSave={handleSave}
                 onCancel={handleStartOver}
               />
             </motion.div>
@@ -276,7 +273,7 @@ export default function ExpenseImportPage() {
                     Import Another Statement
                   </button>
                   <a
-                    href="/app/expenses"
+                    href="/app/expenseManager"
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-200 inline-flex items-center justify-center"
                   >
                     <i className="fas fa-eye mr-2"></i>
