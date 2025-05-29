@@ -185,9 +185,9 @@ export class Trading212Service {
   private apiKey: string;
   private baseUrl = 'https://live.trading212.com/api/v0';
   private requestQueue: Promise<unknown> = Promise.resolve();
-  private requestTimeout = 30000; // 30 seconds timeout for each request
+  private requestTimeout = 60000; // 30 seconds timeout for each request
   private lastRequestTime = 0;
-  private minRequestInterval = 2500; // 2.5 seconds between requests (Trading 212 limit is 2s)
+  private minRequestInterval = 30000; // 30 seconds between requests (Trading 212 limit is 2s)
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
