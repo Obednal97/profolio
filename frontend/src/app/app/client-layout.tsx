@@ -4,6 +4,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { initializeDemoData } from '@/lib/demoData';
 
 // DEVELOPMENT: Authentication imports commented out for testing
 // import { useUser } from "@/lib/user";
@@ -17,6 +18,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+
+  useEffect(() => {
+    // Initialize demo data if in demo mode
+    if (isDemoMode && typeof window !== 'undefined') {
+      initializeDemoData();
+    }
+  }, [isDemoMode]);
 
   useEffect(() => {
     // Only redirect if not loading and no user and not in demo mode
