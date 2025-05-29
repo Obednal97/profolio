@@ -18,7 +18,7 @@ export interface Trading212Position {
   currentPrice: number;
   ppl: number;
   fxPpl: number;
-  initialFillDate: string;
+  initialFillDate: string | null;
   frontend: string;
   maxBuy: number;
   maxSell: number;
@@ -55,9 +55,9 @@ export interface Trading212AccountCash {
 
 export interface Trading212Order {
   id: number;
-  dateCreated: string;
-  dateExecuted: string;
-  dateModified: string;
+  dateCreated: string | null;
+  dateExecuted: string | null;
+  dateModified: string | null;
   executor: string;
   fillCost: number;
   fillId: number;
@@ -87,7 +87,7 @@ export interface Trading212Dividend {
   amount: number;
   amountInEuro: number;
   grossAmountPerShare: number;
-  paidOn: string;
+  paidOn: string | null;
   quantity: number;
   reference: string;
   ticker: string;
@@ -669,150 +669,204 @@ export class Trading212Service {
       pieShare: number;
     };
   }>> {
-    // Make requests sequentially to avoid rate limiting
-    console.log('Fetching portfolio positions...');
-    const positions = await this.getPortfolio();
-    
-    console.log('Fetching instruments metadata...');
-    const instruments = await this.getInstruments();
-    
-    console.log('Fetching account cash...');
-    const accountCash = await this.getAccountCash().catch(() => ({ 
-      free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 
-    }));
-    
-    console.log('Fetching pies...');
-    const pies = await this.getPies().catch(() => []);
+    try {
+      // Make requests sequentially to avoid rate limiting
+      console.log('Fetching portfolio positions...');
+      const positions = await this.getPortfolio();
+      console.log(`✅ Fetched ${positions.length} positions`);
+      
+      console.log('Fetching instruments metadata...');
+      const instruments = await this.getInstruments();
+      console.log(`✅ Fetched ${instruments.length} instruments`);
+      
+      console.log('Fetching account cash...');
+      const accountCash = await this.getAccountCash().catch((error) => {
+        console.warn('Failed to fetch account cash:', error);
+        return { free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 };
+      });
+      console.log(`✅ Fetched account cash: ${accountCash.free}`);
+      
+      console.log('Fetching pies...');
+      const pies = await this.getPies().catch((error) => {
+        console.warn('Failed to fetch pies:', error);
+        return [];
+      });
+      console.log(`✅ Fetched ${pies.length} pies`);
 
-    // Get detailed pie information sequentially
-    const pieDetails = new Map<number, Trading212PieDetails>();
-    for (let i = 0; i < pies.length; i++) {
-      const pie = pies[i];
-      try {
-        const details = await this.getPieDetails(pie.id);
-        pieDetails.set(pie.id, details);
-        // Requests are now automatically queued sequentially
-      } catch (error) {
-        console.warn(`Failed to get details for pie ${pie.id}:`, error);
-      }
-    }
-
-    // Get historical orders with limited pagination to avoid too many requests
-    console.log('Fetching recent historical orders...');
-    const historicalOrders = await this.getHistoricalOrders({ limit: 50 }).then(response => response.items).catch(() => []);
-
-    // Create instrument lookup map
-    const instrumentMap = new Map(
-      instruments.map(instrument => [instrument.ticker, instrument])
-    );
-
-    // Create historical price data from orders
-    const priceHistoryMap = new Map<string, Array<{ date: string; value: number }>>();
-    
-    historicalOrders.forEach(order => {
-      if (order.status === 'FILLED' && order.fillPrice > 0) {
-        const ticker = this.cleanTicker(order.ticker);
-        if (!priceHistoryMap.has(ticker)) {
-          priceHistoryMap.set(ticker, []);
+      // Get detailed pie information sequentially
+      const pieDetails = new Map<number, Trading212PieDetails>();
+      for (let i = 0; i < pies.length; i++) {
+        const pie = pies[i];
+        try {
+          console.log(`Fetching details for pie ${pie.id}...`);
+          const details = await this.getPieDetails(pie.id);
+          pieDetails.set(pie.id, details);
+          console.log(`✅ Fetched details for pie ${pie.id}: ${details.settings.name}`);
+        } catch (error) {
+          console.warn(`Failed to get details for pie ${pie.id}:`, error);
         }
-        
-        priceHistoryMap.get(ticker)!.push({
-          date: order.dateExecuted.split('T')[0],
-          value: order.fillPrice
-        });
       }
-    });
 
-    // Sort and deduplicate price history
-    priceHistoryMap.forEach((history, ticker) => {
-      const sortedHistory = history
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .filter((item, index, arr) => 
-          index === 0 || item.date !== arr[index - 1].date
-        );
-      priceHistoryMap.set(ticker, sortedHistory);
-    });
+      // Get historical orders with limited pagination to avoid too many requests
+      console.log('Fetching recent historical orders...');
+      const historicalOrders = await this.getHistoricalOrders({ limit: 50 })
+        .then(response => {
+          console.log(`✅ Fetched ${response.items.length} historical orders`);
+          return response.items;
+        })
+        .catch((error) => {
+          console.warn('Failed to fetch historical orders:', error);
+          return [];
+        });
 
-    // Find pie information for each position
-    const findPieInfo = (ticker: string) => {
-      for (const [pieId, details] of Array.from(pieDetails.entries())) {
-        const instrument = details.instruments.find(inst => inst.ticker === ticker);
-        if (instrument) {
+      // Create instrument lookup map
+      const instrumentMap = new Map(
+        instruments.map(instrument => [instrument.ticker, instrument])
+      );
+
+      // Create historical price data from orders
+      const priceHistoryMap = new Map<string, Array<{ date: string; value: number }>>();
+      
+      historicalOrders.forEach(order => {
+        try {
+          if (order.status === 'FILLED' && order.fillPrice > 0 && order.dateExecuted) {
+            const ticker = this.cleanTicker(order.ticker);
+            if (!priceHistoryMap.has(ticker)) {
+              priceHistoryMap.set(ticker, []);
+            }
+            
+            priceHistoryMap.get(ticker)!.push({
+              date: order.dateExecuted.split('T')[0],
+              value: order.fillPrice
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to process historical order ${order.id}:`, error);
+        }
+      });
+
+      // Sort and deduplicate price history
+      priceHistoryMap.forEach((history, ticker) => {
+        const sortedHistory = history
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .filter((item, index, arr) => 
+            index === 0 || item.date !== arr[index - 1].date
+          );
+        priceHistoryMap.set(ticker, sortedHistory);
+      });
+
+      // Find pie information for each position
+      const findPieInfo = (ticker: string) => {
+        try {
+          for (const [pieId, details] of Array.from(pieDetails.entries())) {
+            const instrument = details.instruments.find(inst => inst.ticker === ticker);
+            if (instrument) {
+              return {
+                pieId,
+                pieName: details.settings.name,
+                pieShare: instrument.expectedShare,
+              };
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to find pie info for ticker ${ticker}:`, error);
+        }
+        return undefined;
+      };
+
+      // Convert positions to assets
+      const assets = positions.map((position, index) => {
+        try {
+          console.log(`Processing position ${index + 1}/${positions.length}: ${position.ticker}`);
+          
+          const instrument = instrumentMap.get(position.ticker);
+          const currentValue = position.quantity * position.currentPrice * 100; // Convert to cents
+          const purchasePrice = position.quantity * position.averagePrice * 100; // Convert to cents
+          const cleanedTicker = this.cleanTicker(position.ticker);
+
+          // Determine asset type based on instrument type
+          let assetType = 'stock';
+          if (instrument?.type === 'ETF') assetType = 'stock'; // ETFs are treated as stocks in Profolio
+          if (instrument?.type === 'REIT') assetType = 'property'; // REITs could be property-related
+
+          // Get price history for this asset
+          const priceHistory = priceHistoryMap.get(cleanedTicker) || [];
+          
+          // Add current price as latest data point if not already present
+          const today = new Date().toISOString().split('T')[0];
+          const hasToday = priceHistory.some(p => p.date === today);
+          if (!hasToday) {
+            priceHistory.push({
+              date: today,
+              value: position.currentPrice
+            });
+          }
+
+          // Get pie information
+          const pieInfo = findPieInfo(position.ticker);
+
+          const asset = {
+            id: `t212_${position.ticker}`,
+            name: instrument?.name || position.ticker,
+            type: assetType,
+            symbol: cleanedTicker,
+            quantity: position.quantity,
+            current_value: Math.round(currentValue),
+            purchase_price: Math.round(purchasePrice),
+            purchase_date: position.initialFillDate ? position.initialFillDate.split('T')[0] : new Date().toISOString().split('T')[0],
+            notes: `Synced from Trading 212 (${instrument?.type || 'STOCK'})${instrument?.isin ? ` - ISIN: ${instrument.isin}` : ''}${pieInfo ? ` - Part of pie: ${pieInfo.pieName} (${pieInfo.pieShare.toFixed(1)}%)` : ''}`,
+            price_history: priceHistory,
+            pie_info: pieInfo,
+          };
+          
+          console.log(`✅ Processed ${position.ticker}: ${asset.name}`);
+          return asset;
+        } catch (error) {
+          console.error(`Failed to process position ${position.ticker}:`, error);
+          // Return a minimal asset to prevent the entire sync from failing
           return {
-            pieId,
-            pieName: details.settings.name,
-            pieShare: instrument.expectedShare,
+            id: `t212_${position.ticker}`,
+            name: position.ticker,
+            type: 'stock',
+            symbol: this.cleanTicker(position.ticker),
+            quantity: position.quantity,
+            current_value: Math.round(position.quantity * position.currentPrice * 100),
+            purchase_price: Math.round(position.quantity * position.averagePrice * 100),
+            purchase_date: new Date().toISOString().split('T')[0],
+            notes: `Synced from Trading 212 (processing error)`,
+            price_history: [],
+            pie_info: undefined,
           };
         }
-      }
-      return undefined;
-    };
+      });
 
-    // Convert positions to assets
-    const assets = positions.map(position => {
-      const instrument = instrumentMap.get(position.ticker);
-      const currentValue = position.quantity * position.currentPrice * 100; // Convert to cents
-      const purchasePrice = position.quantity * position.averagePrice * 100; // Convert to cents
-      const cleanedTicker = this.cleanTicker(position.ticker);
-
-      // Determine asset type based on instrument type
-      let assetType = 'stock';
-      if (instrument?.type === 'ETF') assetType = 'stock'; // ETFs are treated as stocks in Profolio
-      if (instrument?.type === 'REIT') assetType = 'property'; // REITs could be property-related
-
-      // Get price history for this asset
-      const priceHistory = priceHistoryMap.get(cleanedTicker) || [];
-      
-      // Add current price as latest data point if not already present
-      const today = new Date().toISOString().split('T')[0];
-      const hasToday = priceHistory.some(p => p.date === today);
-      if (!hasToday) {
-        priceHistory.push({
-          date: today,
-          value: position.currentPrice
+      // Add cash as an asset if there's any free cash
+      if (accountCash.free > 0) {
+        console.log(`Adding cash asset: ${accountCash.free}`);
+        assets.push({
+          id: 't212_cash',
+          name: 'Trading 212 Cash',
+          type: 'cash',
+          symbol: 'CASH',
+          quantity: 1,
+          current_value: Math.round(accountCash.free * 100),
+          purchase_price: Math.round(accountCash.free * 100),
+          purchase_date: new Date().toISOString().split('T')[0],
+          notes: `Cash balance from Trading 212. Total: ${accountCash.total}, Invested: ${accountCash.invested}, Pie Cash: ${accountCash.pieCash}`,
+          price_history: [{ 
+            date: new Date().toISOString().split('T')[0], 
+            value: 1.0 // Cash always has value of 1
+          }],
+          pie_info: undefined, // Cash is not part of any pie
         });
       }
 
-      // Get pie information
-      const pieInfo = findPieInfo(position.ticker);
-
-      return {
-        id: `t212_${position.ticker}`,
-        name: instrument?.name || position.ticker,
-        type: assetType,
-        symbol: cleanedTicker,
-        quantity: position.quantity,
-        current_value: Math.round(currentValue),
-        purchase_price: Math.round(purchasePrice),
-        purchase_date: position.initialFillDate.split('T')[0],
-        notes: `Synced from Trading 212 (${instrument?.type || 'STOCK'})${instrument?.isin ? ` - ISIN: ${instrument.isin}` : ''}${pieInfo ? ` - Part of pie: ${pieInfo.pieName} (${pieInfo.pieShare.toFixed(1)}%)` : ''}`,
-        price_history: priceHistory,
-        pie_info: pieInfo,
-      };
-    });
-
-    // Add cash as an asset if there's any free cash
-    if (accountCash.free > 0) {
-      assets.push({
-        id: 't212_cash',
-        name: 'Trading 212 Cash',
-        type: 'cash',
-        symbol: 'CASH',
-        quantity: 1,
-        current_value: Math.round(accountCash.free * 100),
-        purchase_price: Math.round(accountCash.free * 100),
-        purchase_date: new Date().toISOString().split('T')[0],
-        notes: `Cash balance from Trading 212. Total: ${accountCash.total}, Invested: ${accountCash.invested}, Pie Cash: ${accountCash.pieCash}`,
-        price_history: [{ 
-          date: new Date().toISOString().split('T')[0], 
-          value: 1.0 // Cash always has value of 1
-        }],
-        pie_info: undefined, // Cash is not part of any pie
-      });
+      console.log(`✅ Successfully processed ${assets.length} assets`);
+      return assets;
+    } catch (error) {
+      console.error('Error in getProfolioAssets:', error);
+      throw error;
     }
-
-    console.log(`Successfully processed ${assets.length} assets`);
-    return assets;
   }
 
   /**
@@ -975,7 +1029,7 @@ export class Trading212Service {
         ...asset,
         dividends: assetDividends.map(div => ({
           amount: div.amount,
-          date: div.paidOn.split('T')[0],
+          date: div.paidOn ? div.paidOn.split('T')[0] : new Date().toISOString().split('T')[0],
           grossAmountPerShare: div.grossAmountPerShare,
         })),
       };
