@@ -18,16 +18,34 @@ let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 
 export const getFirebase = async () => {
+  // Ensure we're in a browser environment
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase can only be initialized in the browser');
+  }
+  
   if (!app) {
-    const res = await fetch('/firebase-config.json');
-    const config = await res.json();
-    app = initializeApp(config);
-    auth = getAuth(app);
+    try {
+      const res = await fetch('/firebase-config.json');
+      if (!res.ok) {
+        throw new Error(`Failed to fetch Firebase config: ${res.status}`);
+      }
+      const config = await res.json();
+      app = initializeApp(config);
+      auth = getAuth(app);
+    } catch (error) {
+      console.error('Failed to initialize Firebase:', error);
+      throw error;
+    }
   }
   return { app, auth };
 };
 
 export const getFirebaseAuth = async (): Promise<Auth> => {
+  // Ensure we're in a browser environment
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase auth can only be accessed in the browser');
+  }
+  
   const { auth } = await getFirebase();
   if (!auth) throw new Error('Firebase auth not initialized');
   return auth;
