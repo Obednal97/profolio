@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
-import { BaseModal as Modal } from "@/components/modals/modal";
+import { BaseModal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -769,14 +769,14 @@ function SettingsPage() {
   // Show loading if no user data is available or profile data is still loading
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#101828]">
         <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-white dark:bg-[#101828] text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
@@ -853,7 +853,7 @@ function SettingsPage() {
 
       {/* Delete Account Modal */}
       {showDeleteModal && (
-        <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+        <BaseModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
           <div className="bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 rounded-2xl p-8 w-full max-w-md border border-gray-200 dark:border-white/10 shadow-2xl">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-100 mb-4">
@@ -881,7 +881,7 @@ function SettingsPage() {
               </div>
             </div>
           </div>
-        </Modal>
+        </BaseModal>
       )}
     </div>
   );
