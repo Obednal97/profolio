@@ -200,7 +200,7 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
         <div onClick={handleBackdropClick} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
           <motion.div
             ref={modalRef}
-            className="relative h-full w-full bg-white dark:bg-gray-900 p-6 overflow-auto"
+            className="relative h-full w-full bg-white dark:bg-[#101828] p-6 overflow-auto"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}

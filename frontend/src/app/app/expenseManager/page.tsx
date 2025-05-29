@@ -589,7 +589,7 @@ function ExpenseManager() {
 
   // Comprehensive Expense Manager Skeleton
   const ExpenseManagerSkeleton = () => (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-white dark:bg-[#101828] text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
         {/* Header skeleton */}
         <div className="mb-8">
@@ -1048,7 +1048,7 @@ function ExpenseManager() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-white dark:bg-[#101828] text-gray-900 dark:text-white">
       <BulkActionsBar />
       
       <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
@@ -1537,7 +1537,7 @@ function ExpenseManager() {
                     >
                       <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="bg-gray-50 dark:bg-gray-900">
+                          <thead className="bg-gray-50 dark:bg-[#101828]">
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                 <input

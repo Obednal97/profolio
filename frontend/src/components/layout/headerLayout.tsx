@@ -13,7 +13,7 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = ({ user, currentPath })
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="flex items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
+      <div className="flex items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 backdrop-blur-md bg-white/90 dark:bg-[#101828]/90">
         {/* Logo */}
         <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
           <Link href={user ? '/app/dashboard' : '/'} className="flex flex-col leading-tight min-w-0">
@@ -50,7 +50,7 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = ({ user, currentPath })
 
       {/* Mobile Navigation */}
       {user && isMobileMenuOpen && (
-        <div className="md:hidden border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div className="md:hidden border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#101828]">
           <div className="px-4 py-3">
             <Navbar 
               user={user} 
