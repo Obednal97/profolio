@@ -81,7 +81,7 @@ const BANK_PATTERNS = {
   // American Express patterns
   amex: {
     name: 'American Express',
-    transactionPattern: /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(?:\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\s+)?(.+?)\s+[£$]?([\d,]+\.\d{2})/gm,
+    transactionPattern: /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm,
     accountPattern: /(?:Account|Membership)\s+(?:Number|Ending)[:\s]*(?:\*+)?(\d{4,})/i,
     periodPattern: /(?:Statement\s+)?(?:Period|Closing\s+Date|Date)[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:to|-|–)?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})?/i,
     indicators: ['american express', 'amex', 'americanexpress'],
@@ -409,29 +409,14 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
     
     // More flexible patterns based on actual PDF text extraction
     const patterns = [
-      // Pattern 1: Original ChatGPT pattern (strict)
-      /([A-Z][a-z]{2} \d{1,2}) ([A-Z][a-z]{2} \d{1,2}) (.+?) (\d+\.\d{2})$/gm,
-      
-      // Pattern 2: More flexible with optional extra spaces
+      // Pattern 1: Corrected Amex format with both dates
       /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm,
       
-      // Pattern 3: Handle cases where description might have multiple spaces
-      /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.{5,}?)\s+(\d+\.\d{2})$/gm,
-      
-      // Pattern 4: Very flexible - any amount of whitespace
-      /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})\s*$/gm,
-      
-      // Pattern 5: Handle single date format (transaction date only)
+      // Pattern 2: Single date format (fallback)
       /([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm,
       
-      // Pattern 6: Lines that end with just an amount (common in PDF extraction)
-      /(.+?)\s+(\d+\.\d{2})$/gm,
-      
-      // Pattern 7: Handle cases where dates might be on separate lines or merged
-      /([A-Z][a-z]{2} \d{1,2}).*?([A-Z][A-Z\s&']+).*?(\d+\.\d{2})/gm,
-      
-      // Pattern 8: Very loose pattern for anything with merchant-like text and amount
-      /((?:[A-Z][A-Z\s&']{2,}|[A-Z][a-z]+(?:\s+[A-Z][a-z]*)*)).*?(\d+\.\d{2})$/gm,
+      // Pattern 3: Very flexible - any amount of whitespace
+      /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})\s*$/gm,
     ];
     
     for (const [patternIndex, pattern] of patterns.entries()) {
@@ -539,91 +524,10 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
         console.log(`Successfully parsed ${transactions.length} transactions with pattern ${patternIndex + 1}`);
         break;
       }
+      
     }
     
     console.log(`Total Amex transactions found: ${transactions.length}`);
-    
-    // If still no transactions found, try line-by-line parsing
-    if (transactions.length === 0) {
-      console.log('No transactions found with regex patterns, trying line-by-line parsing...');
-      
-      const lines = text.split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        // Look for lines that contain an amount at the end
-        const amountMatch = line.match(/(\d+\.\d{2})$/);
-        if (amountMatch) {
-          const amount = parseFloat(amountMatch[1]);
-          
-          // Skip very small amounts (likely not real transactions)
-          if (amount < 0.5) continue;
-          
-          // Extract description (everything before the amount)
-          const description = line.replace(/\s+\d+\.\d{2}$/, '').trim();
-          
-          // Skip if description is too short or looks like a header
-          if (description.length < 3 || 
-              description.match(/total|balance|summary|statement|page|date|amount|foreign|spend/i)) {
-            continue;
-          }
-          
-          // Look for a date in the current line or nearby lines
-          let transactionDate = 'Apr 15'; // Default
-          const dateInLine = line.match(/([A-Z][a-z]{2} \d{1,2})/);
-          if (dateInLine) {
-            transactionDate = dateInLine[1];
-          } else {
-            // Check previous few lines for a date
-            for (let j = Math.max(0, i - 3); j < i; j++) {
-              const prevLineDate = lines[j].match(/([A-Z][a-z]{2} \d{1,2})/);
-              if (prevLineDate) {
-                transactionDate = prevLineDate[1];
-                break;
-              }
-            }
-          }
-          
-          // Clean description
-          let cleanDescription = description.replace(/[A-Z][a-z]{2} \d{1,2}/g, '').trim();
-          cleanDescription = cleanDescription.replace(/\s+/g, ' ');
-          
-          if (cleanDescription.length >= 3) {
-            try {
-              const classification = classifyTransaction(cleanDescription, amount * 100, 'debit');
-              
-              const transaction: ParsedTransaction = {
-                id: `${Date.now()}_${transactions.length}`,
-                date: formatDate(transactionDate),
-                description: cleanDescription,
-                amount: amount * 100, // Convert to cents
-                type: 'debit',
-                category: classification.category,
-                merchant: classification.merchant?.name,
-                isSubscription: classification.isSubscription,
-                confidence: 0.7, // Lower confidence for line-by-line parsing
-                rawText: line,
-              };
-              
-              // Check for duplicates
-              const isDuplicate = transactions.some(t => 
-                t.amount === transaction.amount && 
-                t.description.substring(0, 15) === transaction.description.substring(0, 15)
-              );
-              
-              if (!isDuplicate) {
-                transactions.push(transaction);
-                console.log('Added line-parsed transaction:', cleanDescription, amount);
-              }
-            } catch (error) {
-              console.warn('Failed to parse line transaction:', error);
-            }
-          }
-        }
-      }
-      
-      console.log(`Line-by-line parsing added ${transactions.length} more transactions`);
-    }
     
     return transactions;
   }
@@ -781,40 +685,12 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
     console.log('Extracted text preview (first 1000 chars):', text.substring(0, 1000));
     console.log('Total text length:', text.length);
     
-    // Add debugging for Amex - show more text sections
+    // Preprocess text to join amounts that are on separate lines (Amex issue)
     if (text.toLowerCase().includes('american express')) {
-      console.log('=== AMEX DEBUGGING - More text sections ===');
-      const sections = [
-        text.substring(1000, 2000),
-        text.substring(2000, 3000),
-        text.substring(3000, 4000),
-        text.substring(4000, 5000)
-      ];
-      
-      sections.forEach((section, index) => {
-        if (section.trim()) {
-          console.log(`--- Section ${index + 2} (chars ${1000 + (index * 1000)}-${2000 + (index * 1000)}) ---`);
-          console.log(section);
-        }
-      });
-      
-      // Show line-by-line breakdown to understand format
-      console.log('=== LINE BY LINE ANALYSIS ===');
-      const lines = text.split('\n');
-      for (let i = 0; i < Math.min(200, lines.length); i++) {
-        const line = lines[i].trim();
-        if (line && line.match(/\d+\.\d{2}/)) {
-          console.log(`Line ${i}: "${line}"`);
-        }
-      }
-      
-      // Look for specific patterns in the text
-      console.log('=== PATTERN ANALYSIS ===');
-      const amountMatches = text.match(/\d+\.\d{2}/g);
-      console.log('All amounts found:', amountMatches?.slice(0, 20));
-      
-      const dateMatches = text.match(/[A-Z][a-z]{2} \d{1,2}/g);
-      console.log('All dates found:', dateMatches?.slice(0, 20));
+      console.log('Preprocessing Amex text to join split amounts...');
+      // Join amounts that are on their own line back to the previous line
+      text = text.replace(/\n(\d+\.\d{2})/g, ' $1');
+      console.log('Text after preprocessing length:', text.length);
     }
     
     if (!text || text.length < 100) {
