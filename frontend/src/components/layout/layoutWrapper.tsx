@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { HeaderLayout as Header } from "@/components/layout/headerLayout";
 import { FooterLayout as Footer } from "@/components/layout/footerLayout";
-import { useUser } from "@/lib/user";
+import { useAuth } from "@/lib/auth";
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -40,21 +40,36 @@ export const useTheme = () => {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname();
-  const { data: user } = useUser();
+  const { user } = useAuth(); // Use Firebase authentication
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [currency, setCurrencyState] = useState<string>('USD');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  const demoUser = isDemoMode ? {
+    id: 'demo-user-id',
+    name: 'Demo User',
+    email: 'demo@profolio.com'
+  } : null;
+
+  // Use Firebase user or demo user
+  const currentUser = user ? {
+    id: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || 'User',
+    email: user.email || ''
+  } : demoUser;
+
   // Load user preferences from API when user is available
   useEffect(() => {
     const loadUserPreferences = async () => {
-      if (user?.id && !preferencesLoaded) {
+      if (currentUser?.id && !preferencesLoaded) {
         try {
           const { apiCall } = await import('@/lib/mockApi');
           const response = await apiCall('/api/user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ method: 'GET_PROFILE', userId: user.id }),
+            body: JSON.stringify({ method: 'GET_PROFILE', userId: currentUser.id }),
           });
           
           const data = await response.json();
@@ -89,7 +104,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     };
 
     loadUserPreferences();
-  }, [user?.id, preferencesLoaded]);
+  }, [currentUser?.id, preferencesLoaded]);
 
   // Apply theme to document
   useEffect(() => {
@@ -114,7 +129,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     localStorage.setItem('currency', newCurrency);
     
     // Save to user preferences if user is logged in
-    if (user?.id) {
+    if (currentUser?.id) {
       try {
         const { apiCall } = await import('@/lib/mockApi');
         await apiCall('/api/user', {
@@ -122,7 +137,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             method: 'UPDATE_PREFERENCES', 
-            userId: user.id,
+            userId: currentUser.id,
             preferences: { currency: newCurrency }
           }),
         });
@@ -158,9 +173,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   // Check if we're in the app section
   const isAppSection = pathname.startsWith("/app");
   
-  // For app section, always show app navigation (with mock user if needed)
-  // For public pages, show public navigation
-  const headerUser = isAppSection ? (user || { name: "Demo User", email: "demo@example.com" }) : undefined;
+  // For app section, show current user (Firebase or demo)
+  // For public pages, show no user
+  const headerUser = isAppSection && currentUser ? currentUser : undefined;
 
   return (
     <AppContext.Provider value={appValue}>

@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -30,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -72,9 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       await signInWithEmail(email, password);
       // User state will be updated by the auth listener
-    } catch (error: any) {
+    } catch (error: unknown) {
       setLoading(false);
-      throw new Error(error.message || 'Failed to sign in');
+      throw new Error(error instanceof Error ? error.message : 'Failed to sign in');
     }
   };
 
@@ -83,9 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       await signUpWithEmail(email, password, displayName);
       // User state will be updated by the auth listener
-    } catch (error: any) {
+    } catch (error: unknown) {
       setLoading(false);
-      throw new Error(error.message || 'Failed to create account');
+      throw new Error(error instanceof Error ? error.message : 'Failed to create account');
     }
   };
 
@@ -94,26 +92,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       await signInWithGoogle();
       // User state will be updated by the auth listener
-    } catch (error: any) {
+    } catch (error: unknown) {
       setLoading(false);
-      throw new Error(error.message || 'Failed to sign in with Google');
+      throw new Error(error instanceof Error ? error.message : 'Failed to sign in with Google');
     }
   };
 
   const signOut = async () => {
     try {
+      // Clear any demo mode data first
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('demo-mode');
+      localStorage.removeItem('user-data');
+      localStorage.removeItem('demo-api-keys');
+      
+      // Sign out from Firebase
       await signOutUser();
-      router.push('/auth/signIn');
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to sign out');
+      
+      // Force redirect to sign-in page
+      window.location.href = '/auth/signIn';
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to sign out');
     }
   };
 
   const resetUserPassword = async (email: string) => {
     try {
       await resetPassword(email);
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to send password reset email');
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to send password reset email');
     }
   };
 
@@ -145,8 +152,6 @@ export function useAuth() {
 
 // Legacy compatibility functions
 export function useAuthLegacy() {
-  const router = useRouter();
-
   async function signInWithCredentials({
     email,
     password,
@@ -161,11 +166,11 @@ export function useAuthLegacy() {
     try {
       await signInWithEmail(email, password);
       if (redirect) {
-        router.push(callbackUrl);
+        window.location.href = callbackUrl;
       }
       return { success: true };
-    } catch (error: any) {
-      throw new Error(error.message || 'Invalid email or password');
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Invalid email or password');
     }
   }
 

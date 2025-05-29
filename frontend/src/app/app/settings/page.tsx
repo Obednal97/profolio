@@ -1,13 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useUser } from "@/lib/user";
+import { useAuth } from "@/lib/auth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Tab = { id: "profile" | "security" | "preferences" | "account"; label: string; icon: string };
+interface Tab {
+  id: string;
+  label: string;
+  icon: string;
+}
+
 const tabs: Tab[] = [
   { id: "profile", label: "Profile", icon: "fa-user" },
   { id: "security", label: "Security", icon: "fa-lock" },
@@ -16,7 +21,7 @@ const tabs: Tab[] = [
 ];
 
 function SettingsPage() {
-  const { data: user } = useUser();
+  const { user } = useAuth(); // Use Firebase authentication
   const { theme, currency, setCurrency } = useAppContext();
   const [activeTab, setActiveTab] = useState<Tab["id"]>("profile");
   const [error, setError] = useState<string | null>(null);
@@ -24,14 +29,39 @@ function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  
+  // Use Firebase user data or demo user data
+  const currentUser = user ? {
+    id: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || 'User',
+    email: user.email || ''
+  } : (isDemoMode ? {
+    id: 'demo-user-id',
+    name: 'Demo User',
+    email: 'demo@profolio.com'
+  } : null);
+
   // Profile form state
   const [profileData, setProfileData] = useState({
-    name: user?.name || "Demo User",
-    email: user?.email || "demo@example.com",
+    name: currentUser?.name || "User",
+    email: currentUser?.email || "",
     phone: "",
     bio: "",
     location: "",
   });
+
+  // Update profile data when user changes
+  useEffect(() => {
+    if (currentUser) {
+      setProfileData(prev => ({
+        ...prev,
+        name: currentUser.name || "User",
+        email: currentUser.email || "",
+      }));
+    }
+  }, [currentUser]);
 
   // Preferences state
   const [preferences, setPreferences] = useState({
