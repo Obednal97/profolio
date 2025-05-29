@@ -90,32 +90,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
     const setupAuthListener = async () => {
       try {
+        // Make sure we're in the browser before setting up Firebase listeners
+        if (typeof window === 'undefined') {
+          setLoading(false);
+          return;
+        }
+
+        // Add a small delay to ensure proper hydration
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         unsubscribe = await onAuthStateChange(async (user) => {
           setUser(user);
           
           if (user) {
             // Extract and persist Google profile data if this is a Google sign-in
-            await extractAndPersistGoogleProfile(user);
+            try {
+              await extractAndPersistGoogleProfile(user);
+            } catch (error) {
+              console.warn('Failed to extract Google profile:', error);
+            }
             
             // Get and store the user token
-            const userToken = await getUserToken();
-            setToken(userToken);
-            localStorage.setItem('userToken', userToken || '');
+            try {
+              const userToken = await getUserToken();
+              setToken(userToken);
+              if (userToken) {
+                localStorage.setItem('userToken', userToken);
+              }
+            } catch (tokenError) {
+              console.warn('Failed to get user token:', tokenError);
+              setToken(null);
+            }
           } else {
             setToken(null);
-            localStorage.removeItem('userToken');
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('userToken');
+            }
           }
           
           setLoading(false);
         });
+        
+        setInitError(null);
       } catch (error) {
         console.error('Error setting up auth listener:', error);
+        setInitError(error instanceof Error ? error.message : 'Failed to initialize authentication');
         setLoading(false);
       }
     };
@@ -124,10 +150,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       if (unsubscribe) {
-        unsubscribe();
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.warn('Error during auth cleanup:', error);
+        }
       }
     };
   }, []);
+
+  // If there's an initialization error, provide a fallback context
+  if (initError) {
+    console.warn('Auth initialization failed, providing fallback context:', initError);
+    const fallbackValue: AuthContextType = {
+      user: null,
+      loading: false,
+      signIn: async () => { throw new Error('Authentication not available'); },
+      signUp: async () => { throw new Error('Authentication not available'); },
+      signInWithGoogleProvider: async (): Promise<UserCredential> => { 
+        throw new Error('Authentication not available'); 
+      },
+      signOut: async () => { throw new Error('Authentication not available'); },
+      resetUserPassword: async () => { throw new Error('Authentication not available'); },
+      token: null,
+    };
+
+    return (
+      <AuthContext.Provider value={fallbackValue}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
 
   const signIn = async (email: string, password: string) => {
     try {
