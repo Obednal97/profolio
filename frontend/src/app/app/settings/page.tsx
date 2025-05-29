@@ -45,23 +45,23 @@ function SettingsPage() {
 
   // Profile form state
   const [profileData, setProfileData] = useState({
-    name: currentUser?.name || "User",
-    email: currentUser?.email || "",
+    name: "",
+    email: "",
     phone: "",
     bio: "",
     location: "",
   });
 
-  // Update profile data when user changes
+  // Initialize profile data when currentUser is available
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && profileData.name === "" && profileData.email === "") {
       setProfileData(prev => ({
         ...prev,
         name: currentUser.name || "User",
         email: currentUser.email || "",
       }));
     }
-  }, [currentUser]);
+  }, [currentUser, profileData.name, profileData.email]);
 
   // Preferences state
   const [preferences, setPreferences] = useState({
@@ -437,6 +437,15 @@ function SettingsPage() {
       </div>
     </motion.div>
   );
+
+  // Show loading if no user data is available
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+        <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">

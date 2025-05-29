@@ -20,12 +20,15 @@ function SignInPage() {
 
   const isFormValid = formData.email.trim() !== '' && formData.password.trim() !== '';
 
-  // Redirect if already authenticated
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+
+  // Redirect if already authenticated (Firebase user or demo mode)
   useEffect(() => {
-    if (user && !authLoading) {
+    if ((user && !authLoading) || isDemoMode) {
       router.push('/app/dashboard');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, isDemoMode, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,8 +88,8 @@ function SignInPage() {
     );
   }
 
-  // Don't render if user is already authenticated
-  if (user) return null;
+  // Don't render if user is already authenticated or in demo mode
+  if (user || isDemoMode) return null;
 
   return (
     <AuthLayout>

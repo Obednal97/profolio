@@ -1,6 +1,10 @@
 // /app/app/client-layout.tsx (CLIENT component)
 'use client';
 
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
+
 // DEVELOPMENT: Authentication imports commented out for testing
 // import { useUser } from "@/lib/user";
 // import type { User } from '@/types/global';
@@ -8,20 +12,32 @@
 // import { useEffect } from "react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  // DEVELOPMENT: Authentication code disabled for testing
-  // Uncomment the following block to re-enable authentication
-  /*
-  const { data: user, loading } = useUser() as { data: User | null; loading: boolean };
+  const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !user?.token) {
-      router.push("/auth/signIn");
-    }
-  }, [user, loading, router]);
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
 
-  if (loading || !user?.token) return null;
-  */
+  useEffect(() => {
+    // Only redirect if not loading and no user and not in demo mode
+    if (!loading && !user && !isDemoMode) {
+      router.push('/auth/signIn');
+    }
+  }, [user, loading, isDemoMode, router]);
+
+  // Show loading while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+        <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // Don't render if no user and not in demo mode
+  if (!user && !isDemoMode) {
+    return null;
+  }
 
   return <>{children}</>;
 }

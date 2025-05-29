@@ -1,18 +1,17 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { User } from '@/types/global';
 import { useAppContext } from '@/components/layout/layoutWrapper';
 import { Tile } from '@/components/ui/tile/tile';
 import LineChart from '@/components/charts/line';
 import PieChart from '@/components/charts/pie';
 import type { Asset, Expense } from "@/types/global";
-import { useUser } from '@/lib/user';
+import { useAuth } from '@/lib/auth';
 import { motion } from 'framer-motion';
 
 const timeRanges = ["week", "month", "quarter", "year", "all"];
 
 function DashboardPage() {
-  const { data: user } = useUser() as { data: User | null };
+  const { user } = useAuth(); // Use Firebase authentication
   const { formatCurrency } = useAppContext();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -20,7 +19,23 @@ function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState("month");
 
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  
+  // Use Firebase user data or demo user data
+  const currentUser = user ? {
+    id: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || 'User',
+    email: user.email || ''
+  } : (isDemoMode ? {
+    id: 'demo-user-id',
+    name: 'Demo User',
+    email: 'demo@profolio.com'
+  } : null);
+
   const fetchData = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -29,12 +44,12 @@ function DashboardPage() {
         apiCall('/api/assets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'READ', userId: user?.id }),
+          body: JSON.stringify({ method: 'READ', userId: currentUser.id }),
         }),
         apiCall('/api/expenses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'READ', userId: user?.id }),
+          body: JSON.stringify({ method: 'READ', userId: currentUser.id }),
         }),
       ]);
 
@@ -53,11 +68,11 @@ function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [currentUser?.id]);
 
   useEffect(() => {
-    if (user?.id) fetchData();
-  }, [user?.id, fetchData]);
+    if (currentUser?.id) fetchData();
+  }, [currentUser?.id, fetchData]);
 
   // Filter data based on timeRange
   const filteredData = useMemo(() => {
@@ -208,7 +223,7 @@ function DashboardPage() {
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Financial Dashboard
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">Welcome back, {user?.name || 'User'}</p>
+            <p className="text-gray-600 dark:text-gray-400">Welcome back, {currentUser?.name || 'User'}</p>
           </div>
         </motion.div>
 
