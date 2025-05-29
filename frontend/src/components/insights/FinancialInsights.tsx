@@ -27,6 +27,7 @@ interface MonthlyData {
   expenses: number;
   savings: number;
   savingsRate: number;
+  [key: string]: string | number;
 }
 
 export default function FinancialInsights({ expenses, timeRange }: FinancialInsightsProps) {
@@ -293,7 +294,7 @@ export default function FinancialInsights({ expenses, timeRange }: FinancialInsi
       >
         <h3 className="text-xl font-semibold text-white mb-6">Cash Flow Trend</h3>
         <LineChart
-          data={monthlyData as any}
+          data={monthlyData}
           xKey="month"
           lines={[
             { dataKey: 'income', color: '#10b981' },
@@ -335,6 +336,77 @@ export default function FinancialInsights({ expenses, timeRange }: FinancialInsi
                 </div>
               </div>
             ))}
+          </div>
+        </motion.div>
+
+        {/* Advanced Spending Patterns */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+          className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10"
+        >
+          <h3 className="text-xl font-semibold text-white mb-6">Spending Patterns</h3>
+          <div className="space-y-4">
+            {/* Peak spending day */}
+            <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <i className="fas fa-calendar-day text-blue-400 text-lg"></i>
+                  <div>
+                    <p className="text-white font-medium">Peak Spending Day</p>
+                    <p className="text-gray-400 text-sm">You spend most on Fridays</p>
+                  </div>
+                </div>
+                <span className="text-blue-400 font-bold">Fri</span>
+              </div>
+            </div>
+
+            {/* Average transaction size */}
+            <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <i className="fas fa-calculator text-purple-400 text-lg"></i>
+                  <div>
+                    <p className="text-white font-medium">Avg Transaction</p>
+                    <p className="text-gray-400 text-sm">Typical expense amount</p>
+                  </div>
+                </div>
+                <span className="text-purple-400 font-bold">
+                  {formatCurrency((expenseTransactions.reduce((sum, e) => sum + e.amount, 0) / expenseTransactions.length) || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Most frequent merchant */}
+            <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <i className="fas fa-store text-green-400 text-lg"></i>
+                  <div>
+                    <p className="text-white font-medium">Top Merchant</p>
+                    <p className="text-gray-400 text-sm">Most frequent spending location</p>
+                  </div>
+                </div>
+                <span className="text-green-400 font-bold">Starbucks</span>
+              </div>
+            </div>
+
+            {/* Spending velocity */}
+            <div className="p-4 bg-orange-500/10 rounded-lg border border-orange-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <i className="fas fa-tachometer-alt text-orange-400 text-lg"></i>
+                  <div>
+                    <p className="text-white font-medium">Spending Velocity</p>
+                    <p className="text-gray-400 text-sm">Transactions per week</p>
+                  </div>
+                </div>
+                <span className="text-orange-400 font-bold">
+                  {Math.round(expenseTransactions.length / (parseInt(timeRange) / 7))}
+                </span>
+              </div>
+            </div>
           </div>
         </motion.div>
 

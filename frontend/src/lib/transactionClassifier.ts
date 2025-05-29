@@ -339,6 +339,15 @@ export const TRANSACTION_CATEGORIES: Record<string, TransactionCategory> = {
     parent: 'financial',
     keywords: ['transfer', 'payment', 'send', 'receive'],
   },
+  'insurance': {
+    id: 'insurance',
+    name: 'Insurance',
+    icon: 'fa-shield-alt',
+    color: '#6366f1',
+    gradient: 'from-indigo-500 to-indigo-600',
+    parent: 'financial',
+    keywords: ['insurance', 'policy', 'premium', 'coverage', 'deductible'],
+  },
   
   // Other
   'other': {
@@ -424,6 +433,16 @@ export const MERCHANT_DATABASE: Record<string, MerchantInfo> = {
   'annual fee': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
   'amex annual': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
   'foreign transaction fee': { name: 'Foreign Transaction Fee', category: 'financial', subcategory: 'fees' },
+  
+  // Insurance companies
+  'aviva': { name: 'Aviva', category: 'financial', subcategory: 'insurance' },
+  'axa': { name: 'AXA', category: 'financial', subcategory: 'insurance' },
+  'admiral': { name: 'Admiral', category: 'financial', subcategory: 'insurance' },
+  'direct line': { name: 'Direct Line', category: 'financial', subcategory: 'insurance' },
+  'churchill': { name: 'Churchill', category: 'financial', subcategory: 'insurance' },
+  'geico': { name: 'GEICO', category: 'financial', subcategory: 'insurance' },
+  'state farm': { name: 'State Farm', category: 'financial', subcategory: 'insurance' },
+  'allstate': { name: 'Allstate', category: 'financial', subcategory: 'insurance' },
 };
 
 // Transaction classification function
