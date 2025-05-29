@@ -418,6 +418,12 @@ export const MERCHANT_DATABASE: Record<string, MerchantInfo> = {
   'playstation': { name: 'PlayStation', category: 'entertainment', subcategory: 'gaming' },
   'xbox': { name: 'Xbox', category: 'entertainment', subcategory: 'gaming' },
   'nintendo': { name: 'Nintendo', category: 'entertainment', subcategory: 'gaming' },
+  
+  // American Express specific
+  'membership fee': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
+  'annual fee': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
+  'amex annual': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
+  'foreign transaction fee': { name: 'Foreign Transaction Fee', category: 'financial', subcategory: 'fees' },
 };
 
 // Transaction classification function

@@ -78,6 +78,15 @@ const BANK_PATTERNS = {
     indicators: ['capital one', 'capitalone'],
   },
   
+  // American Express patterns
+  amex: {
+    name: 'American Express',
+    transactionPattern: /(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(?:\d{2}\/\d{2}(?:\/\d{2,4})?\s+)?(.+?)\s+\$?([\d,]+\.\d{2})/gm,
+    accountPattern: /Account\s+(?:Number|Ending)[:\s]*(?:\*+)?(\d{4,})/i,
+    periodPattern: /(?:Statement\s+)?(?:Period|Closing\s+Date)[:\s]*(\d{2}\/\d{2}\/\d{2,4})\s*(?:to|-)?\s*(\d{2}\/\d{2}\/\d{2,4})?/i,
+    indicators: ['american express', 'amex', 'americanexpress'],
+  },
+  
   // RBS (Royal Bank of Scotland) patterns - Updated
   rbs: {
     name: 'RBS',
@@ -130,6 +139,16 @@ function parseAmount(amountStr: string): number {
 function formatDate(dateStr: string): string {
   // Handle different date formats
   dateStr = dateStr.trim();
+  
+  // MM/DD/YY format (common in Amex statements)
+  if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2}$/)) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const [month, day, year] = parts;
+      const fullYear = `20${year}`; // Assume 20xx for 2-digit years
+      return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
   
   // MM/DD/YYYY or DD/MM/YYYY format
   if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
@@ -205,6 +224,11 @@ function detectBank(text: string): string {
   if (normalizedText.includes('royal bank of scotland') || normalizedText.includes('rbs')) {
     console.log('Detected bank: RBS (heuristic)');
     return 'rbs';
+  }
+  
+  if (normalizedText.includes('american express') || normalizedText.includes('amex')) {
+    console.log('Detected bank: American Express (heuristic)');
+    return 'amex';
   }
   
   console.log('Could not detect bank, using generic patterns');
@@ -340,6 +364,71 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
     }
     
     console.log(`Found ${transactions.length} Starling transactions`);
+    return transactions;
+  }
+  
+  // For American Express, try specific patterns
+  if (bankKey === 'amex') {
+    // Pattern 1: Standard Amex format with optional posting date
+    const pattern1 = /(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(?:\d{2}\/\d{2}(?:\/\d{2,4})?\s+)?(.+?)\s+\$?([\d,]+\.\d{2})/gm;
+    // Pattern 2: Format with reference numbers
+    const pattern2 = /(\d{2}\/\d{2})\s+(\S.+?)\s+(?:\d+\s+)?\$?([\d,]+\.\d{2})/gm;
+    // Pattern 3: Flexible format
+    const pattern3 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+\$?([\d,]+\.\d{2})(?:\s+CR)?/gm;
+    
+    const patterns = [pattern1, pattern2, pattern3];
+    
+    for (const pattern of patterns) {
+      console.log('Trying Amex pattern...');
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const [fullMatch, dateStr, description, amountStr] = match;
+        
+        // Skip headers, totals, and common non-transaction lines
+        if (description.match(/balance|total|payment|thank you|previous balance|new balance|minimum|credit limit|available credit|finance charge|membership|annual fee/i)) {
+          continue;
+        }
+        
+        try {
+          const amount = parseAmount(amountStr);
+          if (amount === 0 || isNaN(amount)) continue;
+          
+          // For Amex, payments/credits often have "CR" or contain "PAYMENT"
+          const isCredit = fullMatch.includes('CR') || description.toUpperCase().includes('PAYMENT') || description.toUpperCase().includes('CREDIT');
+          const type = isCredit ? 'credit' : 'debit';
+          
+          const classification = classifyTransaction(description, Math.abs(amount), type);
+          
+          const transaction: ParsedTransaction = {
+            id: `${Date.now()}_${transactions.length}`,
+            date: formatDate(dateStr),
+            description: description.trim(),
+            amount: Math.abs(amount),
+            type,
+            category: classification.category,
+            merchant: classification.merchant?.name,
+            isSubscription: classification.isSubscription,
+            confidence: classification.confidence,
+            rawText: fullMatch.trim(),
+          };
+          
+          // Check for duplicates
+          const isDuplicate = transactions.some(t => 
+            t.date === transaction.date && 
+            t.amount === transaction.amount && 
+            t.description.substring(0, 20) === transaction.description.substring(0, 20)
+          );
+          
+          if (!isDuplicate) {
+            transactions.push(transaction);
+          }
+        } catch (error) {
+          console.warn('Failed to parse Amex transaction:', error);
+        }
+      }
+    }
+    
+    console.log(`Found ${transactions.length} Amex transactions`);
     return transactions;
   }
   
