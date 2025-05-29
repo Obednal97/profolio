@@ -1,9 +1,8 @@
 "use client";
-import { useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import type { PropertyFormData, Property } from "@/types/global";
-import React, { useState, useCallback, useMemo } from "react";
 import { BaseModal as Modal } from "@/components/modals/modal";
-import { useUser } from "@/lib/user";
+import { useAuth } from '@/lib/auth';
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,8 +31,22 @@ export default function PropertyManager() {
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
   const [filterType, setFilterType] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"value_desc" | "value_asc" | "rental_desc" | "rental_asc">("value_desc");
-  const { data: user } = useUser();
+  const { user } = useAuth();
   const { formatCurrency } = useAppContext();
+
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  
+  // Use Firebase user data or demo user data
+  const currentUser = user ? {
+    id: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || 'User',
+    email: user.email || ''
+  } : (isDemoMode ? {
+    id: 'demo-user-id',
+    name: 'Demo User',
+    email: 'demo@profolio.com'
+  } : null);
 
   const fetchProperties = useCallback(async () => {
     setLoading(true);
@@ -63,8 +76,8 @@ export default function PropertyManager() {
   }, [fetchProperties]);
 
   const handleSubmit = async (propertyData: Property) => {
-    if (!user) return;
-    setModalError(null);
+    if (!currentUser) return;
+    
     try {
       const { apiCall } = await import('@/lib/mockApi');
       
@@ -74,7 +87,7 @@ export default function PropertyManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method,
-          userId: user.id,
+          userId: currentUser.id,
           ...propertyData,
           ...(editingProperty?.id ? { id: editingProperty.id } : {}),
         }),
@@ -93,7 +106,7 @@ export default function PropertyManager() {
   };
 
   const handleDelete = async (propertyId: string) => {
-    if (!user) return;
+    if (!currentUser) return;
     if (!confirm("Are you sure you want to delete this property?")) return;
 
     try {
@@ -104,7 +117,7 @@ export default function PropertyManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method: "DELETE",
-          userId: user.id,
+          userId: currentUser.id,
           id: propertyId,
         }),
       });
@@ -1020,13 +1033,13 @@ export default function PropertyManager() {
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
               {property.mortgageProvider && (
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-gray-600 dark:text-gray-400 text-xs">Lender</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Lender</span>
                   <span className="text-gray-900 dark:text-white text-xs font-medium">{property.mortgageProvider}</span>
                 </div>
               )}
               {property.mortgageRate && (
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400 text-xs">Rate</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Rate</span>
                   <span className="text-gray-900 dark:text-white text-xs font-medium">{property.mortgageRate}%</span>
                 </div>
               )}

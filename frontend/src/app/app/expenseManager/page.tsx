@@ -1,7 +1,7 @@
 "use client";
 import type { Expense, ExpenseFormData } from "@/types/global";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useUser } from "@/lib/user";
+import { useAuth } from '@/lib/auth';
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
@@ -46,35 +46,56 @@ function ExpenseManager() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [timeRange, setTimeRange] = useState("30");
-  const { data: user } = useUser();
+  const { user } = useAuth();
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  
+  // Use Firebase user data or demo user data
+  const currentUser = user ? {
+    id: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || 'User',
+    email: user.email || ''
+  } : (isDemoMode ? {
+    id: 'demo-user-id',
+    name: 'Demo User',
+    email: 'demo@profolio.com'
+  } : null);
+
   const fetchExpenses = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
       
-      const response = await apiCall("/api/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "READ", userId: "demo-user-id" }),
+      const response = await apiCall('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          method: 'READ', 
+          userId: currentUser.id,
+          days: parseInt(timeRange)
+        }),
       });
-      
+
       const data = await response.json();
       if (data.error) throw new Error(data.error);
+
       setExpenses(data.expenses || []);
-      setError(null); // Clear any previous errors
-    } catch (err) {
-      console.error("Expense fetch error:", err);
-      setError("Failed to load expenses");
+      setError(null);
+    } catch (err: unknown) {
+      console.error('Error loading expenses:', err);
+      setError('Failed to load expenses');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser?.id, timeRange]);
 
   useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
+    if (currentUser?.id) fetchExpenses();
+  }, [currentUser?.id, fetchExpenses]);
 
   // Auto-clear notifications
   useEffect(() => {
@@ -87,63 +108,62 @@ function ExpenseManager() {
     }
   }, [error, success]);
 
-  const handleSubmit = useCallback(
-    async (expenseData: Expense) => {
-      if (!user) return;
-      try {
-        const { apiCall } = await import('@/lib/mockApi');
-        
-        const method = editingExpense ? "UPDATE" : "CREATE";
-        const response = await apiCall("/api/expenses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            method,
-            ...expenseData,
-            id: editingExpense?.id,
-          }),
-        });
-        
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        setShowModal(false);
-        setEditingExpense(null);
-        fetchExpenses();
-      } catch (err) {
-        console.error("Expense save error:", err);
-        setError("Failed to save expense");
-      }
-    },
-    [editingExpense, fetchExpenses, user]
-  );
+  const handleSubmit = useCallback(async (expenseData: Expense) => {
+    if (!currentUser) return;
+    
+    try {
+      const { apiCall } = await import('@/lib/mockApi');
+      
+      const method = editingExpense ? 'UPDATE' : 'CREATE';
+      const response = await apiCall('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          method,
+          ...expenseData,
+          userId: currentUser.id,
+          ...(editingExpense?.id ? { id: editingExpense.id } : {}),
+        }),
+      });
 
-  const handleDelete = useCallback(
-    async (expenseId: string) => {
-      if (!user) return;
-      if (!confirm("Are you sure you want to delete this expense?")) return;
-      try {
-        const { apiCall } = await import('@/lib/mockApi');
-        
-        const response = await apiCall("/api/expenses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            method: "DELETE",
-            userId: user.id,
-            id: expenseId,
-          }),
-        });
-        
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        fetchExpenses();
-      } catch (err) {
-        console.error("Expense deletion error:", err);
-        setError("Failed to delete expense");
-      }
-    },
-    [fetchExpenses, user]
-  );
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      setShowModal(false);
+      setEditingExpense(null);
+      fetchExpenses();
+    } catch (err: unknown) {
+      console.error('Expense save error:', err);
+      setError('Failed to save expense');
+    }
+  }, [editingExpense, currentUser, fetchExpenses]);
+
+  const handleDelete = useCallback(async (expenseId: string) => {
+    if (!currentUser) return;
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+
+    try {
+      const { apiCall } = await import('@/lib/mockApi');
+      
+      const response = await apiCall('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          method: 'DELETE',
+          userId: currentUser.id,
+          id: expenseId,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      fetchExpenses();
+    } catch (err: unknown) {
+      console.error('Expense deletion error:', err);
+      setError('Failed to delete expense');
+    }
+  }, [currentUser, fetchExpenses]);
 
   const handleOpenModal = useCallback(() => {
     setShowModal(true);
@@ -180,7 +200,7 @@ function ExpenseManager() {
           if (values.length >= 3) {
             const expense: Expense = {
               id: Date.now().toString() + i,
-              userId: user?.id || '',
+              userId: currentUser?.id || '',
               category: values[headers.indexOf('category')] || 'Other',
               amount: parseFloat(values[headers.indexOf('amount')] || '0') * 100,
               date: values[headers.indexOf('date')] || new Date().toISOString().split('T')[0],
@@ -212,7 +232,7 @@ function ExpenseManager() {
       // Reset file input
       e.target.value = '';
     }
-  }, [user, handleSubmit, setError, setSuccess, setUploadProgress]);
+  }, [currentUser, handleSubmit, setError, setSuccess, setUploadProgress]);
 
   // Calculate metrics
   const totalExpenses = useMemo(() => {
@@ -286,15 +306,13 @@ function ExpenseManager() {
           }
     );
 
-    const { data: user } = useUser();
-
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if (!user) return;
+      if (!currentUser) return;
       onSubmit({
         ...formData,
         amount: parseFloat(formData.amount) * 100,
-        userId: user?.id ?? "",
+        userId: currentUser.id,
         date: formData.date,
         description: formData.description,
         category: formData.category,

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useEffect, useState } from "react";
-import { useUser } from "@/lib/user";
+import { useAuth } from '@/lib/auth';
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
@@ -37,7 +37,7 @@ const getCryptoIcon = (symbol: string) => {
 
 export default function AssetManager() {
   const [error, setError] = useState<string | null>(null);
-  const { data: user } = useUser();
+  const { user } = useAuth();
   const { formatCurrency } = useAppContext();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +50,20 @@ export default function AssetManager() {
   const [filterType, setFilterType] = useState<string>("all");
   const [showApiConfig, setShowApiConfig] = useState(false);
 
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  
+  // Use Firebase user data or demo user data
+  const currentUser = user ? {
+    id: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || 'User',
+    email: user.email || ''
+  } : (isDemoMode ? {
+    id: 'demo-user-id',
+    name: 'Demo User',
+    email: 'demo@profolio.com'
+  } : null);
+
   const fetchAssets = useCallback(async () => {
     setLoading(true);
     try {
@@ -58,7 +72,7 @@ export default function AssetManager() {
       const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "READ", userId: user?.id || "demo-user-id" }),
+        body: JSON.stringify({ method: "READ", userId: currentUser?.id || "demo-user-id" }),
       });
       
       const data = await response.json();
@@ -71,7 +85,7 @@ export default function AssetManager() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [currentUser?.id]);
 
   useEffect(() => {
       fetchAssets();
@@ -87,7 +101,7 @@ export default function AssetManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method: "GET_HISTORY",
-          userId: user?.id || "demo-user-id",
+          userId: currentUser?.id || "demo-user-id",
           days: timeframe === "max" ? null : parseInt(timeframe),
         }),
       });
@@ -102,7 +116,7 @@ export default function AssetManager() {
     } finally {
       setChartLoading(false);
     }
-  }, [timeframe, user?.id]);
+  }, [timeframe, currentUser?.id]);
 
   useEffect(() => {
       fetchChartData();
@@ -115,7 +129,7 @@ export default function AssetManager() {
 
   const handleDelete = useCallback(
     async (assetId: string) => {
-      if (!user) return;
+      if (!currentUser) return;
       if (!confirm("Are you sure you want to delete this asset?")) return;
       try {
         const { apiCall } = await import('@/lib/mockApi');
@@ -125,7 +139,7 @@ export default function AssetManager() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             method: "DELETE",
-            userId: user.id,
+            userId: currentUser.id,
             id: assetId,
           }),
         });
@@ -138,7 +152,7 @@ export default function AssetManager() {
         setError("Failed to delete asset");
       }
     },
-    [user, fetchAssets]
+    [currentUser, fetchAssets]
   );
 
   const handleOpenModal = useCallback(() => {
@@ -152,7 +166,7 @@ export default function AssetManager() {
 
   const handleSubmit = useCallback(
     async (assetData: Asset) => {
-      if (!user) return;
+      if (!currentUser) return;
       try {
         const { apiCall } = await import('@/lib/mockApi');
         
@@ -162,7 +176,7 @@ export default function AssetManager() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             method,
-            ...(user?.id && { userId: user.id }),
+            ...(currentUser?.id && { userId: currentUser.id }),
             ...assetData,
             id: editingAsset?.id,
           }),
@@ -178,7 +192,7 @@ export default function AssetManager() {
         setError("Failed to save asset");
       }
     },
-    [editingAsset, user, fetchAssets]
+    [editingAsset, currentUser, fetchAssets]
   );
 
   // Calculate metrics
