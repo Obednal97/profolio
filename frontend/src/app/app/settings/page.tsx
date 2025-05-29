@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
@@ -199,19 +199,26 @@ function SettingsPage() {
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
   // Use Firebase user data or demo user data with enhanced Google profile extraction
-  const currentUser = user ? {
-    id: user.uid,
-    name: user.displayName || user.email?.split('@')[0] || 'User',
-    email: user.email || '',
-    phone: user.phoneNumber || '',
-    photoURL: user.photoURL || '',
-  } : (isDemoMode ? {
-    id: 'demo-user-id',
-    name: 'Demo User',
-    email: 'demo@profolio.com',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA'
-  } : null);
+  const currentUser = useMemo(() => {
+    if (user) {
+      return {
+        id: user.uid,
+        name: user.displayName || user.email?.split('@')[0] || 'User',
+        email: user.email || '',
+        phone: user.phoneNumber || '',
+        photoURL: user.photoURL || '',
+      };
+    } else if (isDemoMode) {
+      return {
+        id: 'demo-user-id',
+        name: 'Demo User',
+        email: 'demo@profolio.com',
+        phone: '+1 (555) 123-4567',
+        location: 'San Francisco, CA'
+      };
+    }
+    return null;
+  }, [user, isDemoMode]);
 
   // Profile form state
   const [profileData, setProfileData] = useState({
