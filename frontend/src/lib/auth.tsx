@@ -25,6 +25,67 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to extract and persist Google profile data
+async function extractAndPersistGoogleProfile(user: User) {
+  try {
+    // Check if this is a Google sign-in
+    const isGoogleProvider = user.providerData?.some(provider => provider.providerId === 'google.com');
+    
+    if (!isGoogleProvider) {
+      return; // Not a Google sign-in, skip
+    }
+
+    // Extract additional profile data from Google
+    const profileData = {
+      id: user.uid,
+      name: user.displayName || user.email?.split('@')[0] || 'User',
+      email: user.email || '',
+      phone: (user as { phoneNumber?: string }).phoneNumber || '',
+      photoURL: user.photoURL || '',
+      // Try to extract additional data if available
+      ...(user.providerData?.[0] && {
+        // Some additional Google profile data might be available
+        location: (user as { customClaims?: { location?: string } }).customClaims?.location || '',
+      })
+    };
+
+    // Check if we already have this profile data stored
+    const existingProfile = localStorage.getItem(`user-profile-${user.uid}`);
+    const shouldUpdate = !existingProfile || 
+      (existingProfile && JSON.parse(existingProfile).lastUpdated < Date.now() - 24 * 60 * 60 * 1000); // Update if older than 24 hours
+
+    if (shouldUpdate) {
+      // Save to our user API
+      const { apiCall } = await import('./mockApi');
+      
+      const profileToSave = {
+        ...profileData,
+        lastUpdated: Date.now(),
+        provider: 'google',
+        // Add any additional fields that might be useful
+        emailVerified: user.emailVerified,
+        createdAt: user.metadata.creationTime,
+        lastSignIn: user.metadata.lastSignInTime,
+      };
+
+      await apiCall('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          method: 'UPDATE_PROFILE',
+          userId: user.uid,
+          profileData: profileToSave
+        }),
+      });
+
+      console.log('✅ Google profile data persisted for user:', user.uid);
+    }
+  } catch (error) {
+    console.error('❌ Failed to persist Google profile data:', error);
+    // Don't throw - this shouldn't break the auth flow
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,6 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(user);
           
           if (user) {
+            // Extract and persist Google profile data if this is a Google sign-in
+            await extractAndPersistGoogleProfile(user);
+            
             // Get and store the user token
             const userToken = await getUserToken();
             setToken(userToken);

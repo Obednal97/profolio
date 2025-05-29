@@ -142,6 +142,20 @@ export type User = {
   name?: string;
   role?: "user" | "admin" | "super_admin";
   token?: string;
+  
+  // Extended profile fields (from Google auth or manual entry)
+  phone?: string;
+  location?: string;
+  bio?: string;
+  photoURL?: string;
+  
+  // Authentication metadata
+  provider?: 'google' | 'email' | 'demo';
+  emailVerified?: boolean;
+  createdAt?: string;
+  lastSignIn?: string;
+  lastUpdated?: number;
+  
   preferences?: {
     currency?: string;
     theme?: 'light' | 'dark' | 'system';
