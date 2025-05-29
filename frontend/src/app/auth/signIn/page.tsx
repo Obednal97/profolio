@@ -25,11 +25,20 @@ function SignInPage() {
 
   // Redirect if already authenticated (Firebase user or demo mode)
   useEffect(() => {
+    console.log('Auth state check:', { user: user?.uid, authLoading, isDemoMode });
+    
     // Only redirect if we have a valid user AND we're not in a loading state
     if (!authLoading && ((user && user.uid) || isDemoMode)) {
-      router.push('/app/dashboard');
+      console.log('Redirecting to dashboard...');
+      
+      // Use a small delay to ensure the auth state is fully settled
+      const redirectTimer = setTimeout(() => {
+        window.location.href = '/app/dashboard';
+      }, 100);
+      
+      return () => clearTimeout(redirectTimer);
     }
-  }, [user, authLoading, isDemoMode, router]);
+  }, [user, authLoading, isDemoMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,8 +61,20 @@ function SignInPage() {
     setLoading(true);
 
     try {
-      await signInWithGoogleProvider();
-      router.push('/app/dashboard');
+      const result = await signInWithGoogleProvider();
+      console.log('Google sign-in successful:', result.user.uid);
+      
+      // Primary redirect attempt
+      window.location.href = '/app/dashboard';
+      
+      // Fallback redirect in case the primary one doesn't work
+      setTimeout(() => {
+        if (window.location.pathname === '/auth/signIn') {
+          console.log('Fallback redirect triggered');
+          window.location.replace('/app/dashboard');
+        }
+      }, 1000);
+      
     } catch (err: unknown) {
       console.error('Google sign in error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google';
