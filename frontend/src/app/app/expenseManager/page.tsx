@@ -578,10 +578,17 @@ function ExpenseManager() {
               <p className="text-gray-400 mt-2">Track and manage your spending</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href="/app/expenses/import"
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200 inline-flex items-center justify-center"
+              >
+                <i className="fas fa-file-pdf mr-2"></i>
+                Import Bank Statement
+              </a>
               <div className="relative">
                 <input
                   type="file"
-                  accept=".csv,.pdf"
+                  accept=".csv"
                   onChange={handleFileUpload}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   id="file-upload"
@@ -590,7 +597,7 @@ function ExpenseManager() {
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium shadow-lg px-6 py-3"
                 >
                   <i className="fas fa-upload mr-2"></i>
-                  Upload CSV/PDF
+                  Upload CSV
                 </Button>
               </div>
               <Button
