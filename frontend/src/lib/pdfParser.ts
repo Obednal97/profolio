@@ -1,4 +1,8 @@
-import pdfParse from 'pdf-parse';
+import * as pdfjsLib from 'pdfjs-dist';
+import type { TextItem } from 'pdfjs-dist/types/src/display/api';
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 // Types for parsed transactions
 export interface ParsedTransaction {
@@ -249,9 +253,19 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
   try {
     // Extract text from PDF
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const data = await pdfParse(buffer);
-    const text = data.text;
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    
+    let text = '';
+    
+    // Extract text from all pages
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item) => (item as TextItem).str)
+        .join(' ');
+      text += pageText + '\n';
+    }
     
     if (!text || text.length < 100) {
       throw new Error('PDF appears to be empty or contains no readable text');

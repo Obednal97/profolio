@@ -189,7 +189,7 @@ function ExpenseManager() {
 
     try {
       if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
-        // Handle CSV upload
+        // Handle CSV upload locally
         const text = await file.text();
         const lines = text.split('\n');
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
@@ -219,8 +219,11 @@ function ExpenseManager() {
 
         setSuccess(`Successfully imported ${expenses.length} expenses from CSV`);
       } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        // For PDF, show a message that it's not yet supported
-        setError('PDF parsing is not yet implemented. Please use CSV format for now.');
+        // For PDF files, redirect to the import page
+        setSuccess('Redirecting to PDF import page...');
+        setTimeout(() => {
+          window.location.href = '/app/expenses/import';
+        }, 1000);
       } else {
         setError('Please upload a CSV or PDF file');
       }
@@ -578,31 +581,24 @@ function ExpenseManager() {
               <p className="text-gray-400 mt-2">Track and manage your spending</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href="/app/expenses/import"
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200 inline-flex items-center justify-center"
-              >
-                <i className="fas fa-file-pdf mr-2"></i>
-                Import Bank Statement
-              </a>
               <div className="relative">
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.pdf,application/pdf,text/csv"
                   onChange={handleFileUpload}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   id="file-upload"
                 />
                 <Button
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium shadow-lg px-6 py-3"
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200"
                 >
                   <i className="fas fa-upload mr-2"></i>
-                  Upload CSV
+                  Import Expenses
                 </Button>
               </div>
               <Button
                 onClick={handleOpenModal}
-                className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg px-6 py-3"
+                className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add Expense

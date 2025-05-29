@@ -32,7 +32,7 @@ export type Expense = {
   date: string;
   description: string;
   recurrence: "one-time" | "recurring";
-  frequency?: "Daily" | "Weekly" | "Monthly" | "Yearly";
+  frequency?: "Daily" | "Weekly" | "Biweekly" | "Monthly" | "Quarterly" | "Yearly";
 };
 
 export type ExpenseFormData = {
