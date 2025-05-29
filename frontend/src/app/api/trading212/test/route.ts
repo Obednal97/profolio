@@ -57,38 +57,24 @@ export async function POST(request: NextRequest) {
     // Initialize Trading 212 service
     const trading212 = new Trading212Service(apiKey);
     
-    // Test connection and get account info
-    const accountInfo = await trading212.testConnection();
-    
-    // Get basic account overview for testing (lightweight)
-    const [accountCash, positions, pies] = await Promise.all([
-      trading212.getAccountCash().catch(() => null),
-      trading212.getPortfolio().catch(() => []),
-      trading212.getPies().catch(() => [])
-    ]);
+    // Use the simple test method to avoid rate limiting
+    const testResult = await trading212.testConnectionSimple();
     
     return NextResponse.json({ 
       success: true,
       message: 'Trading 212 API connection successful!',
       accountInfo: {
-        id: accountInfo.id,
-        currencyCode: accountInfo.currencyCode,
+        id: testResult.accountInfo.id,
+        currencyCode: testResult.accountInfo.currencyCode,
         userId: user.userId,
         isDemo: user.isDemo,
       },
-      portfolioSummary: {
-        positionsCount: positions.length,
-        piesCount: pies.length,
-        hasCash: accountCash ? accountCash.free > 0 : false,
-        totalCash: accountCash?.free || 0,
-        totalInvested: accountCash?.invested || 0,
-      },
       apiCapabilities: {
-        canReadPortfolio: positions.length >= 0, // Always true if we got here
-        canReadPies: pies.length >= 0, // Always true if we got here
-        canReadCash: accountCash !== null,
-        hasPositions: positions.length > 0,
-        hasPies: pies.length > 0,
+        canReadPortfolio: testResult.hasPortfolio,
+        canReadPies: testResult.hasPies,
+        canReadCash: testResult.hasCash,
+        hasPositions: testResult.hasPortfolio,
+        hasPies: testResult.hasPies,
       },
       testedAt: new Date().toISOString(),
     });

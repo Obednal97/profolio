@@ -178,6 +178,8 @@ export interface Trading212CurrentOrder {
 export class Trading212Service {
   private apiKey: string;
   private baseUrl = 'https://live.trading212.com/api/v0';
+  private lastRequestTime = 0;
+  private minRequestInterval = 2500; // 2.5 seconds between requests (Trading 212 limit is 2s)
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -188,6 +190,14 @@ export class Trading212Service {
   // ============================================================================
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    // Rate limiting: ensure minimum time between requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const delay = this.minRequestInterval - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
     const url = `${this.baseUrl}${endpoint}`;
     
     const response = await fetch(url, {
@@ -195,9 +205,12 @@ export class Trading212Service {
       headers: {
         'Authorization': this.apiKey,
         'Content-Type': 'application/json',
+        'User-Agent': 'Profolio/1.0',
         ...options?.headers,
       },
     });
+
+    this.lastRequestTime = Date.now();
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -214,6 +227,11 @@ export class Trading212Service {
     }
 
     return response.json();
+  }
+
+  // Helper method to add delays between requests
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // ============================================================================
@@ -559,26 +577,40 @@ export class Trading212Service {
       pieShare: number;
     };
   }>> {
-    const [positions, instruments, accountCash, historicalOrders, pies] = await Promise.all([
-      this.getPortfolio(),
-      this.getInstruments(),
-      this.getAccountCash().catch(() => ({ 
-        free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 
-      })),
-      this.getAllHistoricalOrders().catch(() => []),
-      this.getPies().catch(() => [])
-    ]);
+    // Make requests sequentially to avoid rate limiting
+    console.log('Fetching portfolio positions...');
+    const positions = await this.getPortfolio();
+    
+    console.log('Fetching instruments metadata...');
+    const instruments = await this.getInstruments();
+    
+    console.log('Fetching account cash...');
+    const accountCash = await this.getAccountCash().catch(() => ({ 
+      free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 
+    }));
+    
+    console.log('Fetching pies...');
+    const pies = await this.getPies().catch(() => []);
 
-    // Get detailed pie information
+    // Get detailed pie information sequentially with delays
     const pieDetails = new Map<number, Trading212PieDetails>();
-    for (const pie of pies) {
+    for (let i = 0; i < pies.length; i++) {
+      const pie = pies[i];
       try {
         const details = await this.getPieDetails(pie.id);
         pieDetails.set(pie.id, details);
+        // Small delay between requests (rate limiting is handled in makeRequest)
+        if (i < pies.length - 1) {
+          await this.delay(100);
+        }
       } catch (error) {
         console.warn(`Failed to get details for pie ${pie.id}:`, error);
       }
     }
+
+    // Get historical orders with limited pagination to avoid too many requests
+    console.log('Fetching recent historical orders...');
+    const historicalOrders = await this.getHistoricalOrders({ limit: 50 }).then(response => response.items).catch(() => []);
 
     // Create instrument lookup map
     const instrumentMap = new Map(
@@ -690,6 +722,7 @@ export class Trading212Service {
       });
     }
 
+    console.log(`Successfully processed ${assets.length} assets`);
     return assets;
   }
 
@@ -720,21 +753,25 @@ export class Trading212Service {
       instrumentsCount: number;
     }>;
   }> {
-    const [positions, instruments, accountCash, pies] = await Promise.all([
-      this.getPortfolio(),
-      this.getInstruments(),
-      this.getAccountCash().catch(() => ({ 
-        free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 
-      })),
-      this.getPies().catch(() => [])
-    ]);
+    // Make requests sequentially to avoid rate limiting
+    const positions = await this.getPortfolio();
+    const instruments = await this.getInstruments();
+    const accountCash = await this.getAccountCash().catch(() => ({ 
+      free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 
+    }));
+    const pies = await this.getPies().catch(() => []);
 
-    // Get detailed pie information
+    // Get detailed pie information sequentially with delays
     const pieDetails = new Map<number, Trading212PieDetails>();
-    for (const pie of pies) {
+    for (let i = 0; i < pies.length; i++) {
+      const pie = pies[i];
       try {
         const details = await this.getPieDetails(pie.id);
         pieDetails.set(pie.id, details);
+        // Small delay between requests (rate limiting is handled in makeRequest)
+        if (i < pies.length - 1) {
+          await this.delay(100);
+        }
       } catch (error) {
         console.warn(`Failed to get details for pie ${pie.id}:`, error);
       }
@@ -892,13 +929,12 @@ export class Trading212Service {
     totalValue: number;
     totalPnL: number;
   }> {
-    const [accountInfo, cash, positions, pies, currentOrders] = await Promise.all([
-      this.testConnection(),
-      this.getAccountCash(),
-      this.getPortfolio(),
-      this.getPies().catch(() => []),
-      this.getCurrentOrders().catch(() => [])
-    ]);
+    // Make requests sequentially to avoid rate limiting
+    const accountInfo = await this.testConnection();
+    const cash = await this.getAccountCash();
+    const positions = await this.getPortfolio();
+    const pies = await this.getPies().catch(() => []);
+    const currentOrders = await this.getCurrentOrders().catch(() => []);
 
     const totalValue = positions.reduce((sum, pos) => sum + (pos.quantity * pos.currentPrice), 0) + cash.free;
 
@@ -910,6 +946,35 @@ export class Trading212Service {
       currentOrdersCount: currentOrders.length,
       totalValue,
       totalPnL: cash.result,
+    };
+  }
+
+  /**
+   * Simple test method that makes minimal API calls
+   */
+  async testConnectionSimple(): Promise<{
+    accountInfo: Trading212AccountInfo;
+    hasPortfolio: boolean;
+    hasPies: boolean;
+    hasCash: boolean;
+  }> {
+    // Test basic connection
+    const accountInfo = await this.testConnection();
+    
+    // Test portfolio access with minimal data
+    const positions = await this.getPortfolio().catch(() => []);
+    
+    // Test pies access
+    const pies = await this.getPies().catch(() => []);
+    
+    // Test cash access
+    const cash = await this.getAccountCash().catch(() => null);
+
+    return {
+      accountInfo,
+      hasPortfolio: positions.length >= 0,
+      hasPies: pies.length >= 0,
+      hasCash: cash !== null,
     };
   }
 } 
