@@ -81,7 +81,7 @@ const BANK_PATTERNS = {
   // American Express patterns
   amex: {
     name: 'American Express',
-    transactionPattern: /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm,
+    transactionPattern: /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+(?:\.\d{2})?)$/gm,
     accountPattern: /(?:Account|Membership)\s+(?:Number|Ending)[:\s]*(?:\*+)?(\d{4,})/i,
     periodPattern: /(?:Statement\s+)?(?:Period|Closing\s+Date|Date)[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:to|-|–)?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})?/i,
     indicators: ['american express', 'amex', 'americanexpress'],
@@ -132,8 +132,20 @@ function normalizeText(text: string): string {
 function parseAmount(amountStr: string): number {
   // Remove currency symbols (both $ and £) and convert to number
   const cleanAmount = amountStr.replace(/[£$,\s]/g, '');
+  
+  // If the amount has no decimal point, treat it as whole pounds/dollars and convert to pence
+  if (!cleanAmount.includes('.')) {
+    const amount = parseInt(cleanAmount);
+    const result = amount * 100;
+    console.log(`Parsing integer amount: "${amountStr}" -> "${cleanAmount}" -> ${amount} -> ${result} pence`);
+    return result; // Convert whole pounds to pence (e.g., "5" -> 500 pence)
+  }
+  
+  // If it has decimal points, it's already in pounds/dollars format
   const amount = parseFloat(cleanAmount);
-  return Math.round(amount * 100); // Convert to cents/pence
+  const result = Math.round(amount * 100);
+  console.log(`Parsing decimal amount: "${amountStr}" -> "${cleanAmount}" -> ${amount} -> ${result} pence`);
+  return result; // Convert to cents/pence (e.g., "3.00" -> 300 pence)
 }
 
 function formatDate(dateStr: string): string {
@@ -409,14 +421,14 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
     
     // More flexible patterns based on actual PDF text extraction
     const patterns = [
-      // Pattern 1: Corrected Amex format with both dates
-      /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm,
+      // Pattern 1: Corrected Amex format with both dates (handles both decimal and integer amounts)
+      /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+(?:\.\d{2})?)$/gm,
       
       // Pattern 2: Single date format (fallback)
-      /([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})$/gm,
+      /([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+(?:\.\d{2})?)$/gm,
       
       // Pattern 3: Very flexible - any amount of whitespace
-      /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+\.\d{2})\s*$/gm,
+      /([A-Z][a-z]{2} \d{1,2})\s+([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+(\d+(?:\.\d{2})?)\s*$/gm,
     ];
     
     for (const [patternIndex, pattern] of patterns.entries()) {
