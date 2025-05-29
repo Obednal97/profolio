@@ -81,9 +81,9 @@ const BANK_PATTERNS = {
   // American Express patterns
   amex: {
     name: 'American Express',
-    transactionPattern: /(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(?:\d{2}\/\d{2}(?:\/\d{2,4})?\s+)?(.+?)\s+\$?([\d,]+\.\d{2})/gm,
-    accountPattern: /Account\s+(?:Number|Ending)[:\s]*(?:\*+)?(\d{4,})/i,
-    periodPattern: /(?:Statement\s+)?(?:Period|Closing\s+Date)[:\s]*(\d{2}\/\d{2}\/\d{2,4})\s*(?:to|-)?\s*(\d{2}\/\d{2}\/\d{2,4})?/i,
+    transactionPattern: /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(?:\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\s+)?(.+?)\s+[£$]?([\d,]+\.\d{2})/gm,
+    accountPattern: /(?:Account|Membership)\s+(?:Number|Ending)[:\s]*(?:\*+)?(\d{4,})/i,
+    periodPattern: /(?:Statement\s+)?(?:Period|Closing\s+Date|Date)[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:to|-|–)?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})?/i,
     indicators: ['american express', 'amex', 'americanexpress'],
   },
   
@@ -119,7 +119,7 @@ const BANK_PATTERNS = {
     name: 'Unknown Bank',
     transactionPattern: /(\d{1,2}[\/\s]\w{3}[\/\s]\d{2,4}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.+?)\s+([-]?[£$]?[\d,]+\.?\d{0,2})/gm,
     accountPattern: /(?:Account|Acct)(?:\s+Number)?[:\s]*(\d+)/i,
-    periodPattern: /(?:Statement\s+)?Period[:\s]*(\d{1,2}[\/\s]\w{3}[\/\s]\d{2,4}|\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:to|-)?\s*(\d{1,2}[\/\s]\w{3}[\/\s]\d{2,4}|\d{1,2}\/\d{1,2}\/\d{2,4})/i,
+    periodPattern: /(?:Statement\s+)?Period[:\s]*(\d{1,2}[\/\s]\w{3}[\/\s]\d{2,4}|\d{1,2}\/\d{1,2}\/\d{2,4})/i,
     indicators: [],
   },
 };
@@ -204,12 +204,33 @@ function detectBank(text: string): string {
   // Check for bank indicators in the first 500 characters
   const headerText = normalizedText.substring(0, 500);
   
+  // Check for American Express first (most specific)
+  if (headerText.includes('american express') || normalizedText.includes('american express')) {
+    console.log('Detected bank: American Express (header match)');
+    return 'amex';
+  }
+  
+  // Check for exact word matches in header
   for (const [bankKey, bank] of Object.entries(BANK_PATTERNS)) {
     if (bankKey === 'generic') continue;
     
     for (const indicator of bank.indicators) {
-      if (headerText.includes(indicator) || normalizedText.includes(indicator)) {
-        console.log(`Detected bank: ${bank.name} (matched: ${indicator})`);
+      // Use word boundaries for more precise matching
+      const wordBoundaryRegex = new RegExp(`\\b${indicator.replace(/\s+/g, '\\s+')}\\b`, 'i');
+      if (wordBoundaryRegex.test(headerText)) {
+        console.log(`Detected bank: ${bank.name} (word boundary match: ${indicator})`);
+        return bankKey;
+      }
+    }
+  }
+  
+  // Fallback to substring matching for banks that might not have clear word boundaries
+  for (const [bankKey, bank] of Object.entries(BANK_PATTERNS)) {
+    if (bankKey === 'generic') continue;
+    
+    for (const indicator of bank.indicators) {
+      if (headerText.includes(indicator)) {
+        console.log(`Detected bank: ${bank.name} (substring match: ${indicator})`);
         return bankKey;
       }
     }
@@ -224,11 +245,6 @@ function detectBank(text: string): string {
   if (normalizedText.includes('royal bank of scotland') || normalizedText.includes('rbs')) {
     console.log('Detected bank: RBS (heuristic)');
     return 'rbs';
-  }
-  
-  if (normalizedText.includes('american express') || normalizedText.includes('amex')) {
-    console.log('Detected bank: American Express (heuristic)');
-    return 'amex';
   }
   
   console.log('Could not detect bank, using generic patterns');
@@ -369,32 +385,53 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
   
   // For American Express, try specific patterns
   if (bankKey === 'amex') {
-    // Pattern 1: Standard Amex format with optional posting date
-    const pattern1 = /(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(?:\d{2}\/\d{2}(?:\/\d{2,4})?\s+)?(.+?)\s+\$?([\d,]+\.\d{2})/gm;
-    // Pattern 2: Format with reference numbers
-    const pattern2 = /(\d{2}\/\d{2})\s+(\S.+?)\s+(?:\d+\s+)?\$?([\d,]+\.\d{2})/gm;
-    // Pattern 3: Flexible format
-    const pattern3 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+\$?([\d,]+\.\d{2})(?:\s+CR)?/gm;
+    console.log('Parsing American Express statement...');
     
-    const patterns = [pattern1, pattern2, pattern3];
+    // Pattern 1: Standard UK Amex format: DD/MM/YY description £amount
+    const pattern1 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+£([\d,]+\.\d{2})/gm;
+    // Pattern 2: US Amex format: MM/DD/YY description $amount
+    const pattern2 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+\$([\d,]+\.\d{2})/gm;
+    // Pattern 3: With posting date: DD/MM/YY DD/MM/YY description amount
+    const pattern3 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\s+(.+?)\s+[£$]([\d,]+\.\d{2})/gm;
+    // Pattern 4: Flexible format with optional CR indicator
+    const pattern4 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+[£$]?([\d,]+\.\d{2})(?:\s+CR)?/gm;
+    // Pattern 5: Transaction lines without currency symbol
+    const pattern5 = /(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.+?)\s+([\d,]+\.\d{2})\s*$/gm;
     
-    for (const pattern of patterns) {
-      console.log('Trying Amex pattern...');
+    const patterns = [pattern1, pattern2, pattern3, pattern4, pattern5];
+    
+    for (const [index, pattern] of patterns.entries()) {
+      console.log(`Trying Amex pattern ${index + 1}...`);
       let match;
+      let patternMatches = 0;
+      
       while ((match = pattern.exec(text)) !== null) {
+        patternMatches++;
         const [fullMatch, dateStr, description, amountStr] = match;
         
+        console.log(`Pattern ${index + 1} matched:`, fullMatch);
+        
         // Skip headers, totals, and common non-transaction lines
-        if (description.match(/balance|total|payment|thank you|previous balance|new balance|minimum|credit limit|available credit|finance charge|membership|annual fee/i)) {
+        if (description.match(/balance|total|payment|thank you|previous balance|new balance|minimum|credit limit|available credit|finance charge|membership|annual fee|summary|statement|page|prepared for|account|closing date|direct debit/i)) {
+          console.log('Skipping header/summary line:', description);
+          continue;
+        }
+        
+        // Skip very short descriptions that are likely not transactions
+        if (description.trim().length < 3) {
+          console.log('Skipping short description:', description);
           continue;
         }
         
         try {
           const amount = parseAmount(amountStr);
-          if (amount === 0 || isNaN(amount)) continue;
+          if (amount === 0 || isNaN(amount)) {
+            console.log('Skipping zero/invalid amount:', amountStr);
+            continue;
+          }
           
           // For Amex, payments/credits often have "CR" or contain "PAYMENT"
-          const isCredit = fullMatch.includes('CR') || description.toUpperCase().includes('PAYMENT') || description.toUpperCase().includes('CREDIT');
+          const isCredit = fullMatch.includes('CR') || description.toUpperCase().includes('PAYMENT') || description.toUpperCase().includes('CREDIT') || description.toUpperCase().includes('REFUND');
           const type = isCredit ? 'credit' : 'debit';
           
           const classification = classifyTransaction(description, Math.abs(amount), type);
@@ -421,14 +458,19 @@ function parseTransactions(text: string, bankKey: string): ParsedTransaction[] {
           
           if (!isDuplicate) {
             transactions.push(transaction);
+            console.log('Added Amex transaction:', transaction);
+          } else {
+            console.log('Skipping duplicate transaction');
           }
         } catch (error) {
           console.warn('Failed to parse Amex transaction:', error);
         }
       }
+      
+      console.log(`Pattern ${index + 1} found ${patternMatches} matches`);
     }
     
-    console.log(`Found ${transactions.length} Amex transactions`);
+    console.log(`Found ${transactions.length} Amex transactions total`);
     return transactions;
   }
   
