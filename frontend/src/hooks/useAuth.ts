@@ -1,6 +1,7 @@
 import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebase } from '../lib/firebase';
 import { useEffect, useState } from 'react';
+import { initializeDemoData } from '@/lib/demoData';
 
 // Development bypass flag - set to false for proper authentication
 const BYPASS_AUTH = false;
@@ -68,8 +69,7 @@ export function useAuth() {
       
       // Populate demo data
       try {
-        const { populateDemoData } = await import('@/lib/demoData');
-        await populateDemoData(DEMO_USER.id);
+        await initializeDemoData();
         console.log('Demo data populated successfully');
       } catch (error) {
         console.error('Failed to populate demo data:', error);
