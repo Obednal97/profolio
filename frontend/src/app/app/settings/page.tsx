@@ -220,72 +220,28 @@ function SettingsPage() {
     return null;
   }, [user, isDemoMode]);
 
-  // Profile form state
-  const [profileData, setProfileData] = useState({
+  // Profile form state - initialize directly from currentUser
+  const [profileData, setProfileData] = useState(() => ({
     name: "",
     email: "",
     phone: "",
     bio: "",
     location: "",
-  });
-  const [profileDataLoaded, setProfileDataLoaded] = useState(false);
+  }));
 
-  // Load persisted profile data when currentUser is available
+  // Update profile data when currentUser changes
   useEffect(() => {
-    const loadProfileData = async () => {
-      if (!currentUser?.id || profileDataLoaded) return;
-      
-      try {
-        // First try to load persisted profile data from our API
-        const { apiCall } = await import('@/lib/mockApi');
-        const response = await apiCall('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            method: 'GET_PROFILE_FROM_STORAGE',
-            userId: currentUser.id
-          }),
-        });
-        
-        const data = await response.json();
-        
-        if (data.user && !data.error) {
-          // Use persisted data if available
-          setProfileData({
-            name: data.user.name || currentUser.name || "User",
-            email: data.user.email || currentUser.email || "",
-            phone: data.user.phone || "",
-            location: data.user.location || "",
-            bio: data.user.bio || "",
-          });
-        } else {
-          // Fallback to Firebase user data if no persisted data
-          setProfileData({
-            name: currentUser.name || "User",
-            email: currentUser.email || "",
-            phone: currentUser.phone || "",
-            location: currentUser.location || "",
-            bio: "",
-          });
-        }
-        
-        setProfileDataLoaded(true);
-      } catch (error) {
-        console.error('Failed to load profile data:', error);
-        // Fallback to Firebase user data
-        setProfileData({
-          name: currentUser.name || "User",
-          email: currentUser.email || "",
-          phone: currentUser.phone || "",
-          location: currentUser.location || "",
-          bio: "",
-        });
-        setProfileDataLoaded(true);
-      }
-    };
-
-    loadProfileData();
-  }, [currentUser?.id]);
+    if (currentUser) {
+      console.log('Updating profile data for user:', currentUser.id);
+      setProfileData({
+        name: currentUser.name || "User",
+        email: currentUser.email || "",
+        phone: currentUser.phone || "",
+        location: currentUser.location || "",
+        bio: "",
+      });
+    }
+  }, [currentUser]);
 
   // Preferences state
   const [preferences, setPreferences] = useState({
@@ -696,7 +652,7 @@ function SettingsPage() {
   );
 
   // Show loading if no user data is available or profile data is still loading
-  if (!currentUser || !profileDataLoaded) {
+  if (!currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
