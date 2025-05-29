@@ -21,6 +21,13 @@ export default function ExpenseImportPage() {
   const currentUser = user || (isDemoMode ? { uid: 'demo-user-id' } : null);
 
   const handleParsed = (result: ParseResult) => {
+    console.log('Parse result:', result);
+    
+    // Show warning if very few transactions found
+    if (result.transactions.length < 5 && result.transactions.length > 0) {
+      result.errors.push(`Only ${result.transactions.length} transactions found. The PDF might not be fully parsed.`);
+    }
+    
     setParseResult(result);
     setCurrentStep('review');
     setError(null);
@@ -29,6 +36,9 @@ export default function ExpenseImportPage() {
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
     setParseResult(null);
+    
+    // Log error for debugging
+    console.error('Import error:', errorMessage);
   };
 
   const handleSave = useCallback(async (selectedTransactions: ParsedTransaction[]) => {
