@@ -332,7 +332,7 @@ export default function PropertyManager() {
             >
               <p className="text-red-400 flex items-center">
                 <i className="fas fa-exclamation-circle mr-2"></i>
-                {error}
+              {error}
               </p>
             </motion.div>
           )}
@@ -359,12 +359,12 @@ export default function PropertyManager() {
                 />
               </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Property Type
-                </label>
-                <select
-                  value={formData.propertyType}
+                Property Type
+              </label>
+              <select
+                value={formData.propertyType}
                   onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                 >
@@ -372,10 +372,10 @@ export default function PropertyManager() {
                   <option value="commercial" className="bg-white dark:bg-gray-800">Commercial</option>
                   <option value="industrial" className="bg-white dark:bg-gray-800">Industrial</option>
                   <option value="land" className="bg-white dark:bg-gray-800">Land</option>
-                </select>
-              </div>
+              </select>
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Ownership Type
                 </label>
@@ -392,20 +392,20 @@ export default function PropertyManager() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
+                Status
+              </label>
+              <select
+                value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                 >
                   <option value="owned" className="bg-white dark:bg-gray-800">Owned</option>
                   <option value="rented" className="bg-white dark:bg-gray-800">Rented Out</option>
                   <option value="listed" className="bg-white dark:bg-gray-800">Listed for Sale</option>
-                </select>
+              </select>
               </div>
             </div>
-          </div>
+            </div>
 
           {/* Property Details */}
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 sm:p-6">
@@ -418,7 +418,7 @@ export default function PropertyManager() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Bedrooms
-                </label>
+              </label>
                 <input
                   type="number"
                   min="0"
@@ -426,10 +426,10 @@ export default function PropertyManager() {
                   onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                   placeholder="3"
-                />
-              </div>
+              />
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Bathrooms
                 </label>
@@ -501,23 +501,23 @@ export default function PropertyManager() {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Purchase Price
-                    </label>
+                Purchase Price
+              </label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.purchasePrice}
+              <input
+                type="number"
+                min="0"
+                value={formData.purchasePrice}
                         onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
                         className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                         placeholder="500000"
-                        required
-                      />
+                required
+              />
                     </div>
-                  </div>
+            </div>
 
-                  <div>
+            <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Purchase Date
                     </label>
@@ -596,24 +596,24 @@ export default function PropertyManager() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Current Value
-                </label>
+                Current Value
+              </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.currentValue}
+              <input
+                type="number"
+                min="0"
+                value={formData.currentValue}
                     onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
                     className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                     placeholder="550000"
-                    required
-                  />
+                required
+              />
                 </div>
-              </div>
+            </div>
 
               {formData.status === 'rented' && (
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Monthly Rental Income
                   </label>
@@ -644,38 +644,38 @@ export default function PropertyManager() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Mortgage Amount
-                  </label>
+                Mortgage Amount
+              </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.mortgageAmount}
+              <input
+                type="number"
+                min="0"
+                value={formData.mortgageAmount}
                       onChange={(e) => setFormData({ ...formData, mortgageAmount: e.target.value })}
                       className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                       placeholder="400000"
                     />
                   </div>
-                </div>
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Interest Rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
+              </label>
+              <input
+                type="number"
+                step="0.01"
                     min="0"
                     max="20"
-                    value={formData.mortgageRate}
+                value={formData.mortgageRate}
                     onChange={(e) => setFormData({ ...formData, mortgageRate: e.target.value })}
                     className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                     placeholder="3.5"
-                  />
-                </div>
+              />
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Term (years)
                   </label>
@@ -692,26 +692,26 @@ export default function PropertyManager() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Monthly Payment
-                  </label>
+                Monthly Payment
+              </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.monthlyPayment}
+              <input
+                type="number"
+                min="0"
+                value={formData.monthlyPayment}
                       onChange={(e) => setFormData({ ...formData, monthlyPayment: e.target.value })}
                       className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                       placeholder="2000"
                     />
                   </div>
-                </div>
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Mortgage Start Date
-                  </label>
-                  <input
+              </label>
+              <input
                     type="date"
                     value={formData.mortgageStartDate}
                     onChange={(e) => setFormData({ ...formData, mortgageStartDate: e.target.value })}
@@ -750,20 +750,20 @@ export default function PropertyManager() {
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                   <input
-                    type="number"
-                    min="0"
+                type="number"
+                min="0"
                     value={formData.propertyTaxes}
                     onChange={(e) => setFormData({ ...formData, propertyTaxes: e.target.value })}
                     className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
                     placeholder="500"
                   />
                 </div>
-              </div>
+            </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Insurance
-                </label>
+              </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                   <input
@@ -820,13 +820,13 @@ export default function PropertyManager() {
               Notes
             </h4>
             
-            <textarea
-              value={formData.notes}
+              <textarea
+                value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
-              rows={3}
+                rows={3}
               placeholder="Additional information about the property..."
-            />
+              />
           </div>
 
           <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -880,7 +880,7 @@ export default function PropertyManager() {
 
     const netCashFlow = (property.rentalIncome ?? 0) - totalMonthlyCosts;
 
-    return (
+  return (
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.9 }}
@@ -960,7 +960,7 @@ export default function PropertyManager() {
 
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div>
+    <div>
               <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Current Value</p>
               <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
                 {formatCurrency(property.currentValue ?? 0)}

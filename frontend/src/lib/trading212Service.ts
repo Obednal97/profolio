@@ -184,8 +184,8 @@ export interface Trading212CurrentOrder {
 export class Trading212Service {
   private apiKey: string;
   private baseUrl = 'https://live.trading212.com/api/v0';
-  private lastRequestTime = 0;
-  private minRequestInterval = 2500; // 2.5 seconds between requests (Trading 212 limit is 2s)
+  private requestQueue: Promise<unknown> = Promise.resolve();
+  private requestTimeout = 30000; // 30 seconds timeout for each request
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -196,98 +196,120 @@ export class Trading212Service {
   // ============================================================================
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    // Rate limiting: ensure minimum time between requests
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-    if (timeSinceLastRequest < this.minRequestInterval) {
-      const delay = this.minRequestInterval - timeSinceLastRequest;
-      console.log(`⏱️ Rate limiting: waiting ${delay}ms before ${endpoint}`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-    
-    const url = `${this.baseUrl}${endpoint}`;
-    console.log(`🔄 Making request to: ${endpoint}`);
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Authorization': this.apiKey,
+    // Queue requests to ensure they run in series
+    return this.requestQueue = this.requestQueue.then(async () => {
+      const url = `${this.baseUrl}${endpoint}`;
+      console.log(`🔄 Making request to: ${endpoint}`);
+      
+      // Enhanced logging for debugging
+      const requestHeaders = {
+        'Authorization': this.apiKey, // Trading 212 expects just the API key, not "Bearer {key}"
         'Content-Type': 'application/json',
         'User-Agent': 'Profolio/1.0',
         ...options?.headers,
-      },
-    });
-
-    this.lastRequestTime = Date.now();
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = `Trading 212 API error: ${response.status} ${response.statusText}`;
-      let errorDetails = '';
+      };
       
-      // Enhanced error logging
-      console.error(`❌ API Error on ${endpoint}:`, {
-        status: response.status,
-        statusText: response.statusText,
+      console.log(`📤 Request details:`, {
         url,
+        method: options?.method || 'GET',
         headers: {
-          'content-type': response.headers.get('content-type'),
-          'retry-after': response.headers.get('retry-after'),
-          'x-ratelimit-reset': response.headers.get('x-ratelimit-reset'),
-          'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
+          ...requestHeaders,
+          'Authorization': `${this.apiKey.substring(0, 8)}...` // Mask API key for security
         },
-        body: errorText
+        bodyLength: options?.body ? (options.body as string).length : 0
       });
       
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, this.requestTimeout);
+      
       try {
-        const errorData = JSON.parse(errorText);
-        if (errorData.message) {
-          errorMessage += ` - ${errorData.message}`;
-          errorDetails = errorData.message;
-        }
-      } catch {
-        if (errorText) {
-          errorMessage += ` - ${errorText}`;
-          errorDetails = errorText;
-        }
-      }
-
-      // Specific rate limit error handling
-      if (response.status === 429) {
-        const retryAfter = response.headers.get('Retry-After');
-        const rateLimitReset = response.headers.get('X-RateLimit-Reset');
-        
-        console.error(`🚫 Rate limit exceeded on ${endpoint}:`, {
-          retryAfter,
-          rateLimitReset,
-          timeSinceLastRequest,
-          minInterval: this.minRequestInterval
+        const response = await fetch(url, {
+          ...options,
+          headers: requestHeaders,
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorMessage = `Trading 212 API error: ${response.status} ${response.statusText}`;
+          let errorDetails = '';
+          
+          // Enhanced error logging
+          console.error(`❌ API Error on ${endpoint}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            url,
+            headers: {
+              'content-type': response.headers.get('content-type'),
+              'retry-after': response.headers.get('retry-after'),
+              'x-ratelimit-reset': response.headers.get('x-ratelimit-reset'),
+              'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
+            },
+            body: errorText
+          });
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.message) {
+              errorMessage += ` - ${errorData.message}`;
+              errorDetails = errorData.message;
+            }
+          } catch {
+            if (errorText) {
+              errorMessage += ` - ${errorText}`;
+              errorDetails = errorText;
+            }
+          }
+
+          // Specific rate limit error handling
+          if (response.status === 429) {
+            const retryAfter = response.headers.get('Retry-After');
+            const rateLimitReset = response.headers.get('X-RateLimit-Reset');
+            
+            console.error(`🚫 Rate limit exceeded on ${endpoint}:`, {
+              retryAfter,
+              rateLimitReset
+            });
+            
+            errorMessage = `Rate limit exceeded on ${endpoint}. `;
+            if (retryAfter) {
+              errorMessage += `Retry after ${retryAfter} seconds. `;
+            }
+            if (rateLimitReset) {
+              errorMessage += `Rate limit resets at ${new Date(parseInt(rateLimitReset) * 1000).toISOString()}. `;
+            }
+            errorMessage += `Requests are now queued sequentially to prevent further rate limiting.`;
+          }
+
+          const error = new Error(errorMessage) as Trading212ApiError;
+          error.status = response.status;
+          error.endpoint = endpoint;
+          error.details = errorDetails;
+          throw error;
+        }
+
+        console.log(`✅ Success: ${endpoint}`);
+        return response.json();
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
         
-        errorMessage = `Rate limit exceeded on ${endpoint}. `;
-        if (retryAfter) {
-          errorMessage += `Retry after ${retryAfter} seconds. `;
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          const timeoutError = new Error(`Request timeout after ${this.requestTimeout}ms on ${endpoint}`) as Trading212ApiError;
+          timeoutError.status = 408;
+          timeoutError.endpoint = endpoint;
+          timeoutError.details = 'Request timed out';
+          console.error(`⏰ Request timeout on ${endpoint}`);
+          throw timeoutError;
         }
-        if (rateLimitReset) {
-          errorMessage += `Rate limit resets at ${new Date(parseInt(rateLimitReset) * 1000).toISOString()}. `;
-        }
-        errorMessage += `Consider increasing the request interval (currently ${this.minRequestInterval}ms).`;
+        
+        throw fetchError;
       }
-
-      const error = new Error(errorMessage) as Trading212ApiError;
-      error.status = response.status;
-      error.endpoint = endpoint;
-      error.details = errorDetails;
-      throw error;
-    }
-
-    console.log(`✅ Success: ${endpoint}`);
-    return response.json();
-  }
-
-  // Helper method to add delays between requests
-  private async delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    });
   }
 
   // ============================================================================
@@ -648,17 +670,14 @@ export class Trading212Service {
     console.log('Fetching pies...');
     const pies = await this.getPies().catch(() => []);
 
-    // Get detailed pie information sequentially with delays
+    // Get detailed pie information sequentially
     const pieDetails = new Map<number, Trading212PieDetails>();
     for (let i = 0; i < pies.length; i++) {
       const pie = pies[i];
       try {
         const details = await this.getPieDetails(pie.id);
         pieDetails.set(pie.id, details);
-        // Small delay between requests (rate limiting is handled in makeRequest)
-        if (i < pies.length - 1) {
-          await this.delay(100);
-        }
+        // Requests are now automatically queued sequentially
       } catch (error) {
         console.warn(`Failed to get details for pie ${pie.id}:`, error);
       }
@@ -817,17 +836,14 @@ export class Trading212Service {
     }));
     const pies = await this.getPies().catch(() => []);
 
-    // Get detailed pie information sequentially with delays
+    // Get detailed pie information sequentially
     const pieDetails = new Map<number, Trading212PieDetails>();
     for (let i = 0; i < pies.length; i++) {
       const pie = pies[i];
       try {
         const details = await this.getPieDetails(pie.id);
         pieDetails.set(pie.id, details);
-        // Small delay between requests (rate limiting is handled in makeRequest)
-        if (i < pies.length - 1) {
-          await this.delay(100);
-        }
+        // Requests are now automatically queued sequentially
       } catch (error) {
         console.warn(`Failed to get details for pie ${pie.id}:`, error);
       }

@@ -125,7 +125,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased min-h-screen flex flex-col`}
       >
         <ThemeProvider defaultTheme="system">
-          <LayoutWrapper>{children}</LayoutWrapper>
+        <LayoutWrapper>{children}</LayoutWrapper>
           <PWAInstallPrompt />
         </ThemeProvider>
       </body>
