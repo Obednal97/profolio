@@ -28,12 +28,12 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
     console.log('CSV headers:', headers);
     
     // Map headers to indices (handle different CSV formats)
-    const dateIndex = headers.findIndex(h => h.includes('date') || h.includes('time'));
+    const dateIndex = headers.findIndex(h => h.includes('date') || h.includes('time') || h.includes('transaction date'));
     const typeIndex = headers.findIndex(h => h.includes('type') || h.includes('transaction type'));
     const nameIndex = headers.findIndex(h => h.includes('name') || h.includes('description') || h.includes('merchant'));
     const moneyOutIndex = headers.findIndex(h => h.includes('money out') || h.includes('debit') || h.includes('amount out'));
     const moneyInIndex = headers.findIndex(h => h.includes('money in') || h.includes('credit') || h.includes('amount in'));
-    const amountIndex = headers.findIndex(h => h.includes('amount') && !h.includes('out') && !h.includes('in'));
+    const amountIndex = headers.findIndex(h => (h.includes('amount') && !h.includes('out') && !h.includes('in')) || h.includes('amount (£)'));
 
     console.log('Column indices:', { dateIndex, nameIndex, moneyOutIndex, moneyInIndex, amountIndex });
 
@@ -66,10 +66,19 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
             isDebit = false;
           }
         } else if (amountIndex >= 0) {
-          // Single amount column (positive/negative)
+          // Single amount column (positive/negative or always positive for Amex)
           const amount = parseFloat(cleanValues[amountIndex] || '0');
           transactionAmount = Math.abs(amount) * 100;
-          isDebit = amount < 0;
+          
+          // For Amex CSV, most transactions are debits unless specifically marked as credits
+          isDebit = amount < 0 ? false : true; // Amex typically shows positive amounts as debits
+          
+          // Check if it's a credit based on description
+          if (name.toLowerCase().includes('payment') || 
+              name.toLowerCase().includes('credit') || 
+              name.toLowerCase().includes('refund')) {
+            isDebit = false;
+          }
         }
 
         // Skip pot transfers and other non-spending transactions
@@ -79,7 +88,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
           continue;
         }
 
-        if (name) {
+        if (name && transactionAmount > 0) {
           // Use the classifier for better categorization
           const { classifyTransaction } = await import('@/lib/transactionClassifier');
           const classification = classifyTransaction(name, transactionAmount, isDebit ? 'debit' : 'credit');
@@ -115,6 +124,23 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
   };
 
   const formatDateFromCSV = (dateStr: string): string => {
+    // Handle American Express format: "Apr 15" (month abbreviation + day)
+    if (dateStr.match(/^\w{3}\s+\d{1,2}$/)) {
+      const [monthStr, day] = dateStr.split(/\s+/);
+      const currentYear = new Date().getFullYear();
+      
+      const months: Record<string, string> = {
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+        'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+        'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+      };
+      
+      const month = months[monthStr.toLowerCase()];
+      if (month) {
+        return `${currentYear}-${month}-${day.padStart(2, '0')}`;
+      }
+    }
+    
     // Handle DD/MM/YYYY format (UK)
     if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
       const [day, month, year] = dateStr.split('/');
