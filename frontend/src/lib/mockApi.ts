@@ -106,8 +106,11 @@ export const mockApi = {
     async getHistory(userId: string, days: number = 30) {
       await new Promise(resolve => setTimeout(resolve, API_DELAY));
       
-      // Generate historical data
-      const history = generateHistoricalData(days);
+      // Get current user assets to base historical data on
+      const userAssets = getUserAssets(userId);
+      
+      // Generate historical data based on current assets
+      const history = generateHistoricalData(days, userAssets);
       return { history, error: null };
     }
   },

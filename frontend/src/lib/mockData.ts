@@ -125,49 +125,72 @@ export const mockExpenses: Expense[] = [
 export const mockProperties: Property[] = [
   {
     id: '1',
-    address: '123 Main Street, San Francisco, CA 94105',
-    purchasePrice: 75000000, // $750,000 in cents
-    currentValue: 85000000, // $850,000 in cents
+    userId: 'demo-user-id',
+    address: '123 Main St, San Francisco, CA',
+    propertyType: 'single_family',
+    status: 'owned',
+    purchasePrice: 80000000, // $800,000 in cents
+    currentValue: 95000000, // $950,000 in cents
+    purchaseDate: '2020-03-15',
     mortgageAmount: 60000000, // $600,000 in cents
-    mortgageRate: 3.5,
-    monthlyPayment: 269000, // $2,690 in cents
-    rentalIncome: 350000, // $3,500 in cents
-    propertyType: 'residential',
-    status: 'rented',
-    notes: 'Primary residence, renting out basement unit',
+    mortgageRate: 3.25,
+    mortgageStartDate: '2020-03-15',
+    rentalIncome: 0,
+    maintenanceCosts: 250000, // $2,500/month in cents
+    notes: 'Beautiful Victorian home in the heart of the city',
   },
   {
     id: '2',
-    address: '456 Oak Avenue, Austin, TX 78701',
+    userId: 'demo-user-id',
+    address: '456 Oak Ave, Oakland, CA',
+    propertyType: 'single_family',
+    status: 'rental',
     purchasePrice: 45000000, // $450,000 in cents
     currentValue: 52000000, // $520,000 in cents
-    mortgageAmount: 36000000, // $360,000 in cents
-    mortgageRate: 4.0,
-    monthlyPayment: 171000, // $1,710 in cents
-    rentalIncome: 250000, // $2,500 in cents
-    propertyType: 'residential',
-    status: 'rented',
-    notes: 'Investment property',
+    purchaseDate: '2021-08-20',
+    mortgageAmount: 35000000, // $350,000 in cents
+    mortgageRate: 3.75,
+    mortgageStartDate: '2021-08-20',
+    rentalIncome: 280000, // $2,800/month in cents
+    maintenanceCosts: 150000, // $1,500/month in cents
+    notes: 'Great rental property with reliable tenants',
   },
 ];
 
 // Generate historical data for charts
-export const generateHistoricalData = (days: number) => {
+export const generateHistoricalData = (days: number, currentAssets: Asset[] = []) => {
+  // If no assets, return empty data
+  if (!currentAssets || currentAssets.length === 0) {
+    return [];
+  }
+
   const data = [];
   const today = new Date();
+  
+  // Calculate current total value from actual assets
+  const currentTotalValue = currentAssets.reduce((sum, asset) => sum + (asset.current_value || 0), 0);
+  
+  // If current value is 0, return empty data
+  if (currentTotalValue === 0) {
+    return [];
+  }
   
   for (let i = days; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     
-    // Simulate some growth with random fluctuations
-    const baseValue = 5000000; // $50,000 in cents
-    const growth = (days - i) * 10000; // $100 per day growth
-    const randomFluctuation = Math.random() * 100000 - 50000; // +/- $500
+    // Simulate historical values based on current portfolio value
+    // Start from a lower value and grow to current value
+    const progressRatio = (days - i) / days; // 0 to 1
+    const baseValue = currentTotalValue * 0.7; // Start at 70% of current value
+    const growth = currentTotalValue * 0.3 * progressRatio; // Grow 30% over time
+    const randomFluctuation = (Math.random() - 0.5) * currentTotalValue * 0.05; // +/- 5% random
+    
+    const historicalValue = Math.max(0, baseValue + growth + randomFluctuation);
     
     data.push({
       date: date.toISOString().split('T')[0],
-      total_value: baseValue + growth + randomFluctuation,
+      total_value: Math.round(historicalValue),
     });
   }
   
