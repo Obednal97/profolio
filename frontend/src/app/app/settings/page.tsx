@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
@@ -220,7 +220,7 @@ function SettingsPage() {
     return null;
   }, [user?.uid, user?.displayName, user?.email, user?.phoneNumber, user?.photoURL, isDemoMode]);
 
-  // Profile form state - initialize directly from currentUser
+  // Profile form state - start with empty values
   const [profileData, setProfileData] = useState(() => ({
     name: "",
     email: "",
@@ -229,30 +229,69 @@ function SettingsPage() {
     location: "",
   }));
   
-  // Track if profile data has been initialized to prevent re-renders
-  const profileInitialized = useRef(false);
-  const lastUserId = useRef<string | null>(null);
+  // Track loading state for profile data
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  // Update profile data when currentUser changes (only once per user)
+  // Load profile data from database when component mounts
   useEffect(() => {
-    // Reset initialization flag if user changed
-    if (currentUser?.id !== lastUserId.current) {
-      profileInitialized.current = false;
-      lastUserId.current = currentUser?.id || null;
-    }
-    
-    if (currentUser && !profileInitialized.current) {
-      console.log('Initializing profile data for user:', currentUser.id);
-      setProfileData({
-        name: currentUser.name || "User",
-        email: currentUser.email || "",
-        phone: currentUser.phone || "",
-        location: currentUser.location || "",
-        bio: "",
-      });
-      profileInitialized.current = true;
-    }
-  }, [currentUser]);
+    const loadProfileFromDatabase = async () => {
+      if (!currentUser?.id) {
+        setProfileLoading(false);
+        return;
+      }
+      
+      try {
+        console.log('Loading profile from database for user:', currentUser.id);
+        
+        const { apiCall } = await import('@/lib/mockApi');
+        const response = await apiCall('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            method: 'GET_PROFILE_FROM_STORAGE',
+            userId: currentUser.id
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.user && !data.error) {
+          console.log('Profile loaded from database:', data.user);
+          setProfileData({
+            name: data.user.name || currentUser.name || '',
+            email: data.user.email || currentUser.email || '',
+            phone: data.user.phone || '',
+            bio: data.user.bio || '',
+            location: data.user.location || '',
+          });
+        } else {
+          // No profile in database yet, use auth data as initial values
+          console.log('No profile in database, using auth data');
+          setProfileData({
+            name: currentUser.name || '',
+            email: currentUser.email || '',
+            phone: currentUser.phone || '',
+            bio: '',
+            location: '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load profile from database:', error);
+        // Fallback to auth data
+        setProfileData({
+          name: currentUser.name || '',
+          email: currentUser.email || '',
+          phone: currentUser.phone || '',
+          bio: '',
+          location: '',
+        });
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    loadProfileFromDatabase();
+  }, [currentUser?.id]); // Only depend on user ID
 
   // Preferences state
   const [preferences, setPreferences] = useState({
@@ -392,92 +431,98 @@ function SettingsPage() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      <form onSubmit={handleProfileUpdate} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Full Name
-            </label>
-            <input
-              type="text"
-              value={profileData.name}
-              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Email Address
-              {!isDemoMode && <span className="text-gray-500 text-xs ml-2">(cannot be changed)</span>}
-            </label>
-            <input
-              type="email"
-              value={profileData.email}
-              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-              disabled={!isDemoMode}
-              className={`w-full backdrop-blur-sm border rounded-xl px-4 py-3 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-200 ${
-                !isDemoMode 
-                  ? 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-50 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10'
-              }`}
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Phone Number <span className="text-gray-500 text-xs">(optional)</span>
-            </label>
-            <input
-              type="tel"
-              value={profileData.phone}
-              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-              placeholder="+1 (555) 123-4567"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Location <span className="text-gray-500 text-xs">(optional)</span>
-            </label>
-            <select
-              value={profileData.location}
-              onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            >
-              {countries.map((country) => (
-                <option key={country.code} value={country.name}>
-                  {country.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      {profileLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
         </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Bio
-          </label>
-          <textarea
-            value={profileData.bio}
-            onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            rows={4}
-            placeholder="Tell us about yourself..."
-          />
-        </div>
-        
-        <Button
-          type="submit"
-          disabled={loading}
-          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium px-6 py-3"
-        >
-          {loading ? "Updating..." : "Update Profile"}
-        </Button>
-      </form>
+      ) : (
+        <form onSubmit={handleProfileUpdate} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={profileData.name}
+                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email Address
+                {!isDemoMode && <span className="text-gray-500 text-xs ml-2">(cannot be changed)</span>}
+              </label>
+              <input
+                type="email"
+                value={profileData.email}
+                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                disabled={!isDemoMode}
+                className={`w-full backdrop-blur-sm border rounded-xl px-4 py-3 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-200 ${
+                  !isDemoMode 
+                    ? 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-50 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10'
+                }`}
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Phone Number <span className="text-gray-500 text-xs">(optional)</span>
+              </label>
+              <input
+                type="tel"
+                value={profileData.phone}
+                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Location <span className="text-gray-500 text-xs">(optional)</span>
+              </label>
+              <select
+                value={profileData.location}
+                onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+              >
+                {countries.map((country) => (
+                  <option key={country.code} value={country.name}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Bio
+            </label>
+            <textarea
+              value={profileData.bio}
+              onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+              rows={4}
+              placeholder="Tell us about yourself..."
+            />
+          </div>
+          
+          <Button
+            type="submit"
+            disabled={loading}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium px-6 py-3"
+          >
+            {loading ? "Updating..." : "Update Profile"}
+          </Button>
+        </form>
+      )}
     </motion.div>
   );
 

@@ -35,49 +35,51 @@ async function extractAndPersistGoogleProfile(user: User) {
       return; // Not a Google sign-in, skip
     }
 
-    // Extract basic profile data from Google (only what's readily available)
+    // First, check if we already have a profile for this user
+    const { apiCall } = await import('./mockApi');
+    const existingProfileResponse = await apiCall('/api/user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        method: 'GET_PROFILE_FROM_STORAGE',
+        userId: user.uid
+      }),
+    });
+    
+    const existingData = await existingProfileResponse.json();
+    
+    // If user already has a profile with data, don't overwrite it
+    if (existingData.user && existingData.user.name) {
+      console.log('✅ User profile already exists, skipping Google data import');
+      return;
+    }
+
+    // Only save Google data for new users (first sign-up)
+    console.log('🆕 New user detected, saving Google profile data');
+    
     const profileData = {
-      id: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'User',
       email: user.email || '',
+      phone: user.phoneNumber || '',
       photoURL: user.photoURL || '',
-      // Phone number is optional - only include if user granted permission
-      ...(user.phoneNumber && { phone: user.phoneNumber }),
-      // We don't extract location/address from basic Google profile
-      // Users can manually add their country in settings if they want
+      provider: 'google',
+      emailVerified: user.emailVerified,
+      createdAt: user.metadata.creationTime,
+      lastSignIn: user.metadata.lastSignInTime,
+      lastUpdated: Date.now(),
     };
 
-    // Check if we already have this profile data stored
-    const existingProfile = localStorage.getItem(`user-profile-${user.uid}`);
-    const shouldUpdate = !existingProfile || 
-      (existingProfile && JSON.parse(existingProfile).lastUpdated < Date.now() - 24 * 60 * 60 * 1000); // Update if older than 24 hours
+    await apiCall('/api/user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        method: 'UPDATE_PROFILE',
+        userId: user.uid,
+        profileData
+      }),
+    });
 
-    if (shouldUpdate) {
-      // Save to our user API
-      const { apiCall } = await import('./mockApi');
-      
-      const profileToSave = {
-        ...profileData,
-        lastUpdated: Date.now(),
-        provider: 'google',
-        // Add authentication metadata
-        emailVerified: user.emailVerified,
-        createdAt: user.metadata.creationTime,
-        lastSignIn: user.metadata.lastSignInTime,
-      };
-
-      await apiCall('/api/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          method: 'UPDATE_PROFILE',
-          userId: user.uid,
-          profileData: profileToSave
-        }),
-      });
-
-      console.log('✅ Google profile data persisted for user:', user.uid);
-    }
+    console.log('✅ Google profile data saved for new user:', user.uid);
   } catch (error) {
     console.error('❌ Failed to persist Google profile data:', error);
     // Don't throw - this shouldn't break the auth flow
@@ -141,7 +143,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, displayName?: string) => {
     try {
       setLoading(true);
-      await signUpWithEmail(email, password, displayName);
+      const userCredential = await signUpWithEmail(email, password, displayName);
+      
+      // Save initial profile data for email sign-ups
+      if (userCredential.user) {
+        const { apiCall } = await import('./mockApi');
+        const profileData = {
+          name: displayName || email.split('@')[0] || 'User',
+          email: email,
+          phone: '',
+          photoURL: '',
+          provider: 'email',
+          emailVerified: false,
+          createdAt: new Date().toISOString(),
+          lastSignIn: new Date().toISOString(),
+          lastUpdated: Date.now(),
+        };
+
+        await apiCall('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            method: 'UPDATE_PROFILE',
+            userId: userCredential.user.uid,
+            profileData
+          }),
+        });
+        
+        console.log('✅ Initial profile created for email user:', userCredential.user.uid);
+      }
+      
       // User state will be updated by the auth listener
     } catch (error: unknown) {
       setLoading(false);
