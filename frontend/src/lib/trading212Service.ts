@@ -5,6 +5,12 @@
 // TYPE DEFINITIONS
 // ============================================================================
 
+export interface Trading212ApiError extends Error {
+  status?: number;
+  endpoint?: string;
+  details?: string;
+}
+
 export interface Trading212Position {
   ticker: string;
   quantity: number;
@@ -195,10 +201,12 @@ export class Trading212Service {
     const timeSinceLastRequest = now - this.lastRequestTime;
     if (timeSinceLastRequest < this.minRequestInterval) {
       const delay = this.minRequestInterval - timeSinceLastRequest;
+      console.log(`⏱️ Rate limiting: waiting ${delay}ms before ${endpoint}`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
     
     const url = `${this.baseUrl}${endpoint}`;
+    console.log(`🔄 Making request to: ${endpoint}`);
     
     const response = await fetch(url, {
       ...options,
@@ -215,17 +223,65 @@ export class Trading212Service {
     if (!response.ok) {
       const errorText = await response.text();
       let errorMessage = `Trading 212 API error: ${response.status} ${response.statusText}`;
+      let errorDetails = '';
+      
+      // Enhanced error logging
+      console.error(`❌ API Error on ${endpoint}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        headers: {
+          'content-type': response.headers.get('content-type'),
+          'retry-after': response.headers.get('retry-after'),
+          'x-ratelimit-reset': response.headers.get('x-ratelimit-reset'),
+          'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
+        },
+        body: errorText
+      });
       
       try {
         const errorData = JSON.parse(errorText);
-        if (errorData.message) errorMessage += ` - ${errorData.message}`;
+        if (errorData.message) {
+          errorMessage += ` - ${errorData.message}`;
+          errorDetails = errorData.message;
+        }
       } catch {
-        if (errorText) errorMessage += ` - ${errorText}`;
+        if (errorText) {
+          errorMessage += ` - ${errorText}`;
+          errorDetails = errorText;
+        }
       }
 
-      throw new Error(errorMessage);
+      // Specific rate limit error handling
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const rateLimitReset = response.headers.get('X-RateLimit-Reset');
+        
+        console.error(`🚫 Rate limit exceeded on ${endpoint}:`, {
+          retryAfter,
+          rateLimitReset,
+          timeSinceLastRequest,
+          minInterval: this.minRequestInterval
+        });
+        
+        errorMessage = `Rate limit exceeded on ${endpoint}. `;
+        if (retryAfter) {
+          errorMessage += `Retry after ${retryAfter} seconds. `;
+        }
+        if (rateLimitReset) {
+          errorMessage += `Rate limit resets at ${new Date(parseInt(rateLimitReset) * 1000).toISOString()}. `;
+        }
+        errorMessage += `Consider increasing the request interval (currently ${this.minRequestInterval}ms).`;
+      }
+
+      const error = new Error(errorMessage) as Trading212ApiError;
+      error.status = response.status;
+      error.endpoint = endpoint;
+      error.details = errorDetails;
+      throw error;
     }
 
+    console.log(`✅ Success: ${endpoint}`);
     return response.json();
   }
 
