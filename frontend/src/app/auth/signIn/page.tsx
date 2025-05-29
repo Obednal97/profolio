@@ -2,19 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth'; 
-import { useUser } from '@/lib/user';
+import { useAuth } from '@/lib/auth';
 import { useAuth as useAuthHook } from '@/hooks/useAuth';
-import type { User } from '@/types/global';
 import { AuthLayout } from "@/components/layout/authLayout";
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 function SignInPage() {
   const router = useRouter();
-  const { signInWithCredentials } = useAuth();
+  const { user, loading: authLoading, signIn, signInWithGoogleProvider } = useAuth();
   const { signInWithDemo } = useAuthHook();
-  const { data: user } = useUser() as { data: User | null };
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -23,23 +20,41 @@ function SignInPage() {
 
   const isFormValid = formData.email.trim() !== '' && formData.password.trim() !== '';
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push('/app/dashboard');
+    }
+  }, [user, authLoading, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      await signInWithCredentials({
-        email: formData.email,
-        password: formData.password,
-        callbackUrl: '/app/dashboard',
-        redirect: true,
-      });
-    } catch (err) {
+      await signIn(formData.email, formData.password);
+      router.push('/app/dashboard');
+    } catch (err: unknown) {
       console.error('Sign in error:', err);
-      setError('Invalid email or password');
+      const errorMessage = err instanceof Error ? err.message : 'Invalid email or password';
+      setError(errorMessage);
       setLoading(false);
-      return;
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      await signInWithGoogleProvider();
+      router.push('/app/dashboard');
+    } catch (err: unknown) {
+      console.error('Google sign in error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google';
+      setError(errorMessage);
+      setLoading(false);
     }
   };
 
@@ -59,13 +74,19 @@ function SignInPage() {
     }
   };
 
-  useEffect(() => {
-    if (user?.token) {
-      router.push('/app/dashboard');
-    }
-  }, [user, router]);
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <AuthLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+        </div>
+      </AuthLayout>
+    );
+  }
 
-  if (user?.token) return null;
+  // Don't render if user is already authenticated
+  if (user) return null;
 
   return (
     <AuthLayout>
@@ -140,6 +161,7 @@ function SignInPage() {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="john@example.com"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -154,6 +176,7 @@ function SignInPage() {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -222,20 +245,15 @@ function SignInPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <button
               type="button"
-              className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <i className="fab fa-google mr-2"></i>
-              Google
-            </button>
-            <button
-              type="button"
-              className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <i className="fab fa-github mr-2"></i>
-              GitHub
+              <i className="fab fa-google mr-2 text-red-500"></i>
+              Continue with Google
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useAuth, useUser } from "@/hooks/useAuth";
+import { useAuth } from "@/lib/auth";
+import { useAuth as useAuthHook } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/layout/authLayout";
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,8 +11,8 @@ function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const { signUpWithCredentials, signInWithDemo } = useAuth();
-  const { data: user } = useUser();
+  const { user, loading: authLoading, signUp, signInWithGoogleProvider } = useAuth();
+  const { signInWithDemo } = useAuthHook();
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
@@ -20,11 +21,12 @@ function SignUpPage() {
     confirmPassword: "",
   });
 
+  // Redirect if already authenticated
   useEffect(() => {
-    if (user?.token) {
+    if (user && !authLoading) {
       router.push('/app/dashboard');
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   const validatePassword = (password: string) => {
     const requirements = [
@@ -78,16 +80,27 @@ function SignUpPage() {
     }
 
     try {
-      await signUpWithCredentials({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        callbackUrl: "/app/dashboard",
-        redirect: true,
-      });
-    } catch (err) {
+      await signUp(formData.email.trim(), formData.password, formData.name.trim());
+      router.push('/app/dashboard');
+    } catch (err: unknown) {
       console.error("Sign up error:", err);
-      setError("Failed to create account. Please try again.");
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create account. Please try again.';
+      setError(errorMessage);
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      await signInWithGoogleProvider();
+      router.push('/app/dashboard');
+    } catch (err: unknown) {
+      console.error('Google sign up error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign up with Google';
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -108,7 +121,19 @@ function SignUpPage() {
     }
   };
 
-  if (user?.token) return null;
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <AuthLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Don't render if user is already authenticated
+  if (user) return null;
 
   return (
     <AuthLayout>
@@ -185,6 +210,7 @@ function SignUpPage() {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="John Doe"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -201,6 +227,7 @@ function SignUpPage() {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="john@example.com"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -218,6 +245,7 @@ function SignUpPage() {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
               <div className="mt-3 space-y-2">
                 {validatePassword(formData.password).map((req, index) => (
@@ -258,6 +286,7 @@ function SignUpPage() {
                 }`}
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
               {formData.confirmPassword && formData.password !== formData.confirmPassword && (
                 <p className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -295,6 +324,29 @@ function SignUpPage() {
                 Sign in
               </Link>
             </p>
+          </div>
+
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              disabled={loading}
+              className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="fab fa-google mr-2 text-red-500"></i>
+              Continue with Google
+            </button>
           </div>
         </div>
 
