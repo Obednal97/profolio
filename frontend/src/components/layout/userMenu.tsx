@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTheme } from "../layout/layoutWrapper";
+import { useTheme } from "@/providers/theme-provider";
 import { useAuth } from "@/lib/auth";
 
 interface UserMenuProps {
@@ -18,7 +18,7 @@ export default function UserMenu({
   unreadNotifications = 0,
 }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
 
   const handleSignOut = async () => {
@@ -37,6 +37,10 @@ export default function UserMenu({
     { label: "Notifications", path: "/app/notifications", icon: "fa-bell", action: null },
     { label: "Sign Out", path: null, icon: "fa-sign-out-alt", action: handleSignOut },
   ];
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
 
   const getThemeIcon = () => {
     return theme === "light" ? "fa-moon" : "fa-sun";

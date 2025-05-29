@@ -10,6 +10,13 @@ import LineChart from "@/components/charts/line";
 import PieChart from "@/components/charts/pie";
 import FinancialInsights from "@/components/insights/FinancialInsights";
 import { getAllCategories, getSubcategories, getCategoryInfo } from "@/lib/transactionClassifier";
+import {
+  SkeletonCard,
+  Skeleton,
+  SkeletonStat,
+  SkeletonButton,
+  SkeletonInput
+} from '@/components/ui/skeleton';
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
@@ -580,50 +587,68 @@ function ExpenseManager() {
     }
   }, [currentUser, selectedExpenses, expenses, fetchExpenses]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"
-        />
-      </div>
-    );
-  }
-
-  // Skeleton Loader Component
-  const ExpenseSkeleton = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 animate-pulse">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-gray-700 rounded-lg mr-4"></div>
-              <div>
-                <div className="h-5 bg-gray-700 rounded w-32 mb-2"></div>
-                <div className="h-4 bg-gray-700 rounded w-20"></div>
-              </div>
+  // Comprehensive Expense Manager Skeleton
+  const ExpenseManagerSkeleton = () => (
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+      <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
+        {/* Header skeleton */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <Skeleton className="h-10 w-64 mb-2" />
+              <Skeleton className="h-5 w-48" />
             </div>
-            <div className="flex space-x-2">
-              <div className="w-8 h-8 bg-gray-700 rounded-lg"></div>
-              <div className="w-8 h-8 bg-gray-700 rounded-lg"></div>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="h-4 bg-gray-700 rounded w-16"></div>
-              <div className="h-6 bg-gray-700 rounded w-20"></div>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="h-4 bg-gray-700 rounded w-12"></div>
-              <div className="h-4 bg-gray-700 rounded w-24"></div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <SkeletonButton size="lg" className="w-40" />
+              <SkeletonButton size="lg" className="w-36" />
+              <SkeletonButton size="lg" className="w-36" />
             </div>
           </div>
         </div>
-      ))}
+
+        {/* Stats Cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <SkeletonStat key={i} />
+          ))}
+        </div>
+
+        {/* Tab navigation skeleton */}
+        <div className="flex space-x-1 mb-6">
+          <Skeleton className="h-10 w-32 rounded-lg" />
+          <Skeleton className="h-10 w-32 rounded-lg" />
+        </div>
+
+        {/* Filters skeleton */}
+        <div className="mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search skeleton */}
+            <div className="flex-1 max-w-md">
+              <SkeletonInput className="w-full" />
+            </div>
+            
+            {/* Filter controls skeleton */}
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-10 w-32 rounded-lg" />
+              <Skeleton className="h-10 w-28 rounded-lg" />
+              <Skeleton className="h-10 w-20 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        {/* Content area skeleton based on view mode */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonCard key={i} className="h-48" />
+          ))}
+        </div>
+      </div>
     </div>
   );
+
+  if (loading) {
+    return <ExpenseManagerSkeleton />;
+  }
 
   // Error Boundary Component
   const ErrorBoundary = ({ children, error, retry }: { children: React.ReactNode; error?: string | null; retry?: () => void }) => {
@@ -1475,7 +1500,7 @@ function ExpenseManager() {
               <AnimatePresence mode="wait">
                 <ErrorBoundary error={error || undefined} retry={fetchExpenses}>
                   {loading ? (
-                    <ExpenseSkeleton />
+                    <ExpenseManagerSkeleton />
                   ) : filteredExpenses.length === 0 ? (
                     <motion.div
                       initial={{ opacity: 0 }}
