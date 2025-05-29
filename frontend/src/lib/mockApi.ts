@@ -142,6 +142,39 @@ export const mockApi = {
       return { user: mockUser, error: null };
     },
     
+    async updateProfile(userId: string, profileData: Partial<User>) {
+      await new Promise(resolve => setTimeout(resolve, API_DELAY));
+      
+      // Update the mock user with new profile data
+      Object.assign(mockUser, profileData);
+      
+      // In a real app, this would save to database
+      // For now, we'll also save to localStorage for persistence
+      if (typeof window !== 'undefined') {
+        const existingProfile = localStorage.getItem(`user-profile-${userId}`);
+        const currentProfile = existingProfile ? JSON.parse(existingProfile) : {};
+        const updatedProfile = { ...currentProfile, ...profileData };
+        localStorage.setItem(`user-profile-${userId}`, JSON.stringify(updatedProfile));
+      }
+      
+      return { user: mockUser, error: null };
+    },
+    
+    async getProfileFromStorage(userId: string) {
+      await new Promise(resolve => setTimeout(resolve, API_DELAY));
+      
+      if (typeof window !== 'undefined') {
+        const storedProfile = localStorage.getItem(`user-profile-${userId}`);
+        if (storedProfile) {
+          const profileData = JSON.parse(storedProfile);
+          const userWithProfile = { ...mockUser, ...profileData };
+          return { user: userWithProfile, error: null };
+        }
+      }
+      
+      return { user: mockUser, error: null };
+    },
+    
     async updatePreferences(preferences: User['preferences']) {
       await new Promise(resolve => setTimeout(resolve, API_DELAY));
       if (mockUser.preferences) {
@@ -216,6 +249,10 @@ export async function apiCall(url: string, options: RequestInit) {
     switch (method) {
       case 'GET_PROFILE':
         return { json: async () => mockApi.user.getProfile() };
+      case 'UPDATE_PROFILE':
+        return { json: async () => mockApi.user.updateProfile(body.userId, body.profileData) };
+      case 'GET_PROFILE_FROM_STORAGE':
+        return { json: async () => mockApi.user.getProfileFromStorage(body.userId) };
       case 'UPDATE_PREFERENCES':
         return { json: async () => mockApi.user.updatePreferences(body.preferences) };
       default:

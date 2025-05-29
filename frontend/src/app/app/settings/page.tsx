@@ -32,15 +32,27 @@ function SettingsPage() {
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use Firebase user data or demo user data
+  // Use Firebase user data or demo user data with enhanced Google profile extraction
   const currentUser = user ? {
     id: user.uid,
     name: user.displayName || user.email?.split('@')[0] || 'User',
-    email: user.email || ''
+    email: user.email || '',
+    // Extract additional data from Google profile if available
+    phone: (user as { phoneNumber?: string }).phoneNumber || '',
+    location: (user as { location?: string; address?: string }).location || (user as { location?: string; address?: string }).address || '',
+    photoURL: user.photoURL || '',
+    // Try to extract location from Google profile metadata
+    ...(user.providerData?.[0]?.providerId === 'google.com' && {
+      // Google sometimes provides additional profile data
+      phone: (user as { phoneNumber?: string }).phoneNumber || '',
+      location: (user as { customClaims?: { location?: string }; location?: string }).customClaims?.location || (user as { customClaims?: { location?: string }; location?: string }).location || '',
+    })
   } : (isDemoMode ? {
     id: 'demo-user-id',
     name: 'Demo User',
-    email: 'demo@profolio.com'
+    email: 'demo@profolio.com',
+    phone: '+1 (555) 123-4567',
+    location: 'San Francisco, CA'
   } : null);
 
   // Profile form state
@@ -52,14 +64,61 @@ function SettingsPage() {
     location: "",
   });
 
-  // Initialize profile data when currentUser is available
+  // Load persisted profile data when currentUser is available
   useEffect(() => {
+    const loadProfileData = async () => {
+      if (!currentUser?.id) return;
+      
+      try {
+        // First try to load persisted profile data from our API
+        const { apiCall } = await import('@/lib/mockApi');
+        const response = await apiCall('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            method: 'GET_PROFILE_FROM_STORAGE',
+            userId: currentUser.id
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.user && !data.error) {
+          // Use persisted data if available
+          setProfileData(prev => ({
+            ...prev,
+            name: data.user.name || currentUser.name || "User",
+            email: data.user.email || currentUser.email || "",
+            phone: data.user.phone || "",
+            location: data.user.location || "",
+            bio: data.user.bio || "",
+          }));
+        } else {
+          // Fallback to Firebase user data if no persisted data
+          setProfileData(prev => ({
+            ...prev,
+            name: currentUser.name || "User",
+            email: currentUser.email || "",
+            phone: currentUser.phone || "",
+            location: currentUser.location || "",
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load profile data:', error);
+        // Fallback to Firebase user data
+        setProfileData(prev => ({
+          ...prev,
+          name: currentUser.name || "User",
+          email: currentUser.email || "",
+          phone: currentUser.phone || "",
+          location: currentUser.location || "",
+        }));
+      }
+    };
+
+    // Only load if we don't already have profile data
     if (currentUser && profileData.name === "" && profileData.email === "") {
-      setProfileData(prev => ({
-        ...prev,
-        name: currentUser.name || "User",
-        email: currentUser.email || "",
-      }));
+      loadProfileData();
     }
   }, [currentUser, profileData.name, profileData.email]);
 
@@ -106,12 +165,35 @@ function SettingsPage() {
     setSuccess(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!currentUser?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      // Save profile data to our API
+      const { apiCall } = await import('@/lib/mockApi');
+      const response = await apiCall('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          method: 'UPDATE_PROFILE',
+          userId: currentUser.id,
+          profileData: {
+            ...profileData,
+            lastUpdated: Date.now(),
+          }
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       setSuccess("Profile updated successfully");
     } catch (err) {
       console.error("Profile update error:", err);
-      setError("Failed to update profile");
+      setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -181,66 +263,66 @@ function SettingsPage() {
       <form onSubmit={handleProfileUpdate} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Full Name
             </label>
             <input
               type="text"
               value={profileData.name}
               onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-              className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Email Address
             </label>
             <input
               type="email"
               value={profileData.email}
               onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-              className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Phone Number
             </label>
             <input
               type="tel"
               value={profileData.phone}
               onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-              className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
               placeholder="+1 (555) 123-4567"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Location
             </label>
             <input
               type="text"
               value={profileData.location}
               onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-              className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
               placeholder="City, Country"
             />
           </div>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Bio
           </label>
           <textarea
             value={profileData.bio}
             onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-            className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
             rows={4}
             placeholder="Tell us about yourself..."
           />
@@ -265,34 +347,34 @@ function SettingsPage() {
     >
       <form onSubmit={handlePasswordUpdate} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Current Password
           </label>
           <input
             type="password"
-            className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
             required
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             New Password
           </label>
           <input
             type="password"
-            className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
             required
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Confirm New Password
           </label>
           <input
             type="password"
-            className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
             required
           />
         </div>
@@ -306,15 +388,15 @@ function SettingsPage() {
         </Button>
       </form>
       
-      <div className="border-t border-white/10 pt-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Two-Factor Authentication</h3>
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+      <div className="border-t border-gray-200 dark:border-white/10 pt-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Two-Factor Authentication</h3>
+        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white font-medium">Authenticator App</p>
-              <p className="text-gray-400 text-sm">Use an authenticator app to generate codes</p>
+              <p className="text-gray-900 dark:text-white font-medium">Authenticator App</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Use an authenticator app to generate codes</p>
             </div>
-            <Button variant="ghost" className="text-blue-400 hover:bg-blue-500/10">
+            <Button variant="ghost" className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10">
               Enable
             </Button>
           </div>
@@ -331,42 +413,42 @@ function SettingsPage() {
     >
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Theme
           </label>
           <select
             value={preferences.theme}
             onChange={(e) => setPreferences({ ...preferences, theme: e.target.value as 'light' | 'dark' | 'system' })}
-            className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
           >
-            <option value="light" className="bg-gray-800">Light</option>
-            <option value="dark" className="bg-gray-800">Dark</option>
-            <option value="system" className="bg-gray-800">System</option>
+            <option value="light" className="bg-white dark:bg-gray-800">Light</option>
+            <option value="dark" className="bg-white dark:bg-gray-800">Dark</option>
+            <option value="system" className="bg-white dark:bg-gray-800">System</option>
           </select>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Currency
           </label>
           <select
             value={preferences.currency}
             onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
-            className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-200"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
           >
-            <option value="USD" className="bg-gray-800">USD ($)</option>
-            <option value="EUR" className="bg-gray-800">EUR (€)</option>
-            <option value="GBP" className="bg-gray-800">GBP (£)</option>
-            <option value="JPY" className="bg-gray-800">JPY (¥)</option>
+            <option value="USD" className="bg-white dark:bg-gray-800">USD ($)</option>
+            <option value="EUR" className="bg-white dark:bg-gray-800">EUR (€)</option>
+            <option value="GBP" className="bg-white dark:bg-gray-800">GBP (£)</option>
+            <option value="JPY" className="bg-white dark:bg-gray-800">JPY (¥)</option>
           </select>
         </div>
         
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white">Notifications</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
           
           <div className="space-y-3">
             <label className="flex items-center justify-between">
-              <span className="text-gray-300">Email Notifications</span>
+              <span className="text-gray-700 dark:text-gray-300">Email Notifications</span>
               <input
                 type="checkbox"
                 checked={preferences.notifications.email}
@@ -374,12 +456,12 @@ function SettingsPage() {
                   ...preferences,
                   notifications: { ...preferences.notifications, email: e.target.checked }
                 })}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-white/10 focus:ring-blue-500"
+                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
               />
             </label>
             
             <label className="flex items-center justify-between">
-              <span className="text-gray-300">Push Notifications</span>
+              <span className="text-gray-700 dark:text-gray-300">Push Notifications</span>
               <input
                 type="checkbox"
                 checked={preferences.notifications.push}
@@ -387,12 +469,12 @@ function SettingsPage() {
                   ...preferences,
                   notifications: { ...preferences.notifications, push: e.target.checked }
                 })}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-white/10 focus:ring-blue-500"
+                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
               />
             </label>
             
             <label className="flex items-center justify-between">
-              <span className="text-gray-300">Marketing Emails</span>
+              <span className="text-gray-700 dark:text-gray-300">Marketing Emails</span>
               <input
                 type="checkbox"
                 checked={preferences.notifications.marketing}
@@ -400,7 +482,7 @@ function SettingsPage() {
                   ...preferences,
                   notifications: { ...preferences.notifications, marketing: e.target.checked }
                 })}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-white/10 focus:ring-blue-500"
+                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
               />
             </label>
           </div>
@@ -459,7 +541,7 @@ function SettingsPage() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Settings
           </h1>
-          <p className="text-gray-400 mt-2">Manage your account and preferences</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account and preferences</p>
         </motion.div>
 
         {/* Notifications */}
@@ -513,7 +595,7 @@ function SettingsPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
           <AnimatePresence mode="wait">
             {activeTab === 'profile' && <ProfileTab key="profile" />}
             {activeTab === 'security' && <SecurityTab key="security" />}
@@ -526,20 +608,20 @@ function SettingsPage() {
       {/* Delete Account Modal */}
       {showDeleteModal && (
         <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
+          <div className="bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 rounded-2xl p-8 w-full max-w-md border border-gray-200 dark:border-white/10 shadow-2xl">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-100 mb-4">
                 <i className="fas fa-exclamation-triangle text-red-600 text-xl"></i>
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">Delete Account</h3>
-              <p className="text-gray-400 mb-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Delete Account</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Are you sure you want to delete your account? This action cannot be undone.
               </p>
               <div className="flex space-x-4">
                 <Button
                   onClick={() => setShowDeleteModal(false)}
                   variant="ghost"
-                  className="flex-1 hover:bg-white/10"
+                  className="flex-1 hover:bg-gray-100 dark:hover:bg-white/10"
                 >
                   Cancel
                 </Button>

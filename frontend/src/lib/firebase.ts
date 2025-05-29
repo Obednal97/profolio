@@ -54,8 +54,18 @@ export const signUpWithEmail = async (email: string, password: string, displayNa
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   const auth = await getFirebaseAuth();
   const provider = new GoogleAuthProvider();
+  
+  // Request additional scopes for more profile information
   provider.addScope('email');
   provider.addScope('profile');
+  provider.addScope('https://www.googleapis.com/auth/user.phonenumbers.read');
+  provider.addScope('https://www.googleapis.com/auth/user.addresses.read');
+  
+  // Set custom parameters to get additional profile info
+  provider.setCustomParameters({
+    prompt: 'select_account'
+  });
+  
   return signInWithPopup(auth, provider);
 };
 
