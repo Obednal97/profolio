@@ -186,6 +186,347 @@ const countries = [
   { code: "KP", name: "North Korea" },
 ];
 
+// Type definitions for tab components
+interface ProfileTabProps {
+  profileData: {
+    name: string;
+    email: string;
+    phone: string;
+    bio: string;
+    location: string;
+  };
+  setProfileData: React.Dispatch<React.SetStateAction<{
+    name: string;
+    email: string;
+    phone: string;
+    bio: string;
+    location: string;
+  }>>;
+  profileLoading: boolean;
+  handleProfileUpdate: (e: React.FormEvent) => Promise<void>;
+  loading: boolean;
+  isDemoMode: boolean;
+}
+
+// Type for preferences
+interface PreferencesType {
+  theme: 'light' | 'dark' | 'system';
+  currency: string;
+  language: string;
+  notifications: {
+    email: boolean;
+    push: boolean;
+    marketing: boolean;
+  };
+  privacy: {
+    profileVisible: boolean;
+    dataSharing: boolean;
+  };
+}
+
+// Define ProfileTab outside of SettingsPage to prevent recreation on every render
+const ProfileTab = ({ 
+  profileData, 
+  setProfileData, 
+  profileLoading, 
+  handleProfileUpdate, 
+  loading, 
+  isDemoMode
+}: ProfileTabProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="space-y-6"
+  >
+    {profileLoading ? (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    ) : (
+      <form onSubmit={handleProfileUpdate} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Full Name
+            </label>
+            <input
+              type="text"
+              value={profileData.name}
+              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Email Address
+              {!isDemoMode && <span className="text-gray-500 text-xs ml-2">(cannot be changed)</span>}
+            </label>
+            <input
+              type="email"
+              value={profileData.email}
+              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+              disabled={!isDemoMode}
+              className={`w-full backdrop-blur-sm border rounded-xl px-4 py-3 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-200 ${
+                !isDemoMode 
+                  ? 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-50 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10'
+              }`}
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Phone Number <span className="text-gray-500 text-xs">(optional)</span>
+            </label>
+            <input
+              type="tel"
+              value={profileData.phone}
+              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+              placeholder="+1 (555) 123-4567"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Location <span className="text-gray-500 text-xs">(optional)</span>
+            </label>
+            <select
+              value={profileData.location}
+              onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+            >
+              {countries.map((country) => (
+                <option key={country.code} value={country.name}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Bio
+          </label>
+          <textarea
+            value={profileData.bio}
+            onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+            rows={4}
+            placeholder="Tell us about yourself..."
+          />
+        </div>
+        
+        <Button
+          type="submit"
+          disabled={loading}
+          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium px-6 py-3"
+        >
+          {loading ? "Updating..." : "Update Profile"}
+        </Button>
+      </form>
+    )}
+  </motion.div>
+);
+
+// Security Tab component
+const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: (e: React.FormEvent) => Promise<void>; loading: boolean }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="space-y-6"
+  >
+    <form onSubmit={handlePasswordUpdate} className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Current Password
+        </label>
+        <input
+          type="password"
+          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+          required
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          New Password
+        </label>
+        <input
+          type="password"
+          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+          required
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Confirm New Password
+        </label>
+        <input
+          type="password"
+          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+          required
+        />
+      </div>
+      
+      <Button
+        type="submit"
+        disabled={loading}
+        className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 py-3"
+      >
+        {loading ? "Updating..." : "Update Password"}
+      </Button>
+    </form>
+    
+    <div className="border-t border-gray-200 dark:border-white/10 pt-6">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Two-Factor Authentication</h3>
+      <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-900 dark:text-white font-medium">Authenticator App</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Use an authenticator app to generate codes</p>
+          </div>
+          <Button variant="ghost" className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10">
+            Enable
+          </Button>
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
+
+// Preferences Tab component
+const PreferencesTab = ({ 
+  preferences, 
+  setPreferences, 
+  handlePreferencesUpdate, 
+  loading 
+}: { 
+  preferences: PreferencesType; 
+  setPreferences: React.Dispatch<React.SetStateAction<PreferencesType>>; 
+  handlePreferencesUpdate: () => Promise<void>; 
+  loading: boolean 
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="space-y-6"
+  >
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Theme
+        </label>
+        <select
+          value={preferences.theme}
+          onChange={(e) => setPreferences({ ...preferences, theme: e.target.value as 'light' | 'dark' | 'system' })}
+          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+        >
+          <option value="light" className="bg-white dark:bg-gray-800">Light</option>
+          <option value="dark" className="bg-white dark:bg-gray-800">Dark</option>
+          <option value="system" className="bg-white dark:bg-gray-800">System</option>
+        </select>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Currency
+        </label>
+        <select
+          value={preferences.currency}
+          onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
+          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+        >
+          <option value="USD" className="bg-white dark:bg-gray-800">USD ($)</option>
+          <option value="EUR" className="bg-white dark:bg-gray-800">EUR (€)</option>
+          <option value="GBP" className="bg-white dark:bg-gray-800">GBP (£)</option>
+          <option value="JPY" className="bg-white dark:bg-gray-800">JPY (¥)</option>
+        </select>
+      </div>
+      
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
+        
+        <div className="space-y-3">
+          <label className="flex items-center justify-between">
+            <span className="text-gray-700 dark:text-gray-300">Email Notifications</span>
+            <input
+              type="checkbox"
+              checked={preferences.notifications.email}
+              onChange={(e) => setPreferences({
+                ...preferences,
+                notifications: { ...preferences.notifications, email: e.target.checked }
+              })}
+              className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
+            />
+          </label>
+          
+          <label className="flex items-center justify-between">
+            <span className="text-gray-700 dark:text-gray-300">Push Notifications</span>
+            <input
+              type="checkbox"
+              checked={preferences.notifications.push}
+              onChange={(e) => setPreferences({
+                ...preferences,
+                notifications: { ...preferences.notifications, push: e.target.checked }
+              })}
+              className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
+            />
+          </label>
+          
+          <label className="flex items-center justify-between">
+            <span className="text-gray-700 dark:text-gray-300">Marketing Emails</span>
+            <input
+              type="checkbox"
+              checked={preferences.notifications.marketing}
+              onChange={(e) => setPreferences({
+                ...preferences,
+                notifications: { ...preferences.notifications, marketing: e.target.checked }
+              })}
+              className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
+            />
+          </label>
+        </div>
+      </div>
+      
+      <Button
+        onClick={handlePreferencesUpdate}
+        disabled={loading}
+        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium px-6 py-3"
+      >
+        {loading ? "Saving..." : "Save Preferences"}
+      </Button>
+    </div>
+  </motion.div>
+);
+
+// Account Tab component
+const AccountTab = ({ setShowDeleteModal }: { setShowDeleteModal: (value: boolean) => void }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="space-y-6"
+  >
+    <div className="bg-red-900/20 backdrop-blur-sm border border-red-800 rounded-xl p-6">
+      <h3 className="text-lg font-semibold text-red-400 mb-4">Danger Zone</h3>
+      <p className="text-gray-300 mb-4">
+        Once you delete your account, there is no going back. Please be certain.
+      </p>
+      <Button
+        onClick={() => setShowDeleteModal(true)}
+        className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3"
+      >
+        Delete Account
+      </Button>
+    </div>
+  </motion.div>
+);
+
 function SettingsPage() {
   const { user } = useAuth(); // Use Firebase authentication
   const { theme, currency, setCurrency } = useAppContext();
@@ -294,7 +635,7 @@ function SettingsPage() {
   }, [currentUser?.id]); // Only depend on user ID
 
   // Preferences state
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState<PreferencesType>({
     theme: theme as 'light' | 'dark' | 'system',
     currency: currency,
     language: "en",
@@ -425,288 +766,6 @@ function SettingsPage() {
     }
   };
 
-  const ProfileTab = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      {profileLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-        </div>
-      ) : (
-        <form onSubmit={handleProfileUpdate} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={profileData.name}
-                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email Address
-                {!isDemoMode && <span className="text-gray-500 text-xs ml-2">(cannot be changed)</span>}
-              </label>
-              <input
-                type="email"
-                value={profileData.email}
-                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                disabled={!isDemoMode}
-                className={`w-full backdrop-blur-sm border rounded-xl px-4 py-3 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-200 ${
-                  !isDemoMode 
-                    ? 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-50 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10'
-                }`}
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Phone Number <span className="text-gray-500 text-xs">(optional)</span>
-              </label>
-              <input
-                type="tel"
-                value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-                placeholder="+1 (555) 123-4567"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Location <span className="text-gray-500 text-xs">(optional)</span>
-              </label>
-              <select
-                value={profileData.location}
-                onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-              >
-                {countries.map((country) => (
-                  <option key={country.code} value={country.name}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Bio
-            </label>
-            <textarea
-              value={profileData.bio}
-              onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-              rows={4}
-              placeholder="Tell us about yourself..."
-            />
-          </div>
-          
-          <Button
-            type="submit"
-            disabled={loading}
-            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium px-6 py-3"
-          >
-            {loading ? "Updating..." : "Update Profile"}
-          </Button>
-        </form>
-      )}
-    </motion.div>
-  );
-
-  const SecurityTab = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <form onSubmit={handlePasswordUpdate} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Current Password
-          </label>
-          <input
-            type="password"
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            required
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            New Password
-          </label>
-          <input
-            type="password"
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            required
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Confirm New Password
-          </label>
-          <input
-            type="password"
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            required
-          />
-        </div>
-        
-        <Button
-          type="submit"
-          disabled={loading}
-          className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 py-3"
-        >
-          {loading ? "Updating..." : "Update Password"}
-        </Button>
-      </form>
-      
-      <div className="border-t border-gray-200 dark:border-white/10 pt-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Two-Factor Authentication</h3>
-        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-900 dark:text-white font-medium">Authenticator App</p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Use an authenticator app to generate codes</p>
-            </div>
-            <Button variant="ghost" className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10">
-              Enable
-            </Button>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-
-  const PreferencesTab = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Theme
-          </label>
-          <select
-            value={preferences.theme}
-            onChange={(e) => setPreferences({ ...preferences, theme: e.target.value as 'light' | 'dark' | 'system' })}
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-          >
-            <option value="light" className="bg-white dark:bg-gray-800">Light</option>
-            <option value="dark" className="bg-white dark:bg-gray-800">Dark</option>
-            <option value="system" className="bg-white dark:bg-gray-800">System</option>
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Currency
-          </label>
-          <select
-            value={preferences.currency}
-            onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-          >
-            <option value="USD" className="bg-white dark:bg-gray-800">USD ($)</option>
-            <option value="EUR" className="bg-white dark:bg-gray-800">EUR (€)</option>
-            <option value="GBP" className="bg-white dark:bg-gray-800">GBP (£)</option>
-            <option value="JPY" className="bg-white dark:bg-gray-800">JPY (¥)</option>
-          </select>
-        </div>
-        
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
-          
-          <div className="space-y-3">
-            <label className="flex items-center justify-between">
-              <span className="text-gray-700 dark:text-gray-300">Email Notifications</span>
-              <input
-                type="checkbox"
-                checked={preferences.notifications.email}
-                onChange={(e) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, email: e.target.checked }
-                })}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
-              />
-            </label>
-            
-            <label className="flex items-center justify-between">
-              <span className="text-gray-700 dark:text-gray-300">Push Notifications</span>
-              <input
-                type="checkbox"
-                checked={preferences.notifications.push}
-                onChange={(e) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, push: e.target.checked }
-                })}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
-              />
-            </label>
-            
-            <label className="flex items-center justify-between">
-              <span className="text-gray-700 dark:text-gray-300">Marketing Emails</span>
-              <input
-                type="checkbox"
-                checked={preferences.notifications.marketing}
-                onChange={(e) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, marketing: e.target.checked }
-                })}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
-              />
-            </label>
-          </div>
-        </div>
-        
-        <Button
-          onClick={handlePreferencesUpdate}
-          disabled={loading}
-          className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium px-6 py-3"
-        >
-          {loading ? "Saving..." : "Save Preferences"}
-        </Button>
-      </div>
-    </motion.div>
-  );
-
-  const AccountTab = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <div className="bg-red-900/20 backdrop-blur-sm border border-red-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-red-400 mb-4">Danger Zone</h3>
-        <p className="text-gray-300 mb-4">
-          Once you delete your account, there is no going back. Please be certain.
-        </p>
-        <Button
-          onClick={() => setShowDeleteModal(true)}
-          className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3"
-        >
-          Delete Account
-        </Button>
-      </div>
-    </motion.div>
-  );
-
   // Show loading if no user data is available or profile data is still loading
   if (!currentUser) {
     return (
@@ -784,10 +843,10 @@ function SettingsPage() {
         {/* Tab Content */}
         <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
           <AnimatePresence mode="wait">
-            {activeTab === 'profile' && <ProfileTab key="profile" />}
-            {activeTab === 'security' && <SecurityTab key="security" />}
-            {activeTab === 'preferences' && <PreferencesTab key="preferences" />}
-            {activeTab === 'account' && <AccountTab key="account" />}
+            {activeTab === 'profile' && <ProfileTab key="profile" profileData={profileData} setProfileData={setProfileData} profileLoading={profileLoading} handleProfileUpdate={handleProfileUpdate} loading={loading} isDemoMode={isDemoMode} />}
+            {activeTab === 'security' && <SecurityTab key="security" handlePasswordUpdate={handlePasswordUpdate} loading={loading} />}
+            {activeTab === 'preferences' && <PreferencesTab key="preferences" preferences={preferences} setPreferences={setPreferences} handlePreferencesUpdate={handlePreferencesUpdate} loading={loading} />}
+            {activeTab === 'account' && <AccountTab key="account" setShowDeleteModal={setShowDeleteModal} />}
           </AnimatePresence>
         </div>
       </div>
