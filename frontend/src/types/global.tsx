@@ -2,21 +2,22 @@
 // Asset Types
 // --------------------
 export type Asset = {
-  id?: string;
+  id: string;
+  userId?: string;
   name: string;
-  type: string;
+  type: "stock" | "crypto" | "cash" | "stock_options" | "bond" | "other";
   symbol?: string;
-  quantity?: number;
-  current_value: number;
+  quantity: number;
   purchase_price?: number;
+  current_value?: number;
   purchase_date?: string;
-  notes?: string;
   vesting_start_date?: string;
   vesting_end_date?: string;
   vesting_schedule?: {
-    initial?: string;
-    monthly?: string;
+    initial: string;
+    monthly: string;
   };
+  notes?: string;
   price_history?: { date: string; value: number }[];
 };
 
@@ -24,14 +25,14 @@ export type Asset = {
 // Expense Types
 // --------------------
 export type Expense = {
-  id?: string;
-  userId: string;
+  id: string;
+  userId?: string;
   category: string;
   amount: number;
   date: string;
   description: string;
-  recurrence?: "one-time" | "recurring";
-  frequency?: "Daily" | "Weekly" | "Biweekly" | "Monthly" | "Quarterly" | "Yearly";
+  recurrence: "one-time" | "recurring";
+  frequency?: "Daily" | "Weekly" | "Monthly" | "Yearly";
 };
 
 export type ExpenseFormData = {
@@ -47,48 +48,37 @@ export type ExpenseFormData = {
 // Property Types
 // --------------------
 export type Property = {
-    id?: string;
-    address: string;
-    purchasePrice: number;
-    currentValue: number;
-    propertyType: string;
-    status: string;
-    notes?: string;
-    
-    // Ownership details
-    ownershipType: 'owned' | 'rented' | 'leased';
-    
-    // Rental-specific fields
-    rentalStartDate?: string;
-    rentalEndDate?: string;
-    monthlyRent?: number;
-    securityDeposit?: number;
-    
-    // Owned property fields
-    purchaseDate?: string;
-    
-    // Mortgage details (for owned properties)
-    mortgageAmount?: number;
-    mortgageRate?: number;
-    mortgageTerm?: number; // in years
-    monthlyPayment?: number;
-    mortgageStartDate?: string;
-    mortgageProvider?: string;
-    
-    // Property details
-    bedrooms?: number;
-    bathrooms?: number;
-    squareFootage?: number;
-    yearBuilt?: number;
-    lotSize?: number;
-    
-    // Financial details
-    rentalIncome?: number;
-    propertyTaxes?: number;
-    insurance?: number;
-    maintenanceCosts?: number;
-    hoa?: number;
-  };
+  id: string;
+  userId?: string;
+  address: string;
+  ownershipType?: "owned" | "rented";
+  propertyType?: "single_family" | "condo" | "townhouse" | "multi_family" | "commercial" | "land";
+  status?: "owned" | "rental" | "rented" | "sold";
+  currentValue?: number;
+  purchasePrice?: number;
+  purchaseDate?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  squareFootage?: number;
+  yearBuilt?: number;
+  lotSize?: number;
+  propertyTaxes?: number;
+  insurance?: number;
+  maintenanceCosts?: number;
+  hoa?: number;
+  mortgageAmount?: number;
+  mortgageRate?: number;
+  mortgageTerm?: number;
+  monthlyPayment?: number;
+  mortgageProvider?: string;
+  monthlyRent?: number;
+  securityDeposit?: number;
+  rentalStartDate?: string;
+  rentalEndDate?: string;
+  notes?: string;
+  mortgageStartDate?: string;
+  rentalIncome?: number;
+};
 
 export type PropertyFormData = {
     address: string;

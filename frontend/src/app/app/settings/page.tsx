@@ -37,16 +37,8 @@ function SettingsPage() {
     id: user.uid,
     name: user.displayName || user.email?.split('@')[0] || 'User',
     email: user.email || '',
-    // Extract additional data from Google profile if available
-    phone: (user as { phoneNumber?: string }).phoneNumber || '',
-    location: (user as { location?: string; address?: string }).location || (user as { location?: string; address?: string }).address || '',
+    phone: user.phoneNumber || '',
     photoURL: user.photoURL || '',
-    // Try to extract location from Google profile metadata
-    ...(user.providerData?.[0]?.providerId === 'google.com' && {
-      // Google sometimes provides additional profile data
-      phone: (user as { phoneNumber?: string }).phoneNumber || '',
-      location: (user as { customClaims?: { location?: string }; location?: string }).customClaims?.location || (user as { customClaims?: { location?: string }; location?: string }).location || '',
-    })
   } : (isDemoMode ? {
     id: 'demo-user-id',
     name: 'Demo User',
@@ -63,11 +55,12 @@ function SettingsPage() {
     bio: "",
     location: "",
   });
+  const [profileDataLoaded, setProfileDataLoaded] = useState(false);
 
   // Load persisted profile data when currentUser is available
   useEffect(() => {
     const loadProfileData = async () => {
-      if (!currentUser?.id) return;
+      if (!currentUser?.id || profileDataLoaded) return;
       
       try {
         // First try to load persisted profile data from our API
@@ -85,42 +78,41 @@ function SettingsPage() {
         
         if (data.user && !data.error) {
           // Use persisted data if available
-          setProfileData(prev => ({
-            ...prev,
+          setProfileData({
             name: data.user.name || currentUser.name || "User",
             email: data.user.email || currentUser.email || "",
             phone: data.user.phone || "",
             location: data.user.location || "",
             bio: data.user.bio || "",
-          }));
+          });
         } else {
           // Fallback to Firebase user data if no persisted data
-          setProfileData(prev => ({
-            ...prev,
+          setProfileData({
             name: currentUser.name || "User",
             email: currentUser.email || "",
             phone: currentUser.phone || "",
             location: currentUser.location || "",
-          }));
+            bio: "",
+          });
         }
+        
+        setProfileDataLoaded(true);
       } catch (error) {
         console.error('Failed to load profile data:', error);
         // Fallback to Firebase user data
-        setProfileData(prev => ({
-          ...prev,
+        setProfileData({
           name: currentUser.name || "User",
           email: currentUser.email || "",
           phone: currentUser.phone || "",
           location: currentUser.location || "",
-        }));
+          bio: "",
+        });
+        setProfileDataLoaded(true);
       }
     };
 
-    // Only load if we don't already have profile data
-    if (currentUser && profileData.name === "" && profileData.email === "") {
-      loadProfileData();
-    }
-  }, [currentUser, profileData.name, profileData.email]);
+    loadProfileData();
+  }, [currentUser?.id, profileDataLoaded]);
 
   // Preferences state
   const [preferences, setPreferences] = useState({
@@ -290,7 +282,7 @@ function SettingsPage() {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Phone Number
+              Phone Number <span className="text-gray-500 text-xs">(optional)</span>
             </label>
             <input
               type="tel"
@@ -303,14 +295,14 @@ function SettingsPage() {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Location
+              Location <span className="text-gray-500 text-xs">(optional)</span>
             </label>
             <input
               type="text"
               value={profileData.location}
               onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
               className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-              placeholder="City, Country"
+              placeholder="Country or City, Country"
             />
           </div>
         </div>
@@ -520,8 +512,8 @@ function SettingsPage() {
     </motion.div>
   );
 
-  // Show loading if no user data is available
-  if (!currentUser) {
+  // Show loading if no user data is available or profile data is still loading
+  if (!currentUser || !profileDataLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>

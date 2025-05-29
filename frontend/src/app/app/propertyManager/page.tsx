@@ -49,6 +49,8 @@ export default function PropertyManager() {
   } : null);
 
   const fetchProperties = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -56,7 +58,7 @@ export default function PropertyManager() {
       const response = await apiCall("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "READ", userId: "demo-user-id" }),
+        body: JSON.stringify({ method: "READ", userId: currentUser.id }),
       });
       
       const data = await response.json();
@@ -69,7 +71,7 @@ export default function PropertyManager() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
       fetchProperties();
