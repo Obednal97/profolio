@@ -520,4 +520,4 @@ function SettingsPage() {
   );
 }
 
-export default SettingsPage; 
+export default SettingsPage;

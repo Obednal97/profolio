@@ -259,6 +259,20 @@ export async function POST(request: NextRequest) {
         endpoint: errorEndpoint,
         failedAt: currentStep || 'unknown step'
       }, { status: 401 });
+    } else if (errorMessage.includes('timeout') || errorMessage.includes('Request timeout') || errorStatus === 408) {
+      return NextResponse.json({ 
+        error: 'Trading 212 request timeout', 
+        details: `Request timed out on endpoint: ${errorEndpoint || 'unknown'}. ${errorDetails || errorMessage}`,
+        suggestions: [
+          'Try again in a few minutes',
+          'Check your internet connection',
+          'Trading 212 servers may be experiencing high load',
+          'Consider syncing during off-peak hours'
+        ],
+        endpoint: errorEndpoint,
+        retryAfter: '2-5 minutes',
+        failedAt: currentStep || 'unknown step'
+      }, { status: 408 });
     } else {
       return NextResponse.json({ 
         error: 'Failed to sync portfolio data', 

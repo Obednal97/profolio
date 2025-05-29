@@ -54,7 +54,7 @@ export default function AssetManager() {
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
-      
+
       const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,7 +74,7 @@ export default function AssetManager() {
   }, [user?.id]);
 
   useEffect(() => {
-    fetchAssets();
+      fetchAssets();
   }, [fetchAssets]);
 
   const fetchChartData = useCallback(async () => {
@@ -105,12 +105,12 @@ export default function AssetManager() {
   }, [timeframe, user?.id]);
 
   useEffect(() => {
-    fetchChartData();
+      fetchChartData();
   }, [timeframe, fetchChartData]);
 
   const handleEdit = useCallback((asset: Asset) => {
-    setEditingAsset(asset);
-    setShowAddModal(true);
+      setEditingAsset(asset);
+      setShowAddModal(true);
   }, []);
 
   const handleDelete = useCallback(
@@ -566,7 +566,7 @@ export default function AssetManager() {
               required={field.required}
               step={field.step}
             />
-          )}
+            )}
         </div>
       );
     };
@@ -589,8 +589,8 @@ export default function AssetManager() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Asset Name
-              </label>
+                  Asset Name
+                </label>
               <input
                 type="text"
                 value={formData.name}
@@ -606,7 +606,7 @@ export default function AssetManager() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Asset Type
-              </label>
+                </label>
               <select
                 value={formData.type}
                 onChange={(e) =>
@@ -621,7 +621,7 @@ export default function AssetManager() {
                 ))}
               </select>
             </div>
-          </div>
+            </div>
 
           <div className="space-y-4 sm:space-y-6">
             {assetTypeFields[formData.type].map((field) => (
@@ -700,8 +700,8 @@ export default function AssetManager() {
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{asset.name}</h3>
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
                 {asset.symbol || asset.type?.charAt(0).toUpperCase() + asset.type?.slice(1)}
-              </p>
-            </div>
+            </p>
+          </div>
           </div>
           <div className="flex space-x-1 sm:space-x-2 flex-shrink-0 ml-2">
             <button
@@ -797,7 +797,7 @@ export default function AssetManager() {
                       <div className="flex items-center">
                         <div className={`p-2 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 flex-shrink-0`}>
                           <i className={`fas ${iconClass} text-white text-sm`}></i>
-                        </div>
+            </div>
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{asset.name}</div>
                         </div>
@@ -1151,7 +1151,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
                 Demo Mode: Keys stored locally in browser only
               </p>
             )}
-          </div>
+              </div>
           <button
             onClick={onClose}
             className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -1196,7 +1196,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
                       )}
                     </div>
                   )}
-                </div>
+              </div>
                 
                 <button
                   type="button"
@@ -1210,7 +1210,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
                     'Test'
                   )}
                 </button>
-              </div>
+        </div>
 
               <p className="text-xs text-gray-500">{provider.description}</p>
               
@@ -1348,12 +1348,12 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
 
           <div className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 dark:hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 transition-all duration-200 sm:col-span-2 lg:col-span-1`}>
             <div className="flex justify-between items-start">
-              <div>
+          <div>
                 <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Total Gain/Loss</p>
                 <p className={`text-2xl sm:text-3xl font-bold mt-1 ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {totalGainLoss >= 0 ? '+' : ''}{formatCurrency(totalGainLoss)}
-                </p>
-              </div>
+            </p>
+          </div>
               <div className={`p-2 sm:p-3 ${totalGainLoss >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}>
                 <i className={`fas fa-chart-line ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'} text-lg sm:text-xl`}></i>
               </div>
@@ -1373,7 +1373,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Portfolio Performance</h3>
               <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-1">
                 {["7", "30", "90", "365", "max"].map((days) => (
-                  <button
+              <button
                     key={days}
                     onClick={() => setTimeframe(days)}
                     className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap touch-manipulation ${
@@ -1383,15 +1383,15 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
                     }`}
                   >
                     {days === "max" ? "Max" : `${days}D`}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {chartLoading ? (
+              </button>
+            ))}
+          </div>
+        </div>
+        {chartLoading ? (
               <div className="h-48 sm:h-64 flex items-center justify-center">
                 <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              </div>
-            ) : (
+          </div>
+        ) : (
               <div className="h-48 sm:h-64">
                 <LineChart
                   data={chartDataFormatted}
@@ -1447,7 +1447,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
                 {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} ({assetsByType[type].count})
               </button>
             ))}
-          </div>
+      </div>
 
           <div className="flex gap-2 self-end lg:self-auto">
             <button
@@ -1483,7 +1483,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
             >
               <i className="fas fa-table text-sm sm:text-base"></i>
             </button>
-          </div>
+      </div>
         </motion.div>
 
         {/* Assets Grid/List */}
@@ -1497,7 +1497,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
             >
               <div className="text-gray-500 text-4xl sm:text-6xl mb-4">
                 <i className="fas fa-wallet"></i>
-              </div>
+        </div>
               <h3 className="text-lg sm:text-xl font-medium text-gray-600 dark:text-gray-400 mb-2">
                 {filterType === "all" ? "No Assets Yet" : `No ${filterType} assets`}
               </h3>
@@ -1526,12 +1526,12 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
             >
               {viewMode === "grid" ? (
                 filteredAssets.map((asset) => (
-                  <AssetCard
-                    key={asset.id}
-                    asset={asset}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
                 ))
               ) : viewMode === "list" ? (
                 filteredAssets.map((asset) => (
