@@ -4,7 +4,7 @@
   "description": "Professional Portfolio Management Platform",
   "scripts": {
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "dev:backend": "cd backend && npm run dev",
+    "dev:backend": "cd backend && npm run start:dev",
     "dev:frontend": "cd frontend && npm run dev", 
     "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:backend": "cd backend && npm run build",

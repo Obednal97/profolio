@@ -40,10 +40,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Graceful shutdown for Prisma
-  const prismaService = app.get(PrismaService);
-  await prismaService.enableShutdownHooks(app);
-
-  await app.listen(3000, '0.0.0.0');
+  // Start server
+  const port = process.env.PORT || 3001;
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Backend running on http://localhost:${port}`);
 }
 bootstrap();

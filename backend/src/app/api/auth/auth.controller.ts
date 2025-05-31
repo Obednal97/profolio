@@ -5,6 +5,8 @@ import { sign } from 'jsonwebtoken';
 import { PrismaService } from '@/common/prisma.service';
 import { Request } from 'express';
 import { AuthGuard } from './guards/auth.guard'; // adjust path as needed
+import { AuthUser } from '@/common/auth/jwt.strategy';
+import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
 
 @Controller('api/auth')
 export class AuthController {
@@ -70,8 +72,18 @@ export class AuthController {
   }
 
   @Get('user')
-  @UseGuards(AuthGuard)
-  getUser(@Req() req: Request) {
+  @UseGuards(JwtAuthGuard)
+  getUser(@Req() req: { user: AuthUser }) {
+    return {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name ?? null,
+    };
+  }
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  async getProfile(@Req() req: { user: AuthUser }) {
     return {
       id: req.user.id,
       email: req.user.email,

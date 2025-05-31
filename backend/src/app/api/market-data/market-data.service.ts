@@ -307,31 +307,28 @@ export class MarketDataService {
 
   async getCryptoPriceFromCoinGecko(userId: string, symbol: string): Promise<any> {
     const coinGeckoKey = await this.apiKeysService.findActiveByProvider(userId, 'COINGECKO');
-    
-    // ... existing code ...
+    return await this.fetchCoinGeckoPrice(symbol, coinGeckoKey || undefined);
   }
 
   async getStockPriceFromAlphaVantage(userId: string, symbol: string): Promise<any> {
     const alphaVantageKey = await this.apiKeysService.findActiveByProvider(userId, 'ALPHA_VANTAGE');
-    
-    // ... existing code ...
+    if (!alphaVantageKey) return null;
+    return await this.fetchAlphaVantagePrice(symbol, alphaVantageKey);
   }
 
   async getStockPriceFromTwelveData(userId: string, symbol: string): Promise<any> {
     const twelveDataKey = await this.apiKeysService.findActiveByProvider(userId, 'TWELVE_DATA');
-    
-    // ... existing code ...
+    if (!twelveDataKey) return null;
+    return await this.fetchTwelveDataPrice(symbol, twelveDataKey);
   }
 
   async getHistoricalPricesFromCoinGecko(userId: string, symbol: string, days: number = 30): Promise<any[]> {
-    const coinGeckoKey = await this.apiKeysService.findActiveByProvider(userId, 'COINGECKO');
-    
-    // ... existing code ...
+    const historicalData = await this.getCryptoHistoricalData(userId, symbol, days);
+    return historicalData?.data || [];
   }
 
   async getHistoricalPricesFromAlphaVantage(userId: string, symbol: string): Promise<any[]> {
-    const alphaVantageKey = await this.apiKeysService.findActiveByProvider(userId, 'ALPHA_VANTAGE');
-    
-    // ... existing code ...
+    const historicalData = await this.getStockHistoricalData(userId, symbol, 30);
+    return historicalData?.data || [];
   }
 } 
