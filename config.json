@@ -1,0 +1,21 @@
+{
+  "deployment": "development",
+  "features": {
+    "landingPage": true,
+    "userRegistration": true,
+    "emailVerification": false,
+    "networkBypass": true,
+    "demoMode": true,
+    "apiKeyManagement": true,
+    "marketDataSync": true
+  },
+  "security": {
+    "requireHTTPS": false,
+    "sessionTimeout": 86400000,
+    "maxLoginAttempts": 5
+  },
+  "database": {
+    "autoMigrate": true,
+    "seedData": true
+  }
+}

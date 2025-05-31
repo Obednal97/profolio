@@ -1,12 +1,3 @@
-enum AssetType {
-  CRYPTO
-  STOCK
-  PROPERTY
-  EQUITY
-  OTHER
-  BOND
-}
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,46 +9,143 @@ datasource db {
 
 model User {
   id          String      @id @default(uuid())
-  password    String
   email       String      @unique
-  name        String?
   taxCountry  String?
-  taxRate     Int? // stored as basis points, e.g. 0.25 => 2500
+  taxRate     Int?
+  createdAt   DateTime    @default(now())
+  password    String
+  updatedAt   DateTime    @default(now()) @updatedAt
+  name        String?
+  apiKeys     ApiKey[]
   assets      Asset[]
-  liabilities Liability[]
   expenses    Expense[]
-  properties Property[]
+  liabilities Liability[]
+  properties  Property[]
   settings    Settings?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
 }
 
 model Asset {
-  id            String  @id @default(uuid())
-  userId        String
-  name          String
-  type          AssetType
-  symbol        String?
-  quantity      Int    // stored in micro-units, e.g. 1.234 => 1234000
-  source        String?
-  externalId    String?
-  currency      String?
-  valueOverride Int?   // stored in pence/cents, e.g. £10.99 => 1099
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  id               String             @id @default(uuid())
+  userId           String
+  name             String
+  quantity         Int
+  source           String?
+  externalId       String?
+  valueOverride    Int?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @default(now()) @updatedAt
+  type             AssetType
+  currency         String?
+  symbol           String?
+  autoSync         Boolean            @default(false)
+  initialAmount    Int?
+  interestRate     Int?
+  interestType     InterestType?
+  lastSyncedAt     DateTime?
+  maturityDate     DateTime?
+  paymentFrequency PaymentFrequency?
+  purchaseDate     DateTime?
+  purchasePrice    Int?
+  termLength       Int?
+  user             User               @relation(fields: [userId], references: [id])
+  transactions     AssetTransaction[]
+  priceHistory     PriceHistory[]
+  
+  // Critical indexes for performance
+  @@index([userId, type]) // Fast user asset filtering by type
+  @@index([symbol, type]) // Fast symbol lookups for price sync
+  @@index([userId, symbol]) // Fast user-specific symbol lookups
+  @@index([lastSyncedAt]) // Fast sync status queries
+}
+
+model PriceHistory {
+  id        String   @id @default(uuid())
+  assetId   String
+  symbol    String
+  price     Int
+  timestamp DateTime
+  source    String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // Critical indexes for performance (this table will have millions of records)
+  @@unique([assetId, timestamp, source])
+  @@index([assetId, timestamp]) // Fast asset price history queries
+  @@index([symbol, timestamp]) // Fast symbol price history queries
+  @@index([timestamp]) // Fast time-based queries and cleanup
+  @@index([symbol, timestamp, source]) // Composite index for complex queries
+  @@index([assetId, timestamp, price]) // Covering index for price charts
+}
+
+model AssetTransaction {
+  id          String   @id @default(uuid())
+  assetId     String
+  type        String
+  quantity    Int
+  price       Int
+  fees        Int?
+  totalValue  Int
+  date        DateTime
+  description String?
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, date]) // Fast asset transaction history
+  @@index([assetId, type, date]) // Fast transaction type filtering
+  @@index([date]) // Fast date-based queries
+}
+
+model ApiKey {
+  id                           String      @id @default(cuid())
+  userId                       String
+  provider                     ApiProvider
+  isActive                     Boolean     @default(true)
+  createdAt                    DateTime    @default(now())
+  updatedAt                    DateTime    @updatedAt
+  expiresAt                    DateTime?
+  permissions                  String[]    @default([])
+  rateLimitInfo                Json?
+  testResult                   String?
+  testedAt                     DateTime?
+  user_api_key_display_name    String
+  user_api_key_encrypted_value String
+  user_api_key_environment     String      @default("production")
+  user                         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, user_api_key_display_name])
+  @@index([userId, provider, isActive]) // Fast active key lookups
+  @@index([provider, isActive]) // Fast provider-wide active key queries
+  @@map("ApiKey")
+}
+
+model MarketDataJob {
+  id         String      @id @default(uuid())
+  symbol     String
+  provider   ApiProvider
+  lastRun    DateTime?
+  nextRun    DateTime
+  isActive   Boolean     @default(true)
+  errorCount Int         @default(0)
+  lastError  String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @default(now()) @updatedAt
+
+  @@unique([symbol, provider])
+  @@index([nextRun, isActive]) // Fast job scheduling queries
+  @@index([provider, isActive]) // Fast provider-specific job queries
 }
 
 model Liability {
   id           String    @id @default(uuid())
   userId       String
   name         String
-  balance      Int     // stored in pence/cents, e.g. £45,000.23 => 4500023
-  interestRate Int     // stored as basis points, e.g. 3.5% => 3500
+  balance      Int
+  interestRate Int
   dueDate      DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+  user         User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId]) // Fast user liability queries
+  @@index([dueDate]) // Fast due date queries
 }
 
 model Expense {
@@ -67,29 +155,67 @@ model Expense {
   date      DateTime
   notes     String?
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId, date]) // Fast user expense history
+  @@index([userId, category]) // Fast category filtering
+  @@index([date]) // Fast date-based queries
 }
 
 model Settings {
-  userId   String   @id
+  userId    String   @id
+  theme     String?
+  currency  String?
+  timezone  String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
-  theme    String?
-  currency String?
-  timezone String?
-  user     User     @relation(fields: [userId], references: [id])
+  updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Property {
   id           String   @id @default(uuid())
   address      String
-  value        Int      // stored in pence/cents, e.g. £230,000.00 => 23000000
+  value        Int
   purchaseDate DateTime
   notes        String?
   userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
   user         User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  
+  @@index([userId]) // Fast user property queries
+  @@index([purchaseDate]) // Fast date-based queries
+}
+
+enum AssetType {
+  CRYPTO
+  STOCK
+  PROPERTY
+  EQUITY
+  OTHER
+  BOND
+  SAVINGS
+}
+
+enum InterestType {
+  SIMPLE
+  COMPOUND
+}
+
+enum PaymentFrequency {
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
+enum ApiProvider {
+  ALPHA_VANTAGE
+  TWELVE_DATA
+  POLYGON_IO
+  COINGECKO
+  COINMARKETCAP
+  BINANCE
+  TRADING212
 }

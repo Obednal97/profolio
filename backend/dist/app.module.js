@@ -8,15 +8,27 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
-const users_module_1 = require("./users/users.module");
+const schedule_1 = require("@nestjs/schedule");
+const users_module_1 = require("./app/api/admin/users/users.module");
 const prisma_service_1 = require("./common/prisma.service");
+const settings_module_1 = require("./app/api/settings/settings.module");
+const assets_module_1 = require("./app/api/assets/assets.module");
+const api_keys_module_1 = require("./app/api/api-keys/api-keys.module");
+const market_data_module_1 = require("./app/api/market-data/market-data.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [users_module_1.UsersModule],
+        imports: [
+            schedule_1.ScheduleModule.forRoot(),
+            settings_module_1.SettingsModule,
+            users_module_1.UsersModule,
+            assets_module_1.AssetsModule,
+            api_keys_module_1.ApiKeysModule,
+            market_data_module_1.MarketDataModule,
+        ],
         providers: [prisma_service_1.PrismaService],
-        exports: [prisma_service_1.PrismaService], // <-- this line is key
+        exports: [prisma_service_1.PrismaService],
     })
 ], AppModule);
