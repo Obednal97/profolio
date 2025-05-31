@@ -1,30 +1,40 @@
 {
   "name": "profolio",
   "version": "1.0.0",
-  "description": "Professional Portfolio Management Platform",
+  "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
+  "main": "install-or-update.sh",
   "scripts": {
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "install": "./install-or-update.sh",
+    "update": "./install-or-update.sh",
+    "deploy": "./deploy.sh",
+    "setup": "./setup.sh",
     "dev:backend": "cd backend && npm run start:dev",
-    "dev:frontend": "cd frontend && npm run dev", 
-    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
-    "build:all": "npm run build:backend && npm run build:frontend",
-    "setup:dev": "node deployment.config.js && npm run install:all",
-    "test:all": "cd backend && npm test && cd ../frontend && npm test",
-    "lint:all": "cd backend && npm run lint && cd ../frontend && npm run lint",
-    "db:migrate": "cd backend && npx prisma migrate dev",
-    "db:reset": "cd backend && npx prisma migrate reset && npx prisma db seed",
-    "db:studio": "cd backend && npx prisma studio"
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test"
   },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
-  "keywords": ["portfolio", "finance", "self-hosted", "investment-tracking"],
-  "author": "Your Name",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Obednal97/profolio.git"
-  }
+  },
+  "keywords": ["portfolio", "finance", "self-hosted", "investment-tracking", "proxmox", "homelab", "privacy", "typescript", "nextjs", "nestjs"],
+  "author": "Ollie Bednal <contact@profolio.app>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Obednal97/profolio/issues"
+  },
+  "homepage": "https://github.com/Obednal97/profolio#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "files": [
+    "install-or-update.sh",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "policies/"
+  ]
 } 

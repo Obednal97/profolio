@@ -10,7 +10,7 @@ if [ "$NODE_ENV" = "development" ] || [ -f "/Users/$(whoami)" ]; then
     PORT=3001
 else
     echo "🚀 Production environment detected"
-    DB_HOST="192.168.1.27"
+    DB_HOST="YOUR_SERVER_IP"
     DB_NAME="profolio"
     PORT=3001
 fi
@@ -18,7 +18,7 @@ fi
 # Create backend .env file
 echo "📝 Creating backend .env file..."
 cat > /opt/profolio/backend/.env << EOF
-DATABASE_URL="postgresql://profolio:temppassword@${DB_HOST}:5432/${DB_NAME}"
+DATABASE_URL="postgresql://profolio:CHANGE_THIS_PASSWORD@${DB_HOST}:5432/${DB_NAME}"
 JWT_SECRET="production-jwt-secret-change-this-in-production-environment"
 API_ENCRYPTION_KEY="production-api-encryption-key-32b!"
 PORT=${PORT}

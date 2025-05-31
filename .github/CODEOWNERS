@@ -1,0 +1,39 @@
+# Code Owners for Profolio
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners - These users will be requested for review on all PRs
+* @Obednal97
+
+# Backend specific
+/backend/ @Obednal97
+/backend/src/ @Obednal97
+/backend/prisma/ @Obednal97
+
+# Frontend specific  
+/frontend/ @Obednal97
+/frontend/src/ @Obednal97
+
+# Documentation - Important for maintaining quality docs
+/docs/ @Obednal97
+README.md @Obednal97
+CONTRIBUTING.md @Obednal97
+CHANGELOG.md @Obednal97
+
+# Security and compliance
+SECURITY.md @Obednal97
+/policies/ @Obednal97
+
+# Configuration and automation
+/.github/ @Obednal97
+/scripts/ @Obednal97
+install-or-update.sh @Obednal97
+deploy.sh @Obednal97
+
+# Package files
+package.json @Obednal97
+/backend/package.json @Obednal97
+/frontend/package.json @Obednal97
+
+# Environment and config files
+.gitignore @Obednal97
+*.env.example @Obednal97 

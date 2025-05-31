@@ -26,7 +26,7 @@ aws rds create-db-instance \
 ### Step 2: Database Migration
 ```bash
 # Export from home server
-pg_dump -h 192.168.1.27 -U username profolio_prod > profolio_backup.sql
+pg_dump -h YOUR_SERVER_IP -U username profolio_prod > profolio_backup.sql
 
 # Import to RDS
 psql -h your-rds-endpoint.amazonaws.com -U profolio_user -d profolio < profolio_backup.sql
