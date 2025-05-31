@@ -665,17 +665,31 @@ setup_environment() {
         api_key="$existing_api_key"
         info "Preserving existing credentials"
         
-        # Verify database password still works
-        if ! sudo -u postgres psql -c "SELECT 1;" profolio 2>/dev/null; then
-            warn "Existing database credentials may be invalid, attempting to fix..."
-            # Try to update PostgreSQL password to match .env
+        # FIXED: Test if profolio user can actually authenticate with the preserved password
+        info "Testing preserved database credentials..."
+        if PGPASSWORD="$db_password" psql -h localhost -U profolio -d profolio -c "SELECT 1;" >/dev/null 2>&1; then
+            success "Existing database credentials are valid"
+        else
+            warn "Existing database credentials are invalid, updating PostgreSQL password..."
+            # Update PostgreSQL password to match .env
             if sudo -u postgres psql -c "ALTER USER profolio WITH PASSWORD '$db_password';" 2>/dev/null; then
                 success "Database password synchronized with existing credentials"
+                # Test again after sync
+                if PGPASSWORD="$db_password" psql -h localhost -U profolio -d profolio -c "SELECT 1;" >/dev/null 2>&1; then
+                    success "Database credentials now working"
+                else
+                    error "Failed to synchronize database credentials - will regenerate"
+                    credentials_preserved=false
+                fi
             else
-                error "Failed to synchronize database password - continuing anyway"
+                error "Failed to synchronize database password - will regenerate"
+                credentials_preserved=false
             fi
         fi
-    else
+    fi
+    
+    # Generate new credentials if preservation failed or not available
+    if [ "$credentials_preserved" = false ]; then
         db_password="${DB_PASSWORD:-$(openssl rand -base64 12)}"
         jwt_secret="$(openssl rand -base64 32)"
         api_key="$(openssl rand -base64 32)"
@@ -695,6 +709,15 @@ setup_environment() {
         # Ensure database exists and grant permissions
         sudo -u postgres psql -c "CREATE DATABASE profolio OWNER profolio;" 2>/dev/null || true
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;" 2>/dev/null || true
+        
+        # Test new credentials work
+        info "Testing new database credentials..."
+        if PGPASSWORD="$db_password" psql -h localhost -U profolio -d profolio -c "SELECT 1;" >/dev/null 2>&1; then
+            success "New database credentials verified"
+        else
+            error "New database credentials failed verification"
+            return 1
+        fi
     fi
     
     # Update global DB_PASSWORD variable for consistency
