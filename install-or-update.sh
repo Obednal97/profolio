@@ -6,132 +6,135 @@
 # Note: Removed 'set -e' to prevent premature exit on minor errors
 # Critical errors will be handled explicitly
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-NC='\033[0m' # No Color
+# Colors for output - simplified for better compatibility
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    PURPLE='\033[0;35m'
+    CYAN='\033[0;36m'
+    WHITE='\033[1;37m'
+    NC='\033[0m' # No Color
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    PURPLE=''
+    CYAN=''
+    WHITE=''
+    NC=''
+fi
 
-# Progress spinner variables
-SPINNER_ACTIVE=0
+# Simple progress spinner - using basic ASCII characters for compatibility
+SPINNER_CHARS="/-\|"
 SPINNER_PID=""
-SPINNER_MSG=""
 
-# Dynamic spinner system (like Proxmox community scripts)
-start_spinner() {
-    local msg="$1"
-    local frames="⣾⣽⣻⢿⡿⣟⣯⣷"
-    local spin_i=0
-    local interval=0.1
+# Simple spinner function that actually works
+show_spinner() {
+    local message="$1"
+    local pid="$2"
+    local spin='-\|/'
+    local i=0
     
-    SPINNER_MSG="$msg"
-    printf "\r%s%s %s" "$BLUE" "⣾" "$SPINNER_MSG$NC" >&2
-    
-    {
-        while [[ "$SPINNER_ACTIVE" -eq 1 ]]; do
-            printf "\r%s%s %s%s" "$BLUE" "${frames:spin_i++%${#frames}:1}" "$SPINNER_MSG" "$NC" >&2
-            sleep "$interval"
-        done
-    } &
-    
-    SPINNER_PID=$!
-    disown "$SPINNER_PID"
-}
-
-# Update spinner message in real-time
-update_spinner_msg() {
-    local new_msg="$1"
-    SPINNER_MSG="$new_msg"
-}
-
-# Stop spinner and show completion
-stop_spinner() {
-    local status="$1"  # "success" or "error" or "warning"
-    local final_msg="$2"
-    
-    if [[ -n "$SPINNER_PID" ]] && kill -0 "$SPINNER_PID" 2>/dev/null; then
-        kill "$SPINNER_PID" 2>/dev/null
+    echo -n "$message "
+    while kill -0 $pid 2>/dev/null; do
+        i=$(((i+1) % 4))
+        printf "\r$message ${spin:$i:1}"
         sleep 0.1
-    fi
-    
-    # Clear the spinner line
-    printf "\r%*s\r" "$(tput cols)" ""
-    
-    # Show final status
-    case "$status" in
-        "success")
-            printf "%s✅ %s%s\n" "$GREEN" "$final_msg" "$NC"
-            ;;
-        "error")
-            printf "%s❌ %s%s\n" "$RED" "$final_msg" "$NC"
-            ;;
-        "warning")
-            printf "%s⚠️  %s%s\n" "$YELLOW" "$final_msg" "$NC"
-            ;;
-        *)
-            printf "%s✨ %s%s\n" "$CYAN" "$final_msg" "$NC"
-            ;;
-    esac
+    done
+    printf "\r$message ✓\n"
 }
 
-# Enhanced progress function with real-time updates
-show_progress_with_spinner() {
+# Enhanced progress function with simple, working progress indication
+show_progress() {
     local step=$1
     local total=$2
     local message=$3
     local command="$4"
     
-    # Start spinner
-    SPINNER_ACTIVE=1
-    start_spinner "[$step/$total] $message"
+    printf "${BLUE}[$step/$total]${NC} $message"
     
-    # Execute command if provided
     if [[ -n "$command" ]]; then
-        if eval "$command" >/dev/null 2>&1; then
-            SPINNER_ACTIVE=0
-            stop_spinner "success" "[$step/$total] $message - Complete"
+        # Run command in background and show spinner
+        eval "$command" > /tmp/profolio_progress.log 2>&1 &
+        local cmd_pid=$!
+        
+        # Simple ASCII spinner
+        local spin='-\|/'
+        local i=0
+        while kill -0 $cmd_pid 2>/dev/null; do
+            i=$(((i+1) % 4))
+            printf "\r${BLUE}[$step/$total]${NC} $message ${spin:$i:1}"
+            sleep 0.1
+        done
+        
+        # Check if command succeeded
+        wait $cmd_pid
+        local exit_code=$?
+        
+        if [[ $exit_code -eq 0 ]]; then
+            printf "\r${BLUE}[$step/$total]${NC} $message ${GREEN}✓${NC}\n"
             return 0
         else
-            SPINNER_ACTIVE=0
-            stop_spinner "error" "[$step/$total] $message - Failed"
+            printf "\r${BLUE}[$step/$total]${NC} $message ${RED}✗${NC}\n"
+            echo "${RED}Error details:${NC}"
+            cat /tmp/profolio_progress.log
             return 1
         fi
     else
-        # Manual control - caller will stop spinner
+        printf "\n"
         return 0
     fi
 }
 
-# Multi-stage progress with live updates
-execute_with_live_progress() {
-    local main_msg="$1"
-    local total_steps="$2"
-    shift 2
+# Multi-step execution with clean progress display
+execute_steps() {
+    local main_message="$1"
+    shift
     local steps=("$@")
     
-    echo -e "${CYAN}🚀 $main_msg${NC}"
+    echo -e "${CYAN}🚀 $main_message${NC}"
+    
+    local step_count=$((${#steps[@]} / 2))
+    local current_step=1
     
     for ((i=0; i<${#steps[@]}; i+=2)); do
         local step_msg="${steps[i]}"
         local step_cmd="${steps[i+1]}"
-        local step_num=$((i/2 + 1))
         
-        if ! show_progress_with_spinner "$step_num" "$total_steps" "$step_msg" "$step_cmd"; then
-            echo -e "${RED}❌ Failed at step: $step_msg${NC}"
+        if ! show_progress "$current_step" "$step_count" "$step_msg" "$step_cmd"; then
+            echo -e "${RED}❌ Failed: $step_msg${NC}"
             return 1
         fi
+        
+        ((current_step++))
     done
     
-    echo -e "${GREEN}🎉 $main_msg - All steps completed successfully!${NC}"
+    echo -e "${GREEN}✅ $main_message completed successfully${NC}"
     return 0
 }
 
-# Signal handler for cleanup
-trap 'stop_spinner "error" "Operation interrupted"; exit 130' INT TERM
+# Simple info messages
+info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+# Simple warning messages  
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+# Simple error messages
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Simple success messages
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
 
 # Default configuration values
 DEFAULT_CONTAINER_NAME="Profolio"
@@ -162,7 +165,7 @@ DB_PASSWORD=""
 AUTO_INSTALL=false
 GENERATE_SSH_KEY=""
 
-# Banner with styling
+# Banner with simple, reliable styling
 show_banner() {
     # Set TERM if not already set to prevent clear command failures
     if [ -z "$TERM" ]; then
@@ -398,7 +401,7 @@ EOF
     fi
 }
 
-# Use default configuration
+# Use default configuration with clear output
 use_defaults() {
     CONTAINER_NAME="Profolio"
     CPU_CORES="2"
@@ -416,9 +419,9 @@ use_defaults() {
     GENERATE_SSH_KEY="yes"
     DB_PASSWORD=$(openssl rand -base64 12)
     
-    echo -e "${GREEN}✅ Using recommended default configuration${NC}"
-    echo -e "${YELLOW}📝 Database password: $DB_PASSWORD${NC}"
-    echo -e "${YELLOW}📝 SSH enabled with key-only authentication${NC}"
+    success "Using recommended default configuration"
+    info "Database password: $DB_PASSWORD"
+    info "SSH enabled with key-only authentication"
 }
 
 # Show configuration summary
@@ -466,7 +469,7 @@ show_configuration_summary() {
     fi
 }
 
-# Update confirmation wizard
+# Update confirmation wizard with cleaner output
 run_update_wizard() {
     echo -e "${WHITE}🔄 PROFOLIO UPDATE WIZARD${NC}"
     echo -e "${YELLOW}Update your existing Profolio installation${NC}"
@@ -492,14 +495,14 @@ run_update_wizard() {
     
     read -p "Proceed with update? (y/n) [y]: " update_confirm
     if [[ ! "$update_confirm" =~ ^[Yy]?$ ]]; then
-        echo -e "${YELLOW}⚠️  Update cancelled by user${NC}"
+        warn "Update cancelled by user"
         exit 0
     fi
     
-    echo -e "${GREEN}✅ Update confirmed. Starting update process...${NC}"
+    success "Update confirmed. Starting update process..."
 }
 
-# Backup management with 3 backup limit
+# Manage backups with improved feedback
 manage_backups() {
     local backup_type=$1
     local backup_dir="/opt/profolio-backups"
@@ -511,19 +514,19 @@ manage_backups() {
     local new_backup_dir="$backup_dir/${backup_type}_${timestamp}"
     mkdir -p "$new_backup_dir"
     
-    echo -e "${BLUE}💾 Creating backup...${NC}"
+    info "Creating backup..."
     
     # Backup database
     if sudo -u postgres pg_dump profolio > "$new_backup_dir/database.sql" 2>/dev/null; then
-        echo -e "${GREEN}✅ Database backup created${NC}"
+        success "Database backup created"
     else
-        echo -e "${YELLOW}⚠️  Database backup failed (may not exist yet)${NC}"
+        warn "Database backup failed (may not exist yet)"
     fi
     
     # Backup application
     if [ -d "/opt/profolio" ]; then
         cp -r /opt/profolio "$new_backup_dir/application"
-        echo -e "${GREEN}✅ Application backup created${NC}"
+        success "Application backup created"
     fi
     
     # Cleanup old backups (keep only 3 most recent)
@@ -532,11 +535,11 @@ manage_backups() {
         local backups_to_remove=$((backup_count - 3))
         ls -1 "$backup_dir" | grep "^${backup_type}_" | head -n "$backups_to_remove" | while read -r old_backup; do
             rm -rf "$backup_dir/$old_backup"
-            echo -e "${YELLOW}🗑️  Removed old backup: $old_backup${NC}"
+            info "Removed old backup: $old_backup"
         done
     fi
     
-    echo -e "${GREEN}📁 Backup created: $new_backup_dir${NC}"
+    success "Backup created: $new_backup_dir"
 }
 
 # Check if running as root
@@ -572,38 +575,31 @@ build_application() {
         "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio npm run build"
     )
     
-    execute_with_live_progress "Building Profolio Application" 6 "${steps[@]}"
+    execute_steps "Building Profolio Application" "${steps[@]}"
 }
 
-# Enhanced verification with real-time updates
+# Enhanced verification with simple progress
 verify_installation() {
-    echo -e "${BLUE}🔍 Verifying installation...${NC}"
-    
-    # Start spinner for service check
-    SPINNER_ACTIVE=1
-    start_spinner "Checking service status"
+    info "Verifying installation..."
     
     # Wait for services to start
     sleep 10
     
     # Check service status
+    printf "${BLUE}[1/3]${NC} Checking service status"
     if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
-        SPINNER_ACTIVE=0
-        stop_spinner "success" "Services are running"
+        printf "\r${BLUE}[1/3]${NC} Checking service status ${GREEN}✓${NC}\n"
         
-        # Test backend API with dynamic updates
-        SPINNER_ACTIVE=1
-        start_spinner "Testing backend API connectivity"
-        
+        # Test backend API
+        printf "${BLUE}[2/3]${NC} Testing backend API"
         local max_attempts=30
         local attempt=1
         
         while [ $attempt -le $max_attempts ]; do
-            update_spinner_msg "Testing backend API connectivity (attempt $attempt/$max_attempts)"
+            printf "\r${BLUE}[2/3]${NC} Testing backend API (attempt $attempt/$max_attempts)"
             
             if curl -s http://localhost:3001/api/health >/dev/null 2>&1; then
-                SPINNER_ACTIVE=0
-                stop_spinner "success" "Backend API responding"
+                printf "\r${BLUE}[2/3]${NC} Testing backend API ${GREEN}✓${NC}\n"
                 break
             fi
             
@@ -612,37 +608,34 @@ verify_installation() {
         done
         
         if [ $attempt -gt $max_attempts ]; then
-            SPINNER_ACTIVE=0
-            stop_spinner "warning" "Backend API not responding (may still be starting)"
+            printf "\r${BLUE}[2/3]${NC} Testing backend API ${YELLOW}⚠${NC}\n"
+            warn "Backend API not responding (may still be starting)"
         fi
         
         # Test frontend
-        SPINNER_ACTIVE=1
-        start_spinner "Testing frontend connectivity"
-        
+        printf "${BLUE}[3/3]${NC} Testing frontend"
         if curl -s http://localhost:3000 >/dev/null 2>&1; then
-            SPINNER_ACTIVE=0
-            stop_spinner "success" "Frontend responding"
+            printf "\r${BLUE}[3/3]${NC} Testing frontend ${GREEN}✓${NC}\n"
         else
-            SPINNER_ACTIVE=0
-            stop_spinner "warning" "Frontend starting up..."
+            printf "\r${BLUE}[3/3]${NC} Testing frontend ${YELLOW}⚠${NC}\n"
+            warn "Frontend starting up..."
         fi
     else
-        SPINNER_ACTIVE=0
-        stop_spinner "error" "Services failed to start"
+        printf "\r${BLUE}[1/3]${NC} Checking service status ${RED}✗${NC}\n"
+        error "Services failed to start"
         echo "Check logs with: journalctl -u profolio-backend -u profolio-frontend -f"
         return 1
     fi
 }
 
-# Enhanced fresh install with grouped operations
+# Simplified fresh install
 fresh_install() {
-    echo -e "${GREEN}🆕 FRESH INSTALLATION${NC}"
+    success "Starting fresh installation"
     
     if [ "$AUTO_INSTALL" = false ]; then
-        echo -e "${GREEN}✅ Configuration completed${NC}"
+        success "Configuration completed"
     else
-        echo -e "${GREEN}✅ Using default configuration${NC}"
+        success "Using default configuration"
     fi
     
     # System setup phase
@@ -652,17 +645,15 @@ fresh_install() {
         "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server"
     )
     
-    if ! execute_with_live_progress "System Setup" 3 "${system_steps[@]}"; then
+    if ! execute_steps "System Setup" "${system_steps[@]}"; then
         return 1
     fi
     
     # SSH configuration if enabled
     if [ "$SSH_ENABLED" = "yes" ]; then
-        SPINNER_ACTIVE=1
-        start_spinner "Configuring SSH access"
+        info "Configuring SSH access..."
         configure_ssh_server
-        SPINNER_ACTIVE=0
-        stop_spinner "success" "SSH configuration complete"
+        success "SSH configuration complete"
     fi
     
     # Database setup phase
@@ -671,14 +662,12 @@ fresh_install() {
         "Creating database and user" "sudo -u postgres psql -c \"CREATE USER profolio WITH PASSWORD '$DB_PASSWORD'; CREATE DATABASE profolio OWNER profolio; GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;\" || true"
     )
     
-    if ! execute_with_live_progress "Database Setup" 2 "${db_steps[@]}"; then
+    if ! execute_steps "Database Setup" "${db_steps[@]}"; then
         return 1
     fi
     
-    # Application setup phase
-    SPINNER_ACTIVE=1
-    start_spinner "Downloading Profolio repository"
-    
+    # Application download
+    info "Downloading Profolio repository..."
     if [ -d "/opt/profolio" ]; then
         rm -rf /opt/profolio
     fi
@@ -686,21 +675,17 @@ fresh_install() {
     cd /opt
     if git clone https://github.com/Obednal97/profolio.git; then
         chown -R profolio:profolio /opt/profolio
-        SPINNER_ACTIVE=0
-        stop_spinner "success" "Repository downloaded"
+        success "Repository downloaded"
     else
-        SPINNER_ACTIVE=0
-        stop_spinner "error" "Failed to download repository"
+        error "Failed to download repository"
         return 1
     fi
     
-    # Environment and build
-    SPINNER_ACTIVE=1
-    start_spinner "Setting up environment configuration"
+    # Environment setup
+    info "Setting up environment configuration..."
     cd /opt/profolio
     setup_environment
-    SPINNER_ACTIVE=0
-    stop_spinner "success" "Environment configured"
+    success "Environment configured"
     
     # Build application
     if ! build_application; then
@@ -714,49 +699,43 @@ fresh_install() {
         "Starting services" "systemctl start profolio-backend profolio-frontend"
     )
     
-    if ! execute_with_live_progress "Service Setup" 3 "${service_steps[@]}"; then
+    if ! execute_steps "Service Setup" "${service_steps[@]}"; then
         return 1
     fi
     
     # Final verification
     verify_installation
     
-    echo -e "${GREEN}✅ Installation completed successfully!${NC}"
+    success "Installation completed successfully!"
     show_access_info
 }
 
-# Enhanced update with better feedback
+# Simplified update installation
 update_installation() {
-    echo -e "${YELLOW}🔄 UPDATE INSTALLATION${NC}"
+    info "Starting update process"
     
-    # Backup phase
-    SPINNER_ACTIVE=1
-    start_spinner "Creating system backup"
+    # Create backup
+    info "Creating system backup..."
     manage_backups "update"
-    SPINNER_ACTIVE=0
-    stop_spinner "success" "Backup created"
+    success "Backup created"
     
-    # Service management
+    # Stop services
     local service_steps=(
         "Stopping frontend service" "systemctl stop profolio-frontend || true"
         "Stopping backend service" "systemctl stop profolio-backend || true"
     )
     
-    if ! execute_with_live_progress "Stopping Services" 2 "${service_steps[@]}"; then
+    if ! execute_steps "Stopping Services" "${service_steps[@]}"; then
         return 1
     fi
     
-    # Update phase
-    SPINNER_ACTIVE=1
-    start_spinner "Downloading latest updates"
-    
+    # Update code
+    info "Downloading latest updates..."
     cd /opt/profolio
     if sudo -u profolio git stash push -m "Auto-stash before update $(date)" && sudo -u profolio git pull origin main; then
-        SPINNER_ACTIVE=0
-        stop_spinner "success" "Code updated"
+        success "Code updated"
     else
-        SPINNER_ACTIVE=0
-        stop_spinner "error" "Failed to update code"
+        error "Failed to update code"
         return 1
     fi
     
@@ -772,28 +751,26 @@ update_installation() {
         "Starting frontend service" "systemctl start profolio-frontend"
     )
     
-    if ! execute_with_live_progress "Restarting Services" 3 "${restart_steps[@]}"; then
+    if ! execute_steps "Restarting Services" "${restart_steps[@]}"; then
         return 1
     fi
     
     # Verify update
     verify_installation
     
-    echo -e "${GREEN}✅ Update completed successfully!${NC}"
+    success "Update completed successfully!"
     show_access_info
 }
 
-# Enhanced repair installation function
+# Simplified repair installation
 repair_installation() {
-    echo -e "${YELLOW}🔧 REPAIR INSTALLATION${NC}"
+    info "Starting repair process"
     
     # Configuration update
-    SPINNER_ACTIVE=1
-    start_spinner "Updating system configuration"
+    info "Updating system configuration..."
     cd /opt/profolio
     setup_environment
-    SPINNER_ACTIVE=0
-    stop_spinner "success" "Configuration updated"
+    success "Configuration updated"
     
     # Service management
     local service_steps=(
@@ -803,18 +780,18 @@ repair_installation() {
         "Starting frontend service" "systemctl start profolio-frontend"
     )
     
-    if ! execute_with_live_progress "Service Repair" 4 "${service_steps[@]}"; then
+    if ! execute_steps "Service Repair" "${service_steps[@]}"; then
         return 1
     fi
     
     # Final verification
     verify_installation
     
-    echo -e "${GREEN}✅ Repair completed successfully!${NC}"
+    success "Repair completed successfully!"
     show_access_info
 }
 
-# Setup environment configuration
+# Setup environment configuration with feedback
 setup_environment() {
     # Generate secure JWT secret if needed
     local jwt_secret=$(openssl rand -base64 32)
@@ -955,7 +932,7 @@ show_access_info() {
     echo ""
 }
 
-# Main execution logic
+# Main execution logic with cleaner output
 main() {
     show_banner
     check_root
@@ -972,14 +949,14 @@ main() {
             ;;
     esac
     
-    echo -e "${CYAN}🔍 Detecting installation state...${NC}"
+    info "Detecting installation state..."
     detect_installation_state
     local install_state=$?
     
-    echo -e "${BLUE}📊 Installation state: $install_state${NC}"
+    info "Installation state: $install_state"
     case $install_state in
         0)
-            echo -e "${GREEN}🆕 Fresh system detected${NC}"
+            success "Fresh system detected"
             if [ "$AUTO_INSTALL" = false ]; then
                 run_configuration_wizard
             else
@@ -988,21 +965,21 @@ main() {
             fresh_install
             ;;
         1)
-            echo -e "${YELLOW}🔧 Installed but not running - repair needed${NC}"
+            warn "Installed but not running - repair needed"
             repair_installation
             ;;
         2)
-            echo -e "${BLUE}🔄 Running installation detected - update available${NC}"
+            info "Running installation detected - update available"
             run_update_wizard
             update_installation
             ;;
         *)
-            echo -e "${RED}❌ Unknown installation state: $install_state${NC}"
+            error "Unknown installation state: $install_state"
             exit 1
             ;;
     esac
     
-    echo -e "${GREEN}🎉 Script execution completed!${NC}"
+    success "Script execution completed!"
 }
 
 # Run main function
