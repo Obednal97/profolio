@@ -664,21 +664,37 @@ setup_environment() {
         jwt_secret="$existing_jwt_secret"
         api_key="$existing_api_key"
         info "Preserving existing credentials"
+        
+        # Verify database password still works
+        if ! sudo -u postgres psql -c "SELECT 1;" profolio 2>/dev/null; then
+            warn "Existing database credentials may be invalid, attempting to fix..."
+            # Try to update PostgreSQL password to match .env
+            if sudo -u postgres psql -c "ALTER USER profolio WITH PASSWORD '$db_password';" 2>/dev/null; then
+                success "Database password synchronized with existing credentials"
+            else
+                error "Failed to synchronize database password - continuing anyway"
+            fi
+        fi
     else
         db_password="${DB_PASSWORD:-$(openssl rand -base64 12)}"
         jwt_secret="$(openssl rand -base64 32)"
         api_key="$(openssl rand -base64 32)"
         info "Generating new credentials"
         
-        # If generating new database password, update PostgreSQL user password
-        if [ "$credentials_preserved" = false ] && [ "$OPERATION_TYPE" != "INSTALLATION" ]; then
-            info "Updating database user password to match new credentials..."
-            if sudo -u postgres psql -c "ALTER USER profolio WITH PASSWORD '$db_password';" 2>/dev/null; then
-                success "Database user password updated"
-            else
-                warn "Failed to update database user password - manual intervention may be required"
-            fi
+        # Create/update PostgreSQL user with new password
+        info "Creating/updating database user with new password..."
+        if sudo -u postgres psql -c "DROP USER IF EXISTS profolio; CREATE USER profolio WITH PASSWORD '$db_password';" 2>/dev/null; then
+            success "Database user created with new password"
+        elif sudo -u postgres psql -c "ALTER USER profolio WITH PASSWORD '$db_password';" 2>/dev/null; then
+            success "Database user password updated"
+        else
+            error "Failed to create/update database user password"
+            return 1
         fi
+        
+        # Ensure database exists and grant permissions
+        sudo -u postgres psql -c "CREATE DATABASE profolio OWNER profolio;" 2>/dev/null || true
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;" 2>/dev/null || true
     fi
     
     # Update global DB_PASSWORD variable for consistency
@@ -963,7 +979,7 @@ update_installation() {
     show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
 }
 
-# Repair installation with proper completion tracking
+# Repair installation with proper completion tracking and missing build step
 repair_installation() {
     OPERATION_TYPE="REPAIR"
     info "Starting repair process"
@@ -976,6 +992,14 @@ repair_installation() {
     # Configuration update (preserving existing credentials)
     cd /opt/profolio
     setup_environment
+    
+    # CRITICAL FIX: Add missing build step for repairs
+    info "Rebuilding application components..."
+    if ! build_application; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
     
     # Service management
     local service_steps=(
