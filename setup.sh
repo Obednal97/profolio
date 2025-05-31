@@ -39,12 +39,12 @@ mkdir -p ./frontend
 
 if [ ! -f "$ENV_FILE_BACKEND" ]; then
   echo "Creating backend .env..."
-  echo "DATABASE_URL=postgresql://profolio:temppassword@${LAN_IP}:5432/profolio" > "$ENV_FILE_BACKEND"
+  echo "DATABASE_URL=postgresql://profolio:CHANGE_THIS_PASSWORD@${LAN_IP}:5432/profolio" > "$ENV_FILE_BACKEND"
 else
   if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://profolio:temppassword@${LAN_IP}:5432/profolio|" "$ENV_FILE_BACKEND"
+    sed -i '' "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://profolio:CHANGE_THIS_PASSWORD@${LAN_IP}:5432/profolio|" "$ENV_FILE_BACKEND"
   else
-    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://profolio:temppassword@${LAN_IP}:5432/profolio|" "$ENV_FILE_BACKEND"
+    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://profolio:CHANGE_THIS_PASSWORD@${LAN_IP}:5432/profolio|" "$ENV_FILE_BACKEND"
   fi
 fi
 
@@ -70,7 +70,7 @@ echo "📦 Installing frontend dependencies..."
 pnpm install
 
 echo -e "\n✅ Setup complete!"
-echo "🔐 Backend is configured to connect to PostgreSQL at: postgresql://profolio:temppassword@${LAN_IP}:5432/profolio"
+echo "🔐 Backend is configured to connect to PostgreSQL at: postgresql://profolio:CHANGE_THIS_PASSWORD@${LAN_IP}:5432/profolio"
 echo "🧠 Frontend is configured to connect to backend API at: http://${LAN_IP}:3000/api"
 echo
 echo "👉 Next steps:"

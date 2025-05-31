@@ -12,7 +12,7 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors({
     origin: process.env.NODE_ENV === 'production'
-      ? ['http://192.168.1.27:3001']
+      ? ['http://YOUR_SERVER_IP:3001']
       : true,
   });
 
