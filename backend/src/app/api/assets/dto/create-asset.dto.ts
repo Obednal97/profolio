@@ -28,4 +28,34 @@ export class CreateAssetDto {
 
   @ApiProperty({ required: false })
   valueOverride?: number; // stored in pence/cents
+
+  // Purchase tracking fields
+  @ApiProperty({ required: false })
+  purchasePrice?: number;
+
+  @ApiProperty({ required: false })
+  purchaseDate?: string;
+
+  // Savings-specific fields
+  @ApiProperty({ required: false })
+  initialAmount?: number;
+
+  @ApiProperty({ required: false })
+  interestRate?: number; // stored as percentage, converted to basis points
+
+  @ApiProperty({ required: false, enum: ['SIMPLE', 'COMPOUND'] })
+  interestType?: 'SIMPLE' | 'COMPOUND';
+
+  @ApiProperty({ required: false, enum: ['MONTHLY', 'QUARTERLY', 'ANNUALLY'] })
+  paymentFrequency?: 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+
+  @ApiProperty({ required: false })
+  termLength?: number; // in months
+
+  @ApiProperty({ required: false })
+  maturityDate?: string;
+
+  // Performance tracking
+  @ApiProperty({ required: false, default: false })
+  autoSync?: boolean;
 }

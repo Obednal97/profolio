@@ -1,32 +1,30 @@
 {
-  "name": "profolio-landing",
+  "name": "profolio",
   "version": "1.0.0",
-  "description": "Modern landing page for Profolio - Your Personal Finance OS",
-  "main": "index.html",
+  "description": "Professional Portfolio Management Platform",
   "scripts": {
-    "start": "python -m http.server 8000",
-    "serve": "npx serve .",
-    "dev": "npx live-server .",
-    "build": "echo 'No build step required for static site'",
-    "deploy": "echo 'Deploy to your preferred hosting platform'"
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev", 
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:all": "npm run build:backend && npm run build:frontend",
+    "setup:dev": "node deployment.config.js && npm run install:all",
+    "test:all": "cd backend && npm test && cd ../frontend && npm test",
+    "lint:all": "cd backend && npm run lint && cd ../frontend && npm run lint",
+    "db:migrate": "cd backend && npx prisma migrate dev",
+    "db:reset": "cd backend && npx prisma migrate reset && npx prisma db seed",
+    "db:studio": "cd backend && npx prisma studio"
   },
-  "keywords": [
-    "profolio",
-    "finance",
-    "portfolio",
-    "landing-page",
-    "wealth-management",
-    "financial-planning"
-  ],
-  "author": "Profolio Team",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": ["portfolio", "finance", "self-hosted", "investment-tracking"],
+  "author": "Your Name",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/profolio-landing.git"
-  },
-  "homepage": "https://yourusername.github.io/profolio-landing",
-  "devDependencies": {
-    "live-server": "^1.2.2",
-    "serve": "^14.2.1"
+    "url": "https://github.com/Obednal97/profolio.git"
   }
 } 
