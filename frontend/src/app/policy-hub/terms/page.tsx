@@ -1,5 +1,11 @@
 import Terms from "@/content/policies/terms.mdx";
 
 export default function TermsPage() {
-  return <Terms />;
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Terms />
+      </div>
+    </div>
+  );
 }
