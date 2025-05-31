@@ -29,7 +29,7 @@ export const useAppContext = () => {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [currency, setCurrencyState] = useState<string>('USD');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -41,23 +41,68 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use Firebase user or demo user - memoized to prevent re-renders
+  // Debug localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log('🔍 [Layout] localStorage debug:', {
+        demoMode: localStorage.getItem('demo-mode'),
+        authToken: localStorage.getItem('auth-token'),
+        userToken: localStorage.getItem('userToken'),
+        userData: localStorage.getItem('user-data')
+      });
+    }
+  }, []);
+  
+  // Use database user profile or demo user - memoized to prevent re-renders
   const currentUser = useMemo(() => {
+    console.log('🔄 [Layout] Creating currentUser with:', {
+      hasUser: !!user,
+      hasUserProfile: !!userProfile,
+      userProfileName: userProfile?.name,
+      userDisplayName: user?.displayName,
+      userEmail: user?.email,
+      isDemoMode
+    });
+    
     if (user) {
-      return {
+      // Priority: database profile name > Firebase displayName > email username
+      const name = userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User';
+      const result = {
         id: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || 'User',
+        name: name,
         email: user.email || ''
       };
+      console.log('✅ [Layout] Using user data with name:', result.name, 'from:', userProfile?.name ? 'database' : 'firebase');
+      return result;
     } else if (isDemoMode) {
-      return {
+      // Check for stored demo user data
+      const demoUser = {
         id: 'demo-user-id',
         name: 'Demo User',
         email: 'demo@profolio.com'
       };
+      
+      if (typeof window !== 'undefined') {
+        try {
+          const storedUserData = localStorage.getItem('user-data');
+          if (storedUserData) {
+            const parsedData = JSON.parse(storedUserData);
+            demoUser.name = parsedData.name || demoUser.name;
+            demoUser.email = parsedData.email || demoUser.email;
+            console.log('✅ [Layout] Using stored demo profile:', demoUser.name);
+          } else {
+            console.log('🎭 [Layout] Using default demo user');
+          }
+        } catch (error) {
+          console.error('Error parsing demo user data:', error);
+        }
+      }
+      
+      return demoUser;
     }
+    console.log('❌ [Layout] No user available');
     return null;
-  }, [user, isDemoMode]);
+  }, [user?.uid, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
 
   // Load user preferences from API when user is available
   useEffect(() => {

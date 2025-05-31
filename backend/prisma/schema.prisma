@@ -28,9 +28,10 @@ model Asset {
   id               String             @id @default(uuid())
   userId           String
   name             String
-  quantity         Int
+  quantity         Decimal            @default(0) @db.Decimal(18, 8)
   source           String?
   externalId       String?
+  current_value    Int?
   valueOverride    Int?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @default(now()) @updatedAt
@@ -51,11 +52,17 @@ model Asset {
   transactions     AssetTransaction[]
   priceHistory     PriceHistory[]
   
-  // Critical indexes for performance
-  @@index([userId, type]) // Fast user asset filtering by type
-  @@index([symbol, type]) // Fast symbol lookups for price sync
-  @@index([userId, symbol]) // Fast user-specific symbol lookups
-  @@index([lastSyncedAt]) // Fast sync status queries
+  notes            String?
+  vesting_start_date DateTime?
+  vesting_end_date   DateTime?
+  vesting_schedule   Json?
+  
+  symbolData       Symbol?            @relation("SymbolAssets", fields: [symbol], references: [symbol])
+  
+  @@index([userId, type])
+  @@index([symbol, type])
+  @@index([userId, symbol])
+  @@index([lastSyncedAt])
 }
 
 model PriceHistory {
@@ -66,14 +73,15 @@ model PriceHistory {
   timestamp DateTime
   source    String
   asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  
+  symbolData Symbol? @relation("SymbolPriceHistory", fields: [symbol], references: [symbol])
 
-  // Critical indexes for performance (this table will have millions of records)
   @@unique([assetId, timestamp, source])
-  @@index([assetId, timestamp]) // Fast asset price history queries
-  @@index([symbol, timestamp]) // Fast symbol price history queries
-  @@index([timestamp]) // Fast time-based queries and cleanup
-  @@index([symbol, timestamp, source]) // Composite index for complex queries
-  @@index([assetId, timestamp, price]) // Covering index for price charts
+  @@index([assetId, timestamp])
+  @@index([symbol, timestamp])
+  @@index([timestamp])
+  @@index([symbol, timestamp, source])
+  @@index([assetId, timestamp, price])
 }
 
 model AssetTransaction {
@@ -88,9 +96,9 @@ model AssetTransaction {
   description String?
   asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
-  @@index([assetId, date]) // Fast asset transaction history
-  @@index([assetId, type, date]) // Fast transaction type filtering
-  @@index([date]) // Fast date-based queries
+  @@index([assetId, date])
+  @@index([assetId, type, date])
+  @@index([date])
 }
 
 model ApiKey {
@@ -111,8 +119,8 @@ model ApiKey {
   user                         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider, user_api_key_display_name])
-  @@index([userId, provider, isActive]) // Fast active key lookups
-  @@index([provider, isActive]) // Fast provider-wide active key queries
+  @@index([userId, provider, isActive])
+  @@index([provider, isActive])
   @@map("ApiKey")
 }
 
@@ -129,8 +137,8 @@ model MarketDataJob {
   updatedAt  DateTime    @default(now()) @updatedAt
 
   @@unique([symbol, provider])
-  @@index([nextRun, isActive]) // Fast job scheduling queries
-  @@index([provider, isActive]) // Fast provider-specific job queries
+  @@index([nextRun, isActive])
+  @@index([provider, isActive])
 }
 
 model Liability {
@@ -144,13 +152,13 @@ model Liability {
   updatedAt    DateTime  @default(now()) @updatedAt
   user         User      @relation(fields: [userId], references: [id])
   
-  @@index([userId]) // Fast user liability queries
-  @@index([dueDate]) // Fast due date queries
+  @@index([userId])
+  @@index([dueDate])
 }
 
 model Expense {
   id        String   @id @default(uuid())
-  amount    Float
+  amount    Int      // Amount in cents for consistency
   category  String
   date      DateTime
   notes     String?
@@ -159,9 +167,9 @@ model Expense {
   updatedAt DateTime @default(now()) @updatedAt
   user      User     @relation(fields: [userId], references: [id])
   
-  @@index([userId, date]) // Fast user expense history
-  @@index([userId, category]) // Fast category filtering
-  @@index([date]) // Fast date-based queries
+  @@index([userId, date])
+  @@index([userId, category])
+  @@index([date])
 }
 
 model Settings {
@@ -185,8 +193,47 @@ model Property {
   updatedAt    DateTime @default(now()) @updatedAt
   user         User     @relation(fields: [userId], references: [id])
   
-  @@index([userId]) // Fast user property queries
-  @@index([purchaseDate]) // Fast date-based queries
+  @@index([userId])
+  @@index([purchaseDate])
+}
+
+model Symbol {
+  id            String      @id @default(uuid())
+  symbol        String      @unique
+  name          String
+  type          AssetType   // STOCK, CRYPTO, etc.
+  exchange      String?     // NYSE, NASDAQ, etc.
+  sector        String?     // Technology, Healthcare, etc.
+  industry      String?     // Software, Pharmaceuticals, etc.
+  market_cap    BigInt?     // Market cap in cents
+  
+  // Price data
+  current_price Int?        // Current price in cents
+  previous_close Int?       // Previous close in cents
+  day_change    Int?        // Day change in cents
+  day_change_percent Decimal? @db.Decimal(10, 4) // Day change percentage
+  volume        BigInt?     // Trading volume
+  avg_volume    BigInt?     // Average volume
+  
+  // Metadata
+  last_updated  DateTime?   // When price was last updated
+  added_at      DateTime    @default(now())
+  is_active     Boolean     @default(true)
+  update_priority Int       @default(1) // 1=high, 2=medium, 3=low
+  
+  // Error tracking
+  error_count   Int         @default(0)
+  last_error    String?
+  last_error_at DateTime?
+  
+  // Relationships
+  assets        Asset[]     @relation("SymbolAssets")
+  priceHistory  PriceHistory[] @relation("SymbolPriceHistory")
+  
+  @@index([symbol, is_active])
+  @@index([type, is_active])
+  @@index([last_updated, update_priority])
+  @@index([update_priority, is_active])
 }
 
 enum AssetType {
@@ -218,4 +265,22 @@ enum ApiProvider {
   COINMARKETCAP
   BINANCE
   TRADING212
+}
+
+// Queue for processing new symbols that don't exist in our database
+model SymbolQueue {
+  id            String      @id @default(uuid())
+  symbol        String      @unique
+  requested_by  String?     // User ID who requested it
+  asset_type    AssetType?  // Guessed type
+  priority      Int         @default(2) // 1=urgent, 2=normal, 3=low
+  status        String      @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  attempts      Int         @default(0)
+  last_attempt  DateTime?
+  error_message String?
+  created_at    DateTime    @default(now())
+  processed_at  DateTime?
+  
+  @@index([status, priority])
+  @@index([created_at])
 }

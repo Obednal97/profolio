@@ -304,6 +304,7 @@ export default function PortfolioPage() {
             <option value="stock">Stocks</option>
             <option value="crypto">Crypto</option>
             <option value="cash">Cash</option>
+            <option value="savings">Savings</option>
             <option value="stock_options">Options</option>
             <option value="bond">Bonds</option>
             <option value="other">Other</option>

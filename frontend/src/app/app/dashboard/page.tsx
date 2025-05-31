@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Confetti from 'react-confetti';
 import NetWorthDisplay from '@/components/netWorthDisplay';
@@ -128,15 +128,54 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  
+  // Use database user profile or demo user - same logic as LayoutWrapper
+  const currentUser = useMemo(() => {
+    if (user) {
+      // Priority: database profile name > Firebase displayName > email username
+      const name = userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User';
+      return {
+        id: user.uid,
+        name: name,
+        email: user.email || ''
+      };
+    } else if (isDemoMode) {
+      // Check for stored demo user data
+      const demoUser = {
+        id: 'demo-user-id',
+        name: 'Demo User',
+        email: 'demo@profolio.com'
+      };
+      
+      if (typeof window !== 'undefined') {
+        try {
+          const storedUserData = localStorage.getItem('user-data');
+          if (storedUserData) {
+            const parsedData = JSON.parse(storedUserData);
+            demoUser.name = parsedData.name || demoUser.name;
+            demoUser.email = parsedData.email || demoUser.email;
+          }
+        } catch (error) {
+          console.error('Error parsing demo user data:', error);
+        }
+      }
+      
+      return demoUser;
+    }
+    return null;
+  }, [user?.uid, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user?.uid) {
+      if (!currentUser?.id) {
         setLoading(false);
         return;
       }
@@ -188,7 +227,7 @@ export default function DashboardPage() {
     };
 
     fetchDashboardData();
-  }, [user]);
+  }, [currentUser]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -239,7 +278,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Welcome back, {user?.displayName || user?.email?.split('@')[0] || 'User'} 👋
+          Welcome back, {currentUser?.name} 👋
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           Here&apos;s your financial overview for today

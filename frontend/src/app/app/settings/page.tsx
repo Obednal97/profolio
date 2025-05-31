@@ -6,6 +6,7 @@ import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/providers/theme-provider";
 
 interface Tab {
   id: string;
@@ -528,8 +529,9 @@ const AccountTab = ({ setShowDeleteModal }: { setShowDeleteModal: (value: boolea
 );
 
 function SettingsPage() {
-  const { user } = useAuth(); // Use Firebase authentication
-  const { theme, currency, setCurrency } = useAppContext();
+  const { user, refreshUserProfile } = useAuth(); // Use Firebase authentication and get refreshUserProfile
+  const { theme } = useTheme(); // Get theme from theme provider
+  const { currency, setCurrency } = useAppContext();
   const [activeTab, setActiveTab] = useState<Tab["id"]>("profile");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -681,31 +683,71 @@ function SettingsPage() {
         throw new Error('User not authenticated');
       }
 
-      // Save profile data to our API
-      const { apiCall } = await import('@/lib/mockApi');
-      const response = await apiCall('/api/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          method: 'UPDATE_PROFILE',
-          userId: currentUser.id,
-          profileData: {
-            ...profileData,
-            lastUpdated: Date.now(),
-          }
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
+      console.log('🔄 [Settings] Updating profile for:', currentUser.id, 'isDemoMode:', isDemoMode);
+
+      if (isDemoMode) {
+        // Handle demo mode - store in localStorage
+        const demoUserData = {
+          id: 'demo-user-id',
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          lastUpdated: Date.now(),
+        };
+        
+        localStorage.setItem('user-data', JSON.stringify(demoUserData));
+        console.log('✅ [Settings] Demo profile saved to localStorage:', profileData.name);
+        
+        setSuccess('Profile updated successfully!');
+        
+        // Force a complete refresh to ensure changes are visible everywhere
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        // Handle real user - save to API and refresh auth context
+        const { apiCall } = await import('@/lib/mockApi');
+        const response = await apiCall('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            method: 'UPDATE_PROFILE',
+            userId: currentUser.id,
+            profileData: {
+              name: profileData.name,
+              email: profileData.email,
+              phone: profileData.phone,
+              lastUpdated: Date.now(),
+            }
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        console.log('✅ [Settings] Profile saved, refreshing...');
+        
+        // Refresh the user profile in auth context to update header/dashboard
+        if (refreshUserProfile) {
+          await refreshUserProfile();
+        }
+
+        setSuccess('Profile updated successfully!');
+        
+        // Force a complete refresh to ensure changes are visible everywhere
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
       
-      setSuccess("Profile updated successfully");
-    } catch (err) {
-      console.error("Profile update error:", err);
-      setError(err instanceof Error ? err.message : "Failed to update profile");
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('❌ [Settings] Profile update error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update profile');
     } finally {
       setLoading(false);
     }

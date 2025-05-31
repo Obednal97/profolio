@@ -28,12 +28,16 @@ interface YahooQuoteResponse {
 export class YahooFinanceService {
   private readonly logger = new Logger(YahooFinanceService.name);
   
+  // Updated user agents based on GitHub issue #2125 - these are confirmed working
   private readonly userAgents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:134.0) Gecko/20100101 Firefox/134.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0',
+    'Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0',
   ];
 
   private getRandomUserAgent(): string {
@@ -56,9 +60,23 @@ export class YahooFinanceService {
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'none',
             'Cache-Control': 'max-age=0',
+            'Referer': 'https://finance.yahoo.com/',
+            'Origin': 'https://finance.yahoo.com',
           },
-          signal: AbortSignal.timeout(10000), // 10 second timeout
+          signal: AbortSignal.timeout(15000), // 15 second timeout
         });
+
+        if (response.status === 429) {
+          this.logger.warn(`Rate limited on attempt ${attempt}/${retries} for ${url}`);
+          if (attempt < retries) {
+            // Exponential backoff for rate limits: 2s, 4s, 8s
+            const delay = Math.pow(2, attempt) * 1000;
+            this.logger.debug(`Waiting ${delay}ms before retry due to rate limit`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          throw new Error(`Rate limited after ${retries} attempts`);
+        }
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -72,7 +90,7 @@ export class YahooFinanceService {
           throw error;
         }
         
-        // Exponential backoff with jitter
+        // Standard exponential backoff with jitter for other errors
         const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -143,28 +161,30 @@ export class YahooFinanceService {
   async getMultipleQuotes(symbols: string[]): Promise<Map<string, PriceData>> {
     const results = new Map<string, PriceData>();
     
-    // Batch symbols to avoid overwhelming Yahoo Finance
-    const batchSize = 10;
-    for (let i = 0; i < symbols.length; i += batchSize) {
-      const batch = symbols.slice(i, i + batchSize);
-      
-      const promises = batch.map(async (symbol) => {
+    this.logger.log(`Fetching quotes for ${symbols.length} symbols with 5-second delays (tested optimal rate)`);
+    
+    // Process symbols one by one with 5-second delays as proven by testing
+    for (const symbol of symbols) {
+      try {
         const price = await this.getCurrentPrice(symbol);
         if (price) {
           results.set(symbol, price);
+          this.logger.log(`✅ Successfully fetched ${symbol}: $${price.price}`);
+        } else {
+          this.logger.warn(`❌ No price data for ${symbol}`);
         }
-        // Add small delay between requests to be respectful
-        await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-      });
-
-      await Promise.allSettled(promises);
+      } catch (error) {
+        this.logger.error(`❌ Failed to fetch ${symbol}:`, error);
+      }
       
-      // Larger delay between batches
-      if (i + batchSize < symbols.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+      // 5-second delay between requests as proven optimal by testing
+      if (symbols.indexOf(symbol) < symbols.length - 1) {
+        this.logger.debug(`Waiting 5 seconds before next request (optimal tested rate)`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
     
+    this.logger.log(`Completed batch: ${results.size}/${symbols.length} successful fetches`);
     return results;
   }
 

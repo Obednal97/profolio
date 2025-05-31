@@ -19,7 +19,18 @@
     "type": "git",
     "url": "https://github.com/Obednal97/profolio.git"
   },
-  "keywords": ["portfolio", "finance", "self-hosted", "investment-tracking", "proxmox", "homelab", "privacy", "typescript", "nextjs", "nestjs"],
+  "keywords": [
+    "portfolio",
+    "finance",
+    "self-hosted",
+    "investment-tracking",
+    "proxmox",
+    "homelab",
+    "privacy",
+    "typescript",
+    "nextjs",
+    "nestjs"
+  ],
   "author": "Ollie Bednal <contact@profolio.app>",
   "license": "MIT",
   "bugs": {
@@ -36,5 +47,10 @@
     "CHANGELOG.md",
     "LICENSE",
     "policies/"
-  ]
-} 
+  ],
+  "dependencies": {
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

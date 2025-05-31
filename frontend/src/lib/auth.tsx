@@ -14,6 +14,7 @@ import {
 
 interface AuthContextType {
   user: User | null;
+  userProfile: { name: string; email: string; phone?: string; photoURL?: string } | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
@@ -21,6 +22,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetUserPassword: (email: string) => Promise<void>;
   token: string | null;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,6 +90,7 @@ async function extractAndPersistGoogleProfile(user: User) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name: string; email: string; phone?: string; photoURL?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
@@ -107,6 +110,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         unsubscribe = await onAuthStateChange(async (user) => {
+          console.log('🔄 [Auth] Firebase auth state changed:', {
+            hasUser: !!user,
+            userId: user?.uid,
+            email: user?.email,
+            displayName: user?.displayName
+          });
+          
           setUser(user);
           
           if (user) {
@@ -115,6 +125,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await extractAndPersistGoogleProfile(user);
             } catch (error) {
               console.warn('Failed to extract Google profile:', error);
+            }
+            
+            // Fetch user profile from database
+            try {
+              await fetchUserProfile(user.uid);
+            } catch (error) {
+              console.warn('Failed to fetch user profile:', error);
+              // Fallback to Firebase user data
+              setUserProfile({
+                name: user.displayName || user.email?.split('@')[0] || 'User',
+                email: user.email || '',
+                phone: user.phoneNumber || '',
+                photoURL: user.photoURL || ''
+              });
             }
             
             // Get and store the user token
@@ -129,6 +153,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setToken(null);
             }
           } else {
+            console.log('❌ [Auth] No Firebase user, clearing profile');
+            setUserProfile(null);
             setToken(null);
             if (typeof window !== 'undefined') {
               localStorage.removeItem('userToken');
@@ -159,11 +185,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Fetch user profile from database
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      console.log('🔄 [Auth] Fetching user profile for:', userId);
+      const { apiCall } = await import('./mockApi');
+      const response = await apiCall('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          method: 'GET_PROFILE',
+          userId: userId
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.user) {
+        const newProfile = {
+          name: data.user.name || data.user.email?.split('@')[0] || 'User',
+          email: data.user.email || '',
+          phone: data.user.phone || '',
+          photoURL: data.user.photoURL || ''
+        };
+        console.log('✅ [Auth] Profile updated:', newProfile.name);
+        setUserProfile(newProfile);
+      }
+    } catch (error) {
+      console.error('❌ [Auth] Failed to fetch user profile:', error);
+      throw error;
+    }
+  };
+
+  const refreshUserProfile = async () => {
+    if (user?.uid) {
+      await fetchUserProfile(user.uid);
+      console.log('✅ [Auth] Profile refresh completed');
+    }
+  };
+
   // If there's an initialization error, provide a fallback context
   if (initError) {
     console.warn('Auth initialization failed, providing fallback context:', initError);
     const fallbackValue: AuthContextType = {
       user: null,
+      userProfile: null,
       loading: false,
       signIn: async () => { throw new Error('Authentication not available'); },
       signUp: async () => { throw new Error('Authentication not available'); },
@@ -173,6 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut: async () => { throw new Error('Authentication not available'); },
       resetUserPassword: async () => { throw new Error('Authentication not available'); },
       token: null,
+      refreshUserProfile: async () => { throw new Error('Authentication not available'); },
     };
 
     return (
@@ -294,6 +361,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextType = {
     user,
+    userProfile,
     loading,
     signIn,
     signUp,
@@ -301,6 +369,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     resetUserPassword,
     token,
+    refreshUserProfile,
   };
 
   return (
