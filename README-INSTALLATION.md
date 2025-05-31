@@ -6,9 +6,11 @@ Profolio includes a smart installer that automatically detects your system state
 
 ### 🆕 **Fresh Installation**
 ```bash
-# Download and run the installer
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+# Download and run the installer (Proxmox standard format)
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh)"
 ```
+
+> **Note:** This follows the **Proxmox Community Scripts** standard format, similar to Pi-hole, Home Assistant, and other popular self-hosted applications.
 
 **Or clone and run locally:**
 ```bash
@@ -30,6 +32,28 @@ sudo ./install-or-update.sh
 cd /opt/profolio
 sudo ./install-or-update.sh
 ```
+
+## Proxmox Community Standard
+
+### **Familiar Format:**
+Our installer follows the **exact same pattern** as other popular Proxmox community scripts:
+
+```bash
+# Pi-hole
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pihole.sh)"
+
+# Home Assistant  
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/homeassistant.sh)"
+
+# Profolio
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh)"
+```
+
+### **Why This Format:**
+- ✅ **Proxmox Community Standard** - Familiar to Proxmox users
+- ✅ **Safe Execution** - Downloads completely before execution  
+- ✅ **Error Handling** - Better error reporting than piped execution
+- ✅ **Consistent Experience** - Matches other self-hosted applications
 
 ## What the Installer Does
 
@@ -105,8 +129,8 @@ sudo ./install-or-update.sh
 
 2. **Run Installation:**
    ```bash
-   # Inside the container
-   curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+   # Inside the container (Proxmox standard format)
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh)"
    ```
 
 3. **Access via Proxmox Network:**
@@ -170,4 +194,4 @@ sudo chmod +x /opt/profolio/*/scripts/*.sh
 
 - **GitHub Issues:** [Report bugs and feature requests](https://github.com/Obednal97/profolio/issues)
 - **Documentation:** See project README and wiki
-- **Self-Hosted Community:** Join discussions about self-hosting 
+- **Self-Hosted Community:** Join discussions about self-hosting
