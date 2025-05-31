@@ -165,7 +165,7 @@ DB_PASSWORD=""
 AUTO_INSTALL=false
 GENERATE_SSH_KEY=""
 
-# Banner with simple, reliable styling
+# Banner with improved terminology
 show_banner() {
     # Set TERM if not already set to prevent clear command failures
     if [ -z "$TERM" ]; then
@@ -179,7 +179,7 @@ show_banner() {
     
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    🚀 PROFOLIO INSTALLER                    ║"
+    echo "║                🚀 PROFOLIO INSTALLER/UPDATER                ║"
     echo "║              Professional Portfolio Management               ║"
     echo "║                  Proxmox Community Edition                   ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
@@ -401,7 +401,7 @@ EOF
     fi
 }
 
-# Use default configuration with clear output
+# Use default configuration with improved logic
 use_defaults() {
     CONTAINER_NAME="Profolio"
     CPU_CORES="2"
@@ -417,10 +417,14 @@ use_defaults() {
     SSH_PASSWORD_AUTH="no"
     SSH_KEY_ONLY="yes"
     GENERATE_SSH_KEY="yes"
-    DB_PASSWORD=$(openssl rand -base64 12)
+    
+    # Only generate new password if not already set (for fresh installs)
+    if [ -z "$DB_PASSWORD" ]; then
+        DB_PASSWORD=$(openssl rand -base64 12)
+        info "Generated new database password: $DB_PASSWORD"
+    fi
     
     success "Using recommended default configuration"
-    info "Database password: $DB_PASSWORD"
     info "SSH enabled with key-only authentication"
 }
 
@@ -469,19 +473,67 @@ show_configuration_summary() {
     fi
 }
 
-# Update confirmation wizard with cleaner output
+# Check for actual version updates
+check_version_update_available() {
+    local current_version=""
+    local latest_version=""
+    
+    # Get current version if installed
+    if [ -f "/opt/profolio/package.json" ]; then
+        current_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+    fi
+    
+    # Get latest version from GitHub (with timeout)
+    latest_version=$(curl -s --connect-timeout 5 --max-time 10 "https://api.github.com/repos/Obednal97/profolio/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//' 2>/dev/null || echo "unknown")
+    
+    # Compare versions
+    if [ "$current_version" != "unknown" ] && [ "$latest_version" != "unknown" ]; then
+        if [ "$current_version" = "$latest_version" ]; then
+            return 1  # No update available
+        else
+            return 0  # Update available
+        fi
+    fi
+    
+    return 0  # Assume update available if we can't determine
+}
+
+# Enhanced update wizard with proper version checking
 run_update_wizard() {
     echo -e "${WHITE}🔄 PROFOLIO UPDATE WIZARD${NC}"
     echo -e "${YELLOW}Update your existing Profolio installation${NC}"
     echo ""
     
     # Show current version info
+    local current_version="unknown"
+    local latest_version="checking..."
+    
     if [ -f "/opt/profolio/package.json" ]; then
-        current_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4)
+        current_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
         echo -e "${BLUE}Current Version:${NC} $current_version"
     fi
     
-    echo -e "${BLUE}Latest Version:${NC} Checking..."
+    # Check for latest version
+    info "Checking for updates..."
+    latest_version=$(curl -s --connect-timeout 5 --max-time 10 "https://api.github.com/repos/Obednal97/profolio/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//' 2>/dev/null || echo "unknown")
+    
+    if [ "$latest_version" != "unknown" ]; then
+        echo -e "${BLUE}Latest Version:${NC} $latest_version"
+        
+        if [ "$current_version" = "$latest_version" ]; then
+            warn "You already have the latest version ($current_version)"
+            echo ""
+            read -p "Force update anyway? (y/n) [n]: " force_update
+            if [[ ! "$force_update" =~ ^[Yy]$ ]]; then
+                info "Update cancelled - already up to date"
+                exit 0
+            fi
+        else
+            success "Update available: $current_version → $latest_version"
+        fi
+    else
+        echo -e "${BLUE}Latest Version:${NC} Unable to check (proceeding anyway)"
+    fi
     
     echo ""
     echo -e "${CYAN}Update Process:${NC}"
@@ -704,11 +756,9 @@ fresh_install() {
         return 1
     fi
     
-    # Environment setup
-    info "Setting up environment configuration..."
+    # Environment setup (for fresh installs, will generate new credentials)
     cd /opt/profolio
     setup_environment
-    success "Environment configured"
     
     # Build application
     if ! build_application; then
@@ -756,141 +806,34 @@ fresh_install() {
     show_access_info
 }
 
-# Simplified update installation
-update_installation() {
-    info "Starting update process"
-    
-    # Create backup
-    info "Creating system backup..."
-    manage_backups "update"
-    success "Backup created"
-    
-    # Stop services properly
-    info "Stopping services for update..."
-    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
-    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
-    success "Services stopped"
-    
-    # Update code
-    info "Downloading latest updates..."
-    cd /opt/profolio
-    if sudo -u profolio git stash push -m "Auto-stash before update $(date)" && sudo -u profolio git pull origin main; then
-        success "Code updated"
-    else
-        error "Failed to update code"
-        return 1
-    fi
-    
-    # Rebuild application
-    if ! build_application; then
-        return 1
-    fi
-    
-    # Update service configurations
-    local service_steps=(
-        "Updating service configurations" "install_systemd_services"
-        "Reloading systemd daemon" "systemctl daemon-reload"
-        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
-    )
-    
-    if ! execute_steps "Service Update" "${service_steps[@]}"; then
-        return 1
-    fi
-    
-    # Start services with proper timing
-    info "Starting backend service..."
-    if systemctl start profolio-backend; then
-        success "Backend service started"
-        sleep 3  # Give backend time to start
-    else
-        error "Failed to start backend service"
-        info "Backend logs:"
-        journalctl -u profolio-backend -n 10 --no-pager
-        return 1
-    fi
-    
-    info "Starting frontend service..."
-    if systemctl start profolio-frontend; then
-        success "Frontend service started"
-        sleep 2  # Give frontend time to start
-    else
-        error "Failed to start frontend service"
-        info "Frontend logs:"
-        journalctl -u profolio-frontend -n 10 --no-pager
-        return 1
-    fi
-    
-    # Verify update
-    verify_installation
-    
-    success "Update completed successfully!"
-    show_access_info
-}
-
-# Simplified repair installation
-repair_installation() {
-    info "Starting repair process"
-    
-    # Configuration update
-    info "Updating system configuration..."
-    cd /opt/profolio
-    setup_environment
-    success "Configuration updated"
-    
-    # Service management with proper state handling
-    info "Stopping any running services..."
-    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
-    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
-    
-    local service_steps=(
-        "Reinstalling systemd services" "install_systemd_services"
-        "Reloading systemd daemon" "systemctl daemon-reload"
-        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
-    )
-    
-    if ! execute_steps "Service Configuration" "${service_steps[@]}"; then
-        return 1
-    fi
-    
-    # Start services with proper timing
-    info "Starting backend service..."
-    if systemctl start profolio-backend; then
-        success "Backend service started"
-        sleep 3  # Give backend time to start
-    else
-        error "Failed to start backend service"
-        info "Backend logs:"
-        journalctl -u profolio-backend -n 10 --no-pager
-        return 1
-    fi
-    
-    info "Starting frontend service..."
-    if systemctl start profolio-frontend; then
-        success "Frontend service started"
-        sleep 2  # Give frontend time to start
-    else
-        error "Failed to start frontend service"
-        info "Frontend logs:"
-        journalctl -u profolio-frontend -n 10 --no-pager
-        return 1
-    fi
-    
-    # Final verification
-    verify_installation
-    
-    success "Repair completed successfully!"
-    show_access_info
-}
-
-# Setup environment configuration with feedback
+# Setup environment configuration with credential preservation
 setup_environment() {
-    # Generate secure JWT secret if needed
-    local jwt_secret=$(openssl rand -base64 32)
-    local api_key=$(openssl rand -base64 32)
+    # Check if we're updating an existing installation
+    local existing_db_password=""
+    local existing_jwt_secret=""
+    local existing_api_key=""
+    
+    # Try to preserve existing credentials during updates
+    if [ -f "/opt/profolio/backend/.env" ]; then
+        info "Preserving existing credentials from current installation..."
+        existing_db_password=$(grep "^DATABASE_URL=" /opt/profolio/backend/.env | sed 's/.*:\/\/profolio:\([^@]*\)@.*/\1/' 2>/dev/null || echo "")
+        existing_jwt_secret=$(grep "^JWT_SECRET=" /opt/profolio/backend/.env | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
+        existing_api_key=$(grep "^API_ENCRYPTION_KEY=" /opt/profolio/backend/.env | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
+    fi
+    
+    # Use existing credentials if available, otherwise generate new ones
+    local db_password="${existing_db_password:-${DB_PASSWORD:-$(openssl rand -base64 12)}}"
+    local jwt_secret="${existing_jwt_secret:-$(openssl rand -base64 32)}"
+    local api_key="${existing_api_key:-$(openssl rand -base64 32)}"
+    
+    # Update global DB_PASSWORD variable for consistency
+    DB_PASSWORD="$db_password"
+    
+    info "Setting up environment configuration..."
     
     # Create backend .env
     cat > /opt/profolio/backend/.env << EOF
-DATABASE_URL="postgresql://profolio:${DB_PASSWORD}@localhost:5432/profolio"
+DATABASE_URL="postgresql://profolio:${db_password}@localhost:5432/profolio"
 JWT_SECRET="${jwt_secret}"
 API_ENCRYPTION_KEY="${api_key}"
 PORT=3001
@@ -906,6 +849,13 @@ EOF
     # Set proper permissions
     chown profolio:profolio /opt/profolio/backend/.env /opt/profolio/frontend/.env
     chmod 600 /opt/profolio/backend/.env /opt/profolio/frontend/.env
+    
+    if [ -n "$existing_db_password" ]; then
+        success "Preserved existing database credentials"
+    else
+        success "Generated new database credentials"
+        info "Database password: $db_password"
+    fi
 }
 
 # Install systemd services
@@ -1023,7 +973,7 @@ show_access_info() {
     echo ""
 }
 
-# Main execution logic with cleaner output
+# Main execution logic with improved terminology
 main() {
     show_banner
     check_root
@@ -1040,14 +990,13 @@ main() {
             ;;
     esac
     
-    info "Detecting installation state..."
+    info "Detecting application state..."
     detect_installation_state
     local install_state=$?
     
-    info "Installation state: $install_state"
     case $install_state in
         0)
-            success "Fresh system detected"
+            info "Application action: First install"
             if [ "$AUTO_INSTALL" = false ]; then
                 run_configuration_wizard
             else
@@ -1056,21 +1005,149 @@ main() {
             fresh_install
             ;;
         1)
-            warn "Installed but not running - repair needed"
+            info "Application action: Repair (installed but not running)"
             repair_installation
             ;;
         2)
-            info "Running installation detected - update available"
+            info "Application action: Update (running installation detected)"
             run_update_wizard
             update_installation
             ;;
         *)
-            error "Unknown installation state: $install_state"
+            error "Unknown application state: $install_state"
             exit 1
             ;;
     esac
     
-    success "Script execution completed!"
+    success "Operation completed successfully!"
+}
+
+# Improved update installation with better credential handling
+update_installation() {
+    info "Starting update process"
+    
+    # Create backup
+    info "Creating system backup..."
+    manage_backups "update"
+    success "Backup created"
+    
+    # Stop services properly
+    info "Stopping services for update..."
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    success "Services stopped"
+    
+    # Update code
+    info "Downloading latest updates..."
+    cd /opt/profolio
+    if sudo -u profolio git stash push -m "Auto-stash before update $(date)" && sudo -u profolio git pull origin main; then
+        success "Code updated"
+    else
+        error "Failed to update code"
+        return 1
+    fi
+    
+    # Setup environment (preserving existing credentials)
+    setup_environment
+    
+    # Rebuild application
+    if ! build_application; then
+        return 1
+    fi
+    
+    # Update service configurations
+    local service_steps=(
+        "Updating service configurations" "install_systemd_services"
+        "Reloading systemd daemon" "systemctl daemon-reload"
+        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
+    )
+    
+    if ! execute_steps "Service Update" "${service_steps[@]}"; then
+        return 1
+    fi
+    
+    # Start services with proper timing
+    info "Starting backend service..."
+    if systemctl start profolio-backend; then
+        success "Backend service started"
+        sleep 3  # Give backend time to start
+    else
+        error "Failed to start backend service"
+        info "Backend logs:"
+        journalctl -u profolio-backend -n 10 --no-pager
+        return 1
+    fi
+    
+    info "Starting frontend service..."
+    if systemctl start profolio-frontend; then
+        success "Frontend service started"
+        sleep 2  # Give frontend time to start
+    else
+        error "Failed to start frontend service"
+        info "Frontend logs:"
+        journalctl -u profolio-frontend -n 10 --no-pager
+        return 1
+    fi
+    
+    # Verify update
+    verify_installation
+    
+    success "Update completed successfully!"
+    show_access_info
+}
+
+# Repair installation with credential preservation
+repair_installation() {
+    info "Starting repair process"
+    
+    # Stop any running services first
+    info "Stopping any running services..."
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    
+    # Configuration update (preserving existing credentials)
+    cd /opt/profolio
+    setup_environment
+    
+    # Service management
+    local service_steps=(
+        "Reinstalling systemd services" "install_systemd_services"
+        "Reloading systemd daemon" "systemctl daemon-reload"
+        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
+    )
+    
+    if ! execute_steps "Service Configuration" "${service_steps[@]}"; then
+        return 1
+    fi
+    
+    # Start services with proper timing
+    info "Starting backend service..."
+    if systemctl start profolio-backend; then
+        success "Backend service started"
+        sleep 3  # Give backend time to start
+    else
+        error "Failed to start backend service"
+        info "Backend logs:"
+        journalctl -u profolio-backend -n 10 --no-pager
+        return 1
+    fi
+    
+    info "Starting frontend service..."
+    if systemctl start profolio-frontend; then
+        success "Frontend service started"
+        sleep 2  # Give frontend time to start
+    else
+        error "Failed to start frontend service"
+        info "Frontend logs:"
+        journalctl -u profolio-frontend -n 10 --no-pager
+        return 1
+    fi
+    
+    # Final verification
+    verify_installation
+    
+    success "Repair completed successfully!"
+    show_access_info
 }
 
 # Run main function
