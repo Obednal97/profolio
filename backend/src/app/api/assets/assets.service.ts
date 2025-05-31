@@ -49,7 +49,12 @@ export class AssetsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return assets.map(this.transformAsset);
+    // Properly await all async transformations
+    const transformedAssets = await Promise.all(
+      assets.map(asset => this.transformAsset(asset))
+    );
+
+    return transformedAssets;
   }
 
   async findOne(id: string, userId: string) {

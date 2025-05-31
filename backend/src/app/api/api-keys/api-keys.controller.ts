@@ -16,9 +16,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ApiKeysService, CreateApiKeyDto, UpdateApiKeyDto, ApiKeyResponse } from './api-keys.service';
 import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
 import { ApiProvider } from '@prisma/client';
-
-// Temporary type until migration is run
-type ApiProvider = 'ALPHA_VANTAGE' | 'TWELVE_DATA' | 'POLYGON_IO' | 'COINGECKO' | 'COINMARKETCAP' | 'BINANCE' | 'TRADING212';
+import { AuthUser } from '@/common/auth/jwt.strategy';
 
 @ApiTags('api-keys')
 @Controller('api-keys')
@@ -29,7 +27,7 @@ export class ApiKeysController {
   @Post()
   @ApiOperation({ summary: 'Create a new API key' })
   @ApiResponse({ status: 201, description: 'API key created successfully' })
-  async create(@Req() req: any, @Body() createDto: CreateApiKeyDto) {
+  async create(@Req() req: { user: AuthUser }, @Body() createDto: CreateApiKeyDto) {
     const userId = req.user.id.toString();
     return this.apiKeysService.create(userId, createDto);
   }
@@ -37,7 +35,7 @@ export class ApiKeysController {
   @Get()
   @ApiOperation({ summary: 'Get all API keys for user' })
   @ApiResponse({ status: 200, description: 'API keys retrieved successfully' })
-  async findAll(@Req() req: any) {
+  async findAll(@Req() req: { user: AuthUser }) {
     const userId = req.user.id.toString();
     return this.apiKeysService.findAllByUser(userId);
   }
@@ -45,7 +43,7 @@ export class ApiKeysController {
   @Get('provider/:provider')
   @ApiOperation({ summary: 'Get API keys by provider' })
   @ApiResponse({ status: 200, description: 'API keys retrieved successfully' })
-  async findByProvider(@Req() req: any, @Param('provider') provider: ApiProvider) {
+  async findByProvider(@Req() req: { user: AuthUser }, @Param('provider') provider: ApiProvider) {
     const userId = req.user.id.toString();
     return this.apiKeysService.findByProvider(userId, provider);
   }
@@ -53,7 +51,7 @@ export class ApiKeysController {
   @Post('test/:id')
   @ApiOperation({ summary: 'Test an API key' })
   @ApiResponse({ status: 200, description: 'API key test result' })
-  async testConnection(@Req() req: any, @Param('id') id: string) {
+  async testConnection(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     const userId = req.user.id.toString();
     return this.apiKeysService.testConnection(userId, id);
   }
@@ -61,7 +59,7 @@ export class ApiKeysController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update an API key' })
   @ApiResponse({ status: 200, description: 'API key updated successfully' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() updateDto: UpdateApiKeyDto) {
+  async update(@Req() req: { user: AuthUser }, @Param('id') id: string, @Body() updateDto: UpdateApiKeyDto) {
     const userId = req.user.id.toString();
     return this.apiKeysService.update(userId, id, updateDto);
   }
@@ -69,7 +67,7 @@ export class ApiKeysController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete an API key' })
   @ApiResponse({ status: 200, description: 'API key deleted successfully' })
-  async remove(@Req() req: any, @Param('id') id: string) {
+  async remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     const userId = req.user.id.toString();
     await this.apiKeysService.delete(userId, id);
     return { message: 'API key deleted successfully' };
