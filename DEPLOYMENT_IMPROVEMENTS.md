@@ -87,7 +87,7 @@ module.exports = withMDX({
 ```
 
 ### 5. **Environment Configuration Automation**
-**File:** `scripts/setup-environment.sh`
+**File:** `scripts/setup-production-environment.sh`
 **Issues:** Manual .env file creation required
 **Fix:** Create script to auto-generate .env files
 
@@ -107,15 +107,10 @@ EOF
 echo "✅ Environment configured"
 ```
 
-### 6. **Deployment Script Improvements**
-**File:** `deploy.sh`
-**Issues:** Git authentication prompts, build failures
-**Fix:** Better error handling and environment setup
-
-### 7. **Systemd Service Fixes**
+### 6. **Systemd Service Configuration**
 **Files:** `/etc/systemd/system/profolio-*.service`
-**Issues:** Wrong paths in ExecStart
-**Fix:** Use correct `/opt/profolio` paths
+**Issues:** Wrong paths in ExecStart pointing to `/root/profolio`
+**Fix:** Use correct `/opt/profolio` paths in service definitions
 
 ## 🎯 **Implementation Priority:**
 
