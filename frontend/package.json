@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.0",
+    "@mdx-js/react": "^3.0.0",
     "@next/mdx": "^15.3.1",
     "@radix-ui/react-slot": "^1.2.0",
     "@types/jsonwebtoken": "^9.0.9",

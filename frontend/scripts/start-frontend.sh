@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
-export PATH="/usr/bin:$PATH"
-cd /root/profolio/frontend
-pnpm install
-pnpm exec next dev -p 3001
+export PATH="/usr/local/bin:/usr/bin:$PATH"
+cd /opt/profolio/frontend
+
+# Install dependencies if needed
+if [ ! -d "node_modules" ]; then
+    npm ci --production
+fi
+
+# Start the application in production mode
+npm run start
