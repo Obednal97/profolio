@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 🚀 Profolio Smart Install/Update Script
-# Professional Proxmox-style wizard with configuration options
+# Professional Proxmox-style wizard with dynamic progress bars
 
 # Note: Removed 'set -e' to prevent premature exit on minor errors
 # Critical errors will be handled explicitly
@@ -15,6 +15,123 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
 NC='\033[0m' # No Color
+
+# Progress spinner variables
+SPINNER_ACTIVE=0
+SPINNER_PID=""
+SPINNER_MSG=""
+
+# Dynamic spinner system (like Proxmox community scripts)
+start_spinner() {
+    local msg="$1"
+    local frames="⣾⣽⣻⢿⡿⣟⣯⣷"
+    local spin_i=0
+    local interval=0.1
+    
+    SPINNER_MSG="$msg"
+    printf "\r%s%s %s" "$BLUE" "⣾" "$SPINNER_MSG$NC" >&2
+    
+    {
+        while [[ "$SPINNER_ACTIVE" -eq 1 ]]; do
+            printf "\r%s%s %s%s" "$BLUE" "${frames:spin_i++%${#frames}:1}" "$SPINNER_MSG" "$NC" >&2
+            sleep "$interval"
+        done
+    } &
+    
+    SPINNER_PID=$!
+    disown "$SPINNER_PID"
+}
+
+# Update spinner message in real-time
+update_spinner_msg() {
+    local new_msg="$1"
+    SPINNER_MSG="$new_msg"
+}
+
+# Stop spinner and show completion
+stop_spinner() {
+    local status="$1"  # "success" or "error" or "warning"
+    local final_msg="$2"
+    
+    if [[ -n "$SPINNER_PID" ]] && kill -0 "$SPINNER_PID" 2>/dev/null; then
+        kill "$SPINNER_PID" 2>/dev/null
+        sleep 0.1
+    fi
+    
+    # Clear the spinner line
+    printf "\r%*s\r" "$(tput cols)" ""
+    
+    # Show final status
+    case "$status" in
+        "success")
+            printf "%s✅ %s%s\n" "$GREEN" "$final_msg" "$NC"
+            ;;
+        "error")
+            printf "%s❌ %s%s\n" "$RED" "$final_msg" "$NC"
+            ;;
+        "warning")
+            printf "%s⚠️  %s%s\n" "$YELLOW" "$final_msg" "$NC"
+            ;;
+        *)
+            printf "%s✨ %s%s\n" "$CYAN" "$final_msg" "$NC"
+            ;;
+    esac
+}
+
+# Enhanced progress function with real-time updates
+show_progress_with_spinner() {
+    local step=$1
+    local total=$2
+    local message=$3
+    local command="$4"
+    
+    # Start spinner
+    SPINNER_ACTIVE=1
+    start_spinner "[$step/$total] $message"
+    
+    # Execute command if provided
+    if [[ -n "$command" ]]; then
+        if eval "$command" >/dev/null 2>&1; then
+            SPINNER_ACTIVE=0
+            stop_spinner "success" "[$step/$total] $message - Complete"
+            return 0
+        else
+            SPINNER_ACTIVE=0
+            stop_spinner "error" "[$step/$total] $message - Failed"
+            return 1
+        fi
+    else
+        # Manual control - caller will stop spinner
+        return 0
+    fi
+}
+
+# Multi-stage progress with live updates
+execute_with_live_progress() {
+    local main_msg="$1"
+    local total_steps="$2"
+    shift 2
+    local steps=("$@")
+    
+    echo -e "${CYAN}🚀 $main_msg${NC}"
+    
+    for ((i=0; i<${#steps[@]}; i+=2)); do
+        local step_msg="${steps[i]}"
+        local step_cmd="${steps[i+1]}"
+        local step_num=$((i/2 + 1))
+        
+        if ! show_progress_with_spinner "$step_num" "$total_steps" "$step_msg" "$step_cmd"; then
+            echo -e "${RED}❌ Failed at step: $step_msg${NC}"
+            return 1
+        fi
+    done
+    
+    echo -e "${GREEN}🎉 $main_msg - All steps completed successfully!${NC}"
+    return 0
+}
+
+# Signal handler for cleanup
+trap 'stop_spinner "error" "Operation interrupted"; exit 130' INT TERM
 
 # Default configuration values
 DEFAULT_CONTAINER_NAME="Profolio"
@@ -66,14 +183,6 @@ show_banner() {
     echo -e "${NC}"
     echo -e "${CYAN}Self-Hosted • Privacy-Focused • One-Command Setup${NC}"
     echo ""
-}
-
-# Progress indicator
-show_progress() {
-    local step=$1
-    local total=$2
-    local message=$3
-    echo -e "${BLUE}[${step}/${total}]${NC} ${message}"
 }
 
 # Input validation functions
@@ -452,135 +561,253 @@ detect_installation_state() {
     fi
 }
 
-# Fresh Installation Function
+# Build application with dynamic progress
+build_application() {
+    local steps=(
+        "Installing backend dependencies" "cd /opt/profolio/backend && sudo -u profolio npm install"
+        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio npx prisma generate"
+        "Running database migrations" "cd /opt/profolio/backend && sudo -u profolio npx prisma migrate deploy"
+        "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio npx nest build"
+        "Installing frontend dependencies" "cd /opt/profolio/frontend && sudo -u profolio npm install"
+        "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio npm run build"
+    )
+    
+    execute_with_live_progress "Building Profolio Application" 6 "${steps[@]}"
+}
+
+# Enhanced verification with real-time updates
+verify_installation() {
+    echo -e "${BLUE}🔍 Verifying installation...${NC}"
+    
+    # Start spinner for service check
+    SPINNER_ACTIVE=1
+    start_spinner "Checking service status"
+    
+    # Wait for services to start
+    sleep 10
+    
+    # Check service status
+    if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
+        SPINNER_ACTIVE=0
+        stop_spinner "success" "Services are running"
+        
+        # Test backend API with dynamic updates
+        SPINNER_ACTIVE=1
+        start_spinner "Testing backend API connectivity"
+        
+        local max_attempts=30
+        local attempt=1
+        
+        while [ $attempt -le $max_attempts ]; do
+            update_spinner_msg "Testing backend API connectivity (attempt $attempt/$max_attempts)"
+            
+            if curl -s http://localhost:3001/api/health >/dev/null 2>&1; then
+                SPINNER_ACTIVE=0
+                stop_spinner "success" "Backend API responding"
+                break
+            fi
+            
+            sleep 2
+            ((attempt++))
+        done
+        
+        if [ $attempt -gt $max_attempts ]; then
+            SPINNER_ACTIVE=0
+            stop_spinner "warning" "Backend API not responding (may still be starting)"
+        fi
+        
+        # Test frontend
+        SPINNER_ACTIVE=1
+        start_spinner "Testing frontend connectivity"
+        
+        if curl -s http://localhost:3000 >/dev/null 2>&1; then
+            SPINNER_ACTIVE=0
+            stop_spinner "success" "Frontend responding"
+        else
+            SPINNER_ACTIVE=0
+            stop_spinner "warning" "Frontend starting up..."
+        fi
+    else
+        SPINNER_ACTIVE=0
+        stop_spinner "error" "Services failed to start"
+        echo "Check logs with: journalctl -u profolio-backend -u profolio-frontend -f"
+        return 1
+    fi
+}
+
+# Enhanced fresh install with grouped operations
 fresh_install() {
     echo -e "${GREEN}🆕 FRESH INSTALLATION${NC}"
     
     if [ "$AUTO_INSTALL" = false ]; then
-        show_progress 1 9 "Configuration completed"
+        echo -e "${GREEN}✅ Configuration completed${NC}"
     else
-        show_progress 1 9 "Using default configuration"
+        echo -e "${GREEN}✅ Using default configuration${NC}"
     fi
     
-    # Create profolio user
-    show_progress 2 9 "Creating profolio user..."
-    useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || echo "User already exists"
+    # System setup phase
+    local system_steps=(
+        "Creating profolio user" "useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || true"
+        "Updating package lists" "apt update"
+        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server"
+    )
     
-    # Install system dependencies
-    show_progress 3 9 "Installing system dependencies..."
-    if [ "$SSH_ENABLED" = "yes" ]; then
-        apt update
-        apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server
-    else
-        apt update
-        apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl
+    if ! execute_with_live_progress "System Setup" 3 "${system_steps[@]}"; then
+        return 1
     fi
     
-    # Configure SSH if enabled
+    # SSH configuration if enabled
     if [ "$SSH_ENABLED" = "yes" ]; then
-        show_progress 4 9 "Configuring SSH access..."
+        SPINNER_ACTIVE=1
+        start_spinner "Configuring SSH access"
         configure_ssh_server
-    else
-        show_progress 4 9 "Skipping SSH configuration..."
+        SPINNER_ACTIVE=0
+        stop_spinner "success" "SSH configuration complete"
     fi
     
-    # Start PostgreSQL
-    show_progress 5 9 "Setting up PostgreSQL..."
-    systemctl enable postgresql
-    systemctl start postgresql
+    # Database setup phase
+    local db_steps=(
+        "Starting PostgreSQL service" "systemctl enable postgresql && systemctl start postgresql"
+        "Creating database and user" "sudo -u postgres psql -c \"CREATE USER profolio WITH PASSWORD '$DB_PASSWORD'; CREATE DATABASE profolio OWNER profolio; GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;\" || true"
+    )
     
-    # Create database and user
-    show_progress 6 9 "Setting up database..."
-    sudo -u postgres psql << EOF
-CREATE USER profolio WITH PASSWORD '$DB_PASSWORD';
-CREATE DATABASE profolio OWNER profolio;
-GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;
-\q
-EOF
+    if ! execute_with_live_progress "Database Setup" 2 "${db_steps[@]}"; then
+        return 1
+    fi
     
-    # Clone repository
-    show_progress 7 9 "Downloading Profolio..."
+    # Application setup phase
+    SPINNER_ACTIVE=1
+    start_spinner "Downloading Profolio repository"
+    
     if [ -d "/opt/profolio" ]; then
         rm -rf /opt/profolio
     fi
     
     cd /opt
-    git clone https://github.com/Obednal97/profolio.git
-    chown -R profolio:profolio /opt/profolio
+    if git clone https://github.com/Obednal97/profolio.git; then
+        chown -R profolio:profolio /opt/profolio
+        SPINNER_ACTIVE=0
+        stop_spinner "success" "Repository downloaded"
+    else
+        SPINNER_ACTIVE=0
+        stop_spinner "error" "Failed to download repository"
+        return 1
+    fi
     
-    # Setup environment
-    show_progress 8 9 "Configuring environment..."
+    # Environment and build
+    SPINNER_ACTIVE=1
+    start_spinner "Setting up environment configuration"
     cd /opt/profolio
     setup_environment
+    SPINNER_ACTIVE=0
+    stop_spinner "success" "Environment configured"
     
-    # Install dependencies and build
-    build_application
+    # Build application
+    if ! build_application; then
+        return 1
+    fi
     
-    # Install and start services
-    show_progress 9 9 "Starting services..."
-    install_systemd_services
-    systemctl enable profolio-backend profolio-frontend
-    systemctl start profolio-backend profolio-frontend
+    # Service installation and startup
+    local service_steps=(
+        "Installing systemd services" "install_systemd_services"
+        "Enabling services" "systemctl enable profolio-backend profolio-frontend"
+        "Starting services" "systemctl start profolio-backend profolio-frontend"
+    )
     
-    # Verify installation
+    if ! execute_with_live_progress "Service Setup" 3 "${service_steps[@]}"; then
+        return 1
+    fi
+    
+    # Final verification
     verify_installation
     
     echo -e "${GREEN}✅ Installation completed successfully!${NC}"
     show_access_info
 }
 
-# Update Installation Function
+# Enhanced update with better feedback
 update_installation() {
     echo -e "${YELLOW}🔄 UPDATE INSTALLATION${NC}"
     
-    # Create backup
-    show_progress 1 6 "Creating backup..."
+    # Backup phase
+    SPINNER_ACTIVE=1
+    start_spinner "Creating system backup"
     manage_backups "update"
+    SPINNER_ACTIVE=0
+    stop_spinner "success" "Backup created"
     
-    # Stop services
-    show_progress 2 6 "Stopping services..."
-    systemctl stop profolio-frontend profolio-backend || true
+    # Service management
+    local service_steps=(
+        "Stopping frontend service" "systemctl stop profolio-frontend || true"
+        "Stopping backend service" "systemctl stop profolio-backend || true"
+    )
     
-    # Update code
-    show_progress 3 6 "Downloading updates..."
+    if ! execute_with_live_progress "Stopping Services" 2 "${service_steps[@]}"; then
+        return 1
+    fi
+    
+    # Update phase
+    SPINNER_ACTIVE=1
+    start_spinner "Downloading latest updates"
+    
     cd /opt/profolio
-    sudo -u profolio git stash push -m "Auto-stash before update $(date)"
-    sudo -u profolio git pull origin main
+    if sudo -u profolio git stash push -m "Auto-stash before update $(date)" && sudo -u profolio git pull origin main; then
+        SPINNER_ACTIVE=0
+        stop_spinner "success" "Code updated"
+    else
+        SPINNER_ACTIVE=0
+        stop_spinner "error" "Failed to update code"
+        return 1
+    fi
     
-    # Update and rebuild
-    show_progress 4 6 "Rebuilding application..."
-    build_application
+    # Rebuild application
+    if ! build_application; then
+        return 1
+    fi
     
-    # Update services and restart
-    show_progress 5 6 "Updating services..."
-    install_systemd_services
-    systemctl daemon-reload
-    systemctl start profolio-backend profolio-frontend
+    # Restart services
+    local restart_steps=(
+        "Updating service configurations" "install_systemd_services && systemctl daemon-reload"
+        "Starting backend service" "systemctl start profolio-backend"
+        "Starting frontend service" "systemctl start profolio-frontend"
+    )
+    
+    if ! execute_with_live_progress "Restarting Services" 3 "${restart_steps[@]}"; then
+        return 1
+    fi
     
     # Verify update
-    show_progress 6 6 "Verifying update..."
     verify_installation
     
     echo -e "${GREEN}✅ Update completed successfully!${NC}"
     show_access_info
 }
 
-# Repair Installation Function
+# Enhanced repair installation function
 repair_installation() {
     echo -e "${YELLOW}🔧 REPAIR INSTALLATION${NC}"
     
-    show_progress 1 4 "Updating configuration..."
+    # Configuration update
+    SPINNER_ACTIVE=1
+    start_spinner "Updating system configuration"
     cd /opt/profolio
     setup_environment
+    SPINNER_ACTIVE=0
+    stop_spinner "success" "Configuration updated"
     
-    show_progress 2 4 "Reinstalling services..."
-    install_systemd_services
-    systemctl daemon-reload
+    # Service management
+    local service_steps=(
+        "Reinstalling systemd services" "install_systemd_services"
+        "Reloading systemd daemon" "systemctl daemon-reload"
+        "Starting backend service" "systemctl start profolio-backend"
+        "Starting frontend service" "systemctl start profolio-frontend"
+    )
     
-    show_progress 3 4 "Starting services..."
-    systemctl start profolio-backend profolio-frontend
+    if ! execute_with_live_progress "Service Repair" 4 "${service_steps[@]}"; then
+        return 1
+    fi
     
-    show_progress 4 4 "Verifying repair..."
+    # Final verification
     verify_installation
     
     echo -e "${GREEN}✅ Repair completed successfully!${NC}"
@@ -611,21 +838,6 @@ EOF
     # Set proper permissions
     chown profolio:profolio /opt/profolio/backend/.env /opt/profolio/frontend/.env
     chmod 600 /opt/profolio/backend/.env /opt/profolio/frontend/.env
-}
-
-# Build application
-build_application() {
-    # Backend
-    cd /opt/profolio/backend
-    sudo -u profolio npm install
-    sudo -u profolio npx prisma generate
-    sudo -u profolio npx prisma migrate deploy
-    sudo -u profolio npx nest build
-    
-    # Frontend
-    cd /opt/profolio/frontend
-    sudo -u profolio npm install
-    sudo -u profolio npm run build
 }
 
 # Install systemd services
@@ -675,43 +887,6 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 EOF
-}
-
-# Verify installation
-verify_installation() {
-    echo -e "${BLUE}🔍 Verifying installation...${NC}"
-    
-    # Wait for services to start
-    sleep 10
-    
-    # Check service status
-    if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
-        echo -e "${GREEN}✅ Services are running${NC}"
-        
-        # Test endpoints
-        local max_attempts=30
-        local attempt=1
-        
-        while [ $attempt -le $max_attempts ]; do
-            if curl -s http://localhost:3001/api/health >/dev/null 2>&1; then
-                echo -e "${GREEN}✅ Backend API responding${NC}"
-                break
-            fi
-            echo -e "${YELLOW}⏳ Waiting for backend... ($attempt/$max_attempts)${NC}"
-            sleep 2
-            ((attempt++))
-        done
-        
-        if curl -s http://localhost:3000 >/dev/null 2>&1; then
-            echo -e "${GREEN}✅ Frontend responding${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Frontend starting up...${NC}"
-        fi
-    else
-        echo -e "${RED}❌ Services failed to start${NC}"
-        echo "Check logs with: journalctl -u profolio-backend -u profolio-frontend -f"
-        return 1
-    fi
 }
 
 # Show access information
