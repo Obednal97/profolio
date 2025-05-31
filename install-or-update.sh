@@ -165,7 +165,11 @@ DB_PASSWORD=""
 AUTO_INSTALL=false
 GENERATE_SSH_KEY=""
 
-# Banner with improved terminology
+# Global variable to track operation type and success
+OPERATION_TYPE="install"
+OPERATION_SUCCESS=false
+
+# Banner with improved centering
 show_banner() {
     # Set TERM if not already set to prevent clear command failures
     if [ -z "$TERM" ]; then
@@ -179,7 +183,7 @@ show_banner() {
     
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                🚀 PROFOLIO INSTALLER/UPDATER                ║"
+    echo "║               🚀 PROFOLIO INSTALLER/UPDATER                 ║"
     echo "║              Professional Portfolio Management               ║"
     echo "║                  Proxmox Community Edition                   ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
@@ -630,201 +634,52 @@ build_application() {
     execute_steps "Building Profolio Application" "${steps[@]}"
 }
 
-# Enhanced verification with better diagnostics
-verify_installation() {
-    info "Verifying installation..."
-    
-    # Give services a bit more time to fully start
-    info "Waiting for services to fully initialize..."
-    sleep 5
-    
-    # Check service status with better diagnostics
-    printf "${BLUE}[1/3]${NC} Checking service status"
-    
-    # Check backend service
-    if ! systemctl is-active --quiet profolio-backend; then
-        printf "\r${BLUE}[1/3]${NC} Checking service status ${RED}✗${NC}\n"
-        error "Backend service is not running"
-        info "Backend service status:"
-        systemctl status profolio-backend --no-pager -l
-        info "Recent backend logs:"
-        journalctl -u profolio-backend -n 15 --no-pager
-        return 1
-    fi
-    
-    # Check frontend service
-    if ! systemctl is-active --quiet profolio-frontend; then
-        printf "\r${BLUE}[1/3]${NC} Checking service status ${RED}✗${NC}\n"
-        error "Frontend service is not running"
-        info "Frontend service status:"
-        systemctl status profolio-frontend --no-pager -l
-        info "Recent frontend logs:"
-        journalctl -u profolio-frontend -n 15 --no-pager
-        return 1
-    fi
-    
-    printf "\r${BLUE}[1/3]${NC} Checking service status ${GREEN}✓${NC}\n"
-    
-    # Test backend API with better feedback
-    printf "${BLUE}[2/3]${NC} Testing backend API"
-    local max_attempts=30
-    local attempt=1
-    
-    while [ $attempt -le $max_attempts ]; do
-        printf "\r${BLUE}[2/3]${NC} Testing backend API (attempt $attempt/$max_attempts)"
-        
-        if curl -s --connect-timeout 5 --max-time 10 http://localhost:3001/api/health >/dev/null 2>&1; then
-            printf "\r${BLUE}[2/3]${NC} Testing backend API ${GREEN}✓${NC}\n"
-            break
-        fi
-        
-        sleep 2
-        ((attempt++))
-    done
-    
-    if [ $attempt -gt $max_attempts ]; then
-        printf "\r${BLUE}[2/3]${NC} Testing backend API ${YELLOW}⚠${NC}\n"
-        warn "Backend API not responding after $max_attempts attempts"
-        info "Backend might still be starting up. Check logs:"
-        info "journalctl -u profolio-backend -f"
-    fi
-    
-    # Test frontend with timeout
-    printf "${BLUE}[3/3]${NC} Testing frontend"
-    if curl -s --connect-timeout 5 --max-time 10 http://localhost:3000 >/dev/null 2>&1; then
-        printf "\r${BLUE}[3/3]${NC} Testing frontend ${GREEN}✓${NC}\n"
-    else
-        printf "\r${BLUE}[3/3]${NC} Testing frontend ${YELLOW}⚠${NC}\n"
-        warn "Frontend not responding yet - may still be building/starting"
-        info "Frontend logs:"
-        journalctl -u profolio-frontend -n 10 --no-pager
-    fi
-    
-    success "Installation verification completed"
-}
-
-# Simplified fresh install
-fresh_install() {
-    success "Starting fresh installation"
-    
-    if [ "$AUTO_INSTALL" = false ]; then
-        success "Configuration completed"
-    else
-        success "Using default configuration"
-    fi
-    
-    # System setup phase
-    local system_steps=(
-        "Creating profolio user" "useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || true"
-        "Updating package lists" "apt update"
-        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server"
-    )
-    
-    if ! execute_steps "System Setup" "${system_steps[@]}"; then
-        return 1
-    fi
-    
-    # SSH configuration if enabled
-    if [ "$SSH_ENABLED" = "yes" ]; then
-        info "Configuring SSH access..."
-        configure_ssh_server
-        success "SSH configuration complete"
-    fi
-    
-    # Database setup phase
-    local db_steps=(
-        "Starting PostgreSQL service" "systemctl enable postgresql && systemctl start postgresql"
-        "Creating database and user" "sudo -u postgres psql -c \"CREATE USER profolio WITH PASSWORD '$DB_PASSWORD'; CREATE DATABASE profolio OWNER profolio; GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;\" || true"
-    )
-    
-    if ! execute_steps "Database Setup" "${db_steps[@]}"; then
-        return 1
-    fi
-    
-    # Application download
-    info "Downloading Profolio repository..."
-    if [ -d "/opt/profolio" ]; then
-        rm -rf /opt/profolio
-    fi
-    
-    cd /opt
-    if git clone https://github.com/Obednal97/profolio.git; then
-        chown -R profolio:profolio /opt/profolio
-        success "Repository downloaded"
-    else
-        error "Failed to download repository"
-        return 1
-    fi
-    
-    # Environment setup (for fresh installs, will generate new credentials)
-    cd /opt/profolio
-    setup_environment
-    
-    # Build application
-    if ! build_application; then
-        return 1
-    fi
-    
-    # Service installation with improved management
-    local service_steps=(
-        "Installing systemd services" "install_systemd_services"
-        "Reloading systemd daemon" "systemctl daemon-reload"
-        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
-    )
-    
-    if ! execute_steps "Service Installation" "${service_steps[@]}"; then
-        return 1
-    fi
-    
-    # Start services with proper timing
-    info "Starting backend service..."
-    if systemctl start profolio-backend; then
-        success "Backend service started"
-        sleep 3  # Give backend time to start
-    else
-        error "Failed to start backend service"
-        info "Backend logs:"
-        journalctl -u profolio-backend -n 10 --no-pager
-        return 1
-    fi
-    
-    info "Starting frontend service..."
-    if systemctl start profolio-frontend; then
-        success "Frontend service started"
-        sleep 2  # Give frontend time to start
-    else
-        error "Failed to start frontend service"
-        info "Frontend logs:"
-        journalctl -u profolio-frontend -n 10 --no-pager
-        return 1
-    fi
-    
-    # Final verification
-    verify_installation
-    
-    success "Installation completed successfully!"
-    show_access_info
-}
-
-# Setup environment configuration with credential preservation
+# Setup environment configuration with proper credential preservation and database sync
 setup_environment() {
     # Check if we're updating an existing installation
     local existing_db_password=""
     local existing_jwt_secret=""
     local existing_api_key=""
+    local credentials_preserved=false
     
-    # Try to preserve existing credentials during updates
+    # Try to preserve existing credentials during updates/repairs
     if [ -f "/opt/profolio/backend/.env" ]; then
-        info "Preserving existing credentials from current installation..."
+        info "Checking for existing credentials..."
         existing_db_password=$(grep "^DATABASE_URL=" /opt/profolio/backend/.env | sed 's/.*:\/\/profolio:\([^@]*\)@.*/\1/' 2>/dev/null || echo "")
         existing_jwt_secret=$(grep "^JWT_SECRET=" /opt/profolio/backend/.env | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
         existing_api_key=$(grep "^API_ENCRYPTION_KEY=" /opt/profolio/backend/.env | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
+        
+        if [ -n "$existing_db_password" ] && [ -n "$existing_jwt_secret" ] && [ -n "$existing_api_key" ]; then
+            credentials_preserved=true
+        fi
     fi
     
     # Use existing credentials if available, otherwise generate new ones
-    local db_password="${existing_db_password:-${DB_PASSWORD:-$(openssl rand -base64 12)}}"
-    local jwt_secret="${existing_jwt_secret:-$(openssl rand -base64 32)}"
-    local api_key="${existing_api_key:-$(openssl rand -base64 32)}"
+    local db_password
+    local jwt_secret
+    local api_key
+    
+    if [ "$credentials_preserved" = true ]; then
+        db_password="$existing_db_password"
+        jwt_secret="$existing_jwt_secret"
+        api_key="$existing_api_key"
+        info "Preserving existing credentials"
+    else
+        db_password="${DB_PASSWORD:-$(openssl rand -base64 12)}"
+        jwt_secret="$(openssl rand -base64 32)"
+        api_key="$(openssl rand -base64 32)"
+        info "Generating new credentials"
+        
+        # If generating new database password, update PostgreSQL user password
+        if [ "$credentials_preserved" = false ] && [ "$OPERATION_TYPE" != "INSTALLATION" ]; then
+            info "Updating database user password to match new credentials..."
+            if sudo -u postgres psql -c "ALTER USER profolio WITH PASSWORD '$db_password';" 2>/dev/null; then
+                success "Database user password updated"
+            else
+                warn "Failed to update database user password - manual intervention may be required"
+            fi
+        fi
+    fi
     
     # Update global DB_PASSWORD variable for consistency
     DB_PASSWORD="$db_password"
@@ -850,7 +705,7 @@ EOF
     chown profolio:profolio /opt/profolio/backend/.env /opt/profolio/frontend/.env
     chmod 600 /opt/profolio/backend/.env /opt/profolio/frontend/.env
     
-    if [ -n "$existing_db_password" ]; then
+    if [ "$credentials_preserved" = true ]; then
         success "Preserved existing database credentials"
     else
         success "Generated new database credentials"
@@ -858,65 +713,10 @@ EOF
     fi
 }
 
-# Install systemd services
-install_systemd_services() {
-    # Backend service
-    cat > /etc/systemd/system/profolio-backend.service << 'EOF'
-[Unit]
-Description=Profolio Backend
-After=network.target postgresql.service
-
-[Service]
-Type=simple
-User=profolio
-Group=profolio
-WorkingDirectory=/opt/profolio/backend
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    # Frontend service
-    cat > /etc/systemd/system/profolio-frontend.service << 'EOF'
-[Unit]
-Description=Profolio Frontend
-After=network.target profolio-backend.service
-
-[Service]
-Type=simple
-User=profolio
-Group=profolio
-WorkingDirectory=/opt/profolio/frontend
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-}
-
-# Show access information
+# Show access information - removed hardcoded banner (handled by show_completion_status)
 show_access_info() {
     local_ip=$(hostname -I | awk '{print $1}')
     
-    echo ""
-    echo -e "${GREEN}"
-    echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    🎉 INSTALLATION COMPLETE                 ║"
-    echo "╚══════════════════════════════════════════════════════════════╝"
-    echo -e "${NC}"
     echo -e "${BLUE}🌐 Access your Profolio instance:${NC}"
     echo -e "   ${WHITE}Frontend:${NC} ${GREEN}http://$local_ip:3000${NC}"
     echo -e "   ${WHITE}Backend:${NC}  ${GREEN}http://$local_ip:3001${NC}"
@@ -973,6 +773,66 @@ show_access_info() {
     echo ""
 }
 
+# Show completion status with proper operation type and status checking
+show_completion_status() {
+    local operation_name="$1"
+    local operation_success="$2"
+    
+    echo ""
+    if [ "$operation_success" = true ]; then
+        echo -e "${GREEN}"
+        echo "╔══════════════════════════════════════════════════════════════╗"
+        
+        # Dynamic centering based on operation name
+        case "$operation_name" in
+            "INSTALLATION")
+                echo "║                  🎉 INSTALLATION COMPLETE                   ║"
+                ;;
+            "UPDATE")
+                echo "║                     🎉 UPDATE COMPLETE                      ║"
+                ;;
+            "REPAIR")
+                echo "║                     🎉 REPAIR COMPLETE                      ║"
+                ;;
+            *)
+                echo "║                   🎉 OPERATION COMPLETE                     ║"
+                ;;
+        esac
+        
+        echo "╚══════════════════════════════════════════════════════════════╝"
+        echo -e "${NC}"
+        show_access_info
+    else
+        echo -e "${RED}"
+        echo "╔══════════════════════════════════════════════════════════════╗"
+        
+        # Dynamic centering based on operation name
+        case "$operation_name" in
+            "INSTALLATION")
+                echo "║                   ❌ INSTALLATION FAILED                    ║"
+                ;;
+            "UPDATE")
+                echo "║                      ❌ UPDATE FAILED                       ║"
+                ;;
+            "REPAIR")
+                echo "║                      ❌ REPAIR FAILED                       ║"
+                ;;
+            *)
+                echo "║                    ❌ OPERATION FAILED                      ║"
+                ;;
+        esac
+        
+        echo "╚══════════════════════════════════════════════════════════════╝"
+        echo -e "${NC}"
+        error "Operation failed. Check the logs above for details."
+        echo ""
+        echo -e "${CYAN}Troubleshooting commands:${NC}"
+        echo -e "   ${WHITE}Check service status:${NC} systemctl status profolio-backend profolio-frontend"
+        echo -e "   ${WHITE}View logs:${NC} journalctl -u profolio-backend -u profolio-frontend -f"
+        echo -e "   ${WHITE}Try manual restart:${NC} systemctl restart profolio-backend profolio-frontend"
+    fi
+}
+
 # Main execution logic with improved terminology
 main() {
     show_banner
@@ -1018,12 +878,11 @@ main() {
             exit 1
             ;;
     esac
-    
-    success "Operation completed successfully!"
 }
 
-# Improved update installation with better credential handling
+# Improved update installation with proper completion tracking
 update_installation() {
+    OPERATION_TYPE="UPDATE"
     info "Starting update process"
     
     # Create backup
@@ -1044,6 +903,8 @@ update_installation() {
         success "Code updated"
     else
         error "Failed to update code"
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
@@ -1052,6 +913,8 @@ update_installation() {
     
     # Rebuild application
     if ! build_application; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
@@ -1063,6 +926,8 @@ update_installation() {
     )
     
     if ! execute_steps "Service Update" "${service_steps[@]}"; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
@@ -1075,6 +940,8 @@ update_installation() {
         error "Failed to start backend service"
         info "Backend logs:"
         journalctl -u profolio-backend -n 10 --no-pager
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
@@ -1086,18 +953,19 @@ update_installation() {
         error "Failed to start frontend service"
         info "Frontend logs:"
         journalctl -u profolio-frontend -n 10 --no-pager
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
-    # Verify update
+    # Verify update - this sets OPERATION_SUCCESS
     verify_installation
-    
-    success "Update completed successfully!"
-    show_access_info
+    show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
 }
 
-# Repair installation with credential preservation
+# Repair installation with proper completion tracking
 repair_installation() {
+    OPERATION_TYPE="REPAIR"
     info "Starting repair process"
     
     # Stop any running services first
@@ -1117,6 +985,8 @@ repair_installation() {
     )
     
     if ! execute_steps "Service Configuration" "${service_steps[@]}"; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
@@ -1129,6 +999,8 @@ repair_installation() {
         error "Failed to start backend service"
         info "Backend logs:"
         journalctl -u profolio-backend -n 10 --no-pager
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
@@ -1140,14 +1012,286 @@ repair_installation() {
         error "Failed to start frontend service"
         info "Frontend logs:"
         journalctl -u profolio-frontend -n 10 --no-pager
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
-    # Final verification
+    # Final verification - this sets OPERATION_SUCCESS
     verify_installation
+    show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+}
+
+# Install systemd services
+install_systemd_services() {
+    # Backend service
+    cat > /etc/systemd/system/profolio-backend.service << 'EOF'
+[Unit]
+Description=Profolio Backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=profolio
+Group=profolio
+WorkingDirectory=/opt/profolio/backend
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # Frontend service
+    cat > /etc/systemd/system/profolio-frontend.service << 'EOF'
+[Unit]
+Description=Profolio Frontend
+After=network.target profolio-backend.service
+
+[Service]
+Type=simple
+User=profolio
+Group=profolio
+WorkingDirectory=/opt/profolio/frontend
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
+# Enhanced verification with proper error handling and detailed diagnostics
+verify_installation() {
+    info "Verifying installation..."
     
-    success "Repair completed successfully!"
-    show_access_info
+    # Give services time to fully start
+    info "Waiting for services to fully initialize..."
+    sleep 5
+    
+    local verification_success=true
+    local backend_running=false
+    local frontend_running=false
+    
+    # Check service status with detailed diagnostics
+    printf "${BLUE}[1/4]${NC} Checking backend service status"
+    
+    if systemctl is-active --quiet profolio-backend; then
+        printf "\r${BLUE}[1/4]${NC} Checking backend service status ${GREEN}✓${NC}\n"
+        backend_running=true
+    else
+        printf "\r${BLUE}[1/4]${NC} Checking backend service status ${RED}✗${NC}\n"
+        error "Backend service is not running"
+        info "Backend service status:"
+        systemctl status profolio-backend --no-pager -l
+        info "Recent backend logs:"
+        journalctl -u profolio-backend -n 20 --no-pager
+        verification_success=false
+    fi
+    
+    # Check frontend service
+    printf "${BLUE}[2/4]${NC} Checking frontend service status"
+    
+    if systemctl is-active --quiet profolio-frontend; then
+        printf "\r${BLUE}[2/4]${NC} Checking frontend service status ${GREEN}✓${NC}\n"
+        frontend_running=true
+    else
+        printf "\r${BLUE}[2/4]${NC} Checking frontend service status ${RED}✗${NC}\n"
+        error "Frontend service is not running"
+        info "Frontend service status:"
+        systemctl status profolio-frontend --no-pager -l
+        info "Recent frontend logs:"
+        journalctl -u profolio-frontend -n 15 --no-pager
+        verification_success=false
+    fi
+    
+    # Test backend API connectivity (only if backend service is running)
+    if [ "$backend_running" = true ]; then
+        printf "${BLUE}[3/4]${NC} Testing backend API connectivity"
+        local max_attempts=30
+        local attempt=1
+        local api_success=false
+        
+        while [ $attempt -le $max_attempts ]; do
+            printf "\r${BLUE}[3/4]${NC} Testing backend API connectivity (attempt $attempt/$max_attempts)"
+            
+            if curl -s --connect-timeout 5 --max-time 10 http://localhost:3001/api/health >/dev/null 2>&1; then
+                printf "\r${BLUE}[3/4]${NC} Testing backend API connectivity ${GREEN}✓${NC}\n"
+                api_success=true
+                break
+            fi
+            
+            sleep 2
+            ((attempt++))
+        done
+        
+        if [ "$api_success" = false ]; then
+            printf "\r${BLUE}[3/4]${NC} Testing backend API connectivity ${RED}✗${NC}\n"
+            error "Backend API not responding after $max_attempts attempts"
+            info "Common causes: database connection issues, missing dependencies, port conflicts"
+            verification_success=false
+        fi
+    else
+        printf "${BLUE}[3/4]${NC} Testing backend API connectivity ${RED}SKIPPED${NC} (service not running)\n"
+        verification_success=false
+    fi
+    
+    # Test frontend connectivity (only if both backend and frontend services are running)
+    if [ "$backend_running" = true ] && [ "$frontend_running" = true ]; then
+        printf "${BLUE}[4/4]${NC} Testing frontend connectivity"
+        if curl -s --connect-timeout 5 --max-time 10 http://localhost:3000 >/dev/null 2>&1; then
+            printf "\r${BLUE}[4/4]${NC} Testing frontend connectivity ${GREEN}✓${NC}\n"
+        else
+            printf "\r${BLUE}[4/4]${NC} Testing frontend connectivity ${YELLOW}⚠${NC}\n"
+            warn "Frontend not responding yet - may still be building/starting"
+            # Frontend connectivity issues are less critical, don't fail verification
+        fi
+    else
+        printf "${BLUE}[4/4]${NC} Testing frontend connectivity ${RED}SKIPPED${NC} (dependencies not running)\n"
+        verification_success=false
+    fi
+    
+    # Set global success status
+    OPERATION_SUCCESS="$verification_success"
+    
+    if [ "$verification_success" = true ]; then
+        success "Installation verification completed successfully"
+    else
+        error "Installation verification failed"
+        echo ""
+        echo -e "${CYAN}🔧 Quick diagnostics:${NC}"
+        echo -e "   ${WHITE}Database status:${NC} $(systemctl is-active postgresql 2>/dev/null || echo 'inactive')"
+        echo -e "   ${WHITE}Disk space:${NC} $(df -h /opt | tail -1 | awk '{print $4}') available"
+        echo -e "   ${WHITE}Memory usage:${NC} $(free -h | grep '^Mem' | awk '{print $3"/"$2}')"
+    fi
+    
+    return $([ "$verification_success" = true ] && echo 0 || echo 1)
+}
+
+# Simplified fresh install with proper completion tracking
+fresh_install() {
+    OPERATION_TYPE="INSTALLATION"
+    success "Starting fresh installation"
+    
+    if [ "$AUTO_INSTALL" = false ]; then
+        success "Configuration completed"
+    else
+        success "Using default configuration"
+    fi
+    
+    # System setup phase
+    local system_steps=(
+        "Creating profolio user" "useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || true"
+        "Updating package lists" "apt update"
+        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server"
+    )
+    
+    if ! execute_steps "System Setup" "${system_steps[@]}"; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # SSH configuration if enabled
+    if [ "$SSH_ENABLED" = "yes" ]; then
+        info "Configuring SSH access..."
+        configure_ssh_server
+        success "SSH configuration complete"
+    fi
+    
+    # Database setup phase
+    local db_steps=(
+        "Starting PostgreSQL service" "systemctl enable postgresql && systemctl start postgresql"
+        "Creating database and user" "sudo -u postgres psql -c \"CREATE USER profolio WITH PASSWORD '$DB_PASSWORD'; CREATE DATABASE profolio OWNER profolio; GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;\" || true"
+    )
+    
+    if ! execute_steps "Database Setup" "${db_steps[@]}"; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # Application download
+    info "Downloading Profolio repository..."
+    if [ -d "/opt/profolio" ]; then
+        rm -rf /opt/profolio
+    fi
+    
+    cd /opt
+    if git clone https://github.com/Obednal97/profolio.git; then
+        chown -R profolio:profolio /opt/profolio
+        success "Repository downloaded"
+    else
+        error "Failed to download repository"
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # Environment setup (for fresh installs, will generate new credentials)
+    cd /opt/profolio
+    setup_environment
+    
+    # Build application
+    if ! build_application; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # Service installation with improved management
+    local service_steps=(
+        "Installing systemd services" "install_systemd_services"
+        "Reloading systemd daemon" "systemctl daemon-reload"
+        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
+    )
+    
+    if ! execute_steps "Service Installation" "${service_steps[@]}"; then
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # Start services with proper timing
+    info "Starting backend service..."
+    if systemctl start profolio-backend; then
+        success "Backend service started"
+        sleep 3  # Give backend time to start
+    else
+        error "Failed to start backend service"
+        info "Backend logs:"
+        journalctl -u profolio-backend -n 10 --no-pager
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    info "Starting frontend service..."
+    if systemctl start profolio-frontend; then
+        success "Frontend service started"
+        sleep 2  # Give frontend time to start
+    else
+        error "Failed to start frontend service"
+        info "Frontend logs:"
+        journalctl -u profolio-frontend -n 10 --no-pager
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # Final verification - this sets OPERATION_SUCCESS
+    verify_installation
+    show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
 }
 
 # Run main function
