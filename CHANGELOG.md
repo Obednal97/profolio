@@ -197,6 +197,7 @@ This release resolves the critical installer failure that prevented successful d
 
 ## 🔗 **Links**
 - **GitHub Releases:** [View all releases](https://github.com/Obednal97/profolio/releases)
+- **Release Notes:** [docs/releases/](docs/releases/)
 - **Installation Guide:** [README-INSTALLATION.md](README-INSTALLATION.md)
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Security Policy:** [SECURITY.md](SECURITY.md) 

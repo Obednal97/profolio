@@ -119,6 +119,6 @@ If you encounter any issues with this release, please:
 
 ---
 
-**Full Changelog**: [View on GitHub](CHANGELOG.md)
+**Full Changelog**: [View on GitHub](../../CHANGELOG.md)
 
 Thank you for using Profolio! 🚀 
