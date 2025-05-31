@@ -1,5 +1,5 @@
 import Community from "@/content/policies/community.mdx";
 
-export default function TermsPage() {
+export default function CommunityPage() {
   return <Community />;
 }
