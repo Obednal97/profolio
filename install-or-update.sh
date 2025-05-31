@@ -578,54 +578,77 @@ build_application() {
     execute_steps "Building Profolio Application" "${steps[@]}"
 }
 
-# Enhanced verification with simple progress
+# Enhanced verification with better diagnostics
 verify_installation() {
     info "Verifying installation..."
     
-    # Wait for services to start
-    sleep 10
+    # Give services a bit more time to fully start
+    info "Waiting for services to fully initialize..."
+    sleep 5
     
-    # Check service status
+    # Check service status with better diagnostics
     printf "${BLUE}[1/3]${NC} Checking service status"
-    if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
-        printf "\r${BLUE}[1/3]${NC} Checking service status ${GREEN}✓${NC}\n"
-        
-        # Test backend API
-        printf "${BLUE}[2/3]${NC} Testing backend API"
-        local max_attempts=30
-        local attempt=1
-        
-        while [ $attempt -le $max_attempts ]; do
-            printf "\r${BLUE}[2/3]${NC} Testing backend API (attempt $attempt/$max_attempts)"
-            
-            if curl -s http://localhost:3001/api/health >/dev/null 2>&1; then
-                printf "\r${BLUE}[2/3]${NC} Testing backend API ${GREEN}✓${NC}\n"
-                break
-            fi
-            
-            sleep 2
-            ((attempt++))
-        done
-        
-        if [ $attempt -gt $max_attempts ]; then
-            printf "\r${BLUE}[2/3]${NC} Testing backend API ${YELLOW}⚠${NC}\n"
-            warn "Backend API not responding (may still be starting)"
-        fi
-        
-        # Test frontend
-        printf "${BLUE}[3/3]${NC} Testing frontend"
-        if curl -s http://localhost:3000 >/dev/null 2>&1; then
-            printf "\r${BLUE}[3/3]${NC} Testing frontend ${GREEN}✓${NC}\n"
-        else
-            printf "\r${BLUE}[3/3]${NC} Testing frontend ${YELLOW}⚠${NC}\n"
-            warn "Frontend starting up..."
-        fi
-    else
+    
+    # Check backend service
+    if ! systemctl is-active --quiet profolio-backend; then
         printf "\r${BLUE}[1/3]${NC} Checking service status ${RED}✗${NC}\n"
-        error "Services failed to start"
-        echo "Check logs with: journalctl -u profolio-backend -u profolio-frontend -f"
+        error "Backend service is not running"
+        info "Backend service status:"
+        systemctl status profolio-backend --no-pager -l
+        info "Recent backend logs:"
+        journalctl -u profolio-backend -n 15 --no-pager
         return 1
     fi
+    
+    # Check frontend service
+    if ! systemctl is-active --quiet profolio-frontend; then
+        printf "\r${BLUE}[1/3]${NC} Checking service status ${RED}✗${NC}\n"
+        error "Frontend service is not running"
+        info "Frontend service status:"
+        systemctl status profolio-frontend --no-pager -l
+        info "Recent frontend logs:"
+        journalctl -u profolio-frontend -n 15 --no-pager
+        return 1
+    fi
+    
+    printf "\r${BLUE}[1/3]${NC} Checking service status ${GREEN}✓${NC}\n"
+    
+    # Test backend API with better feedback
+    printf "${BLUE}[2/3]${NC} Testing backend API"
+    local max_attempts=30
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        printf "\r${BLUE}[2/3]${NC} Testing backend API (attempt $attempt/$max_attempts)"
+        
+        if curl -s --connect-timeout 5 --max-time 10 http://localhost:3001/api/health >/dev/null 2>&1; then
+            printf "\r${BLUE}[2/3]${NC} Testing backend API ${GREEN}✓${NC}\n"
+            break
+        fi
+        
+        sleep 2
+        ((attempt++))
+    done
+    
+    if [ $attempt -gt $max_attempts ]; then
+        printf "\r${BLUE}[2/3]${NC} Testing backend API ${YELLOW}⚠${NC}\n"
+        warn "Backend API not responding after $max_attempts attempts"
+        info "Backend might still be starting up. Check logs:"
+        info "journalctl -u profolio-backend -f"
+    fi
+    
+    # Test frontend with timeout
+    printf "${BLUE}[3/3]${NC} Testing frontend"
+    if curl -s --connect-timeout 5 --max-time 10 http://localhost:3000 >/dev/null 2>&1; then
+        printf "\r${BLUE}[3/3]${NC} Testing frontend ${GREEN}✓${NC}\n"
+    else
+        printf "\r${BLUE}[3/3]${NC} Testing frontend ${YELLOW}⚠${NC}\n"
+        warn "Frontend not responding yet - may still be building/starting"
+        info "Frontend logs:"
+        journalctl -u profolio-frontend -n 10 --no-pager
+    fi
+    
+    success "Installation verification completed"
 }
 
 # Simplified fresh install
@@ -692,14 +715,37 @@ fresh_install() {
         return 1
     fi
     
-    # Service installation and startup
+    # Service installation with improved management
     local service_steps=(
         "Installing systemd services" "install_systemd_services"
-        "Enabling services" "systemctl enable profolio-backend profolio-frontend"
-        "Starting services" "systemctl start profolio-backend profolio-frontend"
+        "Reloading systemd daemon" "systemctl daemon-reload"
+        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
     )
     
-    if ! execute_steps "Service Setup" "${service_steps[@]}"; then
+    if ! execute_steps "Service Installation" "${service_steps[@]}"; then
+        return 1
+    fi
+    
+    # Start services with proper timing
+    info "Starting backend service..."
+    if systemctl start profolio-backend; then
+        success "Backend service started"
+        sleep 3  # Give backend time to start
+    else
+        error "Failed to start backend service"
+        info "Backend logs:"
+        journalctl -u profolio-backend -n 10 --no-pager
+        return 1
+    fi
+    
+    info "Starting frontend service..."
+    if systemctl start profolio-frontend; then
+        success "Frontend service started"
+        sleep 2  # Give frontend time to start
+    else
+        error "Failed to start frontend service"
+        info "Frontend logs:"
+        journalctl -u profolio-frontend -n 10 --no-pager
         return 1
     fi
     
@@ -719,15 +765,11 @@ update_installation() {
     manage_backups "update"
     success "Backup created"
     
-    # Stop services
-    local service_steps=(
-        "Stopping frontend service" "systemctl stop profolio-frontend || true"
-        "Stopping backend service" "systemctl stop profolio-backend || true"
-    )
-    
-    if ! execute_steps "Stopping Services" "${service_steps[@]}"; then
-        return 1
-    fi
+    # Stop services properly
+    info "Stopping services for update..."
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    success "Services stopped"
     
     # Update code
     info "Downloading latest updates..."
@@ -744,14 +786,37 @@ update_installation() {
         return 1
     fi
     
-    # Restart services
-    local restart_steps=(
-        "Updating service configurations" "install_systemd_services && systemctl daemon-reload"
-        "Starting backend service" "systemctl start profolio-backend"
-        "Starting frontend service" "systemctl start profolio-frontend"
+    # Update service configurations
+    local service_steps=(
+        "Updating service configurations" "install_systemd_services"
+        "Reloading systemd daemon" "systemctl daemon-reload"
+        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
     )
     
-    if ! execute_steps "Restarting Services" "${restart_steps[@]}"; then
+    if ! execute_steps "Service Update" "${service_steps[@]}"; then
+        return 1
+    fi
+    
+    # Start services with proper timing
+    info "Starting backend service..."
+    if systemctl start profolio-backend; then
+        success "Backend service started"
+        sleep 3  # Give backend time to start
+    else
+        error "Failed to start backend service"
+        info "Backend logs:"
+        journalctl -u profolio-backend -n 10 --no-pager
+        return 1
+    fi
+    
+    info "Starting frontend service..."
+    if systemctl start profolio-frontend; then
+        success "Frontend service started"
+        sleep 2  # Give frontend time to start
+    else
+        error "Failed to start frontend service"
+        info "Frontend logs:"
+        journalctl -u profolio-frontend -n 10 --no-pager
         return 1
     fi
     
@@ -772,15 +837,41 @@ repair_installation() {
     setup_environment
     success "Configuration updated"
     
-    # Service management
+    # Service management with proper state handling
+    info "Stopping any running services..."
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    
     local service_steps=(
         "Reinstalling systemd services" "install_systemd_services"
         "Reloading systemd daemon" "systemctl daemon-reload"
-        "Starting backend service" "systemctl start profolio-backend"
-        "Starting frontend service" "systemctl start profolio-frontend"
+        "Enabling services for auto-start" "systemctl enable profolio-backend profolio-frontend"
     )
     
-    if ! execute_steps "Service Repair" "${service_steps[@]}"; then
+    if ! execute_steps "Service Configuration" "${service_steps[@]}"; then
+        return 1
+    fi
+    
+    # Start services with proper timing
+    info "Starting backend service..."
+    if systemctl start profolio-backend; then
+        success "Backend service started"
+        sleep 3  # Give backend time to start
+    else
+        error "Failed to start backend service"
+        info "Backend logs:"
+        journalctl -u profolio-backend -n 10 --no-pager
+        return 1
+    fi
+    
+    info "Starting frontend service..."
+    if systemctl start profolio-frontend; then
+        success "Frontend service started"
+        sleep 2  # Give frontend time to start
+    else
+        error "Failed to start frontend service"
+        info "Frontend logs:"
+        journalctl -u profolio-frontend -n 10 --no-pager
         return 1
     fi
     
