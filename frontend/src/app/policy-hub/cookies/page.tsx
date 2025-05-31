@@ -1,5 +1,5 @@
 import Cookies from "@/content/policies/cookies.mdx";
 
-export default function TermsPage() {
+export default function CookiesPage() {
   return <Cookies />;
 }
