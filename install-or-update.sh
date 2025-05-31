@@ -105,207 +105,27 @@ run_configuration_wizard() {
         return
     fi
     
-    # Container Configuration
-    echo -e "\n${WHITE}📦 CONTAINER CONFIGURATION${NC}"
-    echo "Configure your Profolio LXC container resources"
-    echo ""
-    
-    # Container Name
-    read -p "Container name [$DEFAULT_CONTAINER_NAME]: " CONTAINER_NAME
-    CONTAINER_NAME=${CONTAINER_NAME:-$DEFAULT_CONTAINER_NAME}
-    
-    # CPU Cores
-    while true; do
-        read -p "CPU cores (1-16) [$DEFAULT_CPU_CORES]: " CPU_CORES
-        CPU_CORES=${CPU_CORES:-$DEFAULT_CPU_CORES}
-        if validate_number "$CPU_CORES" 1 16; then
-            break
-        fi
-        echo -e "${RED}❌ Please enter a number between 1 and 16${NC}"
-    done
-    
-    # Memory
-    while true; do
-        read -p "Memory in MB (1024-32768) [$DEFAULT_MEMORY]: " MEMORY_MB
-        MEMORY_MB=${MEMORY_MB:-$DEFAULT_MEMORY}
-        if validate_number "$MEMORY_MB" 1024 32768; then
-            break
-        fi
-        echo -e "${RED}❌ Please enter a number between 1024 and 32768${NC}"
-    done
-    
-    # Storage
-    while true; do
-        read -p "Storage in GB (10-500) [$DEFAULT_STORAGE]: " STORAGE_GB
-        STORAGE_GB=${STORAGE_GB:-$DEFAULT_STORAGE}
-        if validate_number "$STORAGE_GB" 10 500; then
-            break
-        fi
-        echo -e "${RED}❌ Please enter a number between 10 and 500${NC}"
-    done
-    
-    # Network Configuration
-    echo -e "\n${WHITE}🌐 NETWORK CONFIGURATION${NC}"
-    echo "Configure network settings for your container"
-    echo ""
-    
-    echo "Network configuration:"
-    echo "  1) ${GREEN}DHCP${NC} (automatic IP assignment)"
-    echo "  2) ${BLUE}Static IP${NC} (manual configuration)"
-    echo ""
-    read -p "Select network mode [1]: " net_choice
-    net_choice=${net_choice:-1}
-    
-    if [ "$net_choice" = "2" ]; then
-        NETWORK_MODE="static"
-        configure_static_network
-    else
-        NETWORK_MODE="dhcp"
-    fi
-    
-    # IPv6 Configuration
-    echo ""
-    read -p "Enable IPv6? (y/n) [n]: " ipv6_choice
-    if [[ "$ipv6_choice" =~ ^[Yy] ]]; then
-        IPV6_ENABLED="yes"
-    else
-        IPV6_ENABLED="no"
-    fi
-    
-    # DNS Configuration
-    echo -e "\n${WHITE}🔍 DNS CONFIGURATION${NC}"
-    read -p "DNS servers (comma-separated) [8.8.8.8,1.1.1.1]: " DNS_SERVERS
-    DNS_SERVERS=${DNS_SERVERS:-"8.8.8.8,1.1.1.1"}
-    
-    read -p "DNS search domain [local]: " DNS_DOMAIN
-    DNS_DOMAIN=${DNS_DOMAIN:-"local"}
-    
-    # SSH Configuration
-    configure_ssh_access
-    
-    # Database Configuration
-    echo -e "\n${WHITE}🗄️  DATABASE CONFIGURATION${NC}"
-    while true; do
-        read -s -p "Set database password (min 8 characters): " DB_PASSWORD
-        echo ""
-        if [ ${#DB_PASSWORD} -ge 8 ]; then
-            read -s -p "Confirm password: " DB_PASSWORD_CONFIRM
-            echo ""
-            if [ "$DB_PASSWORD" = "$DB_PASSWORD_CONFIRM" ]; then
-                break
-            else
-                echo -e "${RED}❌ Passwords don't match. Please try again.${NC}"
-            fi
-        else
-            echo -e "${RED}❌ Password must be at least 8 characters long.${NC}"
-        fi
-    done
-    
-    # Configuration Summary
-    show_configuration_summary
+    # For now, just use defaults for advanced setup too
+    # TODO: Implement full configuration wizard
+    echo -e "${YELLOW}⚠️  Advanced setup not yet implemented. Using defaults.${NC}"
+    use_defaults
 }
 
-# Static network configuration
-configure_static_network() {
-    echo -e "\n${BLUE}Static IP Configuration:${NC}"
-    
-    while true; do
-        read -p "Static IP address (e.g., 192.168.1.100): " STATIC_IP
-        if validate_ip "$STATIC_IP"; then
-            break
-        fi
-        echo -e "${RED}❌ Please enter a valid IP address${NC}"
-    done
-    
-    while true; do
-        read -p "Gateway IP (e.g., 192.168.1.1): " GATEWAY
-        if validate_ip "$GATEWAY"; then
-            break
-        fi
-        echo -e "${RED}❌ Please enter a valid gateway IP${NC}"
-    done
-    
-    read -p "Subnet mask [255.255.255.0]: " SUBNET_MASK
-    SUBNET_MASK=${SUBNET_MASK:-"255.255.255.0"}
-}
-
-# SSH Access Configuration
+# SSH Access Configuration (simplified for now)
 configure_ssh_access() {
-    echo -e "\n${WHITE}🔐 SSH ACCESS CONFIGURATION${NC}"
-    echo "Configure SSH access for remote administration"
-    echo ""
-    
-    # Enable SSH
-    echo "Enable SSH for remote access?"
-    echo "  ${GREEN}Recommended:${NC} Yes - for remote management and troubleshooting"
-    echo "  ${YELLOW}Note:${NC} SSH is essential for Proxmox LXC container management"
-    echo ""
-    read -p "Enable SSH access? (y/n) [y]: " ssh_choice
-    if [[ "$ssh_choice" =~ ^[Nn] ]]; then
-        SSH_ENABLED="no"
-        echo -e "${YELLOW}⚠️  SSH disabled - you'll only have console access${NC}"
-        return
-    else
-        SSH_ENABLED="yes"
-    fi
-    
-    # SSH Port Configuration
-    echo ""
-    while true; do
-        read -p "SSH port (1024-65535) [22]: " SSH_PORT
-        SSH_PORT=${SSH_PORT:-22}
-        if validate_number "$SSH_PORT" 1 65535; then
-            if [ "$SSH_PORT" -ne 22 ]; then
-                echo -e "${GREEN}✅ Using custom port $SSH_PORT for security${NC}"
-            fi
-            break
-        fi
-        echo -e "${RED}❌ Please enter a valid port number between 1 and 65535${NC}"
-    done
-    
-    # Root Login Configuration
-    echo ""
-    echo "Allow direct root login via SSH?"
-    echo "  ${RED}Security Risk:${NC} Direct root login increases attack surface"
-    echo "  ${GREEN}Recommended:${NC} No - use sudo with regular user"
-    echo ""
-    read -p "Allow root login? (y/n) [n]: " root_choice
-    if [[ "$root_choice" =~ ^[Yy] ]]; then
-        SSH_ROOT_LOGIN="yes"
-        echo -e "${YELLOW}⚠️  Root login enabled - ensure strong password${NC}"
-    else
-        SSH_ROOT_LOGIN="no"
-        echo -e "${GREEN}✅ Root login disabled for security${NC}"
-    fi
-    
-    # Authentication Method
-    echo ""
-    echo "SSH Authentication method:"
-    echo "  1) ${YELLOW}Password + Key${NC} (both allowed - less secure)"
-    echo "  2) ${GREEN}Key Only${NC} (recommended - most secure)"
-    echo "  3) ${BLUE}Password Only${NC} (not recommended)"
-    echo ""
-    read -p "Select authentication method [2]: " auth_choice
-    auth_choice=${auth_choice:-2}
-    
-    case $auth_choice in
-        1)
-            SSH_PASSWORD_AUTH="yes"
-            SSH_KEY_ONLY="no"
-            echo -e "${YELLOW}⚠️  Both password and key authentication enabled${NC}"
-            ;;
-        2)
-            SSH_PASSWORD_AUTH="no"
-            SSH_KEY_ONLY="yes"
-            echo -e "${GREEN}✅ Key-only authentication - most secure${NC}"
-            configure_ssh_keys
-            ;;
-        3)
-            SSH_PASSWORD_AUTH="yes"
-            SSH_KEY_ONLY="no"
-            echo -e "${RED}⚠️  Password-only authentication - not recommended${NC}"
-            ;;
-    esac
+    echo -e "${YELLOW}ℹ️  SSH configuration will use defaults for now${NC}"
+    SSH_ENABLED="yes"
+    SSH_PORT="22"
+    SSH_ROOT_LOGIN="no"
+    SSH_PASSWORD_AUTH="no"
+    SSH_KEY_ONLY="yes"
+    GENERATE_SSH_KEY="yes"
+}
+
+# Static network configuration (simplified)
+configure_static_network() {
+    echo -e "${YELLOW}ℹ️  Static network configuration not implemented yet. Using DHCP.${NC}"
+    NETWORK_MODE="dhcp"
 }
 
 # SSH Key Configuration
@@ -461,10 +281,10 @@ EOF
 
 # Use default configuration
 use_defaults() {
-    CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
-    CPU_CORES="$DEFAULT_CPU_CORES"
-    MEMORY_MB="$DEFAULT_MEMORY"
-    STORAGE_GB="$DEFAULT_STORAGE"
+    CONTAINER_NAME="Profolio"
+    CPU_CORES="2"
+    MEMORY_MB="4096"
+    STORAGE_GB="20"
     NETWORK_MODE="dhcp"
     IPV6_ENABLED="no"
     DNS_SERVERS="8.8.8.8,1.1.1.1"
@@ -478,7 +298,7 @@ use_defaults() {
     DB_PASSWORD=$(openssl rand -base64 12)
     
     echo -e "${GREEN}✅ Using recommended default configuration${NC}"
-    echo -e "${YELLOW}📝 Database password will be auto-generated${NC}"
+    echo -e "${YELLOW}📝 Database password: $DB_PASSWORD${NC}"
     echo -e "${YELLOW}📝 SSH enabled with key-only authentication${NC}"
 }
 
@@ -967,10 +787,14 @@ main() {
             ;;
     esac
     
+    echo -e "${CYAN}🔍 Detecting installation state...${NC}"
     detect_installation_state
-    case $? in
+    local install_state=$?
+    
+    echo -e "${BLUE}📊 Installation state: $install_state${NC}"
+    case $install_state in
         0)
-            # Fresh installation
+            echo -e "${GREEN}🆕 Fresh system detected${NC}"
             if [ "$AUTO_INSTALL" = false ]; then
                 run_configuration_wizard
             else
@@ -979,15 +803,21 @@ main() {
             fresh_install
             ;;
         1)
-            # Repair needed
+            echo -e "${YELLOW}🔧 Installed but not running - repair needed${NC}"
             repair_installation
             ;;
         2)
-            # Update available
+            echo -e "${BLUE}🔄 Running installation detected - update available${NC}"
             run_update_wizard
             update_installation
             ;;
+        *)
+            echo -e "${RED}❌ Unknown installation state: $install_state${NC}"
+            exit 1
+            ;;
     esac
+    
+    echo -e "${GREEN}🎉 Script execution completed!${NC}"
 }
 
 # Run main function
