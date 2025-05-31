@@ -5,7 +5,7 @@ export type Asset = {
   id: string;
   userId?: string;
   name: string;
-  type: "stock" | "crypto" | "cash" | "stock_options" | "bond" | "other";
+  type: "stock" | "crypto" | "cash" | "stock_options" | "bond" | "other" | "savings";
   symbol?: string;
   quantity: number;
   purchase_price?: number;
@@ -19,6 +19,14 @@ export type Asset = {
   };
   notes?: string;
   price_history?: { date: string; value: number }[];
+  
+  // Savings-specific fields
+  initialAmount?: number;
+  interestRate?: number;
+  interestType?: "SIMPLE" | "COMPOUND";
+  paymentFrequency?: "MONTHLY" | "QUARTERLY" | "ANNUALLY";
+  termLength?: number;
+  maturityDate?: string;
 };
 
 // --------------------

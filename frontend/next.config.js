@@ -1,17 +1,14 @@
-import withMDX from '@next/mdx';
-import type { NextConfig } from 'next';
-
-const withMDXConfig = withMDX({
+const withMDX = require('@next/mdx')({
   extension: /\.mdx?$/,
   options: {
     remarkPlugins: [],
     rehypePlugins: [],
-    // Note: providerImportSource is no longer needed in MDX v3
   },
 });
 
-const nextConfig: NextConfig = {
-  pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
   typescript: {
     // Allow production builds to successfully complete even if there are TypeScript errors
     ignoreBuildErrors: true,
@@ -22,4 +19,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withMDXConfig(nextConfig);
+module.exports = withMDX(nextConfig);

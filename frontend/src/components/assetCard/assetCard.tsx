@@ -3,6 +3,7 @@
 import React from 'react';
 import { Asset } from '@/types/global';
 import { motion } from 'framer-motion';
+import { FinancialCalculator } from '@/lib/financial';
 
 // Asset type configuration
 const assetTypeConfig = {
@@ -10,6 +11,7 @@ const assetTypeConfig = {
   crypto: { icon: "fa-bitcoin", color: "orange", gradient: "from-orange-500 to-orange-600" },
   property: { icon: "fa-home", color: "green", gradient: "from-green-500 to-green-600" },
   cash: { icon: "fa-dollar-sign", color: "purple", gradient: "from-purple-500 to-purple-600" },
+  savings: { icon: "fa-piggy-bank", color: "emerald", gradient: "from-emerald-500 to-emerald-600" },
   stock_options: { icon: "fa-certificate", color: "pink", gradient: "from-pink-500 to-pink-600" },
   bond: { icon: "fa-chart-area", color: "indigo", gradient: "from-indigo-500 to-indigo-600" },
   other: { icon: "fa-box", color: "gray", gradient: "from-gray-500 to-gray-600" },
@@ -30,16 +32,6 @@ const getCryptoIcon = (symbol: string) => {
   }
 };
 
-// Currency formatter
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
 interface AssetCardProps {
   asset: Asset;
   onEdit: (asset: Asset) => void;
@@ -55,10 +47,44 @@ const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
     : config.icon;
   
   const calculateAppreciation = () => {
-    if (!asset.purchase_price || !asset.current_value) return null;
-    const gain = asset.current_value - asset.purchase_price;
-    const percentage = (gain / asset.purchase_price) * 100;
-    return { gain, percentage };
+    if (!asset.purchase_price || !asset.current_value || !asset.quantity) return null;
+    
+    // Check if current_value is already in dollars or cents
+    // If it's a large number (>1000), it's likely in cents
+    // If it's a small number (<1000), it's likely already in dollars
+    const currentValueDollars = asset.current_value > 1000 
+      ? parseFloat(FinancialCalculator.centsToDollars(asset.current_value))
+      : asset.current_value;
+    
+    const purchasePriceDollars = asset.purchase_price; // Already in dollars
+    
+    // Use the new proper calculation method
+    const calculation = FinancialCalculator.calculateAssetGainLoss(
+      currentValueDollars, 
+      purchasePriceDollars, 
+      asset.quantity
+    );
+    
+    // Calculate APY if purchase date is available
+    const apy = asset.purchase_date ? 
+      FinancialCalculator.calculateAPY(
+        currentValueDollars,
+        purchasePriceDollars,
+        asset.quantity,
+        asset.purchase_date
+      ) : 0;
+    
+    // Get time period
+    const timePeriod = asset.purchase_date ? 
+      FinancialCalculator.getTimeSincePurchase(asset.purchase_date) : '';
+    
+    return {
+      totalInvestment: calculation.totalInvestment,
+      gain: calculation.gain,
+      gainPercent: calculation.gainPercent,
+      apy,
+      timePeriod
+    };
   };
 
   const appreciation = calculateAppreciation();
@@ -106,7 +132,11 @@ const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
         <div className="flex justify-between items-center">
           <span className="text-gray-600 dark:text-gray-400 text-sm">Current Value</span>
           <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-            {formatCurrency((asset.current_value || 0) / 100)}
+            {FinancialCalculator.formatCurrency(
+              asset.current_value && asset.current_value > 1000 
+                ? parseFloat(FinancialCalculator.centsToDollars(asset.current_value))
+                : asset.current_value || 0
+            )}
           </span>
         </div>
 
@@ -122,10 +152,33 @@ const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
             <span className="text-gray-600 dark:text-gray-400 text-sm">Gain/Loss</span>
             <div className="text-right">
               <div className={`font-semibold text-sm sm:text-base ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {appreciation.gain >= 0 ? '+' : ''}{formatCurrency(appreciation.gain / 100)}
+                {appreciation.gain >= 0 ? '+' : ''}
+                {FinancialCalculator.formatCurrency(appreciation.gain)}
               </div>
               <div className={`text-xs sm:text-sm ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {appreciation.gain >= 0 ? '+' : ''}{appreciation.percentage.toFixed(2)}%
+                {FinancialCalculator.formatPercentage(appreciation.gainPercent)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {appreciation && appreciation.apy !== 0 && asset.purchase_date && (
+          <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+            <span className="text-gray-600 dark:text-gray-400 text-sm">APY</span>
+            <div className="text-right">
+              <div className={`font-semibold text-sm sm:text-base ${appreciation.apy >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {FinancialCalculator.formatAPY(appreciation.apy)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {appreciation && asset.purchase_date && (
+          <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+            <span className="text-gray-600 dark:text-gray-400 text-sm">Held For</span>
+            <div className="text-right">
+              <div className="font-semibold text-sm sm:text-base text-blue-500">
+                {appreciation.timePeriod || 'N/A'}
               </div>
             </div>
           </div>
