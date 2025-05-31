@@ -12,6 +12,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.1] - 2024-12-29
+
+### 🔧 **Critical Bug Fixes**
+
+#### **Fixed**
+- **CRITICAL: MDX React Context Error** - Resolved `r.createContext is not a function` build failure
+  - Fixed conflicting Next.js configuration files (removed outdated `next.config.js`)
+  - Upgraded MDX configuration from v2 to v3 syntax
+  - Added required `mdx-components.tsx` file for MDX v3 compatibility
+  - Added proper TypeScript declarations for `.mdx` file imports
+  - Fixed all policy-hub pages with unique component names and proper styling
+
+- **Installer Reliability** - Multiple installer improvements
+  - Enhanced error handling and reporting in build process
+  - Improved credential preservation logic during repairs
+  - Added dynamic completion banners (INSTALLATION/UPDATE/REPAIR COMPLETE)
+  - Fixed 4-step verification system with proper error tracking
+
+- **Frontend Build Process** - Complete resolution of build failures
+  - Resolved empty MDX files causing component import errors
+  - Fixed duplicate React component names in policy-hub pages
+  - Added responsive styling containers for all policy pages
+  - Implemented proper MDX v3 component rendering
+
+#### **Added**
+- **Complete Policy Documentation** - All policy pages now have full content
+  - Acceptable Use Policy (291 lines)
+  - Terms of Service (297 lines)
+  - Privacy Policy (223 lines)
+  - Cookie Policy (269 lines)
+  - Community Guidelines (319 lines)
+
+- **Enhanced MDX Support** - Professional documentation rendering
+  - Custom styled MDX components with dark mode support
+  - Responsive typography and layout for policy pages
+  - Proper table, code, and content formatting
+  - Accessibility improvements for documentation
+
+#### **Technical Improvements**
+- **Configuration Management** - Cleaned up conflicting configurations
+  - Unified Next.js configuration with proper MDX v3 setup
+  - Added TypeScript support for MDX imports
+  - Improved build performance and reliability
+
+- **Component Architecture** - Better React component organization
+  - Fixed component naming conflicts across policy pages
+  - Added proper styling containers and responsive layouts
+  - Enhanced component reusability and maintainability
+
+### 🏆 **Impact**
+This release resolves the critical installer failure that prevented successful deployments. The installer now consistently completes all build steps and properly starts services.
+
+**Before v1.0.1**: Installer failed at frontend build step with React context errors  
+**After v1.0.1**: Complete successful installation with working policy pages and enhanced documentation
+
 ## [1.0.0] - 2024-12-28
 
 ### 🚀 **Initial Public Release**
