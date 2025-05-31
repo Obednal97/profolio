@@ -3,7 +3,8 @@
 # 🚀 Profolio Smart Install/Update Script
 # Professional Proxmox-style wizard with configuration options
 
-set -e
+# Note: Removed 'set -e' to prevent premature exit on minor errors
+# Critical errors will be handled explicitly
 
 # Colors for output
 RED='\033[0;31m'
@@ -46,7 +47,16 @@ GENERATE_SSH_KEY=""
 
 # Banner with styling
 show_banner() {
-    clear
+    # Set TERM if not already set to prevent clear command failures
+    if [ -z "$TERM" ]; then
+        export TERM=xterm
+    fi
+    
+    # Only clear if we have a proper terminal
+    if [ -t 1 ]; then
+        clear 2>/dev/null || true
+    fi
+    
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║                    🚀 PROFOLIO INSTALLER                    ║"
