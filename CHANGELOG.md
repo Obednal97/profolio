@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.6] - 2025-01-31
+
+### Fixed
+- **Version Reporting**: Updated all package.json files to correctly show version 1.0.6
+- **Installer Banner Spacing**: Fixed text alignment in installer banners for proper centering
+
+### Technical Improvements
+- Synchronized version numbers across root, backend, and frontend package.json files
+- Improved visual consistency in installer output with properly centered text
+
 ## [1.0.5] - 2025-01-31
 
 ### Fixed
