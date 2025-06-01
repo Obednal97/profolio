@@ -20,6 +20,9 @@ importers:
       '@nestjs/jwt':
         specifier: ^11.0.0
         version: 11.0.0(@nestjs/common@11.1.0(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))
+      '@nestjs/mapped-types':
+        specifier: ^2.1.0
+        version: 2.1.0(@nestjs/common@11.1.0(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
       '@nestjs/passport':
         specifier: ^11.0.5
         version: 11.0.5(@nestjs/common@11.1.0(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(passport@0.7.0)
@@ -35,9 +38,6 @@ importers:
       '@prisma/client':
         specifier: ^6.7.0
         version: 6.7.0(prisma@6.7.0(typescript@5.8.3))(typescript@5.8.3)
-      '@types/cron':
-        specifier: ^2.0.1
-        version: 2.4.3
       '@types/decimal.js':
         specifier: ^0.0.32
         version: 0.0.32
@@ -648,10 +648,6 @@ packages:
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
 
-  '@types/cron@2.4.3':
-    resolution: {integrity: sha512-ViRBkoZD9Rk0hGeMdd2GHGaOaZuH9mDmwsE5/Zo53Ftwcvh7h9VJc8lIt2wdgEwS4EW5lbtTX6vlE0idCLPOyA==}
-    deprecated: This is a stub types definition. cron provides its own type definitions, so you do not need this installed.
-
   '@types/decimal.js@0.0.32':
     resolution: {integrity: sha512-qiZoeFWRa6SaedYkSV8VrGV8xDGV3C6usFlUKOOl/fpvVdKVx+eHm+yHjJbGIuHgNsoe24wUddwLJGVBZFM5Ow==}
 
@@ -1047,10 +1043,6 @@ packages:
 
   cron@4.3.0:
     resolution: {integrity: sha512-ciiYNLfSlF9MrDqnbMdRWFiA6oizSF7kA1osPP9lRzNu0Uu+AWog1UKy7SkckiDY2irrNjeO6qLyKnXC8oxmrw==}
-    engines: {node: '>=18.x'}
-
-  cron@4.3.1:
-    resolution: {integrity: sha512-7x7DoEOxV11t3OPWWMjj1xrL1PGkTV5RV+/54IJTZD7gStiaMploY43EkeBSkDZTLRbUwk+OISbQ0TR133oXyA==}
     engines: {node: '>=18.x'}
 
   cross-spawn@7.0.6:
@@ -2671,10 +2663,6 @@ snapshots:
     dependencies:
       '@types/node': 22.15.3
 
-  '@types/cron@2.4.3':
-    dependencies:
-      cron: 4.3.1
-
   '@types/decimal.js@0.0.32': {}
 
   '@types/eslint-scope@3.7.7':
@@ -3097,11 +3085,6 @@ snapshots:
   create-require@1.1.1: {}
 
   cron@4.3.0:
-    dependencies:
-      '@types/luxon': 3.6.2
-      luxon: 3.6.1
-
-  cron@4.3.1:
     dependencies:
       '@types/luxon': 3.6.2
       luxon: 3.6.1
