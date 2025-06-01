@@ -248,7 +248,7 @@ interface AssetModalProps {
   onClose: () => void;
 }
 
-const AssetModal = ({ asset: initialData, onSave, onClose }: AssetModalProps) => {
+export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalProps) {
   const [formData, setFormData] = useState<AssetFormData>(() =>
     initialData
       ? {
@@ -392,7 +392,7 @@ const AssetModal = ({ asset: initialData, onSave, onClose }: AssetModalProps) =>
     // Debounce the API call to avoid too many requests, and add longer delay for user input
     const timeoutId = setTimeout(fetchSymbolData, 1000); // Increased to 1 second
     return () => clearTimeout(timeoutId);
-  }, [formData.symbol, formData.type, formData.quantity]);
+  }, [formData.symbol, formData.type, formData.quantity, initialData?.symbol]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -589,115 +589,111 @@ const AssetModal = ({ asset: initialData, onSave, onClose }: AssetModalProps) =>
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl">
-        <div className="flex justify-between items-center mb-6 sm:mb-8">
-          <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            {initialData ? "Edit Asset" : "Add New Asset"}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
-          >
-            <i className="fas fa-times text-lg sm:text-xl"></i>
-          </button>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl mt-4 sm:mt-8 relative z-50">
+      <div className="flex justify-between items-center mb-6 sm:mb-8">
+        <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          {initialData ? "Edit Asset" : "Add New Asset"}
+        </h3>
+        <button
+          onClick={onClose}
+          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+        >
+          <i className="fas fa-times text-lg sm:text-xl"></i>
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Asset Name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+              placeholder="e.g., Apple Stock"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Asset Type
+            </label>
+            <select
+              value={formData.type}
+              onChange={(e) =>
+                setFormData({ ...formData, type: e.target.value as AssetType })
+              }
+              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+            >
+              {Object.keys(assetTypeFields).map((type) => (
+                <option key={type} value={type} className="bg-white dark:bg-gray-800">
+                  {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Asset Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
-                placeholder="e.g., Apple Stock"
-                required
-              />
-            </div>
+        <div className="space-y-4 sm:space-y-6">
+          {assetTypeFields[formData.type].map((field) => (
+            <div key={field.name}>{renderField(field)}</div>
+          ))}
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Asset Type
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) =>
-                  setFormData({ ...formData, type: e.target.value as AssetType })
-                }
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
-              >
-                {Object.keys(assetTypeFields).map((type) => (
-                  <option key={type} value={type} className="bg-white dark:bg-gray-800">
-                    {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {loading && (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+            <span className="ml-2 text-gray-600 dark:text-gray-400 text-sm">
+              Fetching live price for {formData.symbol?.toUpperCase()}...
+            </span>
           </div>
+        )}
 
-          <div className="space-y-4 sm:space-y-6">
-            {assetTypeFields[formData.type].map((field) => (
-              <div key={field.name}>{renderField(field)}</div>
-            ))}
-          </div>
-
-          {loading && (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              <span className="ml-2 text-gray-600 dark:text-gray-400 text-sm">
-                Fetching live price for {formData.symbol?.toUpperCase()}...
+        {priceSource === 'live' && !loading && (
+          <div className="flex items-center justify-center py-2">
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <i className="fas fa-check-circle text-green-500"></i>
+              <span className="text-green-700 dark:text-green-300 text-sm">
+                Current value updated with live market price
               </span>
             </div>
-          )}
-
-          {priceSource === 'live' && !loading && (
-            <div className="flex items-center justify-center py-2">
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <i className="fas fa-check-circle text-green-500"></i>
-                <span className="text-green-700 dark:text-green-300 text-sm">
-                  Current value updated with live market price
-                </span>
-              </div>
-            </div>
-          )}
-
-          {priceSource === 'error' && !loading && formData.symbol && ["stock", "crypto"].includes(formData.type) && (
-            <div className="flex items-center justify-center py-2">
-              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <i className="fas fa-exclamation-triangle text-yellow-500"></i>
-                <span className="text-yellow-700 dark:text-yellow-300 text-sm">
-                  Live price unavailable for {formData.symbol?.toUpperCase()} - please enter manually
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              type="button"
-              onClick={onClose}
-              variant="ghost"
-              className="w-full sm:w-auto px-6 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 touch-manipulation"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg touch-manipulation"
-            >
-              {initialData ? "Update Asset" : "Add Asset"}
-            </Button>
           </div>
-        </form>
-      </div>
+        )}
+
+        {priceSource === 'error' && !loading && formData.symbol && ["stock", "crypto"].includes(formData.type) && (
+          <div className="flex items-center justify-center py-2">
+            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <i className="fas fa-exclamation-triangle text-yellow-500"></i>
+              <span className="text-yellow-700 dark:text-yellow-300 text-sm">
+                Live price unavailable for {formData.symbol?.toUpperCase()} - please enter manually
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            type="button"
+            onClick={onClose}
+            variant="ghost"
+            className="w-full sm:w-auto px-6 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 touch-manipulation"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg touch-manipulation"
+          >
+            {initialData ? "Update Asset" : "Add Asset"}
+          </Button>
+        </div>
+      </form>
     </div>
   );
-};
-
-export default AssetModal; 
+} 

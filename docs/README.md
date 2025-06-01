@@ -1,83 +1,81 @@
-# Profolio Documentation
+# 📚 Profolio Documentation
 
-Welcome to the Profolio documentation. This directory contains all technical documentation, guides, and references for the project.
+Welcome to the Profolio documentation! This directory contains comprehensive guides, technical documentation, and user resources organized by category.
 
 ## 📁 Documentation Structure
 
-### `/docs/processes/`
-Development and release processes:
-- [**Commit and Push Guide**](./processes/COMMIT_AND_PUSH_GUIDE.md) - Standards for code commits
-- [**Release Process Guide**](./processes/RELEASE_PROCESS_GUIDE.md) - How to create releases
+### 🚀 [User Guides](./user-guides/)
+Documentation for end users of Profolio:
+- **[API Key Management](./user-guides/API_KEY_MANAGEMENT.md)** - Complete guide for managing API keys through the UI
+- **[Address Search Setup](./user-guides/ADDRESS_SEARCH_SETUP.md)** - How to configure Google Places API for enhanced address search
 
-### `/docs/installer/`
-Installer documentation:
-- [**Installer v2.0 Features**](./installer/INSTALLER_V2_FEATURES.md) - Technical details
-- [**Quick Start Guide**](./installer/QUICK_START_V2.md) - Installation walkthrough
+### 🔧 [Development](./development/)
+Technical documentation for developers:
+- **[Component Refactoring Summary](./development/COMPONENT_REFACTORING_SUMMARY.md)** - Technical overview of API modal architecture improvements
 
-### `/docs/features/`
-Feature guides and tutorials:
-- [**Automatic Rollback**](./features/automatic-rollback.md) - Rollback protection system
-- [**Version Management**](./features/version-management.md) - Version control features
-- [**Demo Mode**](./features/demo-mode.md) - Safe testing environment
-
-### `/docs/releases/`
+### 📦 [Releases](./releases/)
 Release notes for each version:
-- [v1.0.6](./releases/RELEASE_NOTES_v1.0.6.md) - Version sync & visual fixes
-- [v1.0.5](./releases/RELEASE_NOTES_v1.0.5.md) - Critical SSR fixes
-- [v1.0.4](./releases/RELEASE_NOTES_v1.0.4.md) - Installer v2.0
-- [v1.0.3](./releases/RELEASE_NOTES_v1.0.3.md) - Production build fixes
-- [v1.0.2](./releases/RELEASE_NOTES_v1.0.2.md) - Currency precision
+- **[Release Notes](./releases/)** - Detailed release notes for each version
 
-### `/docs/deployment/`
-Deployment and infrastructure:
-- Infrastructure setup guides
-- Server configuration
-- Security hardening
+### 🛠 [Installation](./installer/)
+Installation and setup guides:
+- **[Quick Start Guide](./installer/QUICK_START_V2.md)** - Fast setup for new users
+- **[Installer Features](./installer/INSTALLER_V2_FEATURES.md)** - Advanced installer capabilities
 
-### Other Documentation
-- [**API Integration**](./api-integration.md) - Trading 212 API setup
-- [**GitHub Setup**](./github-setup-index.md) - Repository configuration
-- **Contributing** - See [/CONTRIBUTING.md](../CONTRIBUTING.md)
-- **Security** - See [/SECURITY.md](../SECURITY.md)
+### ⚡ [Features](./features/)
+Feature-specific documentation:
+- **[Demo Mode](./features/demo-mode.md)** - Complete guide to demo mode functionality
+- **[Version Management](./features/version-management.md)** - Version handling and updates
+- **[Automatic Rollback](./features/automatic-rollback.md)** - Error recovery and rollback features
 
-## 🚀 Quick Links
+### 🔄 [Processes](./processes/)
+Development processes and workflows:
+- **[Commit & Push Guide](./processes/COMMIT_AND_PUSH_GUIDE.md)** - Git workflow and best practices
+- **[Release Process](./processes/RELEASE_PROCESS_GUIDE.md)** - How to create and manage releases
+
+### ⚙️ [GitHub Configuration](./github-configurations/)
+GitHub-specific setup and configuration guides
+
+## 📋 Root Directory Documentation
+
+The following files follow GitHub conventions by remaining in the root directory:
+- **[Contributing Guidelines](../CONTRIBUTING.md)** - How to contribute to the Profolio project
+- **[Security Policy](../SECURITY.md)** - Security policies, vulnerability reporting, and best practices  
+- **[Changelog](../CHANGELOG.md)** - Complete project changelog
+- **[Main README](../README.md)** - Project overview and quick start
+
+## 🔍 Quick Navigation
 
 ### For Users
-1. [Installation Guide](./installer/QUICK_START_V2.md)
-2. [Feature Guides](./features/)
-3. [Troubleshooting](./troubleshooting.md)
+- **New to Profolio?** Start with the [Quick Start Guide](./installer/QUICK_START_V2.md)
+- **Setting up APIs?** Check the [User Guides](./user-guides/) section
+- **Need help?** See our [Security Policy](../SECURITY.md) for support contacts
 
 ### For Developers
-1. [Commit Standards](./processes/COMMIT_AND_PUSH_GUIDE.md)
-2. [Release Process](./processes/RELEASE_PROCESS_GUIDE.md)
-3. [Contributing](../CONTRIBUTING.md)
+- **Contributing?** Read the [Contributing Guidelines](../CONTRIBUTING.md)
+- **Understanding the codebase?** Check [Development](./development/) documentation
+- **Making releases?** Follow the [Release Process](./processes/RELEASE_PROCESS_GUIDE.md)
 
-### For Administrators
-1. [Deployment Guide](./deployment/)
-2. [Security Guide](../SECURITY.md)
-3. [Backup & Recovery](./deployment/backup-recovery.md)
+### For System Administrators
+- **Installation?** Use the [Installer Documentation](./installer/)
+- **Security concerns?** Review [Security Policy](../SECURITY.md)
+- **API integration?** See [API Integration Guide](./api-integration.md)
 
-## 📝 Documentation Standards
+## 📋 Additional Resources
 
-When adding new documentation:
+- **[Project Overview](../README.md)** - Main project README
+- **[API Improvements](./API_IMPROVEMENTS.md)** - API enhancement documentation
+- **[Documentation Cleanup](./DOCUMENTATION_CLEANUP.md)** - Documentation maintenance notes
 
-1. **Location**: Place files in the appropriate subdirectory
-2. **Naming**: Use descriptive names with hyphens (e.g., `feature-name.md`)
-3. **Format**: Use Markdown with clear headings and code blocks
-4. **Updates**: Keep documentation synchronized with code changes
-5. **Cross-references**: Link to related documentation
+## 🤝 Getting Help
 
-## 🔍 Finding Information
+If you can't find what you're looking for:
 
-- **Feature documentation**: Check `/docs/features/`
-- **Release information**: Check `/docs/releases/`
-- **Process guides**: Check `/docs/processes/`
-- **Installation help**: Check `/docs/installer/`
-
-## 🤝 Contributing to Documentation
-
-See our [Commit and Push Guide](./processes/COMMIT_AND_PUSH_GUIDE.md) for documentation standards and our [Contributing Guide](../CONTRIBUTING.md) for general contribution guidelines.
+1. **Check the [User Guides](./user-guides/)** for common tasks
+2. **Search the [Features](./features/)** documentation for specific functionality  
+3. **Review the [Changelog](../CHANGELOG.md)** for recent changes
+4. **Open an issue** following our [Contributing Guidelines](../CONTRIBUTING.md)
 
 ---
 
-*Documentation is a critical part of the Profolio project. If you find errors or areas for improvement, please submit a pull request or open an issue.* 
+*This documentation is organized to help you find information quickly. If you have suggestions for improvements, please see our [Contributing Guidelines](../CONTRIBUTING.md).* 

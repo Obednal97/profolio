@@ -1,6 +1,6 @@
 {
   "name": "profolio",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
   "main": "install-or-update.sh",
   "scripts": {
@@ -8,12 +8,12 @@
     "update": "./install-or-update.sh",
     "deploy": "./deploy.sh",
     "setup": "./setup.sh",
-    "dev:backend": "cd backend && npm run start:dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build:backend": "cd backend && npm run build",
-    "build:frontend": "cd frontend && npm run build",
-    "test:backend": "cd backend && npm test",
-    "test:frontend": "cd frontend && npm test"
+    "dev:backend": "cd backend && pnpm run start:dev",
+    "dev:frontend": "cd frontend && pnpm run dev",
+    "build:backend": "cd backend && pnpm run build",
+    "build:frontend": "cd frontend && pnpm run build",
+    "test:backend": "cd backend && pnpm test",
+    "test:frontend": "cd frontend && pnpm test"
   },
   "repository": {
     "type": "git",
@@ -39,8 +39,9 @@
   "homepage": "https://github.com/Obednal97/profolio#readme",
   "engines": {
     "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "pnpm": ">=8.0.0"
   },
+  "packageManager": "pnpm@9.14.4",
   "files": [
     "install-or-update.sh",
     "README.md",
