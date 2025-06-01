@@ -12,6 +12,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.2.0] - 2025-01-06
+
+### Added
+- **🎭 Enhanced Demo Mode**: 24-hour session management with automatic expiration
+- **📊 Real Market Data for Demo**: Demo users now get actual market data from Yahoo Finance APIs
+- **⏰ Session Management**: DemoSessionManager class for proper session lifecycle handling
+- **🔄 Periodic Session Validation**: Automatic session checking every 5 minutes
+- **📱 Demo Session Status**: Console logging with remaining time display
+- **🧹 Automatic Data Cleanup**: Session expiration clears all temporary demo data
+
+### Changed
+- **Demo User Experience**: Demo mode now showcases real platform capabilities
+- **Authentication Flow**: Enhanced demo session validation and management
+- **Market Data Integration**: Demo users access backend APIs with proper token handling
+- **Session Duration**: Demo access limited to 24 hours with automatic logout
+
+### Fixed
+- **🚨 Critical Authentication Vulnerabilities**: Fixed user ID inconsistencies across components
+  - Standardized user.id usage (replaced user.uid references)
+  - Fixed token handling to use unified auth system instead of hardcoded tokens
+  - Eliminated cross-user data access risks
+- **🔒 Security Token Management**: Replaced hardcoded demo tokens with proper auth flow
+- **📊 Demo Market Data**: Fixed demo users not receiving live market data
+- **🧹 SSR Auth Errors**: Enhanced layoutWrapper SSR safety with better error handling
+- **🎯 Asset Manager Token Issues**: Fixed hardcoded token usage in API configuration modal
+
+### Security
+- **🔐 Authentication Standardization**: All components now use user.id consistently
+- **🛡️ Token Security**: Eliminated hardcoded authentication tokens throughout codebase
+- **👥 Data Isolation**: Fixed potential cross-user data access vulnerabilities
+- **🎭 Demo Session Security**: Proper session boundaries for temporary demo access
+
+### Technical Improvements
+- **DemoSessionManager**: New utility class for complete session lifecycle management
+- **Unified Auth Integration**: All components migrated to unified authentication system
+- **Enhanced Error Handling**: Better fallback mechanisms for market data
+- **SSR Safety**: Improved server-side rendering compatibility for auth components
+- **Code Consistency**: Standardized user property access across entire codebase
+
+### Demo Mode Features
+- **Real Portfolio Data**: Demo users can create and manage assets with live prices
+- **Market Widget**: Displays actual stock/crypto prices from Yahoo Finance
+- **Asset Creation**: Full asset management with real symbol lookup
+- **Portfolio Analytics**: Genuine portfolio tracking with real market data
+- **Temporary Storage**: All demo data automatically cleared after 24 hours
+
+### Impact
+- **✅ Genuine Demo Experience**: Demo users see real platform capabilities
+- **✅ Enhanced Security**: Eliminated authentication vulnerabilities and data leakage risks
+- **✅ Better UX**: Demo mode provides authentic portfolio management experience
+- **✅ Session Security**: Proper time-limited access with automatic cleanup
+- **✅ Production Ready**: Enhanced security for both demo and real user sessions
+
 ## [1.1.0] - 2025-01-06
 
 ### Added
