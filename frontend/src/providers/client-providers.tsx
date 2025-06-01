@@ -2,15 +2,15 @@
 
 import React from 'react';
 import { ThemeProvider } from './theme-provider';
-import { AuthProvider } from '@/lib/auth';
+import { UnifiedAuthProvider } from '@/lib/unifiedAuth';
 import LayoutWrapper from '@/components/layout/layoutWrapper';
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider defaultTheme="system">
-      <AuthProvider>
+      <UnifiedAuthProvider>
         <LayoutWrapper>{children}</LayoutWrapper>
-      </AuthProvider>
+      </UnifiedAuthProvider>
     </ThemeProvider>
   );
 } 
