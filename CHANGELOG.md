@@ -12,6 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.5] - 2025-01-31
+
+### Fixed
+- **CRITICAL: DOMMatrix SSR Error** - Fixed production build failures caused by PDF.js loading during server-side rendering
+- **PDF Parser Browser-Only Loading** - Made PDF.js configuration conditional to only run in browser environment
+- **SSR-Safe Dynamic Imports** - Enhanced browser environment guards for PDF-related components
+
+### Technical Improvements
+- Added `typeof window` checks to prevent PDF.js from initializing during SSR
+- Enhanced `parseBankStatementPDF` function with browser environment validation  
+- Improved error handling for server-side rendering scenarios
+- Maintained full functionality for client-side PDF processing
+
+### Impact
+This release resolves the critical production build error that prevented successful deployments when using the expense import feature. The PDF parsing functionality now works correctly in production while being completely safe during server-side rendering.
+
 ## [1.0.4] - 2025-01-31
 
 ### Added
