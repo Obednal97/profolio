@@ -1,6 +1,6 @@
 {
 	"name": "profolio-backend",
-	"version": "1.0.8",
+	"version": "1.0.9",
 	"description": "Personal finance backend for Profolio",
 	"main": "dist/main.js",
 	"scripts": {
@@ -17,12 +17,12 @@
 		"@nestjs/config": "^4.0.2",
 		"@nestjs/core": "^11.1.0",
 		"@nestjs/jwt": "^11.0.0",
+		"@nestjs/mapped-types": "^2.1.0",
 		"@nestjs/passport": "^11.0.5",
 		"@nestjs/platform-express": "^11.1.0",
 		"@nestjs/schedule": "^6.0.0",
 		"@nestjs/swagger": "^11.1.6",
 		"@prisma/client": "^6.7.0",
-		"@types/cron": "^2.0.1",
 		"@types/decimal.js": "^0.0.32",
 		"bcrypt": "^5.1.1",
 		"class-transformer": "^0.5.1",
