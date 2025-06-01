@@ -12,6 +12,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.11] - 2025-02-01
+
+### Added
+- **Configuration Guide**: Comprehensive `CONFIGURATION_GUIDE.md` with setup instructions
+- **Firebase Setup Documentation**: Clear explanations for Firebase configuration in public directory
+- **Environment Variables Guide**: Detailed explanation of multiple .env files usage
+- **Security Best Practices**: Guidelines for safe configuration management
+- **Troubleshooting Guide**: Common issues and solutions for configuration problems
+
+### Fixed
+- **SECURITY: Hardcoded API Key**: Removed reintroduced hardcoded Firebase API key from auth.tsx
+- **Dynamic Firebase Cleanup**: Implemented pattern-based localStorage cleanup instead of hardcoded keys
+- **Gitignore Security**: Restored comprehensive .gitignore rules for sensitive files
+
+### Documentation
+- **Setup Checklist**: Step-by-step configuration verification
+- **Development Workflow**: Clear instructions for new developer onboarding
+- **Multi-environment Support**: Explained different .env files for various environments
+- **Firebase Integration**: Proper Firebase web app configuration patterns
+
+### Security Improvements
+- **Template-Based Configuration**: Users create own configs from secure templates
+- **Enhanced .gitignore**: Comprehensive protection against secret exposure
+- **Dynamic Secret Handling**: No hardcoded API keys in source code
+- **Configuration Validation**: Clear verification steps for proper setup
+
+### Technical Improvements
+- **Monorepo Structure**: Clarified frontend/backend environment separation
+- **Firebase Best Practices**: Standard Firebase web app configuration patterns
+- **Environment Management**: Proper development vs production configuration handling
+
 ## [1.0.10] - 2025-02-01
 
 ### 🚨 CRITICAL SECURITY FIX 🚨
