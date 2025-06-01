@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/unifiedAuth';
+import { DemoSessionManager } from '@/lib/demoSession';
 
 interface MarketData {
   symbol: string;
@@ -29,8 +30,9 @@ export function MarketDataWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if user is in demo mode
-  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  // Check demo session validity
+  const demoSession = DemoSessionManager.checkDemoSession();
+  const isDemoMode = demoSession.isValid;
   
   // Use Firebase user data or demo user data
   const currentUser = user ? {
@@ -93,16 +95,16 @@ export function MarketDataWidget() {
 
   const fetchLivePrice = async (symbol: string): Promise<{ price: number; change: number; changePercent: number } | null> => {
     try {
-      // For demo mode, return mock data immediately without API calls
-      if (isDemoMode) {
-        return generateRealisticMockData(symbol);
-      }
-
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
-      // Use the backend's cached symbol data instead of triggering live searches
+      // Add demo mode header if in demo mode
+      if (isDemoMode) {
+        headers['x-demo-mode'] = 'true';
+      }
+      
+      // Use the backend's cached symbol data for both demo and real users
       const response = await fetch(
         `/api/integrations/symbols/cached-price/${encodeURIComponent(symbol)}`,
         { headers }
@@ -125,7 +127,7 @@ export function MarketDataWidget() {
         }
       }
       
-      // Fallback to mock data if API unavailable
+      // Fallback to mock data if API unavailable (both demo and real users)
       return generateRealisticMockData(symbol);
       
     } catch (error) {
@@ -148,53 +150,51 @@ export function MarketDataWidget() {
 
         let symbolsToFetch: { symbol: string; name: string; isUserAsset: boolean; userValue?: number }[] = [];
 
-        if (isDemoMode) {
-          // For demo mode, use default symbols with mock data
-          console.log('🎭 Demo mode: Using mock market data');
-          symbolsToFetch = defaultSymbols.map(def => ({ ...def, isUserAsset: false }));
-        } else {
-          // Fetch user's assets for real users
-          const { apiCall } = await import('@/lib/mockApi');
-          const response = await apiCall('/api/assets', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ method: 'read', userId: currentUser.id }),
-          });
+        // Fetch user's assets for both demo and real users (demo users get temporary data)
+        const { apiCall } = await import('@/lib/mockApi');
+        const response = await apiCall('/api/assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'read', userId: currentUser.id }),
+        });
+        
+        const assetsData = await response.json();
+        const userAssets: Asset[] = assetsData.assets || [];
+
+        // Filter assets with symbols and sort by value
+        const assetsWithSymbols = userAssets
+          .filter(asset => asset.symbol && ['stock', 'crypto'].includes(asset.type))
+          .sort((a, b) => (b.current_value || 0) - (a.current_value || 0))
+          .slice(0, 3);
+
+        if (assetsWithSymbols.length > 0) {
+          // Use user's top assets
+          symbolsToFetch = assetsWithSymbols.map(asset => ({
+            symbol: asset.symbol!,
+            name: asset.name,
+            isUserAsset: true,
+            userValue: asset.current_value
+          }));
           
-          const assetsData = await response.json();
-          const userAssets: Asset[] = assetsData.assets || [];
-
-          // Filter assets with symbols and sort by value
-          const assetsWithSymbols = userAssets
-            .filter(asset => asset.symbol && ['stock', 'crypto'].includes(asset.type))
-            .sort((a, b) => (b.current_value || 0) - (a.current_value || 0))
-            .slice(0, 3);
-
-          if (assetsWithSymbols.length > 0) {
-            // Use user's top assets
-            symbolsToFetch = assetsWithSymbols.map(asset => ({
-              symbol: asset.symbol!,
-              name: asset.name,
-              isUserAsset: true,
-              userValue: asset.current_value
-            }));
-            
-            // Fill remaining slots with default symbols if needed
-            const remainingSlots = 3 - symbolsToFetch.length;
-            if (remainingSlots > 0) {
-              const defaultToAdd = defaultSymbols
-                .filter(def => !symbolsToFetch.some(s => s.symbol === def.symbol))
-                .slice(0, remainingSlots)
-                .map(def => ({ ...def, isUserAsset: false }));
-              symbolsToFetch.push(...defaultToAdd);
-            }
-          } else {
-            // Use default index funds for new users
-            symbolsToFetch = defaultSymbols.map(def => ({ ...def, isUserAsset: false }));
+          // Fill remaining slots with default symbols if needed
+          const remainingSlots = 3 - symbolsToFetch.length;
+          if (remainingSlots > 0) {
+            const defaultToAdd = defaultSymbols
+              .filter(def => !symbolsToFetch.some(s => s.symbol === def.symbol))
+              .slice(0, remainingSlots)
+              .map(def => ({ ...def, isUserAsset: false }));
+            symbolsToFetch.push(...defaultToAdd);
           }
+        } else {
+          // Use default index funds for new users (both demo and real)
+          symbolsToFetch = defaultSymbols.map(def => ({ ...def, isUserAsset: false }));
         }
 
-        // Fetch live prices for all symbols
+        if (isDemoMode) {
+          console.log('🎭 Demo mode: Fetching real market data with temporary session');
+        }
+
+        // Fetch live prices for all symbols (uses backend APIs for both demo and real users)
         const marketDataPromises = symbolsToFetch.map(async (item) => {
           const priceData = await fetchLivePrice(item.symbol);
           

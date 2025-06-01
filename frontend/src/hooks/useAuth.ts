@@ -2,6 +2,7 @@ import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sign
 import { getFirebase } from '../lib/firebase';
 import { useEffect, useState } from 'react';
 import { initializeDemoData } from '@/lib/demoData';
+import { DemoSessionManager } from '@/lib/demoSession';
 
 // Development bypass flag - set to false for proper authentication
 const BYPASS_AUTH = false;
@@ -58,11 +59,13 @@ export function useAuth() {
     
     // New demo mode function
     signInWithDemo: async ({ callbackUrl = '/app/dashboard', redirect = true } = {}) => {
-      console.log('Demo mode: Creating demo user session');
+      console.log('Demo mode: Creating demo user session with 24-hour expiration');
       
-      // Store demo user token in localStorage
+      // Start demo session with proper timeout management
+      DemoSessionManager.startDemoSession();
+      
+      // Store demo user token for API calls
       localStorage.setItem('auth-token', DEMO_USER.token!);
-      localStorage.setItem('demo-mode', 'true');
       
       // Store demo user data
       localStorage.setItem('user-data', JSON.stringify(DEMO_USER));
@@ -151,23 +154,21 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for demo mode first
-    const isDemoMode = localStorage.getItem('demo-mode') === 'true';
-    const demoToken = localStorage.getItem('auth-token');
-    const userData = localStorage.getItem('user-data');
-    
-    if (isDemoMode && demoToken && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setLoading(false);
-        return;
-      } catch (error) {
-        console.error('Error parsing demo user data:', error);
-        // Clear corrupted demo data
-        localStorage.removeItem('demo-mode');
-        localStorage.removeItem('auth-token');
-        localStorage.removeItem('user-data');
+    // Check for demo session validity first
+    const demoSession = DemoSessionManager.checkDemoSession();
+    if (demoSession.isValid) {
+      const userData = localStorage.getItem('user-data');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error('Error parsing demo user data:', error);
+          // Clear corrupted demo data
+          DemoSessionManager.endDemoSession();
+        }
       }
     }
 
