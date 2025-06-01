@@ -199,9 +199,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     formatCurrency,
   };
 
-  const hideLayout = ["/login", "/signup", "/signout"].some((path) =>
-    pathname.startsWith(path)
-  );
+  // Hide layout on auth pages and legacy paths
+  const hideLayout = pathname.startsWith('/auth') || 
+    ["/login", "/signup", "/signout"].some((path) => pathname.startsWith(path));
   
   // Check if we're in the app section
   const isAppSection = pathname.startsWith("/app");

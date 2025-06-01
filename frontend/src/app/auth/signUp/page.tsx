@@ -11,7 +11,7 @@ function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const { user, loading: authLoading, signUp, signInWithGoogleProvider } = useAuth();
+  const { user, loading: authLoading, signUp, signInWithGoogleProvider, authMode, config } = useAuth();
   const { signInWithDemo } = useAuthHook();
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -154,6 +154,11 @@ function SignUpPage() {
           <p className="text-gray-600 dark:text-gray-400">
             Start managing your wealth in minutes
           </p>
+          {authMode && (
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+              {authMode === 'local' ? '🏠 Self-hosted mode' : '☁️ Cloud mode'}
+            </p>
+          )}
         </div>
 
         {error && (
@@ -347,15 +352,17 @@ function SignUpPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            <button
-              type="button"
-              onClick={handleGoogleSignUp}
-              disabled={loading}
-              className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <i className="fab fa-google mr-2 text-red-500"></i>
-              Continue with Google
-            </button>
+            {config?.enableGoogleAuth && signInWithGoogleProvider && (
+              <button
+                type="button"
+                onClick={handleGoogleSignUp}
+                disabled={loading}
+                className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <i className="fab fa-google mr-2 text-red-500"></i>
+                Continue with Google
+              </button>
+            )}
           </div>
         </div>
 
