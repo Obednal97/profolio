@@ -475,9 +475,9 @@ show_banner() {
     
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║             🚀 PROFOLIO INSTALLER/UPDATER v2.0              ║"
-    echo "║              Professional Portfolio Management               ║"
-    echo "║          🛡️ With Rollback & Version Control 🎯            ║"
+    echo "║             🚀 PROFOLIO INSTALLER/UPDATER v2.0               ║"
+    echo "║              Professional Portfolio Management                ║"
+    echo "║           🛡️  With Rollback & Version Control 🎯             ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo -e "${CYAN}Self-Hosted • Privacy-Focused • Production-Ready${NC}"
@@ -1186,16 +1186,16 @@ show_completion_status() {
         # Dynamic centering based on operation name
         case "$operation_name" in
             "INSTALLATION")
-                echo "║                  🎉 INSTALLATION COMPLETE                   ║"
+                echo "║                  🎉 INSTALLATION COMPLETE                    ║"
                 ;;
             "UPDATE")
-                echo "║                     🎉 UPDATE COMPLETE                      ║"
+                echo "║                     🎉 UPDATE COMPLETE                       ║"
                 ;;
             "REPAIR")
-                echo "║                     🎉 REPAIR COMPLETE                      ║"
+                echo "║                     🎉 REPAIR COMPLETE                       ║"
                 ;;
             *)
-                echo "║                   🎉 OPERATION COMPLETE                     ║"
+                echo "║                   🎉 OPERATION COMPLETE                      ║"
                 ;;
         esac
         
@@ -1209,16 +1209,16 @@ show_completion_status() {
         # Dynamic centering based on operation name
         case "$operation_name" in
             "INSTALLATION")
-                echo "║                   ❌ INSTALLATION FAILED                    ║"
+                echo "║                   ❌ INSTALLATION FAILED                     ║"
                 ;;
             "UPDATE")
-                echo "║                      ❌ UPDATE FAILED                       ║"
+                echo "║                      ❌ UPDATE FAILED                        ║"
                 ;;
             "REPAIR")
-                echo "║                      ❌ REPAIR FAILED                       ║"
+                echo "║                      ❌ REPAIR FAILED                        ║"
                 ;;
             *)
-                echo "║                    ❌ OPERATION FAILED                      ║"
+                echo "║                    ❌ OPERATION FAILED                       ║"
                 ;;
         esac
         
