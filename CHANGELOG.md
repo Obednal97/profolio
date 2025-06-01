@@ -12,6 +12,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.4] - 2025-01-31
+
+### Added
+- **🚀 Installer v2.0**: Complete overhaul with rollback protection and version control
+- **Automatic Rollback**: Git-based restoration with backup fallback on update failures
+- **Version-Specific Installation**: Install/update to any specific version (v1.0.3, 1.0.3, main, latest)
+- **Manual Rollback Command**: Emergency rollback capability with `--rollback` option
+- **Version Management**: List available versions with `--list-versions`
+- **Enhanced Update Wizard**: Interactive version selection and rollback options
+- **Force Version Support**: Skip version existence checks with `--force-version`
+
+### Improved
+- **Production Safety**: Comprehensive failure detection and automatic recovery
+- **User Experience**: Enhanced progress indicators and status messages  
+- **Error Handling**: Graceful network failure handling and fallback mechanisms
+- **Credential Preservation**: Database passwords and API keys maintained across updates
+- **Service Recovery**: Automatic service restoration after rollback
+- **Version Validation**: Comprehensive version format validation and existence checking
+
+### Technical Features
+- **Git-based Rollback**: Commit hash tracking for precise restoration points
+- **Filesystem Backup**: Full application backup as rollback fallback
+- **Multi-step Verification**: Service status, API connectivity, and frontend accessibility checks
+- **Cleanup Management**: Automatic cleanup of old rollback files (keeps 2 most recent)
+- **Command Line Interface**: Enhanced argument parsing with comprehensive help system
+
+### Command Line Options
+- `--version VERSION` - Install/update to specific version
+- `--force-version VERSION` - Force version installation (skip checks)
+- `--no-rollback` - Disable automatic rollback protection
+- `--list-versions` - Show all available versions
+- `--rollback` - Execute manual rollback to previous version
+- `--auto` - Unattended installation with defaults
+- `--help` - Comprehensive help documentation
+
 ## [1.0.3] - 2025-01-31
 
 ### Fixed
