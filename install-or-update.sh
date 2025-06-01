@@ -410,7 +410,14 @@ checkout_version() {
     
     # Checkout the specified version
     if [ "$version" = "main" ]; then
-        if sudo -u profolio git checkout main && sudo -u profolio git pull origin main; then
+        # Fetch latest changes first
+        if ! sudo -u profolio git fetch origin main; then
+            error "Failed to fetch latest main branch"
+            return 1
+        fi
+        
+        # Checkout main and reset to match remote exactly
+        if sudo -u profolio git checkout main && sudo -u profolio git reset --hard origin/main; then
             success "Switched to main branch (latest development)"
             return 0
         else
@@ -1443,7 +1450,19 @@ update_installation() {
             return 1
         fi
     else
-        if ! sudo -u profolio git pull origin main; then
+        # Fetch latest changes first
+        if ! sudo -u profolio git fetch origin main; then
+            error "Failed to fetch updates"
+            if [ "$ROLLBACK_ENABLED" = true ]; then
+                execute_rollback
+            fi
+            OPERATION_SUCCESS=false
+            show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+            return 1
+        fi
+        
+        # Reset to exactly match remote (handles divergent branches)
+        if ! sudo -u profolio git reset --hard origin/main; then
             error "Failed to update code"
             if [ "$ROLLBACK_ENABLED" = true ]; then
                 execute_rollback
