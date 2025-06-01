@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Property } from '@/types/global';
-import PropertyCard from '@/components/propertyCard/propertyCard';
-import PropertyModal from '@/components/propertyModal/propertyModal';
+import { PropertyCard } from '@/components/cards/PropertyCard';
 import { useAuth } from '@/lib/auth';
 import {
   SkeletonCard,
@@ -12,6 +11,7 @@ import {
   SkeletonButton
 } from '@/components/ui/skeleton';
 import { FullScreenModal } from '@/components/modals/modal';
+import { PropertyModal } from '@/components/modals/PropertyModal';
 
 // Skeleton component for properties page
 function PropertiesSkeleton() {
@@ -202,6 +202,11 @@ export default function PropertiesPage() {
   const totalRental = properties.reduce((sum, property) => sum + (property.rentalIncome || 0), 0);
   const totalGain = totalValue - totalCost;
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedProperty(null);
+  };
+
   if (loading) {
     return <PropertiesSkeleton />;
   }
@@ -312,25 +317,18 @@ export default function PropertiesPage() {
       )}
 
       {/* Property Modal */}
-      {showModal && (
-        <FullScreenModal
-          isOpen={showModal}
-          onClose={() => {
-            setShowModal(false);
-            setSelectedProperty(null);
-          }}
-          title=""
-        >
-          <PropertyModal
-            property={selectedProperty}
-            onSave={handleSaveProperty}
-            onClose={() => {
-              setShowModal(false);
-              setSelectedProperty(null);
-            }}
-          />
-        </FullScreenModal>
-      )}
+      <FullScreenModal
+        isOpen={showModal || selectedProperty !== null}
+        onClose={handleCloseModal}
+      >
+        <PropertyModal
+          initialData={selectedProperty}
+          onSubmit={handleSaveProperty}
+          onClose={handleCloseModal}
+          error={error}
+          currentUserId={currentUser?.id}
+        />
+      </FullScreenModal>
     </div>
   );
 } 

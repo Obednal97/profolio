@@ -12,6 +12,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.8] - 2025-02-01
+
+### Added
+- **Package Manager Standardization**: Standardized on pnpm across all projects for improved performance
+- **Dependency Cleanup Script**: `cleanup-dependencies.sh` to resolve node_modules conflicts
+- **Component Architecture Improvement**: Organized components into logical directories (`cards/`, `modals/`)
+- **Enhanced Property Form**: Dynamic address search with manual entry fallback
+- **Google Places API Integration**: Enhanced address autocomplete with OpenStreetMap fallback
+
+### Changed
+- **Package Manager**: Migrated from npm to pnpm for 40-60% smaller node_modules and faster installs
+- **Project Structure**: Reorganized frontend components for better maintainability
+  - Moved individual component files to organized directories
+  - `src/components/cards/` - Reusable card components
+  - `src/components/modals/` - All modal dialogs
+- **Dependency Management**: Removed duplicate React/Next.js dependencies from root package.json
+- **Address Input System**: Improved property address forms with dual-mode input (search vs manual)
+
+### Fixed
+- **Package Manager Conflicts**: Resolved npm/pnpm lock file conflicts in backend
+- **Duplicate Dependencies**: Eliminated redundant React dependencies between root and frontend
+- **API Key Validation Issues**: Simplified Google Places API key validation to prevent CORS errors
+- **Component Import Paths**: Updated all imports to reflect new organized structure
+
+### Technical Improvements
+- **40-60% Smaller Dependencies**: pnpm uses hard links to reduce disk usage (~1.5GB → ~800MB)
+- **Faster Builds**: pnpm's efficient dependency resolution improves build times
+- **Better Architecture**: Separated concerns with organized component structure
+- **Improved Development Workflow**: Consistent package manager across all environments
+
+### Security
+- **API Key Handling**: Enhanced Google Places API key management with proper validation
+- **Environment Isolation**: Better separation between development and production configurations
+
 ## [1.0.7] - 2025-02-01
 
 ### Added

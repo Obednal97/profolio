@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Asset } from '@/types/global';
-import AssetCard from '@/components/assetCard/assetCard';
-import AssetModal from '@/components/assetModal/assetModal';
+import { AssetCard } from '@/components/cards/AssetCard';
+import { AssetModal } from '@/components/modals/AssetModal';
 import { Tile } from '@/components/ui/tile/tile';
 import { useAuth } from '@/lib/auth';
 import {
@@ -13,6 +13,33 @@ import {
   SkeletonStat,
   SkeletonButton
 } from '@/components/ui/skeleton';
+
+// Asset type configuration
+const assetTypeConfig = {
+  stock: { icon: "fa-chart-line", color: "blue", gradient: "from-blue-500 to-blue-600" },
+  crypto: { icon: "fa-bitcoin", color: "orange", gradient: "from-orange-500 to-orange-600" },
+  property: { icon: "fa-home", color: "green", gradient: "from-green-500 to-green-600" },
+  cash: { icon: "fa-dollar-sign", color: "purple", gradient: "from-purple-500 to-purple-600" },
+  savings: { icon: "fa-piggy-bank", color: "emerald", gradient: "from-emerald-500 to-emerald-600" },
+  bond: { icon: "fa-university", color: "indigo", gradient: "from-indigo-500 to-indigo-600" },
+  stock_options: { icon: "fa-certificate", color: "pink", gradient: "from-pink-500 to-pink-600" },
+  other: { icon: "fa-box", color: "gray", gradient: "from-gray-500 to-gray-600" },
+};
+
+// Crypto-specific icons
+const getCryptoIcon = (symbol: string) => {
+  const symbolUpper = symbol?.toUpperCase();
+  switch (symbolUpper) {
+    case 'BTC':
+    case 'BITCOIN':
+      return 'fa-bitcoin';
+    case 'ETH':
+    case 'ETHEREUM':
+      return 'fa-ethereum';
+    default:
+      return 'fa-coins'; // Generic crypto icon for other cryptocurrencies
+  }
+};
 
 // Skeleton component for portfolio page
 function PortfolioSkeleton() {
@@ -349,6 +376,8 @@ export default function PortfolioPage() {
                 setShowModal(true);
               }}
               onDelete={() => handleDeleteAsset(asset.id!)}
+              config={assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other}
+              getCryptoIcon={getCryptoIcon}
             />
           ))}
         </div>

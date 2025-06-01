@@ -1,48 +1,22 @@
-'use client';
-
 import React from 'react';
-import { Asset } from '@/types/global';
 import { motion } from 'framer-motion';
+import type { Asset } from '@/types/global';
 import { FinancialCalculator } from '@/lib/financial';
-
-// Asset type configuration
-const assetTypeConfig = {
-  stock: { icon: "fa-chart-line", color: "blue", gradient: "from-blue-500 to-blue-600" },
-  crypto: { icon: "fa-bitcoin", color: "orange", gradient: "from-orange-500 to-orange-600" },
-  property: { icon: "fa-home", color: "green", gradient: "from-green-500 to-green-600" },
-  cash: { icon: "fa-dollar-sign", color: "purple", gradient: "from-purple-500 to-purple-600" },
-  savings: { icon: "fa-piggy-bank", color: "emerald", gradient: "from-emerald-500 to-emerald-600" },
-  stock_options: { icon: "fa-certificate", color: "pink", gradient: "from-pink-500 to-pink-600" },
-  bond: { icon: "fa-chart-area", color: "indigo", gradient: "from-indigo-500 to-indigo-600" },
-  other: { icon: "fa-box", color: "gray", gradient: "from-gray-500 to-gray-600" },
-};
-
-// Crypto-specific icons
-const getCryptoIcon = (symbol: string) => {
-  const symbolUpper = symbol?.toUpperCase();
-  switch (symbolUpper) {
-    case 'BTC':
-    case 'BITCOIN':
-      return 'fa-bitcoin';
-    case 'ETH':
-    case 'ETHEREUM':
-      return 'fa-ethereum';
-    default:
-      return 'fa-coins'; // Generic crypto icon for other cryptocurrencies
-  }
-};
 
 interface AssetCardProps {
   asset: Asset;
   onEdit: (asset: Asset) => void;
   onDelete: (id: string) => void;
+  config: {
+    icon: string;
+    gradient: string;
+  };
+  getCryptoIcon?: (symbol: string) => string;
 }
 
-const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
-  const config = assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other;
-  
+export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: AssetCardProps) {
   // Use crypto-specific icon if it's a crypto asset
-  const iconClass = asset.type === 'crypto' && asset.symbol 
+  const iconClass = asset.type === 'crypto' && asset.symbol && getCryptoIcon 
     ? getCryptoIcon(asset.symbol) 
     : config.icon;
   
@@ -50,41 +24,16 @@ const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
     if (!asset.purchase_price || !asset.current_value || !asset.quantity) return null;
     
     // Check if current_value is already in dollars or cents
-    // If it's a large number (>1000), it's likely in cents
-    // If it's a small number (<1000), it's likely already in dollars
-    const currentValueDollars = asset.current_value > 1000 
+    const currentValueDollars = asset.current_value > 1000
       ? parseFloat(FinancialCalculator.centsToDollars(asset.current_value))
       : asset.current_value;
-    
     const purchasePriceDollars = asset.purchase_price; // Already in dollars
     
-    // Use the new proper calculation method
-    const calculation = FinancialCalculator.calculateAssetGainLoss(
-      currentValueDollars, 
-      purchasePriceDollars, 
+    return FinancialCalculator.calculateAssetGainLoss(
+      currentValueDollars,
+      purchasePriceDollars,
       asset.quantity
     );
-    
-    // Calculate APY if purchase date is available
-    const apy = asset.purchase_date ? 
-      FinancialCalculator.calculateAPY(
-        currentValueDollars,
-        purchasePriceDollars,
-        asset.quantity,
-        asset.purchase_date
-      ) : 0;
-    
-    // Get time period
-    const timePeriod = asset.purchase_date ? 
-      FinancialCalculator.getTimeSincePurchase(asset.purchase_date) : '';
-    
-    return {
-      totalInvestment: calculation.totalInvestment,
-      gain: calculation.gain,
-      gainPercent: calculation.gainPercent,
-      apy,
-      timePeriod
-    };
   };
 
   const appreciation = calculateAppreciation();
@@ -132,11 +81,7 @@ const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
         <div className="flex justify-between items-center">
           <span className="text-gray-600 dark:text-gray-400 text-sm">Current Value</span>
           <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-            {FinancialCalculator.formatCurrency(
-              asset.current_value && asset.current_value > 1000 
-                ? parseFloat(FinancialCalculator.centsToDollars(asset.current_value))
-                : asset.current_value || 0
-            )}
+            {FinancialCalculator.formatCurrency(asset.current_value || 0)}
           </span>
         </div>
 
@@ -152,33 +97,10 @@ const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
             <span className="text-gray-600 dark:text-gray-400 text-sm">Gain/Loss</span>
             <div className="text-right">
               <div className={`font-semibold text-sm sm:text-base ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {appreciation.gain >= 0 ? '+' : ''}
-                {FinancialCalculator.formatCurrency(appreciation.gain)}
+                {appreciation.gain >= 0 ? '+' : ''}{FinancialCalculator.formatCurrency(appreciation.gain)}
               </div>
               <div className={`text-xs sm:text-sm ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {FinancialCalculator.formatPercentage(appreciation.gainPercent)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {appreciation && appreciation.apy !== 0 && asset.purchase_date && (
-          <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-gray-600 dark:text-gray-400 text-sm">APY</span>
-            <div className="text-right">
-              <div className={`font-semibold text-sm sm:text-base ${appreciation.apy >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {FinancialCalculator.formatAPY(appreciation.apy)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {appreciation && asset.purchase_date && (
-          <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-gray-600 dark:text-gray-400 text-sm">Held For</span>
-            <div className="text-right">
-              <div className="font-semibold text-sm sm:text-base text-blue-500">
-                {appreciation.timePeriod || 'N/A'}
+                {FinancialCalculator.formatPercentage(appreciation.gainPercent, 2, true)}
               </div>
             </div>
           </div>
@@ -186,6 +108,4 @@ const AssetCard = ({ asset, onEdit, onDelete }: AssetCardProps) => {
       </div>
     </motion.div>
   );
-};
-
-export default AssetCard; 
+} 

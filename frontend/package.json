@@ -1,7 +1,8 @@
 {
   "name": "frontend",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
+  "packageManager": "pnpm@9.14.4",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

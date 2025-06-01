@@ -26,7 +26,7 @@ const statusConfig = {
   sold: { icon: "fa-tag", color: "text-gray-500" },
 };
 
-export default function PropertyCard({ property, onEdit, onDelete }: PropertyCardProps) {
+export function PropertyCard({ property, onEdit, onDelete }: PropertyCardProps) {
   const typeConfig = propertyTypeConfig[property.propertyType as keyof typeof propertyTypeConfig] || propertyTypeConfig.single_family;
   const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig.owned;
   
