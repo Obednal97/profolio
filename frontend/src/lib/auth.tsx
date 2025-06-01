@@ -326,8 +326,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('demo-api-keys');
       localStorage.removeItem('userToken');
       
-      // Clear any other potential auth-related localStorage items
-      localStorage.removeItem('firebase:authUser:AIzaSyBvQvlrGjGjGjGjGjGjGjGjGjGjGjGjGjG:[DEFAULT]');
+      // Clear any Firebase auth-related localStorage items (without hardcoded keys)
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('firebase:authUser:') || key.startsWith('firebase:')) {
+          localStorage.removeItem(key);
+        }
+      });
       
       // Sign out from Firebase
       await signOutUser();

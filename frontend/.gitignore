@@ -3,7 +3,7 @@
 # dependencies
 /node_modules
 /.pnp
-.pnp.*
+.pnp.js
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -30,8 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# local env files
+.env*.local
 
 # vercel
 .vercel
@@ -42,3 +42,16 @@ next-env.d.ts
 
 # temp example files
 /public/temp-bank-file-examples-to-be-deleted
+
+# Firebase configuration files (sensitive)
+/public/firebase-config.json
+firebase-config.json
+/src/config/firebase-config.json
+
+# API keys and secrets
+/src/config/api-keys.json
+api-keys.json
+.env.secrets
+
+# Google Places API configuration
+/src/config/google-places-config.json
