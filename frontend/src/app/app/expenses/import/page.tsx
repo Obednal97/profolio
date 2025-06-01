@@ -3,9 +3,40 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/auth';
-import { ParseResult, ParsedTransaction } from '@/lib/pdfParser';
-import FileUploader from '@/components/pdf/PdfUploader';
-import TransactionReview from '@/components/pdf/TransactionReview';
+import dynamic from 'next/dynamic';
+
+// Dynamically import components that use browser-only APIs
+const FileUploader = dynamic(() => import('@/components/pdf/PdfUploader'), {
+  ssr: false,
+  loading: () => (
+    <div className="animate-pulse">
+      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-2"></div>
+        <div className="h-3 bg-gray-200 rounded w-1/3 mx-auto"></div>
+      </div>
+    </div>
+  )
+});
+
+const TransactionReview = dynamic(() => import('@/components/pdf/TransactionReview'), {
+  ssr: false,
+  loading: () => (
+    <div className="animate-pulse">
+      <div className="bg-white rounded-xl p-6 border">
+        <div className="h-6 bg-gray-200 rounded mb-4"></div>
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-12 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+});
+
+// Types need to be imported separately to avoid SSR issues
+import type { ParseResult, ParsedTransaction } from '@/lib/pdfParser';
 
 type ImportStep = 'upload' | 'review' | 'success';
 

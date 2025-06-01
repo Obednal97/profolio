@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verify, JwtPayload } from 'jsonwebtoken';
 import crypto from 'crypto';
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 // Simple encryption/decryption for API keys
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-character-secret-key-here!';
 const ALGORITHM = 'aes-256-gcm';

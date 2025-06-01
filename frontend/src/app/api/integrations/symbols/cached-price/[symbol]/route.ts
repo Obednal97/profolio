@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 function getUserFromToken(request: NextRequest) {
   // Check for demo mode first
   const isDemoMode = request.headers.get('x-demo-mode') === 'true';
