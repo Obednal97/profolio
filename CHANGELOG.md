@@ -12,6 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.12] - 2025-02-01
+
+### Fixed
+- **CRITICAL: Installer Git Strategy**: Fixed divergent branches issue preventing updates after security fixes
+- **Git Pull Commands**: Replaced `git pull` with `git fetch + git reset --hard` to handle force-pushed history
+- **Update Process**: Installer now successfully updates after git history cleanup from v1.0.10 security fixes
+- **Checkout Version Function**: Fixed both main branch updates and version-specific checkouts
+
+### Technical Improvements
+- **Divergent Branch Handling**: Installer handles git history rewrites gracefully
+- **Force Push Compatibility**: Works correctly after repository history cleanup
+- **Git Strategy**: Uses `git reset --hard origin/main` for exact remote matching
+- **Rollback Protection**: Maintains automatic rollback functionality during failed updates
+
+### Impact
+- **Update Reliability**: Resolves update failures after security fixes were applied
+- **Git History Cleanup**: Installer compatible with security-driven history rewrites
+- **User Experience**: Smooth updates without manual git configuration
+
 ## [1.0.11] - 2025-02-01
 
 ### Added
