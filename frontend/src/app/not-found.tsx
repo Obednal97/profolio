@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import React from 'react';
 
+// Static not-found page - no client-side hooks to ensure SSR safety
 export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">

@@ -29,10 +29,25 @@ export const useAppContext = () => {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname();
-  const { user, userProfile } = useAuth();
   const [currency, setCurrencyState] = useState<string>('USD');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [authError, setAuthError] = useState<boolean>(false);
+
+  // Safe auth hook usage - call unconditionally but handle errors
+  let user = null;
+  let userProfile = null;
+  
+  try {
+    const authData = useAuth();
+    user = authData.user;
+    userProfile = authData.userProfile;
+  } catch (error) {
+    if (!authError) {
+      console.warn('Auth not available during SSR, using fallback:', error);
+      setAuthError(true);
+    }
+  }
 
   useEffect(() => {
     setMounted(true);

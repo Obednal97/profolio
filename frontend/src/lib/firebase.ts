@@ -13,6 +13,7 @@ import {
   sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
+import { getFirebaseConfig } from './authConfig';
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
@@ -25,11 +26,14 @@ export const getFirebase = async () => {
   
   if (!app) {
     try {
-      const res = await fetch('/firebase-config.json');
-      if (!res.ok) {
-        throw new Error(`Failed to fetch Firebase config: ${res.status}`);
+      // Use the new environment-based config system
+      const config = await getFirebaseConfig();
+      
+      if (!config) {
+        throw new Error('No Firebase configuration available. Please set environment variables or provide firebase-config.json');
       }
-      const config = await res.json();
+      
+      console.log('🔥 Initializing Firebase with config source:', config.apiKey?.substring(0, 10) + '...');
       app = initializeApp(config);
       auth = getAuth(app);
     } catch (error) {
