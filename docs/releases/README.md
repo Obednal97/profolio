@@ -4,6 +4,11 @@ This directory contains detailed release notes for each version of Profolio.
 
 ## 📋 Available Release Notes
 
+### v1.0.3 - Critical Production Build Fixes
+- **Date**: January 31, 2025
+- **[Release Notes](RELEASE_NOTES_v1.0.3.md)**
+- **Key Features**: Fixed DOMMatrix SSR errors, API route static generation issues, PDF parser SSR problems
+
 ### v1.0.2 - Enhanced Asset Management and Market Data Integration
 - **Date**: January 31, 2025
 - **[Release Notes](RELEASE_NOTES_v1.0.2.md)**

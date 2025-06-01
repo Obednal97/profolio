@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verify, JwtPayload } from 'jsonwebtoken';
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 interface UserJwtPayload extends JwtPayload {
   userId?: string;
   id?: string;

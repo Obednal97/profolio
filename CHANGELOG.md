@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.3] - 2025-01-31
+
+### Fixed
+- **Critical Build Errors**: Resolved DOMMatrix SSR errors in expense import page by implementing dynamic imports
+- **API Route Static Generation**: Fixed dynamic server usage errors in API routes preventing production builds
+- **PDF Parser SSR Issues**: Prevented PDF.js from being loaded during server-side rendering
+- **Yahoo Finance Network Connectivity**: Enhanced error handling for network timeouts and DNS resolution failures
+
+### Technical Improvements
+- Added dynamic imports for browser-only components (PDF uploader, transaction review)
+- Marked API routes as `dynamic = 'force-dynamic'` to prevent static generation issues
+- Improved error handling for market data service failures
+- Enhanced loading states for client-side only components
+
 ## [1.0.2] - 2025-01-31
 
 ### Added
