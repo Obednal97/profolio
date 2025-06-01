@@ -42,7 +42,7 @@ const getCryptoIcon = (symbol: string) => {
 
 export default function AssetManager() {
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -59,8 +59,8 @@ export default function AssetManager() {
   
   // Use Firebase user data or demo user data
   const currentUser = user ? {
-    id: user.uid,
-    name: user.displayName || user.email?.split('@')[0] || 'User',
+    id: user.id,
+    name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
     email: user.email || ''
   } : (isDemoMode ? {
     id: 'demo-user-id',
@@ -111,9 +111,10 @@ export default function AssetManager() {
 
       // Call the real historical data API
       const days = timeframe === "max" ? 365 : parseInt(timeframe);
+      const authToken = token || (isDemoMode ? 'demo-token' : null);
       const response = await fetch(`/api/market-data/portfolio-history/${currentUser.id}?days=${days}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth-token') || 'demo-token-secure-123'}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -176,7 +177,7 @@ export default function AssetManager() {
     } finally {
       setChartLoading(false);
     }
-  }, [timeframe, currentUser?.id, assets]);
+  }, [timeframe, currentUser?.id, assets, token, isDemoMode]);
 
   useEffect(() => {
       fetchChartData();

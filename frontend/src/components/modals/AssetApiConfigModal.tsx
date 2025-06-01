@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button/button";
 import { FinancialCalculator } from '@/lib/financial';
+import { useAuth } from '@/lib/unifiedAuth';
 
 interface AssetApiConfigModalProps {
   onClose: () => void;
@@ -9,6 +10,7 @@ interface AssetApiConfigModalProps {
 }
 
 export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfigModalProps) {
+  const { token } = useAuth();
   const [apiKeys, setApiKeys] = useState({
     alphaVantage: '',
     coinGecko: '',
@@ -36,11 +38,15 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
         }
 
         // For real users, load from secure server storage
-        const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
+        const authToken = token || (isDemoMode ? 'demo-token' : null);
+        if (!authToken) {
+          console.log('No auth token available, skipping API key load');
+          return;
+        }
 
         const response = await fetch('/api/user/api-keys', {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
           },
         });
@@ -57,7 +63,7 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
     };
 
     loadApiKeys();
-  }, [isDemoMode]);
+  }, [isDemoMode, token]);
 
   const testApiConnection = async (provider: string, apiKey: string) => {
     if (!apiKey.trim()) return;
@@ -67,7 +73,7 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
 
     try {
       let isValid = false;
-      const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
+      const authToken = token || (isDemoMode ? 'demo-token' : null);
       
       switch (provider) {
         case 'trading212':
@@ -76,7 +82,7 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
+              'Authorization': `Bearer ${authToken}`,
             },
             body: JSON.stringify({ apiKey }),
           });
@@ -151,14 +157,14 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
 
     try {
       setIsTestingConnection('trading212-sync');
-      const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
+      const authToken = token || (isDemoMode ? 'demo-token' : null);
       
       // Fetch Trading 212 portfolio data
       const response = await fetch('/api/trading212/sync', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({ apiKey: apiKeys.trading212 }),
       });
@@ -235,12 +241,16 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
       }
 
       // For real users, save to secure server storage
-      const token = localStorage.getItem('auth-token') || 'demo-token-secure-123';
+      const authToken = token || (isDemoMode ? 'demo-token' : null);
+      if (!authToken) {
+        alert('Authentication token not available. Please try logging in again.');
+        return;
+      }
 
       const response = await fetch('/api/user/api-keys', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ apiKeys }),

@@ -40,8 +40,8 @@ export default function PropertyManager() {
   
   // Use Firebase user data or demo user data
   const currentUser = user ? {
-    id: user.uid,
-    name: user.displayName || user.email?.split('@')[0] || 'User',
+    id: user.id,
+    name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
     email: user.email || ''
   } : (isDemoMode ? {
     id: 'demo-user-id',

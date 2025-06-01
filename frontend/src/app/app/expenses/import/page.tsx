@@ -49,7 +49,7 @@ export default function ExpenseImportPage() {
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
-  const currentUser = user || (isDemoMode ? { uid: 'demo-user-id' } : null);
+  const currentUser = user || (isDemoMode ? { id: 'demo-user-id' } : null);
 
   const handleParsed = (result: ParseResult) => {
     console.log('Parse result:', result);
@@ -73,7 +73,7 @@ export default function ExpenseImportPage() {
   };
 
   const handleSave = useCallback(async (selectedTransactions: ParsedTransaction[]) => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.id) return;
 
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -81,7 +81,7 @@ export default function ExpenseImportPage() {
       // Convert transactions to expenses
       const expenses = selectedTransactions.map(transaction => ({
         id: `imported_${transaction.id}`,
-        userId: currentUser.uid,
+        userId: currentUser.id,
         category: transaction.category,
         amount: transaction.amount, // Already in cents
         date: transaction.date,

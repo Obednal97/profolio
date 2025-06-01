@@ -545,7 +545,7 @@ function SettingsPage() {
   const currentUser = useMemo(() => {
     if (user) {
       return {
-        id: user.id || user.uid,
+        id: user.id,
         name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
         email: user.email || '',
         phone: '', // Will be loaded from userProfile if available
@@ -561,7 +561,7 @@ function SettingsPage() {
       };
     }
     return null;
-  }, [user?.id, user?.uid, user?.displayName, user?.name, user?.email, isDemoMode]);
+  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
 
   // Profile form state - start with empty values
   const [profileData, setProfileData] = useState(() => ({

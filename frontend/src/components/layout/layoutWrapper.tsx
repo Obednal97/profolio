@@ -32,22 +32,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const [currency, setCurrencyState] = useState<string>('USD');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [authError, setAuthError] = useState<boolean>(false);
 
   // Safe auth hook usage - call unconditionally but handle errors
-  let user = null;
-  let userProfile = null;
-  
-  try {
-    const authData = useAuth();
-    user = authData.user;
-    userProfile = authData.userProfile;
-  } catch (error) {
-    if (!authError) {
-      console.warn('Auth not available during SSR, using fallback:', error);
-      setAuthError(true);
-    }
-  }
+  const { user, userProfile } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -61,8 +48,6 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     if (typeof window !== 'undefined') {
       console.log('🔍 [Layout] localStorage debug:', {
         demoMode: localStorage.getItem('demo-mode'),
-        authToken: localStorage.getItem('auth-token'),
-        userToken: localStorage.getItem('userToken'),
         userData: localStorage.getItem('user-data')
       });
     }
@@ -83,7 +68,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
       // Priority: database profile name > Firebase displayName > email username
       const name = userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User';
       const result = {
-        id: user.uid,
+        id: user.id,
         name: name,
         email: user.email || ''
       };
@@ -117,7 +102,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     }
     console.log('❌ [Layout] No user available');
     return null;
-  }, [user?.uid, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
+  }, [user?.id, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
 
   // Load user preferences from API when user is available
   useEffect(() => {
