@@ -23,7 +23,7 @@
     "framer-motion": "^12.9.7",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.507.0",
-    "next": "^14.2.15",
+    "next": "^15.2.4",
     "pdfjs-dist": "^5.2.133",
     "react": "^18.3.1",
     "react-confetti": "^6.4.0",
