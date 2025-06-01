@@ -12,6 +12,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.1.0] - 2025-01-06
+
+### Added
+- **🎯 Unified Authentication System**: Support for both self-hosted and cloud authentication modes
+- **🏠 Local Database Authentication**: PostgreSQL + JWT for self-hosted deployments (privacy-focused)
+- **☁️ Firebase Authentication**: Google sign-in and social providers for cloud/SaaS deployments
+- **🤖 Smart Auto-Detection**: Automatically detects appropriate auth mode based on environment
+- **🔧 Configuration System**: Environment variable and Firebase config-based mode switching
+- **🎮 Enhanced Demo Mode**: Works with both authentication modes
+- **📱 Adaptive UI**: Sign-in page shows different options based on auth mode
+
+### Changed
+- **Authentication Architecture**: Migrated from Firebase-only to unified dual-mode system
+- **Sign-in Page**: Conditional UI based on authentication mode (local vs Firebase)
+- **Environment Detection**: Smart detection of self-hosted vs cloud deployment
+- **Provider Setup**: Updated ClientProviders to use UnifiedAuthProvider
+
+### Fixed
+- **🌈 Installer Color Formatting**: Fixed ANSI escape codes in update wizard options
+- **📐 Banner Spacing**: Improved text alignment in installer banners
+- **🔗 Firebase Dependency**: Eliminated Firebase config requirement for self-hosted mode
+- **🔄 Auth State Management**: Improved authentication state handling across modes
+
+### Technical Improvements
+- **LocalAuthService**: New service for backend API communication (self-hosted)
+- **AuthConfig System**: Environment-based configuration detection
+- **UnifiedAuthProvider**: Single provider supporting both authentication backends
+- **Dynamic Imports**: Firebase modules loaded only when needed
+- **Type Safety**: Enhanced TypeScript interfaces for unified user types
+- **Fallback Logic**: Automatic fallback to local auth if Firebase fails
+
+### Security
+- **🔐 Local JWT Authentication**: Secure token-based auth for self-hosted
+- **🛡️ No External Dependencies**: Self-hosted mode works completely offline
+- **🏠 Complete Privacy**: All authentication data stays local in self-hosted mode
+- **🔒 Firebase Security**: Maintained Firebase security model for cloud mode
+
+### Documentation
+- **Local Authentication Deployment Guide**: Complete setup instructions for both modes
+- **README Overhaul**: Updated with dual deployment options
+- **Configuration Examples**: Clear examples for both self-hosted and SaaS setup
+- **Migration Guide**: Instructions for existing installations
+
+### Impact
+- **✅ True Self-Hosted**: No Firebase requirement for privacy-focused deployments
+- **✅ SaaS Ready**: Full Firebase integration maintained for cloud deployments  
+- **✅ Single Codebase**: Same repository supports both deployment modes
+- **✅ Backward Compatible**: Existing Firebase installations continue to work
+- **✅ Future-Proof**: Foundation for both open source and SaaS business models
+
 ## [1.0.12] - 2025-02-01
 
 ### Fixed
