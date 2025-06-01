@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🚀 Profolio Smart Install/Update Script
-# Professional Proxmox-style wizard with dynamic progress bars
+# 🚀 Profolio Smart Install/Update Script v2.0
+# Professional Proxmox-style wizard with rollback and version control
 
 # Note: Removed 'set -e' to prevent premature exit on minor errors
 # Critical errors will be handled explicitly
@@ -26,6 +26,13 @@ else
     WHITE=''
     NC=''
 fi
+
+# Rollback and version control variables
+ROLLBACK_ENABLED=true
+ROLLBACK_COMMIT=""
+ROLLBACK_BACKUP_DIR=""
+TARGET_VERSION=""
+FORCE_VERSION=false
 
 # Simple progress spinner - using basic ASCII characters for compatibility
 SPINNER_CHARS="/-\|"
@@ -136,6 +143,291 @@ success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
+# Rollback and version control functions
+# =====================================
+
+# Validate version format (supports v1.0.0, 1.0.0, main, latest)
+validate_version() {
+    local version="$1"
+    
+    # Allow special keywords
+    case "$version" in
+        "main"|"latest"|"")
+            return 0
+            ;;
+        *)
+            # Check if it's a valid version tag format
+            if [[ "$version" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+    esac
+}
+
+# Get available versions from GitHub
+get_available_versions() {
+    info "Fetching available versions..."
+    
+    # Get all release tags from GitHub API
+    local versions=$(curl -s --connect-timeout 10 --max-time 30 \
+        "https://api.github.com/repos/Obednal97/profolio/releases" | \
+        grep '"tag_name"' | \
+        cut -d'"' -f4 | \
+        sort -V -r 2>/dev/null || echo "")
+    
+    if [ -n "$versions" ]; then
+        echo -e "${CYAN}📋 Available versions:${NC}"
+        echo "$versions" | head -10 | while read -r version; do
+            echo "   • $version"
+        done
+        if [ $(echo "$versions" | wc -l) -gt 10 ]; then
+            echo "   ... and $(($(echo "$versions" | wc -l) - 10)) more"
+        fi
+        echo "   • main (latest development)"
+        echo ""
+        return 0
+    else
+        warn "Could not fetch version list from GitHub"
+        echo -e "${CYAN}📋 Common versions:${NC}"
+        echo "   • v1.0.3 (latest stable)"
+        echo "   • v1.0.2"
+        echo "   • v1.0.1"
+        echo "   • main (latest development)"
+        echo ""
+        return 1
+    fi
+}
+
+# Check if version exists
+version_exists() {
+    local version="$1"
+    
+    # Special cases
+    case "$version" in
+        "main"|"latest"|"")
+            return 0
+            ;;
+    esac
+    
+    # Normalize version (add 'v' prefix if not present)
+    if [[ ! "$version" =~ ^v ]]; then
+        version="v$version"
+    fi
+    
+    # Check if tag exists on GitHub
+    local status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 30 \
+        "https://api.github.com/repos/Obednal97/profolio/releases/tags/$version")
+    
+    if [ "$status_code" = "200" ]; then
+        return 0
+    else
+        # Fallback: check if it exists as a git tag
+        if git ls-remote --tags origin | grep -q "refs/tags/$version$"; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+}
+
+# Create rollback point
+create_rollback_point() {
+    if [ "$ROLLBACK_ENABLED" = false ]; then
+        return 0
+    fi
+    
+    info "Creating rollback point..."
+    
+    # Get current git commit
+    if [ -d "/opt/profolio/.git" ]; then
+        cd /opt/profolio
+        ROLLBACK_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+        
+        if [ -n "$ROLLBACK_COMMIT" ]; then
+            success "Rollback point created: ${ROLLBACK_COMMIT:0:8}"
+        else
+            warn "Could not determine current git commit"
+        fi
+    fi
+    
+    # Create backup directory
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    ROLLBACK_BACKUP_DIR="/opt/profolio-rollback-$timestamp"
+    
+    if [ -d "/opt/profolio" ]; then
+        info "Creating rollback backup..."
+        cp -r /opt/profolio "$ROLLBACK_BACKUP_DIR" 2>/dev/null || {
+            warn "Failed to create rollback backup"
+            ROLLBACK_BACKUP_DIR=""
+        }
+        
+        if [ -n "$ROLLBACK_BACKUP_DIR" ]; then
+            success "Rollback backup created: $ROLLBACK_BACKUP_DIR"
+        fi
+    fi
+}
+
+# Execute rollback
+execute_rollback() {
+    if [ "$ROLLBACK_ENABLED" = false ]; then
+        error "Rollback is disabled"
+        return 1
+    fi
+    
+    warn "🔄 EXECUTING AUTOMATIC ROLLBACK..."
+    echo ""
+    
+    # Stop services
+    info "Stopping services..."
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    
+    local rollback_success=false
+    
+    # Try git rollback first
+    if [ -n "$ROLLBACK_COMMIT" ] && [ -d "/opt/profolio/.git" ]; then
+        info "Rolling back to git commit: ${ROLLBACK_COMMIT:0:8}"
+        cd /opt/profolio
+        
+        if sudo -u profolio git reset --hard "$ROLLBACK_COMMIT"; then
+            success "Git rollback successful"
+            rollback_success=true
+        else
+            error "Git rollback failed"
+        fi
+    fi
+    
+    # Fallback to backup restoration
+    if [ "$rollback_success" = false ] && [ -n "$ROLLBACK_BACKUP_DIR" ] && [ -d "$ROLLBACK_BACKUP_DIR" ]; then
+        info "Restoring from backup: $ROLLBACK_BACKUP_DIR"
+        
+        if [ -d "/opt/profolio" ]; then
+            rm -rf /opt/profolio.failed
+            mv /opt/profolio /opt/profolio.failed
+        fi
+        
+        if cp -r "$ROLLBACK_BACKUP_DIR" /opt/profolio; then
+            chown -R profolio:profolio /opt/profolio
+            success "Backup restoration successful"
+            rollback_success=true
+        else
+            error "Backup restoration failed"
+            
+            # Try to restore the failed directory
+            if [ -d "/opt/profolio.failed" ]; then
+                mv /opt/profolio.failed /opt/profolio
+                warn "Restored to failed state"
+            fi
+        fi
+    fi
+    
+    if [ "$rollback_success" = true ]; then
+        # Rebuild with previous version
+        info "Rebuilding previous version..."
+        cd /opt/profolio
+        setup_environment
+        
+        if build_application; then
+            # Restart services
+            info "Restarting services with previous version..."
+            systemctl start profolio-backend
+            sleep 3
+            systemctl start profolio-frontend
+            sleep 2
+            
+            # Quick verification
+            if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
+                success "🎉 ROLLBACK COMPLETED SUCCESSFULLY"
+                echo ""
+                echo -e "${GREEN}✅ Services restored to previous working version${NC}"
+                echo -e "${YELLOW}⚠️  Please check logs and investigate the update failure${NC}"
+                
+                # Clean up rollback files
+                cleanup_rollback_files
+                return 0
+            else
+                error "Services failed to start after rollback"
+            fi
+        else
+            error "Failed to rebuild after rollback"
+        fi
+    fi
+    
+    error "❌ ROLLBACK FAILED"
+    echo ""
+    echo -e "${RED}Manual intervention required:${NC}"
+    echo -e "   ${WHITE}1.${NC} Check service logs: journalctl -u profolio-backend -u profolio-frontend -f"
+    echo -e "   ${WHITE}2.${NC} Restore manually from: $ROLLBACK_BACKUP_DIR"
+    echo -e "   ${WHITE}3.${NC} Contact support if needed"
+    
+    return 1
+}
+
+# Clean up rollback files
+cleanup_rollback_files() {
+    if [ -n "$ROLLBACK_BACKUP_DIR" ] && [ -d "$ROLLBACK_BACKUP_DIR" ]; then
+        info "Cleaning up rollback backup..."
+        rm -rf "$ROLLBACK_BACKUP_DIR"
+        success "Rollback backup cleaned up"
+    fi
+    
+    # Keep only 2 most recent rollback backups
+    local rollback_count=$(ls -1 /opt/ | grep "^profolio-rollback-" | wc -l)
+    if [ "$rollback_count" -gt 2 ]; then
+        local backups_to_remove=$((rollback_count - 2))
+        ls -1t /opt/ | grep "^profolio-rollback-" | tail -n "$backups_to_remove" | while read -r old_backup; do
+            rm -rf "/opt/$old_backup"
+            info "Removed old rollback backup: $old_backup"
+        done
+    fi
+}
+
+# Checkout specific version
+checkout_version() {
+    local version="$1"
+    
+    if [ -z "$version" ] || [ "$version" = "main" ] || [ "$version" = "latest" ]; then
+        info "Using latest development version (main branch)"
+        version="main"
+    else
+        # Normalize version (add 'v' prefix if not present)
+        if [[ ! "$version" =~ ^v ]]; then
+            version="v$version"
+        fi
+        
+        info "Switching to version: $version"
+    fi
+    
+    cd /opt/profolio
+    
+    # Fetch latest refs
+    if ! sudo -u profolio git fetch origin; then
+        error "Failed to fetch latest updates from repository"
+        return 1
+    fi
+    
+    # Checkout the specified version
+    if [ "$version" = "main" ]; then
+        if sudo -u profolio git checkout main && sudo -u profolio git pull origin main; then
+            success "Switched to main branch (latest development)"
+            return 0
+        else
+            error "Failed to checkout main branch"
+            return 1
+        fi
+    else
+        if sudo -u profolio git checkout "tags/$version"; then
+            success "Switched to version: $version"
+            return 0
+        else
+            error "Failed to checkout version: $version"
+            return 1
+        fi
+    fi
+}
+
 # Default configuration values
 DEFAULT_CONTAINER_NAME="Profolio"
 DEFAULT_CPU_CORES="2"
@@ -183,12 +475,20 @@ show_banner() {
     
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║               🚀 PROFOLIO INSTALLER/UPDATER                 ║"
+    echo "║             🚀 PROFOLIO INSTALLER/UPDATER v2.0              ║"
     echo "║              Professional Portfolio Management               ║"
-    echo "║                  Proxmox Community Edition                   ║"
+    echo "║          🛡️ With Rollback & Version Control 🎯            ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
-    echo -e "${CYAN}Self-Hosted • Privacy-Focused • One-Command Setup${NC}"
+    echo -e "${CYAN}Self-Hosted • Privacy-Focused • Production-Ready${NC}"
+    if [ "$ROLLBACK_ENABLED" = true ]; then
+        echo -e "${GREEN}✅ Rollback Protection Enabled${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Rollback Protection Disabled${NC}"
+    fi
+    if [ -n "$TARGET_VERSION" ]; then
+        echo -e "${PURPLE}🎯 Target Version: $TARGET_VERSION${NC}"
+    fi
     echo ""
 }
 
@@ -517,36 +817,93 @@ run_update_wizard() {
         echo -e "${BLUE}Current Version:${NC} $current_version"
     fi
     
-    # Check for latest version
-    info "Checking for updates..."
-    latest_version=$(curl -s --connect-timeout 5 --max-time 10 "https://api.github.com/repos/Obednal97/profolio/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//' 2>/dev/null || echo "unknown")
-    
-    if [ "$latest_version" != "unknown" ]; then
-        echo -e "${BLUE}Latest Version:${NC} $latest_version"
+    # If version is specified via command line, use it
+    if [ -n "$TARGET_VERSION" ]; then
+        echo -e "${BLUE}Target Version:${NC} $TARGET_VERSION"
         
-        if [ "$current_version" = "$latest_version" ]; then
-            warn "You already have the latest version ($current_version)"
+        if [ "$current_version" = "$TARGET_VERSION" ] || [ "$current_version" = "v$TARGET_VERSION" ]; then
+            warn "Target version ($TARGET_VERSION) is same as current version ($current_version)"
             echo ""
-            read -p "Force update anyway? (y/n) [n]: " force_update
-            if [[ ! "$force_update" =~ ^[Yy]$ ]]; then
-                info "Update cancelled - already up to date"
+            read -p "Continue anyway? (y/n) [n]: " force_same_version
+            if [[ ! "$force_same_version" =~ ^[Yy]$ ]]; then
+                info "Update cancelled - same version"
                 exit 0
             fi
-        else
-            success "Update available: $current_version → $latest_version"
         fi
     else
-        echo -e "${BLUE}Latest Version:${NC} Unable to check (proceeding anyway)"
+        # Check for latest version if no target specified
+        info "Checking for updates..."
+        latest_version=$(curl -s --connect-timeout 5 --max-time 10 "https://api.github.com/repos/Obednal97/profolio/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//' 2>/dev/null || echo "unknown")
+        
+        if [ "$latest_version" != "unknown" ]; then
+            echo -e "${BLUE}Latest Version:${NC} $latest_version"
+            
+            if [ "$current_version" = "$latest_version" ]; then
+                warn "You already have the latest version ($current_version)"
+                echo ""
+                echo -e "${CYAN}Available options:${NC}"
+                echo "  1) ${YELLOW}Force update${NC} (rebuild current version)"
+                echo "  2) ${BLUE}Select different version${NC} (upgrade/downgrade)"
+                echo "  3) ${RED}Cancel${NC}"
+                echo ""
+                read -p "Select option [3]: " update_option
+                update_option=${update_option:-3}
+                
+                case $update_option in
+                    1)
+                        info "Force updating current version"
+                        ;;
+                    2)
+                        echo ""
+                        get_available_versions
+                        read -p "Enter version to install (e.g., v1.0.2): " TARGET_VERSION
+                        if [ -z "$TARGET_VERSION" ]; then
+                            info "Update cancelled - no version specified"
+                            exit 0
+                        fi
+                        if ! validate_version "$TARGET_VERSION"; then
+                            error "Invalid version format: $TARGET_VERSION"
+                            exit 1
+                        fi
+                        ;;
+                    *)
+                        info "Update cancelled"
+                        exit 0
+                        ;;
+                esac
+            else
+                success "Update available: $current_version → $latest_version"
+            fi
+        else
+            echo -e "${BLUE}Latest Version:${NC} Unable to check (proceeding anyway)"
+        fi
     fi
     
     echo ""
     echo -e "${CYAN}Update Process:${NC}"
-    echo "  1. 💾 Create automatic backup"
-    echo "  2. 🛑 Stop running services"
-    echo "  3. 📥 Download latest version"
-    echo "  4. 🔨 Update dependencies and rebuild"
-    echo "  5. 🚀 Restart services"
-    echo "  6. ✅ Verify update success"
+    if [ "$ROLLBACK_ENABLED" = true ]; then
+        echo "  1. 🛡️  Create rollback point (automatic)"
+    fi
+    echo "  2. 💾 Create backup"
+    echo "  3. 🛑 Stop running services"
+    if [ -n "$TARGET_VERSION" ]; then
+        echo "  4. 📥 Download version $TARGET_VERSION"
+    else
+        echo "  4. 📥 Download latest version"
+    fi
+    echo "  5. 🔨 Update dependencies and rebuild"
+    echo "  6. 🚀 Restart services"
+    echo "  7. ✅ Verify update success"
+    if [ "$ROLLBACK_ENABLED" = true ]; then
+        echo ""
+        echo -e "${GREEN}🛡️  Rollback Protection:${NC} Enabled"
+        echo -e "   ${YELLOW}•${NC} Automatic rollback on failure"
+        echo -e "   ${YELLOW}•${NC} Git-based restoration with backup fallback"
+        echo -e "   ${YELLOW}•${NC} Manual rollback available: ${CYAN}$0 --rollback${NC}"
+    else
+        echo ""
+        echo -e "${YELLOW}⚠️  Rollback Protection:${NC} Disabled"
+    fi
     echo ""
     
     read -p "Proceed with update? (y/n) [y]: " update_confirm
@@ -555,7 +912,11 @@ run_update_wizard() {
         exit 0
     fi
     
-    success "Update confirmed. Starting update process..."
+    if [ -n "$TARGET_VERSION" ]; then
+        success "Update confirmed. Installing version: $TARGET_VERSION"
+    else
+        success "Update confirmed. Installing latest version"
+    fi
 }
 
 # Manage backups with improved feedback
@@ -877,17 +1238,90 @@ main() {
     show_banner
     check_root
     
-    # Command line arguments
-    case "${1:-}" in
-        --auto|--unattended)
-            AUTO_INSTALL=true
-            ;;
-        --help|-h)
-            echo "Usage: $0 [--auto|--unattended]"
-            echo "  --auto: Run with default configuration"
-            exit 0
-            ;;
-    esac
+    # Enhanced command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --auto|--unattended)
+                AUTO_INSTALL=true
+                shift
+                ;;
+            --version)
+                TARGET_VERSION="$2"
+                if [ -z "$TARGET_VERSION" ]; then
+                    error "Version parameter requires a value"
+                    echo "Usage: $0 --version v1.0.3"
+                    exit 1
+                fi
+                shift 2
+                ;;
+            --force-version)
+                TARGET_VERSION="$2"
+                FORCE_VERSION=true
+                if [ -z "$TARGET_VERSION" ]; then
+                    error "Force version parameter requires a value"
+                    echo "Usage: $0 --force-version v1.0.2"
+                    exit 1
+                fi
+                shift 2
+                ;;
+            --no-rollback)
+                ROLLBACK_ENABLED=false
+                shift
+                ;;
+            --list-versions)
+                echo -e "${CYAN}🚀 Profolio Available Versions${NC}"
+                echo ""
+                get_available_versions
+                exit 0
+                ;;
+            --rollback)
+                if [ ! -d "/opt/profolio" ]; then
+                    error "No Profolio installation found to rollback"
+                    exit 1
+                fi
+                echo -e "${YELLOW}⚠️  Manual rollback requested${NC}"
+                echo ""
+                if execute_rollback; then
+                    exit 0
+                else
+                    exit 1
+                fi
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Version validation if specified
+    if [ -n "$TARGET_VERSION" ]; then
+        info "Target version specified: $TARGET_VERSION"
+        
+        if ! validate_version "$TARGET_VERSION"; then
+            error "Invalid version format: $TARGET_VERSION"
+            echo "Valid formats: v1.0.3, 1.0.3, main, latest"
+            exit 1
+        fi
+        
+        if [ "$FORCE_VERSION" = false ]; then
+            if ! version_exists "$TARGET_VERSION"; then
+                error "Version $TARGET_VERSION does not exist"
+                echo ""
+                get_available_versions
+                exit 1
+            fi
+        else
+            warn "Force version enabled - skipping version existence check"
+        fi
+        
+        success "Version $TARGET_VERSION validated"
+    fi
     
     info "Detecting application state..."
     detect_installation_state
@@ -919,10 +1353,57 @@ main() {
     esac
 }
 
+# Show enhanced help
+show_help() {
+    echo -e "${CYAN}🚀 Profolio Installer/Updater v2.0${NC}"
+    echo ""
+    echo -e "${WHITE}USAGE:${NC}"
+    echo "  $0 [OPTIONS]"
+    echo ""
+    echo -e "${WHITE}OPTIONS:${NC}"
+    echo -e "  ${GREEN}--auto, --unattended${NC}     Run with default configuration"
+    echo -e "  ${GREEN}--version VERSION${NC}        Install/update to specific version"
+    echo -e "  ${GREEN}--force-version VERSION${NC}  Force version (skip existence check)"
+    echo -e "  ${GREEN}--no-rollback${NC}            Disable automatic rollback on failure"
+    echo -e "  ${GREEN}--list-versions${NC}          Show available versions and exit"
+    echo -e "  ${GREEN}--rollback${NC}               Execute manual rollback to previous version"
+    echo -e "  ${GREEN}--help, -h${NC}               Show this help message"
+    echo ""
+    echo -e "${WHITE}VERSION FORMATS:${NC}"
+    echo -e "  ${YELLOW}v1.0.3${NC}                   Install specific release version"
+    echo -e "  ${YELLOW}1.0.3${NC}                    Install specific release version (without 'v')"
+    echo -e "  ${YELLOW}main${NC}                     Install latest development version"
+    echo -e "  ${YELLOW}latest${NC}                   Install latest stable release"
+    echo ""
+    echo -e "${WHITE}EXAMPLES:${NC}"
+    echo -e "  ${CYAN}$0${NC}                        Interactive installation"
+    echo -e "  ${CYAN}$0 --auto${NC}                 Quick installation with defaults"
+    echo -e "  ${CYAN}$0 --version v1.0.3${NC}       Install specific version"
+    echo -e "  ${CYAN}$0 --version main${NC}         Install latest development"
+    echo -e "  ${CYAN}$0 --list-versions${NC}        Show available versions"
+    echo -e "  ${CYAN}$0 --rollback${NC}             Rollback to previous version"
+    echo ""
+    echo -e "${WHITE}ROLLBACK FEATURES:${NC}"
+    echo -e "  • ${GREEN}Automatic rollback${NC} on failed updates"
+    echo -e "  • ${GREEN}Git-based restoration${NC} with backup fallback"
+    echo -e "  • ${GREEN}Service state preservation${NC}"
+    echo -e "  • ${GREEN}Manual rollback${NC} command available"
+    echo ""
+    echo -e "${WHITE}SAFETY FEATURES:${NC}"
+    echo -e "  • ${GREEN}Pre-update backups${NC} created automatically"
+    echo -e "  • ${GREEN}Version validation${NC} before installation"
+    echo -e "  • ${GREEN}Service verification${NC} after updates"
+    echo -e "  • ${GREEN}Credential preservation${NC} during updates"
+    echo ""
+}
+
 # Improved update installation with proper completion tracking
 update_installation() {
     OPERATION_TYPE="UPDATE"
     info "Starting update process"
+    
+    # Create rollback point before making any changes
+    create_rollback_point
     
     # Create backup
     info "Creating system backup..."
@@ -935,23 +1416,63 @@ update_installation() {
     systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
     success "Services stopped"
     
-    # Update code
-    info "Downloading latest updates..."
+    # Update code with version control
+    info "Downloading updates..."
     cd /opt/profolio
-    if sudo -u profolio git stash push -m "Auto-stash before update $(date)" && sudo -u profolio git pull origin main; then
-        success "Code updated"
-    else
-        error "Failed to update code"
+    
+    # Stash any local changes
+    if ! sudo -u profolio git stash push -m "Auto-stash before update $(date)"; then
+        error "Failed to stash local changes"
+        if [ "$ROLLBACK_ENABLED" = true ]; then
+            execute_rollback
+        fi
         OPERATION_SUCCESS=false
         show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
+    # Checkout specific version or pull latest
+    if [ -n "$TARGET_VERSION" ]; then
+        if ! checkout_version "$TARGET_VERSION"; then
+            error "Failed to checkout version $TARGET_VERSION"
+            if [ "$ROLLBACK_ENABLED" = true ]; then
+                execute_rollback
+            fi
+            OPERATION_SUCCESS=false
+            show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+            return 1
+        fi
+    else
+        if ! sudo -u profolio git pull origin main; then
+            error "Failed to update code"
+            if [ "$ROLLBACK_ENABLED" = true ]; then
+                execute_rollback
+            fi
+            OPERATION_SUCCESS=false
+            show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+            return 1
+        fi
+    fi
+    
+    success "Code updated successfully"
+    
     # Setup environment (preserving existing credentials)
-    setup_environment
+    if ! setup_environment; then
+        error "Failed to setup environment"
+        if [ "$ROLLBACK_ENABLED" = true ]; then
+            execute_rollback
+        fi
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
     
     # Rebuild application
     if ! build_application; then
+        error "Failed to build application"
+        if [ "$ROLLBACK_ENABLED" = true ]; then
+            execute_rollback
+        fi
         OPERATION_SUCCESS=false
         show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
@@ -965,6 +1486,10 @@ update_installation() {
     )
     
     if ! execute_steps "Service Update" "${service_steps[@]}"; then
+        error "Failed to update services"
+        if [ "$ROLLBACK_ENABLED" = true ]; then
+            execute_rollback
+        fi
         OPERATION_SUCCESS=false
         show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
@@ -979,6 +1504,9 @@ update_installation() {
         error "Failed to start backend service"
         info "Backend logs:"
         journalctl -u profolio-backend -n 10 --no-pager
+        if [ "$ROLLBACK_ENABLED" = true ]; then
+            execute_rollback
+        fi
         OPERATION_SUCCESS=false
         show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
@@ -992,13 +1520,37 @@ update_installation() {
         error "Failed to start frontend service"
         info "Frontend logs:"
         journalctl -u profolio-frontend -n 10 --no-pager
+        if [ "$ROLLBACK_ENABLED" = true ]; then
+            execute_rollback
+        fi
         OPERATION_SUCCESS=false
         show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
     # Verify update - this sets OPERATION_SUCCESS
-    verify_installation
+    if ! verify_installation; then
+        error "Update verification failed"
+        if [ "$ROLLBACK_ENABLED" = true ]; then
+            execute_rollback
+        fi
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # If we got here, the update was successful
+    OPERATION_SUCCESS=true
+    
+    # Clean up rollback files on successful update
+    cleanup_rollback_files
+    
+    # Show current version info
+    if [ -f "/opt/profolio/package.json" ]; then
+        local current_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+        success "Successfully updated to version: $current_version"
+    fi
+    
     show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
 }
 
@@ -1236,6 +1788,13 @@ fresh_install() {
         success "Using default configuration"
     fi
     
+    # Show version info if specified
+    if [ -n "$TARGET_VERSION" ]; then
+        info "Installing Profolio version: $TARGET_VERSION"
+    else
+        info "Installing latest Profolio version"
+    fi
+    
     # System setup phase
     local system_steps=(
         "Creating profolio user" "useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || true"
@@ -1268,7 +1827,7 @@ fresh_install() {
         return 1
     fi
     
-    # Application download
+    # Application download with version control
     info "Downloading Profolio repository..."
     if [ -d "/opt/profolio" ]; then
         rm -rf /opt/profolio
@@ -1285,12 +1844,29 @@ fresh_install() {
         return 1
     fi
     
+    # Checkout specific version if requested
+    if [ -n "$TARGET_VERSION" ]; then
+        cd /opt/profolio
+        if ! checkout_version "$TARGET_VERSION"; then
+            error "Failed to checkout version $TARGET_VERSION"
+            OPERATION_SUCCESS=false
+            show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+            return 1
+        fi
+    fi
+    
     # Environment setup (for fresh installs, will generate new credentials)
     cd /opt/profolio
-    setup_environment
+    if ! setup_environment; then
+        error "Failed to setup environment"
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
     
     # Build application
     if ! build_application; then
+        error "Failed to build application"
         OPERATION_SUCCESS=false
         show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
@@ -1337,7 +1913,22 @@ fresh_install() {
     fi
     
     # Final verification - this sets OPERATION_SUCCESS
-    verify_installation
+    if ! verify_installation; then
+        error "Installation verification failed"
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
+    # If we got here, the installation was successful
+    OPERATION_SUCCESS=true
+    
+    # Show installed version info
+    if [ -f "/opt/profolio/package.json" ]; then
+        local installed_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+        success "Successfully installed Profolio version: $installed_version"
+    fi
+    
     show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
 }
 
