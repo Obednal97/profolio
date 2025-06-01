@@ -13,6 +13,11 @@ interface PropertyModalProps {
 
 interface PropertyFormData {
   address: string;
+  street: string;
+  city: string;
+  region: string;
+  postalCode: string;
+  country: string;
   purchasePrice: string;
   currentValue: string;
   propertyType: string;
@@ -47,6 +52,11 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
     if (property) {
       return {
         address: property.address || "",
+        street: property.street || "",
+        city: property.city || "",
+        region: property.region || "",
+        postalCode: property.postalCode || "",
+        country: property.country || "",
         purchasePrice: property.purchasePrice?.toString() || "",
         currentValue: property.currentValue?.toString() || "",
         propertyType: property.propertyType || "single_family",
@@ -78,6 +88,11 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
     } else {
       return {
         address: "",
+        street: "",
+        city: "",
+        region: "",
+        postalCode: "",
+        country: "",
         purchasePrice: "",
         currentValue: "",
         propertyType: "single_family",
@@ -96,6 +111,11 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
     const propertyData: Omit<Property, 'id'> & { id?: string } = {
       ...(property?.id && { id: property.id }),
       address: formData.address,
+      street: formData.street,
+      city: formData.city,
+      region: formData.region,
+      postalCode: formData.postalCode,
+      country: formData.country,
       purchasePrice: formData.purchasePrice ? Number(formData.purchasePrice) : undefined,
       currentValue: formData.currentValue ? Number(formData.currentValue) : undefined,
       propertyType: formData.propertyType as Property["propertyType"],
@@ -187,9 +207,77 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
                 rows={2}
-                placeholder="123 Main St, City, State ZIP"
+                placeholder="Full address (for display and search)"
                 required
               />
+            </div>
+
+            {/* Structured Address Components */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Street Address
+                </label>
+                <input
+                  type="text"
+                  value={formData.street}
+                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  City/Town
+                </label>
+                <input
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                  placeholder="Worcester"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Region/State/County
+                </label>
+                <input
+                  type="text"
+                  value={formData.region}
+                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                  placeholder="Worcestershire"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Postal/ZIP Code
+                </label>
+                <input
+                  type="text"
+                  value={formData.postalCode}
+                  onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                  placeholder="WR2 4FA"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Country
+                </label>
+                <input
+                  type="text"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                  placeholder="United Kingdom"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -342,6 +430,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                   <input
                     type="number"
                     min="0"
+                    step="0.01"
                     value={formData.purchasePrice}
                     onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
                     className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -359,6 +448,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                   <input
                     type="number"
                     min="0"
+                    step="0.01"
                     value={formData.currentValue}
                     onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
                     className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -392,6 +482,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                     <input
                       type="number"
                       min="0"
+                      step="0.01"
                       value={formData.rentalIncome}
                       onChange={(e) => setFormData({ ...formData, rentalIncome: e.target.value })}
                       className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -420,6 +511,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
                   value={formData.mortgageAmount}
                   onChange={(e) => setFormData({ ...formData, mortgageAmount: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -468,6 +560,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
                   value={formData.monthlyPayment}
                   onChange={(e) => setFormData({ ...formData, monthlyPayment: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -507,6 +600,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
                   value={formData.propertyTaxes}
                   onChange={(e) => setFormData({ ...formData, propertyTaxes: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -524,6 +618,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
                   value={formData.insurance}
                   onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -541,6 +636,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
                   value={formData.maintenanceCosts}
                   onChange={(e) => setFormData({ ...formData, maintenanceCosts: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
@@ -558,6 +654,7 @@ export default function PropertyModal({ property, onSave, onClose }: PropertyMod
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
                   value={formData.hoa}
                   onChange={(e) => setFormData({ ...formData, hoa: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"

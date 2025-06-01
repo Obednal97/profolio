@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import LineChart from '@/components/charts/line';
 import PieChart from '@/components/charts/pie';
@@ -45,11 +45,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'overview' | 'detailed' | 'allocation'>('overview');
 
-  useEffect(() => {
-    loadPerformanceData();
-  }, [timeframe, userId]);
-
-  const loadPerformanceData = async () => {
+  const loadPerformanceData = useCallback(async () => {
     setLoading(true);
     try {
       // Load performance metrics
@@ -83,7 +79,11 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, timeframe]);
+
+  useEffect(() => {
+    loadPerformanceData();
+  }, [loadPerformanceData]);
 
   const refreshData = async () => {
     setRefreshing(true);

@@ -61,38 +61,63 @@ export type ExpenseFormData = {
 export type Property = {
   id: string;
   userId?: string;
+  
+  // Address components  
   address: string;
+  street?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+  
+  // Property details
   ownershipType?: "owned" | "rented";
   propertyType?: "single_family" | "condo" | "townhouse" | "multi_family" | "commercial" | "land";
   status?: "owned" | "rental" | "rented" | "sold";
-  currentValue?: number;
-  purchasePrice?: number;
-  purchaseDate?: string;
   bedrooms?: number;
   bathrooms?: number;
   squareFootage?: number;
   yearBuilt?: number;
   lotSize?: number;
-  propertyTaxes?: number;
-  insurance?: number;
-  maintenanceCosts?: number;
-  hoa?: number;
+  
+  // Financial values (received from backend as dollars)
+  currentValue?: number;
+  purchasePrice?: number;
+  rentalIncome?: number;
+  
+  // Mortgage details
   mortgageAmount?: number;
   mortgageRate?: number;
   mortgageTerm?: number;
   monthlyPayment?: number;
   mortgageProvider?: string;
+  mortgageStartDate?: string;
+  
+  // Additional costs (monthly)
+  propertyTaxes?: number;
+  insurance?: number;
+  maintenanceCosts?: number;
+  hoa?: number;
+  
+  // Rental details
   monthlyRent?: number;
   securityDeposit?: number;
   rentalStartDate?: string;
   rentalEndDate?: string;
+  
+  // Dates and metadata
+  purchaseDate?: string;
   notes?: string;
-  mortgageStartDate?: string;
-  rentalIncome?: number;
 };
 
 export type PropertyFormData = {
     address: string;
+    street: string;
+    city: string;
+    region: string;
+    postalCode: string;
+    country: string;
+    
     purchasePrice: string;
     currentValue: string;
     propertyType: string;
