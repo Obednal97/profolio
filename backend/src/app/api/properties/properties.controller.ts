@@ -26,8 +26,21 @@ export class PropertiesController {
     return this.propertiesService.update(id, dto);
   }
 
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.propertiesService.delete(id);
+  }
+
   @Get()
-  findAll() {
+  findAll(@Query('userId') userId?: string) {
+    if (userId) {
+      return this.propertiesService.findByUserId(userId);
+    }
     return this.propertiesService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.propertiesService.findOne(id);
   }
 }

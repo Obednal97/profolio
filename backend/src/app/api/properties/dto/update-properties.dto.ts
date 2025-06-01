@@ -1,23 +1,4 @@
-import { IsString, IsNumber, IsDateString, IsOptional } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreatePropertyDto } from './create-property.dto';
 
-export class UpdatePropertyDto {
-  @IsString()
-  @IsOptional()
-  address?: string;
-
-  @IsNumber()
-  @IsOptional()
-  value?: number;
-
-  @IsDateString()
-  @IsOptional()
-  purchaseDate?: string;
-
-  @IsString()
-  @IsOptional()
-  notes?: string;
-
-  @IsString()
-  @IsOptional()
-  userId?: string;
-}
+export class UpdatePropertyDto extends PartialType(CreatePropertyDto) {}

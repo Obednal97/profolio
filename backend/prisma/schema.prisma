@@ -183,17 +183,64 @@ model Settings {
 }
 
 model Property {
-  id           String   @id @default(uuid())
-  address      String
-  value        Int
-  purchaseDate DateTime
-  notes        String?
-  userId       String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now()) @updatedAt
-  user         User     @relation(fields: [userId], references: [id])
+  id                String   @id @default(uuid())
+  userId            String
+  
+  // Address components
+  address           String   // Full address for backward compatibility
+  street            String?  // Street address
+  city              String?  // City/Town
+  region            String?  // State/Region/County
+  postalCode        String?  // ZIP/Postal code
+  country           String?  // Country
+  
+  // Property details
+  propertyType      String?  // single_family, condo, townhouse, etc.
+  ownershipType     String?  // owned, rented
+  status            String?  // owned, rental, rented, sold
+  bedrooms          Int?
+  bathrooms         Decimal? @db.Decimal(3, 1) // Allow 2.5 bathrooms
+  squareFootage     Int?
+  yearBuilt         Int?
+  lotSize           Int?
+  
+  // Financial values (all stored in cents)
+  currentValue      Int?     // Current value in cents
+  purchasePrice     Int?     // Purchase price in cents  
+  rentalIncome      Int?     // Monthly rental income in cents
+  
+  // Mortgage details (amounts in cents, rates as decimal)
+  mortgageAmount    Int?     // Mortgage amount in cents
+  mortgageRate      Decimal? @db.Decimal(5, 2) // Interest rate percentage
+  mortgageTerm      Int?     // Term in years
+  monthlyPayment    Int?     // Monthly payment in cents
+  mortgageProvider  String?  // Lender name
+  mortgageStartDate DateTime?
+  
+  // Additional costs (monthly, in cents)
+  propertyTaxes     Int?     // Monthly property taxes in cents
+  insurance         Int?     // Monthly insurance in cents
+  maintenanceCosts  Int?     // Monthly maintenance in cents
+  hoa               Int?     // Monthly HOA fees in cents
+  
+  // Rental details
+  monthlyRent       Int?     // Monthly rent in cents
+  securityDeposit   Int?     // Security deposit in cents
+  rentalStartDate   DateTime?
+  rentalEndDate     DateTime?
+  
+  // Dates and metadata
+  purchaseDate      DateTime?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+  
+  // Relationships
+  user              User     @relation(fields: [userId], references: [id])
   
   @@index([userId])
+  @@index([propertyType])
+  @@index([status])
   @@index([purchaseDate])
 }
 
