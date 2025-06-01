@@ -85,15 +85,18 @@ class LocalAuthService {
 
   async signUp(email: string, password: string, name?: string): Promise<LocalUser> {
     try {
+      // Provide sensible defaults for name
+      const displayName = name?.trim() || email.split('@')[0] || 'User';
+      
       const response: SignUpResponse = await this.apiRequest('/api/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name: displayName }),
       });
 
       const user: LocalUser = {
         id: 'temp-id', // Backend should return user ID
         email,
-        name: name || null,
+        name: displayName,
         token: response.token,
       };
 
@@ -120,7 +123,7 @@ class LocalAuthService {
       const user: LocalUser = {
         id: 'temp-id', // Backend should return user ID
         email,
-        name: null, // We'll get this from user profile endpoint
+        name: email.split('@')[0] || 'User', // Provide default name from email
         token: response.token,
       };
 
@@ -136,6 +139,7 @@ class LocalAuthService {
         await this.fetchUserProfile();
       } catch (profileError) {
         console.warn('Failed to fetch user profile:', profileError);
+        // Keep the default name if profile fetch fails
       }
       
       return user;
@@ -176,11 +180,11 @@ class LocalAuthService {
         },
       });
 
-      // Update current user with profile data
+      // Update current user with profile data, providing defaults
       this.currentUser = {
         ...this.currentUser,
-        id: profile.id,
-        name: profile.name,
+        id: profile.id || this.currentUser.id,
+        name: profile.name || this.currentUser.name || this.currentUser.email.split('@')[0] || 'User',
       };
 
       // Update stored user data
@@ -188,6 +192,12 @@ class LocalAuthService {
       this.notifyListeners();
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
+      // Ensure we have a name even if profile fetch fails
+      if (!this.currentUser.name) {
+        this.currentUser.name = this.currentUser.email.split('@')[0] || 'User';
+        localStorage.setItem('user-data', JSON.stringify(this.currentUser));
+        this.notifyListeners();
+      }
     }
   }
 
