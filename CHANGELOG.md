@@ -12,6 +12,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.0.10] - 2025-02-01
+
+### 🚨 CRITICAL SECURITY FIX 🚨
+- **BREAKING**: Complete removal of exposed Firebase API keys from repository and git history
+- **Removed**: Firebase configuration file (`frontend/public/firebase-config.json`) containing exposed Google API key
+- **Fixed**: Hardcoded API key in authentication localStorage cleanup
+- **Enhanced**: Comprehensive .gitignore rules for all sensitive configuration files
+- **Added**: Template-based configuration system (`firebase-config.json.template`)
+
+### Security Improvements
+- **Git History Cleanup**: Used `git-filter-repo` to completely remove sensitive files from all 199 commits
+- **Force Push Applied**: Cleaned git history pushed to GitHub to eliminate secret exposure
+- **Dynamic Secret Handling**: Replaced hardcoded API keys with pattern-based approaches
+- **Prevention Measures**: Enhanced .gitignore to prevent future secret exposures
+
+### Documentation
+- **Security Fix Report**: Complete documentation of issue resolution (`SECURITY_FIX_REPORT.md`)
+- **User Action Required**: Instructions for existing users to rotate Firebase API keys
+- **Template Configuration**: Clear guidance for secure configuration setup
+
+### Technical Changes
+- **Repository History**: 199 commits processed, sensitive files completely removed
+- **Backup Created**: `backup-before-security-fix-20250601-150952` branch for recovery
+- **Configuration Security**: Template-based approach for all sensitive configuration files
+
+### ⚠️ **IMMEDIATE ACTION REQUIRED FOR EXISTING USERS**
+1. **Rotate Firebase API Key**: Go to Firebase Console and regenerate your API key
+2. **Update Configuration**: Create `firebase-config.json` from template with new key
+3. **Review Firebase Logs**: Check for any unauthorized usage during exposure period
+
+**Exposure Period**: May 29, 2025 - February 1, 2025 (approximately 2 months)
+**GitGuardian Alerts**: Resolved - Google API Key and Generic High Entropy Secret
+
 ## [1.0.9] - 2025-02-01
 
 ### Fixed
