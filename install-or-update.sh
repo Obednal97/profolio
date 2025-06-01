@@ -849,9 +849,9 @@ run_update_wizard() {
                 warn "You already have the latest version ($current_version)"
                 echo ""
                 echo -e "${CYAN}Available options:${NC}"
-                echo "  1) ${YELLOW}Force update${NC} (rebuild current version)"
-                echo "  2) ${BLUE}Select different version${NC} (upgrade/downgrade)"
-                echo "  3) ${RED}Cancel${NC}"
+                echo -e "  1) ${YELLOW}Force update${NC} (rebuild current version)"
+                echo -e "  2) ${BLUE}Select different version${NC} (upgrade/downgrade)"
+                echo -e "  3) ${RED}Cancel${NC}"
                 echo ""
                 read -p "Select option [3]: " update_option
                 update_option=${update_option:-3}
