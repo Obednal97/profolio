@@ -2,8 +2,10 @@ import * as pdfjsLib from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { classifyTransaction, detectRecurringTransactions } from './transactionClassifier';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Configure PDF.js worker only in browser environment
+if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+}
 
 // Types for parsed transactions
 export interface ParsedTransaction {
@@ -640,6 +642,16 @@ function extractMetadata(text: string, bankKey: string): {
 
 // Main parsing function
 export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
+  // Prevent execution during SSR
+  if (typeof window === 'undefined') {
+    throw new Error('PDF parsing is only available in browser environment');
+  }
+
+  // Ensure PDF.js worker is configured
+  if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  }
+
   try {
     // Extract text from PDF
     const arrayBuffer = await file.arrayBuffer();
