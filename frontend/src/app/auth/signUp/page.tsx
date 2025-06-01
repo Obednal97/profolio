@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/unifiedAuth";
 import { useAuth as useAuthHook } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/layout/authLayout";
 import { useRouter } from 'next/navigation';
@@ -27,7 +27,7 @@ function SignUpPage() {
   // Redirect if already authenticated (Firebase user or demo mode)
   useEffect(() => {
     // Only redirect if we have a valid user AND we're not in a loading state
-    if (!authLoading && ((user && user.uid) || isDemoMode)) {
+    if (!authLoading && ((user && user.id) || isDemoMode)) {
       router.push('/app/dashboard');
     }
   }, [user, authLoading, isDemoMode, router]);
@@ -95,6 +95,11 @@ function SignUpPage() {
   };
 
   const handleGoogleSignUp = async () => {
+    if (!signInWithGoogleProvider) {
+      setError('Google sign-up is not available');
+      return;
+    }
+
     setError(null);
     setLoading(true);
 
@@ -137,7 +142,7 @@ function SignUpPage() {
   }
 
   // Don't render if user is already authenticated or in demo mode
-  if (!authLoading && ((user && user.uid) || isDemoMode)) return null;
+  if (!authLoading && ((user && user.id) || isDemoMode)) return null;
 
   return (
     <AuthLayout>

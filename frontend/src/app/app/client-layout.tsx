@@ -3,7 +3,7 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import { initializeDemoData } from '@/lib/demoData';
 
 // DEVELOPMENT: Authentication imports commented out for testing

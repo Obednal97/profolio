@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTheme } from "@/providers/theme-provider";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/unifiedAuth";
 
 interface UserMenuProps {
   user?: {

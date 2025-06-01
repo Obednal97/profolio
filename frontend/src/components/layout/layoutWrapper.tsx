@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from "
 import { usePathname } from "next/navigation";
 import { HeaderLayout as Header } from "@/components/layout/headerLayout";
 import { FooterLayout as Footer } from "@/components/layout/footerLayout";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/unifiedAuth";
 
 interface LayoutWrapperProps {
   children: React.ReactNode;

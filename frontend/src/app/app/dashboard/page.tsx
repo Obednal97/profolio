@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Confetti from 'react-confetti';
 import NetWorthDisplay from '@/components/netWorthDisplay';
 import { MarketDataWidget } from '@/components/ui/marketData/marketDataWidget';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import { 
   SkeletonCard, 
   SkeletonChart, 
@@ -143,7 +143,7 @@ export default function DashboardPage() {
       // Priority: database profile name > Firebase displayName > email username
       const name = userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User';
       return {
-        id: user.uid,
+        id: user.id,
         name: name,
         email: user.email || ''
       };
@@ -171,7 +171,7 @@ export default function DashboardPage() {
       return demoUser;
     }
     return null;
-  }, [user?.uid, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
+  }, [user?.id, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
