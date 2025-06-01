@@ -340,30 +340,33 @@ function SignUpPage() {
             </p>
           </div>
 
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                Or continue with
-              </span>
-            </div>
-          </div>
+          {/* Only show social auth section when Google auth is enabled */}
+          {config?.enableGoogleAuth && signInWithGoogleProvider && (
+            <>
+              <div className="relative my-8">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {config?.enableGoogleAuth && signInWithGoogleProvider && (
-              <button
-                type="button"
-                onClick={handleGoogleSignUp}
-                disabled={loading}
-                className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <i className="fab fa-google mr-2 text-red-500"></i>
-                Continue with Google
-              </button>
-            )}
-          </div>
+              <div className="grid grid-cols-1 gap-4">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignUp}
+                  disabled={loading}
+                  className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <i className="fab fa-google mr-2 text-red-500"></i>
+                  Continue with Google
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-8 text-center">
