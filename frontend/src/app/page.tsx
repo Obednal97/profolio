@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button/button';
 import { motion, useAnimationFrame } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { getAuthModeSync } from '@/lib/authConfig';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -31,10 +33,18 @@ const formatCompactNumber = (num: number) =>
 
 export default function LandingPage() {
   const [liveNetWorth, setLiveNetWorth] = useState(getLiveNetWorth());
+  const router = useRouter();
 
   useAnimationFrame(() => {
     setLiveNetWorth(getLiveNetWorth());
   });
+
+  useEffect(() => {
+    const authMode = getAuthModeSync();
+    if (authMode === 'local') {
+      router.push('/auth/signIn');
+    }
+  }, [router]);
 
   return (
     <div className="text-foreground min-h-screen">

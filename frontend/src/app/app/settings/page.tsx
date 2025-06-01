@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/unifiedAuth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
@@ -545,11 +545,11 @@ function SettingsPage() {
   const currentUser = useMemo(() => {
     if (user) {
       return {
-        id: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || 'User',
+        id: user.id || user.uid,
+        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
         email: user.email || '',
-        phone: user.phoneNumber || '',
-        photoURL: user.photoURL || '',
+        phone: '', // Will be loaded from userProfile if available
+        photoURL: '', // Will be loaded from userProfile if available
       };
     } else if (isDemoMode) {
       return {
@@ -561,7 +561,7 @@ function SettingsPage() {
       };
     }
     return null;
-  }, [user?.uid, user?.displayName, user?.email, user?.phoneNumber, user?.photoURL, isDemoMode]);
+  }, [user?.id, user?.uid, user?.displayName, user?.name, user?.email, isDemoMode]);
 
   // Profile form state - start with empty values
   const [profileData, setProfileData] = useState(() => ({

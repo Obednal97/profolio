@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Property } from '@/types/global';
 import { PropertyCard } from '@/components/cards/PropertyCard';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import {
   SkeletonCard,
   Skeleton,

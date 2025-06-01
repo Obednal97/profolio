@@ -5,7 +5,7 @@ import { Asset } from '@/types/global';
 import { AssetCard } from '@/components/cards/AssetCard';
 import { AssetModal } from '@/components/modals/AssetModal';
 import { Tile } from '@/components/ui/tile/tile';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import {
   SkeletonCard,
   SkeletonChart,

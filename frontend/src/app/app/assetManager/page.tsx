@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useEffect, useState } from "react";
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { AssetModal } from "@/components/modals/AssetModal";
 import { AssetApiConfigModal } from "@/components/modals/AssetApiConfigModal";

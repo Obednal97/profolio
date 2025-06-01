@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 
 interface MarketData {
   symbol: string;

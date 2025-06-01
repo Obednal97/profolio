@@ -1,7 +1,7 @@
 "use client";
 import type { Expense } from "@/types/global";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { ExpenseModal } from "@/components/modals/ExpenseModal";

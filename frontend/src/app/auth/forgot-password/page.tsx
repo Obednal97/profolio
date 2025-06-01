@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import { AuthLayout } from "@/components/layout/authLayout";
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -26,6 +26,9 @@ function ForgotPasswordPage() {
     }
 
     try {
+      if (!resetUserPassword) {
+        throw new Error("Password reset is not available in self-hosted mode");
+      }
       await resetUserPassword(email);
       setSuccess(true);
     } catch (err: unknown) {

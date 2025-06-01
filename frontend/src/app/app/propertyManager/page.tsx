@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import type { Property } from "@/types/global";
 import { BaseModal as Modal } from "@/components/modals/modal";
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/unifiedAuth';
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
