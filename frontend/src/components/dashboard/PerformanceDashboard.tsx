@@ -5,6 +5,11 @@ import { motion } from 'framer-motion';
 import LineChart from '@/components/charts/line';
 import PieChart from '@/components/charts/pie';
 
+interface ChartHistoryItem {
+  date: string;
+  totalValue: number;
+}
+
 interface Asset {
   id: string;
   name: string;
@@ -68,7 +73,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
       const chartData = await chartResponse.json();
       
       if (chartData.history) {
-        setChartData(chartData.history.map((item: any) => ({
+        setChartData(chartData.history.map((item: ChartHistoryItem) => ({
           date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           value: item.totalValue
         })));
@@ -167,7 +172,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
         ].map((mode) => (
           <button
             key={mode.key}
-            onClick={() => setViewMode(mode.key as any)}
+            onClick={() => setViewMode(mode.key as 'overview' | 'detailed' | 'allocation')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               viewMode === mode.key
                 ? 'bg-white text-gray-900 shadow'
@@ -296,9 +301,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
             <LineChart
               data={chartData}
               xKey="date"
-              yKey="value"
-              color="#3B82F6"
-              height={300}
+              lines={[{ dataKey: "value", color: "#3B82F6" }]}
             />
           </div>
 
@@ -308,8 +311,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
             <PieChart
               data={allocationData}
               nameKey="name"
-              valueKey="value"
-              height={300}
+              dataKey="value"
             />
             <div className="mt-4 space-y-2">
               {allocationData.map((item) => (
