@@ -136,7 +136,7 @@ export default function UpdatesPage() {
     const element = document.getElementById(sectionId);
     if (element) {
       // Account for header height (approximately 80px) plus some padding
-      const headerOffset = 100;
+      const headerOffset = 120; // Increased to match sticky top-24 (96px) + extra padding
       const elementPosition = element.offsetTop;
       const offsetPosition = elementPosition - headerOffset;
 
@@ -151,7 +151,7 @@ export default function UpdatesPage() {
   // Set up intersection observer to track active sections
   useEffect(() => {
     const observerOptions = {
-      rootMargin: '-100px 0px -60% 0px', // Account for header height
+      rootMargin: '-120px 0px -60% 0px', // Increased to match new header offset
       threshold: 0
     };
 
@@ -347,9 +347,9 @@ export default function UpdatesPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto flex gap-8 p-6">
-        {/* Sidebar Navigation - Constrained to viewport */}
+        {/* Sidebar Navigation - Fixed below header */}
         <div className="w-80 flex-shrink-0">
-          <div className="sticky top-6 h-[calc(100vh-3rem)] flex flex-col gap-4">
+          <div className="sticky top-24 h-[calc(100vh-8rem)] flex flex-col gap-4">
             {/* Update Status Card */}
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
               <div className="flex items-center gap-3 mb-4">
@@ -424,9 +424,9 @@ export default function UpdatesPage() {
               </div>
             </div>
 
-            {/* Navigation Menu - Scrollable Releases - Limited height */}
+            {/* Navigation Menu - Scrollable Releases */}
             {changelog.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col min-h-0 flex-1 max-h-96">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col min-h-0 flex-1">
                 <div className="p-4 pb-2 flex-shrink-0">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                     <Hash className="h-5 w-5" />
@@ -457,7 +457,7 @@ export default function UpdatesPage() {
               </div>
             )}
 
-            {/* System Info - Always visible at bottom with guaranteed space */}
+            {/* System Info - Always visible at bottom */}
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <Settings className="h-5 w-5" />
@@ -503,7 +503,7 @@ export default function UpdatesPage() {
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Scrollable */}
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="mb-8">

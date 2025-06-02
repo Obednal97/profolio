@@ -57,33 +57,43 @@ export function useAuth() {
       await new Promise((r) => setTimeout(r, 150));
     },
     
-    // New demo mode function
+    // Demo mode function
     signInWithDemo: async ({ callbackUrl = '/app/dashboard', redirect = true } = {}) => {
       console.log('Demo mode: Creating demo user session with 24-hour expiration');
       
-      // Start demo session with proper timeout management
-      DemoSessionManager.startDemoSession();
-      
-      // Store demo user token for API calls
-      localStorage.setItem('auth-token', DEMO_USER.token!);
-      
-      // Store demo user data
-      localStorage.setItem('user-data', JSON.stringify(DEMO_USER));
-      
-      // Populate demo data
       try {
-        await initializeDemoData();
-        console.log('Demo data populated successfully');
+        // Start demo session (now synchronous)
+        const sessionStarted = DemoSessionManager.startDemoSession();
+        
+        if (!sessionStarted) {
+          throw new Error('Failed to start demo session');
+        }
+        
+        // Store demo user token for API calls
+        localStorage.setItem('auth-token', DEMO_USER.token!);
+        
+        // Store demo user data
+        localStorage.setItem('user-data', JSON.stringify(DEMO_USER));
+        
+        // Populate demo data
+        try {
+          await initializeDemoData();
+          console.log('Demo data populated successfully');
+        } catch (error) {
+          console.error('Failed to populate demo data:', error);
+          // Don't fail the demo login if data population fails
+        }
+        
+        if (redirect) {
+          console.log('Demo mode setup complete, redirecting to:', callbackUrl);
+          window.location.href = callbackUrl;
+        }
+        
+        return { success: true, user: DEMO_USER };
       } catch (error) {
-        console.error('Failed to populate demo data:', error);
-        // Don't fail the demo login if data population fails
+        console.error('Demo mode setup failed:', error);
+        throw error;
       }
-      
-      if (redirect) {
-        window.location.href = callbackUrl;
-      }
-      
-      return { success: true, user: DEMO_USER };
     },
     
     signOut: async ({ callbackUrl = "/", redirect = true } = {}) => {

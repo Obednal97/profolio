@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.7.1] - 2025-06-02
+
+### 🔧 Improvements
+- **📋 Release Notes Template**: Streamlined template from 358 to 80 lines by removing verbose sections like acknowledgments and extensive statistics
+- **📱 Updates Page Navigation**: Fixed left sidebar scrolling - now stays properly positioned below header while main content scrolls
+- **🎯 Documentation Process**: Simplified release documentation process for faster, more focused release notes
+
+### 📊 Summary
+- **Files Changed**: 2 files modified
+- **User Experience**: Better navigation behaviour in updates page
+- **Process**: Significantly faster release documentation workflow
+
 ## [v1.7.0] - 2025-06-02
 
 ### ✨ Features

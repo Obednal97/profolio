@@ -1,5 +1,5 @@
 // Demo Session Management
-// Handles temporary 24-hour demo sessions with server-side validation
+// Handles temporary 24-hour demo sessions with client-side validation
 
 export interface DemoSessionInfo {
   isValid: boolean;
@@ -74,35 +74,9 @@ export class DemoSessionManager {
   }
 
   /**
-   * Validate demo session with server
+   * Start a new demo session (client-side only for now)
    */
-  private static async validateWithServer(sessionId: string, token: string): Promise<boolean> {
-    try {
-      const response = await fetch('/api/demo/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ sessionId, token }),
-      });
-
-      if (!response.ok) {
-        console.warn('Demo session server validation failed');
-        return false;
-      }
-
-      const data = await response.json();
-      return data.valid === true;
-    } catch (error) {
-      console.error('Demo session server validation error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Start a new demo session with server-side validation
-   */
-  static async startDemoSession(): Promise<boolean> {
+  static startDemoSession(): boolean {
     if (typeof window === 'undefined') return false;
     
     try {
@@ -110,26 +84,13 @@ export class DemoSessionManager {
       const token = this.generateSecureToken();
       const startTime = Date.now();
 
-      // Register session with server
-      const response = await fetch('/api/demo/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ sessionId, token, startTime }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to start demo session on server');
-      }
-
-      // Store session data locally (but rely on server validation)
+      // Store session data locally
       localStorage.setItem(this.DEMO_MODE_KEY, 'true');
       localStorage.setItem(this.DEMO_SESSION_KEY, startTime.toString());
       localStorage.setItem(this.DEMO_SESSION_ID_KEY, sessionId);
       localStorage.setItem(this.DEMO_TOKEN_KEY, token);
       
-      console.log('🎭 Demo session started with server validation - expires in 24 hours');
+      console.log('🎭 Demo session started - expires in 24 hours');
       return true;
     } catch (error) {
       console.error('Failed to start demo session:', error);
@@ -138,9 +99,9 @@ export class DemoSessionManager {
   }
 
   /**
-   * Check demo session validity with server-side validation
+   * Check demo session validity (client-side validation)
    */
-  static async checkDemoSession(): Promise<DemoSessionInfo> {
+  static checkDemoSession(): DemoSessionInfo {
     if (typeof window === 'undefined') {
       return { isValid: false, remainingTime: 0 };
     }
@@ -170,28 +131,11 @@ export class DemoSessionManager {
     const sessionAge = Date.now() - parseInt(demoStartTime);
     const remainingTime = this.DEMO_SESSION_DURATION - sessionAge;
 
-    // Check client-side expiration first
+    // Check client-side expiration
     if (sessionAge > this.DEMO_SESSION_DURATION) {
       console.log('🎭 Demo session expired after 24 hours');
       this.endDemoSession();
       return { isValid: false, remainingTime: 0 };
-    }
-
-    // Validate with server every 10 minutes or if requested
-    const lastServerCheck = localStorage.getItem('demo-last-server-check');
-    const now = Date.now();
-    const shouldCheckServer = !lastServerCheck || 
-      (now - parseInt(lastServerCheck)) > (10 * 60 * 1000); // 10 minutes
-
-    if (shouldCheckServer) {
-      const serverValid = await this.validateWithServer(sessionId, token);
-      localStorage.setItem('demo-last-server-check', now.toString());
-      
-      if (!serverValid) {
-        console.warn('🎭 Demo session invalid on server - ending session');
-        this.endDemoSession();
-        return { isValid: false, remainingTime: 0 };
-      }
     }
 
     const remainingHours = Math.floor(remainingTime / (60 * 60 * 1000));
@@ -202,32 +146,15 @@ export class DemoSessionManager {
       isValid: true, 
       remainingTime,
       sessionId,
-      serverValidated: true
+      serverValidated: false // No server validation for now
     };
   }
 
   /**
    * End demo session and clean up
    */
-  static async endDemoSession(): Promise<void> {
+  static endDemoSession(): void {
     if (typeof window === 'undefined') return;
-    
-    const sessionId = localStorage.getItem(this.DEMO_SESSION_ID_KEY);
-    
-    // Notify server of session end (best effort)
-    if (sessionId) {
-      try {
-        await fetch('/api/demo/end', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ sessionId }),
-        });
-      } catch {
-        // Ignore errors - session will expire on server anyway
-      }
-    }
     
     // Clear all local storage
     localStorage.removeItem(this.DEMO_MODE_KEY);
@@ -236,6 +163,8 @@ export class DemoSessionManager {
     localStorage.removeItem(this.DEMO_TOKEN_KEY);
     localStorage.removeItem('demo-last-server-check');
     localStorage.removeItem('user-data');
+    localStorage.removeItem('auth-token');
+    localStorage.removeItem('demo-api-keys');
     
     // Clear periodic check interval
     if (this.periodicCheckInterval) {
@@ -252,8 +181,8 @@ export class DemoSessionManager {
   /**
    * Get remaining time as formatted string
    */
-  static async getRemainingTimeString(): Promise<string> {
-    const sessionInfo = await this.checkDemoSession();
+  static getRemainingTimeString(): string {
+    const sessionInfo = this.checkDemoSession();
     if (sessionInfo.remainingTime <= 0) return 'Expired';
 
     const hours = Math.floor(sessionInfo.remainingTime / (60 * 60 * 1000));
@@ -286,31 +215,14 @@ export class DemoSessionManager {
     }
 
     // Check every 5 minutes
-    this.periodicCheckInterval = setInterval(async () => {
+    this.periodicCheckInterval = setInterval(() => {
       if (this.isDemoMode()) {
-        const sessionInfo = await this.checkDemoSession();
+        const sessionInfo = this.checkDemoSession();
         if (!sessionInfo.isValid) {
           this.endDemoSession();
         }
       }
     }, 5 * 60 * 1000);
-  }
-
-  /**
-   * Force server validation of current session
-   */
-  static async forceServerValidation(): Promise<boolean> {
-    const sessionId = localStorage.getItem(this.DEMO_SESSION_ID_KEY);
-    const token = localStorage.getItem(this.DEMO_TOKEN_KEY);
-
-    if (!sessionId || !token) return false;
-
-    const isValid = await this.validateWithServer(sessionId, token);
-    if (!isValid) {
-      this.endDemoSession();
-    }
-
-    return isValid;
   }
 }
 
