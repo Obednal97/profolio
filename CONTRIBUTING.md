@@ -410,7 +410,6 @@ profolio/
 │   ├── features/        # Feature-specific guides
 │   └── deployment/      # Deployment guides
 ├── policies/            # Legal compliance documents
-├── scripts/             # Utility scripts
 ├── install-or-update.sh # Main installer script
 └── www/                 # Landing page and assets
 ```

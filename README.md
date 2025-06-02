@@ -124,7 +124,7 @@ tar -czf profolio-offline.tar.gz profolio/
 # Transfer to offline machine and extract
 tar -xzf profolio-offline.tar.gz
 cd profolio
-sudo ./scripts/offline-install.sh
+sudo ./install-or-update.sh
 ```
 
 ---
