@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.2.3] - 2025-01-02
+
+### 🐛 **Bug Fixes**
+- **FIXED**: MDX Components TypeScript errors in `mdx-components.tsx`
+- **FIXED**: Corrected import path from `'mdx/types'` to proper MDX v3 compatibility
+- **IMPROVED**: Added proper TypeScript type annotations for all MDX component props
+- **ENHANCED**: 24 TypeScript compilation errors resolved for better development experience
+
+### 🔧 **Technical Improvements**
+- **TypeScript Safety**: All MDX components now have proper `React.ReactNode` type annotations
+- **MDX v3 Compatibility**: Updated component definitions to work with current MDX version
+- **Developer Experience**: Cleaner compilation with properly typed MDX components
+- **Code Quality**: Enhanced type safety for all HTML element overrides in MDX
+
+### 📚 **Documentation Components**
+- **Policy Pages**: All policy hub MDX pages now compile without TypeScript errors
+- **Content Rendering**: Improved reliability of MDX content compilation
+- **Type Safety**: Better IntelliSense and autocomplete for MDX component development
+
 ## [v1.2.2] - 2025-01-02
 
 ### 🏠 **MAJOR: Proxmox LXC Container Support**
