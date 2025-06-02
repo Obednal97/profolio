@@ -51,11 +51,24 @@ Each release notes file contains:
 - **Release Notes**: [v1.3.0](./v1/v1.3/RELEASE_NOTES_v1.3.0.md)
 - **GitHub Release**: [v1.3.0 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.3.0)
 
-### Previous Stable: v1.2.3
-- **Released**: 2025-01-02
-- **Highlights**: MDX Components TypeScript fixes, development experience improvements
-- **Release Notes**: [v1.2.3](./v1/v1.2/RELEASE_NOTES_v1.2.3.md)
-- **GitHub Release**: [v1.2.3 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.2.3)
+### Previous Stable: v1.2.1
+- **Released**: 2024-12-15
+- **Highlights**: Proxmox LXC container support, environment preservation system
+- **Release Notes**: [v1.2.1](./v1/v1.2/RELEASE_NOTES_v1.2.1.md)
+- **GitHub Release**: [v1.2.1 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.2.1)
+
+## 📝 Version History Notes
+
+Some release notes may be missing for certain versions due to:
+- Early development releases (v1.0.0, v1.0.1) before formal documentation
+- Hotfix releases that were superseded quickly
+- Internal testing versions
+
+Available version series:
+- **v1.0.x**: v1.0.2 through v1.0.11 (with some gaps)
+- **v1.1.x**: v1.1.0
+- **v1.2.x**: v1.2.0, v1.2.1
+- **v1.3.x**: v1.3.0 (current)
 
 ## 🔍 Finding Release Notes
 
