@@ -69,9 +69,9 @@ export class YahooFinanceService {
         if (response.status === 429) {
           this.logger.warn(`Rate limited on attempt ${attempt}/${retries} for ${url}`);
           if (attempt < retries) {
-            // Exponential backoff for rate limits: 2s, 4s, 8s
-            const delay = Math.pow(2, attempt) * 1000;
-            this.logger.debug(`Waiting ${delay}ms before retry due to rate limit`);
+            // Align with PriceSync minimum delay: 5s, 10s, 20s
+            const delay = Math.min(5000 * Math.pow(2, attempt - 1), 20000);
+            this.logger.debug(`Waiting ${delay}ms before retry due to rate limit (aligned with PriceSync)`);
             await new Promise(resolve => setTimeout(resolve, delay));
             continue;
           }
@@ -90,8 +90,9 @@ export class YahooFinanceService {
           throw error;
         }
         
-        // Standard exponential backoff with jitter for other errors
-        const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
+        // Standard exponential backoff aligned with minimum 5s requirement
+        const delay = Math.min(5000 * Math.pow(2, attempt - 1), 15000);
+        this.logger.debug(`Waiting ${delay}ms before retry (standard backoff)`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -161,9 +162,9 @@ export class YahooFinanceService {
   async getMultipleQuotes(symbols: string[]): Promise<Map<string, PriceData>> {
     const results = new Map<string, PriceData>();
     
-    this.logger.log(`Fetching quotes for ${symbols.length} symbols with 5-second delays (tested optimal rate)`);
+    this.logger.log(`Fetching quotes for ${symbols.length} symbols with 5-second delays (aligned with PriceSync)`);
     
-    // Process symbols one by one with 5-second delays as proven by testing
+    // Process symbols one by one with 5-second delays as aligned with PriceSync service
     for (const symbol of symbols) {
       try {
         const price = await this.getCurrentPrice(symbol);
@@ -177,9 +178,9 @@ export class YahooFinanceService {
         this.logger.error(`❌ Failed to fetch ${symbol}:`, error);
       }
       
-      // 5-second delay between requests as proven optimal by testing
+      // 5-second delay between requests (aligned with PriceSync minimum)
       if (symbols.indexOf(symbol) < symbols.length - 1) {
-        this.logger.debug(`Waiting 5 seconds before next request (optimal tested rate)`);
+        this.logger.debug(`Waiting 5 seconds before next request (aligned with PriceSync)`);
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }

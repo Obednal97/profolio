@@ -22,6 +22,7 @@ model User {
   liabilities Liability[]
   properties  Property[]
   settings    Settings?
+  notifications Notification[]
 }
 
 model Asset {
@@ -244,6 +245,26 @@ model Property {
   @@index([purchaseDate])
 }
 
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?            // Additional metadata
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  priority  NotificationPriority @default(NORMAL)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @default(now()) @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([type, isRead])
+}
+
 model Symbol {
   id            String      @id @default(uuid())
   symbol        String      @unique
@@ -330,4 +351,22 @@ model SymbolQueue {
   
   @@index([status, priority])
   @@index([created_at])
+}
+
+enum NotificationType {
+  SYSTEM_UPDATE
+  ASSET_SYNC
+  MARKET_ALERT
+  ACCOUNT_ACTIVITY
+  EXPENSE_REMINDER
+  PROPERTY_UPDATE
+  API_KEY_EXPIRY
+  GENERAL
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }

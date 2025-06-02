@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from "
 import { usePathname } from "next/navigation";
 import { HeaderLayout as Header } from "@/components/layout/headerLayout";
 import { FooterLayout as Footer } from "@/components/layout/footerLayout";
+import DemoModeBanner from "@/components/layout/DemoModeBanner";
 import { useAuth } from "@/lib/unifiedAuth";
 
 interface LayoutWrapperProps {
@@ -203,6 +204,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <AppContext.Provider value={appValue}>
       <>
+        {/* Demo Mode Banner - appears above header when in demo mode */}
+        {isDemoMode && !hideLayout && <DemoModeBanner />}
+        
         {!hideLayout && <Header user={headerUser} currentPath={pathname} />}
         <main className="relative z-10">
           {children}

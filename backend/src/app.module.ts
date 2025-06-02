@@ -8,6 +8,8 @@ import { AssetsModule } from '@/app/api/assets/assets.module';
 import { ApiKeysModule } from '@/app/api/api-keys/api-keys.module';
 import { MarketDataModule } from '@/app/api/market-data/market-data.module';
 import { AuthModule } from '@/app/api/auth/auth.module';
+import { UpdatesModule } from './updates/updates.module';
+import { NotificationsModule } from '@/app/api/notifications/notifications.module';
 
 @Module({
     imports: [
@@ -19,6 +21,8 @@ import { AuthModule } from '@/app/api/auth/auth.module';
         AssetsModule,
         ApiKeysModule,
         MarketDataModule,
+        UpdatesModule,
+        NotificationsModule,
     ],
     providers: [PrismaService],
     exports: [PrismaService],

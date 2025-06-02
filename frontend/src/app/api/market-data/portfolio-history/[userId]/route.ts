@@ -5,12 +5,13 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
     const days = searchParams.get('days') || '30';
-    const userId = params.userId;
+    const resolvedParams = await params;
+    const userId = resolvedParams.userId;
 
     // Check if user is in demo mode
     const isDemoMode = request.headers.get('x-demo-mode') === 'true' ||

@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0] - 2025-02-06
+
+### ✨ **New Features**
+- **🔔 Notification Badge on User Menu**: Added notification count badge to user avatar button for instant visibility
+- **🎭 Demo Mode Banner**: Orange-to-red gradient banner above header with signup CTA for demo users
+- **🔄 Auto-Updates Toggle**: Smart self-hosted detection with interactive toggle for automatic updates
+- **📱 Enhanced User Experience**: Notification badges now visible on both closed and open user menu states
+
+### 🐛 **Critical Bug Fixes**
+- **🚨 FIXED: Next.js 15+ Dynamic Route Parameters**: Resolved `params.symbol` async errors in API routes
+  - Fixed `/api/integrations/symbols/cached-price/[symbol]/route.ts`
+  - Fixed `/api/market-data/portfolio-history/[userId]/route.ts`
+- **⏱️ FIXED: Yahoo Finance Rate Limiting Inconsistency**: Aligned retry timing across all services
+  - Updated YahooFinanceService retries from 2s/4s/8s to 5s/10s/20s
+  - Synchronized with PriceSyncService minimum 5-second delays
+  - Eliminated timing conflicts causing price sync failures
+- **📊 FIXED: Updates Page Layout Issues**: Resolved sidebar positioning and viewport calculations
+  - Added `max-h-96` constraint to Releases section
+  - Fixed System Info positioning with `flex-shrink-0`
+  - Reduced gaps and padding for better space utilization
+
+### 🎨 **UI/UX Improvements**
+- **🔔 Notifications Page Refinement**: Simplified interface based on user feedback
+  - Removed statistics cards (Total, Read, Unread counts)
+  - Changed "Clear Read" to "Mark All as Read" with blue styling
+  - Streamlined layout focusing on notification filtering
+- **⚙️ System Info Enhancement**: Changed icon from Clock to Settings for better clarity
+- **📱 Demo Mode UX**: Dismissible banner with responsive design for mobile/desktop
+- **🎯 Notification Visibility**: Count badges now show on both avatar and dropdown menu items
+
+### 🔧 **Technical Improvements**
+- **🏠 Smart Self-Hosted Detection**: Automatic hostname checking for localhost, 127.0.0.1, and .local domains
+- **💾 Settings Persistence**: Auto-updates preference stored in localStorage with backend integration ready
+- **🎭 Demo Mode Management**: Enhanced DemoSessionManager with proper banner display logic
+- **🔄 Unified Rate Limiting**: Consistent 5-second minimum delays across all Yahoo Finance operations
+- **⚡ Service Reliability**: Improved price sync success rates with aligned timing strategies
+
+### 🛡️ **Security & Compatibility**
+- **📱 Next.js 15+ Compatibility**: Updated dynamic route parameter handling for latest Next.js requirements
+- **🔒 Cross-Deployment Support**: Notification system works consistently across cloud and self-hosted modes
+- **🎯 User Isolation**: Proper notification badge display based on user authentication state
+- **🔐 Demo Mode Security**: Secure banner display only for authenticated demo sessions
+
+### 📚 **Documentation**
+- **🔧 Environment Mode Switching**: Comprehensive `.env.local` configuration guide
+- **🏠 Self-Hosted Auto-Updates**: Documentation for auto-update toggle functionality
+- **🎭 Demo Mode Features**: Complete guide for demo mode banner and user experience
+- **📱 Notification System**: Documentation for badge placement and user interaction patterns
+
+### 🚀 **Performance**
+- **⚡ Reduced API Conflicts**: Eliminated timing inconsistencies in market data fetching
+- **🎯 Optimized Price Sync**: Better success rates with unified rate limiting approach
+- **📱 Efficient Notifications**: Streamlined notification loading and badge updates
+- **🔄 Smart Updates**: Conditional auto-updates only for self-hosted deployments
+
+### 🔄 **Migration & Compatibility**
+- **✅ Backward Compatible**: All changes maintain existing functionality
+- **🔧 Environment Detection**: Automatic mode detection without configuration changes
+- **📱 Progressive Enhancement**: New features gracefully degrade for older browsers
+- **🎯 Zero Breaking Changes**: Existing installations continue working without modifications
+
 ## [v1.2.3] - 2025-01-02
 
 ### 🐛 **Bug Fixes**

@@ -29,6 +29,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     // Only redirect if not loading and no user and not in demo mode
     if (!loading && !user && !isDemoMode) {
+      // Redirect to sign-in page where user can choose demo mode
       router.push('/auth/signIn');
     }
   }, [user, loading, isDemoMode, router]);

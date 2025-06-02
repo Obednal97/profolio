@@ -31,7 +31,7 @@ function getUserFromToken(request: NextRequest) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { symbol: string } }
+  { params }: { params: Promise<{ symbol: string }> }
 ) {
   try {
     const user = getUserFromToken(request);
@@ -40,7 +40,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const symbol = params.symbol?.toUpperCase();
+    const resolvedParams = await params;
+    const symbol = resolvedParams.symbol?.toUpperCase();
 
     if (!symbol) {
       return NextResponse.json({ 
@@ -95,8 +96,9 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching cached price:', error);
     
+    const resolvedParams = await params;
     return NextResponse.json({
-      symbol: params.symbol?.toUpperCase() || 'UNKNOWN',
+      symbol: resolvedParams.symbol?.toUpperCase() || 'UNKNOWN',
       price: null,
       error: 'Failed to fetch cached price'
     });

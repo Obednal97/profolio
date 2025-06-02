@@ -4,22 +4,20 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTheme } from "@/providers/theme-provider";
 import { useAuth } from "@/lib/unifiedAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface UserMenuProps {
   user?: {
     name?: string;
     email?: string;
   };
-  unreadNotifications?: number;
 }
 
-export default function UserMenu({
-  user,
-  unreadNotifications = 0,
-}: UserMenuProps) {
+export default function UserMenu({ user }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const handleSignOut = async () => {
     try {
@@ -34,6 +32,7 @@ export default function UserMenu({
 
   const profileMenuItems = [
     { label: "Account Settings", path: "/app/settings", icon: "fa-cog", action: null },
+    { label: "System Updates", path: "/app/updates", icon: "fa-download", action: null },
     { label: "Notifications", path: "/app/notifications", icon: "fa-bell", action: null },
     { label: "Sign Out", path: null, icon: "fa-sign-out-alt", action: handleSignOut },
   ];
@@ -63,28 +62,21 @@ export default function UserMenu({
 
       {user ? (
         <>
-          <button
-            className="relative w-10 h-10 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all touch-manipulation"
-            onClick={() => (window.location.href = "/notifications")}
-            title="Notifications"
-            aria-label="Notifications"
-          >
-            <i className="fas fa-bell text-lg"></i>
-            {unreadNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                {unreadNotifications > 99 ? '99+' : unreadNotifications}
-              </span>
-            )}
-          </button>
-
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center space-x-2 px-2 sm:px-3 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all touch-manipulation"
               aria-label="User menu"
             >
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
-                {user?.name?.charAt(0) || "?"}
+              <div className="relative">
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
+                  {user?.name?.charAt(0) || "?"}
+                </div>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-gray-800">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </div>
               <span className="hidden sm:inline text-sm font-medium">{user?.name}</span>
               <i className={`fas fa-chevron-${isProfileOpen ? 'up' : 'down'} text-xs transition-transform`}></i>
@@ -109,10 +101,15 @@ export default function UserMenu({
                         key={item.path}
                         href={item.path}
                         onClick={() => setIsProfileOpen(false)}
-                        className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                        className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation relative"
                       >
                         <i className={`fas ${item.icon} mr-3 w-4`}></i>
                         {item.label}
+                        {item.path === "/app/notifications" && unreadCount > 0 && (
+                          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
                       </Link>
                     ) : (
                       <button
