@@ -1,45 +1,130 @@
-# Profolio Release Notes
+# Release Notes Directory
 
-This directory contains detailed release notes for each version of Profolio.
+This directory contains comprehensive release notes for all versions of Profolio, organized by major and minor version series.
 
-## 📋 Available Release Notes
+## 📁 Directory Structure
 
-### v1.0.3 - Critical Production Build Fixes
-- **Date**: January 31, 2025
-- **[Release Notes](RELEASE_NOTES_v1.0.3.md)**
-- **Key Features**: Fixed DOMMatrix SSR errors, API route static generation issues, PDF parser SSR problems
+```
+docs/releases/
+└── v1/                         # Major version 1.x.x
+    ├── v1.0/                   # Minor version series 1.0.x
+    │   ├── RELEASE_NOTES_v1.0.0.md
+    │   ├── RELEASE_NOTES_v1.0.1.md
+    │   ├── RELEASE_NOTES_v1.0.2.md
+    │   ├── ...
+    │   └── RELEASE_NOTES_v1.0.12.md
+    ├── v1.1/                   # Minor version series 1.1.x
+    │   └── RELEASE_NOTES_v1.1.0.md
+    ├── v1.2/                   # Minor version series 1.2.x
+    │   ├── RELEASE_NOTES_v1.2.0.md
+    │   ├── RELEASE_NOTES_v1.2.1.md
+    │   └── RELEASE_NOTES_v1.2.3.md
+    └── v1.3/                   # Minor version series 1.3.x
+        └── RELEASE_NOTES_v1.3.0.md
+```
 
-### v1.0.2 - Enhanced Asset Management and Market Data Integration
-- **Date**: January 31, 2025
-- **[Release Notes](RELEASE_NOTES_v1.0.2.md)**
-- **Key Features**: Complete Asset Manager redesign, Dynamic Market Data Widget, Advanced currency precision system
+Future major versions (v2, v3, etc.) will follow the same pattern.
 
-### v1.0.1 - Critical Bug Fixes
-- **Date**: December 29, 2024
-- **[GitHub Release](https://github.com/Obednal97/profolio/releases/tag/v1.0.1)**
-- **Key Features**: Fixed MDX React Context Error, Enhanced installer reliability
+## 🎯 Release Notes Content
 
-### v1.0.0 - Initial Public Release
-- **Date**: December 28, 2024
-- **[GitHub Release](https://github.com/Obednal97/profolio/releases/tag/v1.0.0)**
-- **Key Features**: One-command installation, Professional portfolio management, Real-time market data
+Each release notes file contains:
 
-## 📝 Release Note Format
+- **🎯 Release Highlights** - Key improvements and changes
+- **✨ New Features** - New functionality with clear benefits
+- **🐛 Critical Bug Fixes** - Important fixes with technical details
+- **🎨 UI/UX Improvements** - User experience enhancements
+- **🔧 Technical Improvements** - Under-the-hood improvements
+- **🛡️ Security & Compatibility** - Security and compatibility updates
+- **📚 Documentation** - Documentation changes
+- **🚀 Performance** - Performance improvements
+- **🔄 Migration Guide** - Breaking changes and upgrade steps
+- **📦 Installation & Updates** - Installation commands
+- **🙏 Acknowledgments** - Contributors and community thanks
+- **📊 Release Statistics** - Commit counts, files changed, etc.
+- **🔗 Related Resources** - Links to GitHub, changelog, etc.
 
-Each release note includes:
-- 🚀 **Major Improvements** - New features and enhancements
-- 🐛 **Key Fixes** - Important bug fixes and resolutions
-- 🔒 **Security & Performance** - Security improvements and optimizations
-- 🛠️ **Developer Experience** - Development and maintenance improvements
-- 📦 **What's Included** - Complete list of changes
-- 🔄 **Migration Notes** - Upgrade instructions and considerations
+## 📋 Latest Releases
 
-## 🔗 Related Documentation
+### Current Stable: v1.3.0
+- **Released**: 2025-02-06
+- **Highlights**: Enhanced notification system, demo mode banner, auto-updates toggle, critical fixes
+- **Release Notes**: [v1.3.0](./v1/v1.3/RELEASE_NOTES_v1.3.0.md)
+- **GitHub Release**: [v1.3.0 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.3.0)
 
-- **[Complete Changelog](../../CHANGELOG.md)** - Technical changelog with all changes
-- **[GitHub Releases](https://github.com/Obednal97/profolio/releases)** - Official GitHub releases
-- **[Installation Guide](../../README-INSTALLATION.md)** - How to install or upgrade
+### Previous Stable: v1.2.3
+- **Released**: 2025-01-02
+- **Highlights**: MDX Components TypeScript fixes, development experience improvements
+- **Release Notes**: [v1.2.3](./v1/v1.2/RELEASE_NOTES_v1.2.3.md)
+- **GitHub Release**: [v1.2.3 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.2.3)
+
+## 🔍 Finding Release Notes
+
+### By Version Number
+1. Identify the major version (e.g., `1` in `v1.3.0`)
+2. Navigate to `v1/`
+3. Identify the minor version series (e.g., `v1.3` for `v1.3.0`)
+4. Navigate to `v1.3/`
+5. Open `RELEASE_NOTES_v1.3.0.md`
+
+### By Date or Feature
+- Browse the directory structure chronologically
+- Major versions are organized in order
+- Minor version series within each major version are in order
+- Patch versions within each minor series are in order
+
+## 📖 Version Information
+
+### Semantic Versioning
+Profolio follows [Semantic Versioning](https://semver.org/):
+- **MAJOR.MINOR.PATCH** (e.g., 1.3.0)
+- **MAJOR**: Breaking changes
+- **MINOR**: New features (backward compatible)
+- **PATCH**: Bug fixes (backward compatible)
+
+### Version History Overview
+
+#### v1.3.x Series - Notification & UX Enhancements
+- Enhanced notification system with badges
+- Demo mode improvements
+- Auto-updates for self-hosted deployments
+- Next.js 15+ compatibility
+
+#### v1.2.x Series - Development & Documentation
+- Proxmox LXC container support
+- Environment preservation system
+- Demo mode session management
+- Documentation improvements
+
+#### v1.1.x Series - Authentication System
+- Unified authentication (local + Firebase)
+- Self-hosted and cloud deployment modes
+- Enhanced demo mode
+
+#### v1.0.x Series - Foundation & Stability
+- Initial public release
+- Core portfolio management features
+- Installer system with rollback protection
+- Security improvements
+- Package manager standardization
+
+## 🔗 Related Resources
+
+- **Main Changelog**: [CHANGELOG.md](../../CHANGELOG.md)
+- **GitHub Releases**: [All Releases](https://github.com/Obednal97/profolio/releases)
+- **Installation Guide**: [README.md](../../README.md)
+- **Release Process**: [Release Process Guide](../processes/RELEASE_PROCESS_GUIDE.md)
+- **Contributing**: [CONTRIBUTING.md](../../CONTRIBUTING.md)
+
+## 📝 Contributing to Release Notes
+
+When creating new release notes:
+
+1. Follow the established directory structure
+2. Use the comprehensive template provided in the [Release Process Guide](../processes/RELEASE_PROCESS_GUIDE.md)
+3. Include all required sections
+4. Update this README with the latest release information
+5. Cross-reference with the main CHANGELOG.md
 
 ---
 
-For the latest releases, visit our [GitHub Releases page](https://github.com/Obednal97/profolio/releases). 
+**Questions or Issues?** Please open an issue on [GitHub](https://github.com/Obednal97/profolio/issues) or refer to our [Contributing Guidelines](../../CONTRIBUTING.md). 
