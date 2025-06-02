@@ -46,7 +46,7 @@ Each release notes file contains:
 ## 📋 Latest Releases
 
 ### Current Stable: v1.3.0
-- **Released**: 2025-02-06
+- **Released**: 2025-06-02
 - **Highlights**: Enhanced notification system, demo mode banner, auto-updates toggle, critical fixes
 - **Release Notes**: [v1.3.0](./v1/v1.3/RELEASE_NOTES_v1.3.0.md)
 - **GitHub Release**: [v1.3.0 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.3.0)

@@ -1,6 +1,6 @@
 # Release Notes - v1.3.0
 
-Released: 2025-02-06
+Released: June 2, 2025
 
 ## 🎯 Release Highlights
 

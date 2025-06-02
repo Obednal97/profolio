@@ -290,7 +290,7 @@ export function useUpdates(): UseUpdatesReturn {
 - Better rate limiting synchronization across services
 - Enhanced demo session management
 - Improved documentation organization`,
-        publishedAt: '2025-02-06T10:00:00Z',
+        publishedAt: '2025-06-02T10:00:00Z',
         downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.3.0',
         isLatest: false
       },

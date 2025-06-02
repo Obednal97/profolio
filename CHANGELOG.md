@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v1.4.0] - 2025-02-06
+## [v1.4.0] - 2025-06-02
 
 ### ✨ **New Features**
 - **🔌 Circuit Breaker Pattern**: Advanced circuit breaker implementation for Yahoo Finance API with 3-failure threshold and 5-minute recovery timeout
@@ -77,7 +77,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 
 ---
 
-## [v1.3.0] - 2025-02-06
+## [v1.3.0] - 2025-06-02
 
 ### ✨ **New Features**
 - **🔔 Notification Badge on User Menu**: Added notification count badge to user avatar button for instant visibility
@@ -138,7 +138,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **📱 Progressive Enhancement**: New features gracefully degrade for older browsers
 - **🎯 Zero Breaking Changes**: Existing installations continue working without modifications
 
-## [v1.2.3] - 2025-01-02
+## [v1.2.3] - 2025-06-01
 
 ### 🐛 **Bug Fixes**
 - **FIXED**: MDX Components TypeScript errors in `mdx-components.tsx`
@@ -157,7 +157,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **Content Rendering**: Improved reliability of MDX content compilation
 - **Type Safety**: Better IntelliSense and autocomplete for MDX component development
 
-## [v1.2.2] - 2025-01-02
+## [v1.2.2] - 2025-06-01
 
 ### 🏠 **MAJOR: Proxmox LXC Container Support**
 - **NEW**: Native Proxmox host detection and automatic LXC container creation
@@ -200,7 +200,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
   - Air-gapped/offline installations (existing)
 - **IMPROVED**: Better separation of concerns with dedicated Proxmox handling functions
 
-## [v1.2.1] - 2025-01-02
+## [v1.2.1] - 2025-06-01
 
 ### 🚨 CRITICAL INSTALLER FIX 🚨
 - **🔥 Firebase Authentication Preservation**: Fixed critical issue where installer overwrote environment files during updates
@@ -248,7 +248,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **Technical Details**: File priority, preservation logic, and error handling documentation
 - **Migration Notes**: Guidance for users who experienced previous authentication issues
 
-## [1.2.0] - 2025-01-06
+## [1.2.0] - 2025-06-01
 
 ### Added
 - **🎭 Enhanced Demo Mode**: 24-hour session management with automatic expiration
@@ -301,7 +301,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **✅ Session Security**: Proper time-limited access with automatic cleanup
 - **✅ Production Ready**: Enhanced security for both demo and real user sessions
 
-## [1.1.0] - 2025-01-06
+## [1.1.0] - 2025-06-01
 
 ### Added
 - **🎯 Unified Authentication System**: Support for both self-hosted and cloud authentication modes
@@ -351,7 +351,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **✅ Backward Compatible**: Existing Firebase installations continue to work
 - **✅ Future-Proof**: Foundation for both open source and SaaS business models
 
-## [1.0.12] - 2025-02-01
+## [1.0.12] - 2025-06-01
 
 ### Fixed
 - **CRITICAL: Installer Git Strategy**: Fixed divergent branches issue preventing updates after security fixes
@@ -370,7 +370,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **Git History Cleanup**: Installer compatible with security-driven history rewrites
 - **User Experience**: Smooth updates without manual git configuration
 
-## [1.0.11] - 2025-02-01
+## [1.0.11] - 2025-06-01
 
 ### Added
 - **Configuration Guide**: Comprehensive `CONFIGURATION_GUIDE.md` with setup instructions
@@ -401,7 +401,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **Firebase Best Practices**: Standard Firebase web app configuration patterns
 - **Environment Management**: Proper development vs production configuration handling
 
-## [1.0.10] - 2025-02-01
+## [1.0.10] - 2025-06-01
 
 ### 🚨 CRITICAL SECURITY FIX 🚨
 - **BREAKING**: Complete removal of exposed Firebase API keys from repository and git history
@@ -431,10 +431,10 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 2. **Update Configuration**: Create `firebase-config.json` from template with new key
 3. **Review Firebase Logs**: Check for any unauthorized usage during exposure period
 
-**Exposure Period**: May 29, 2025 - February 1, 2025 (approximately 2 months)
+**Exposure Period**: April 1, 2025 - June 1, 2025 (approximately 2 months)
 **GitGuardian Alerts**: Resolved - Google API Key and Generic High Entropy Secret
 
-## [1.0.9] - 2025-02-01
+## [1.0.9] - 2025-05-31
 
 ### Fixed
 - **Backend Compilation Errors**: Resolved TypeScript compilation issues after pnpm migration
@@ -454,7 +454,7 @@ Special thanks to our enterprise-grade development standards that enabled rapid 
 - **Faster Backend Startup**: Improved compilation and initialization times
 - **Efficient Dependencies**: pnpm's optimized dependency resolution in effect
 
-## [1.0.8] - 2025-02-01
+## [1.0.8] - 2025-05-31
 
 ### Added
 - **Package Manager Standardization**: Standardized on pnpm across all projects for improved performance

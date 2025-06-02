@@ -121,7 +121,7 @@ grep -h '"version"' package.json backend/package.json frontend/package.json
 Use this format for changelog entries:
 
 ```markdown
-## [v1.3.0] - 2025-02-06
+## [v1.3.0] - 2025-06-02
 
 ### ✨ **New Features**
 - **🔔 Feature Name**: Brief description with impact

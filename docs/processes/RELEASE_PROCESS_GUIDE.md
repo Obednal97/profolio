@@ -47,7 +47,7 @@ grep -h '"version"' package.json backend/package.json frontend/package.json
 Add new section at the top of the changelog using our standard format:
 
 ```markdown
-## [v1.3.0] - 2025-02-06
+## [v1.3.0] - 2025-06-02
 
 ### ✨ **New Features**
 - **🔔 Notification Badge System**: Added notification count badge to user avatar button for instant visibility

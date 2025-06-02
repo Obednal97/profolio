@@ -1,6 +1,6 @@
 # Release Notes - v1.4.0
 
-**Released**: February 6, 2025  
+**Released**: June 2, 2025  
 **Type**: Minor Release with Critical Production Fixes  
 **Stability**: Enterprise Production Ready
 
@@ -354,7 +354,7 @@ curl http://localhost:3001/api/market-data/health
 {
   "healthy": true,
   "circuitBreakerOpen": false,
-  "lastSync": "2025-02-06T21:30:00.000Z"
+  "lastSync": "2025-06-02T21:30:00.000Z"
 }
 ```
 
