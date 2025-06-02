@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1] - 2025-06-02
+
+### 🐛 **Bug Fixes**
+- **🗓️ FIXED: Date Format Inconsistencies**: Corrected US/UK date format confusion throughout documentation
+- **📅 FIXED: Hardcoded Date in useUpdates.ts**: Fixed mock release date from '2025-02-06' to '2025-06-02'
+- **📝 FIXED: Release Notes Date Formats**: Standardized all release documentation to use UK date standards
+- **🕒 FIXED: Historical Release Dates**: Corrected chronological accuracy of older release dates in changelog
+
+### 📚 **Documentation**
+- **📋 NEW: Release Notes Template**: Added comprehensive template (`docs/processes/RELEASE_NOTES_TEMPLATE.md`)
+- **🎯 Date Format Standards**: Established clear guidelines to prevent future UK/US date confusion
+- **✅ Template Instructions**: Detailed instructions for consistent release documentation
+- **📖 Process Improvement**: Enhanced release process with standardized date formatting
+
+### 🔧 **Technical Improvements**
+- **📍 Consistent ISO Timestamps**: All technical timestamps now use 2025-06-02 format
+- **📝 Text Date Format**: Human-readable dates use "June 2, 2025" format consistently
+- **🔍 Documentation Review**: Comprehensive codebase review for date format consistency
+- **🎨 Template Standardization**: Future-proof release notes generation with clear examples
+
+### 🛡️ **Quality Assurance**
+- **✅ Comprehensive Review**: Searched entire codebase for date format inconsistencies
+- **📋 Prevention Measures**: Template includes explicit date format guidelines
+- **🔧 Developer Guidelines**: Clear instructions for maintaining date format consistency
+- **📚 Historical Accuracy**: Corrected timeline documentation for better project history
+
+### 📦 **Impact**
+- **Zero Breaking Changes**: All corrections maintain full backward compatibility
+- **Enhanced Clarity**: Eliminates confusion between UK and US date formats
+- **Future Prevention**: Template system prevents recurring date format issues
+- **Historical Accuracy**: Improved project timeline documentation and release history
+
 ## [v1.4.0] - 2025-06-02
 
 ### ✨ **New Features**
