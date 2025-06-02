@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.5.0] - 2025-06-02
+
+### 🔧 Improvements
+#### Technical
+- **Documentation Architecture**: Completely rewrote README.md and SECURITY.md for self-hosted focus
+- **Code Optimization**: Removed redundant scripts directory and outdated setup scripts
+- **Installation Optimization**: Enhanced installer size optimization (~500KB footprint)
+- **Documentation Standards**: Applied consistent template formats across all documentation
+
+#### UI/UX  
+- **Self-Hosted Positioning**: Clear value proposition for privacy-conscious users and enterprises
+- **Business Model Alignment**: Strategic guidance toward cloud solutions for complex deployments
+- **Professional Presentation**: Enterprise-grade documentation matching security capabilities
+
+#### Security
+- **Security Documentation**: Comprehensive enterprise security architecture documentation
+- **Vulnerability Reporting**: Updated responsible disclosure process with improved timelines
+- **Compliance Documentation**: Added GDPR, ISO 27001, SOC 2, and NIST framework alignment
+- **Best Practices**: Detailed security checklists and configuration examples
+
+### 📊 Summary
+- **Files Changed**: 8 files modified, 1 directory removed
+- **Documentation**: 2 major rewrites (README.md, SECURITY.md)
+- **Code Optimization**: Removed 258 lines of redundant code
+- **Target Audience**: Enhanced focus on self-hosted users with cloud upgrade path
+
 ## [v1.4.1] - 2025-06-02
 
 ### 🐛 Bug Fixes
