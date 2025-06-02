@@ -75,8 +75,8 @@ export default function AssetManager() {
       };
     } else if (isDemoMode) {
       return {
-        id: 'demo-user-id',
-        name: 'Demo User',
+    id: 'demo-user-id',
+    name: 'Demo User',
         email: 'demo@profolio.com',
       };
     }
@@ -97,7 +97,7 @@ export default function AssetManager() {
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
-      
+
       const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -222,8 +222,8 @@ export default function AssetManager() {
       console.log(`📊 Using fallback data due to API error: ${error}`);
     } finally {
       if (!controller.signal.aborted) {
-        setChartLoading(false);
-      }
+      setChartLoading(false);
+    }
     }
   }, [timeframe, currentUser?.id, assets, token, isDemoMode, cleanupChartRequest]);
 
@@ -446,7 +446,7 @@ export default function AssetManager() {
                       <div className="flex items-center">
                         <div className={`p-2 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 flex-shrink-0`}>
                           <i className={`fas ${iconClass} text-white text-sm`}></i>
-                        </div>
+            </div>
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{asset.name}</div>
                         </div>
@@ -600,12 +600,12 @@ export default function AssetManager() {
 
           <div className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 dark:hover:border-${totalGainLoss >= 0 ? 'green' : 'red'}-400 transition-all duration-200`}>
             <div className="flex justify-between items-start">
-              <div>
+          <div>
                 <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Total Gain/Loss</p>
                 <p className={`text-2xl sm:text-3xl font-bold mt-1 ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {totalGainLoss >= 0 ? '+' : ''}{FinancialCalculator.formatCurrency(totalGainLoss)}
-                </p>
-              </div>
+            </p>
+          </div>
               <div className={`p-2 sm:p-3 ${totalGainLoss >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}>
                 <i className={`fas fa-chart-line ${totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'} text-lg sm:text-xl`}></i>
               </div>
@@ -792,14 +792,14 @@ export default function AssetManager() {
             >
               {viewMode === "grid" ? (
                 filteredAssets.map((asset) => (
-                  <AssetCard
-                    key={asset.id}
-                    asset={asset}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
                     config={assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other}
                     getCryptoIcon={getCryptoIcon}
-                  />
+              />
                 ))
               ) : viewMode === "list" ? (
                 filteredAssets.map((asset) => (

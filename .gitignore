@@ -58,7 +58,7 @@ jspm_packages/
 *.swo
 *~
 
-# OS generated files
+# OS generated files (Mac/Windows)
 .DS_Store
 .DS_Store?
 ._*

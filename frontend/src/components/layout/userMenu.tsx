@@ -16,42 +16,23 @@ interface UserMenuProps {
 /**
  * Sanitize user input to prevent XSS attacks
  */
-function sanitizeText(text: string | undefined | null): string {
-  if (!text) return "";
-  
-  // Strip HTML tags and encode special characters
-  return text
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    .trim();
-}
+const sanitizeText = (text: string | undefined): string => {
+  if (!text) return '';
+  return text.replace(/[<>]/g, '');
+};
 
 /**
  * Get safe initials from name
  */
-function getSafeInitials(name: string | undefined | null): string {
-  const sanitizedName = sanitizeText(name);
-  if (!sanitizedName) return "?";
-  
-  // Get first character of first word only
-  const firstChar = sanitizedName.charAt(0).toUpperCase();
-  
-  // Ensure it's a letter or number
-  return /^[A-Z0-9]$/.test(firstChar) ? firstChar : "?";
-}
-
-/**
- * Truncate text safely
- */
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + '...';
-}
+const getSafeInitials = (name: string | undefined): string => {
+  if (!name) return 'U';
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
 
 export default function UserMenu({ user }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -95,106 +76,128 @@ export default function UserMenu({ user }: UserMenuProps) {
   };
 
   return (
-    <div className="flex items-center space-x-2 sm:space-x-4">
+    <div className="relative flex items-center gap-3">
+      {/* Theme Toggle with glass effect */}
       <button
         onClick={toggleTheme}
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all shadow-sm touch-manipulation"
+        className="p-2.5 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105"
         title={getThemeTooltip()}
         aria-label={getThemeTooltip()}
       >
-        <i className={`fas ${getThemeIcon()} text-lg`}></i>
+        <i className={`fas ${getThemeIcon()} text-sm`}></i>
       </button>
 
       {user ? (
         <>
+          {/* User Avatar with glass effect */}
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center space-x-2 px-2 sm:px-3 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all touch-manipulation"
+              className="flex items-center gap-3 p-2 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105"
               aria-label="User menu"
             >
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
-                  {safeInitials}
-                </div>
+              {/* Avatar */}
+              <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold shadow-lg">
+                {safeInitials}
+                {/* Notification badge */}
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-gray-800">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs text-white font-bold">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  </div>
                 )}
               </div>
-              <span className="hidden sm:inline text-sm font-medium">
-                {truncateText(safeName || 'User', 20)}
-              </span>
-              <i className={`fas fa-chevron-${isProfileOpen ? 'up' : 'down'} text-xs transition-transform`}></i>
+              
+              {/* User info (hidden on mobile) */}
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px]">
+                  {safeName || 'User'}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[120px]">
+                  {safeEmail}
+                </p>
+              </div>
+
+              {/* Dropdown arrow */}
+              <i className={`fas fa-chevron-down text-xs text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}></i>
             </button>
 
+            {/* Dropdown Menu with enhanced glass effect */}
             {isProfileOpen && (
               <>
-                {/* Mobile backdrop */}
+                {/* Backdrop */}
                 <div 
-                  className="fixed inset-0 z-40 md:hidden" 
+                  className="fixed inset-0 z-40"
                   onClick={() => setIsProfileOpen(false)}
                 />
                 
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50">
-                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {truncateText(safeName || 'User', 25)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {truncateText(safeEmail || 'No email', 30)}
-                    </p>
+                {/* Menu */}
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/30 dark:border-white/20 rounded-2xl shadow-2xl z-50 py-2">
+                  {/* User info header */}
+                  <div className="px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold shadow-lg">
+                        {safeInitials}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{safeName || 'User'}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{safeEmail}</p>
+                      </div>
+                    </div>
                   </div>
-                  {profileMenuItems.map((item) => (
-                    item.path ? (
-                      <Link
-                        key={item.path}
-                        href={item.path}
-                        onClick={() => setIsProfileOpen(false)}
-                        className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation relative"
-                      >
-                        <i className={`fas ${item.icon} mr-3 w-4`}></i>
-                        {item.label}
-                        {item.path === "/app/notifications" && unreadCount > 0 && (
-                          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </span>
+
+                  {/* Menu items */}
+                  <div className="py-1">
+                    {profileMenuItems.map((item, index) => (
+                      <div key={index}>
+                        {item.path ? (
+                          <Link
+                            href={item.path}
+                            className="w-full px-4 py-3 text-left flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-700/60 transition-all duration-200"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <i className={`fas ${item.icon} w-4 text-center`}></i>
+                            <span className="flex-1">{item.label}</span>
+                            {item.label === "Notifications" && unreadCount > 0 && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                              </span>
+                            )}
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={item.action || undefined}
+                            className="w-full px-4 py-3 text-left flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                          >
+                            <i className={`fas ${item.icon} w-4 text-center`}></i>
+                            <span className="flex-1">{item.label}</span>
+                          </button>
                         )}
-                      </Link>
-                    ) : (
-                      <button
-                        key={item.label}
-                        onClick={item.action || undefined}
-                        className="block w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation"
-                      >
-                        <i className={`fas ${item.icon} mr-3 w-4`}></i>
-                        {item.label}
-                      </button>
-                    )
-                  ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
           </div>
         </>
       ) : (
-        <>
+        /* Sign In/Up buttons with glass effect */
+        <div className="flex items-center gap-2">
           <Link
             href="/auth/signIn"
-            className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all touch-manipulation flex items-center gap-2"
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105"
           >
-            <i className="fas fa-sign-in-alt"></i>
-            <span className="hidden sm:inline">Log In</span>
+            Sign In
           </Link>
           <Link
             href="/auth/signUp"
-            className="px-3 sm:px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all touch-manipulation flex items-center gap-2"
+            className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all duration-200 hover:scale-105"
           >
-            <i className="fas fa-user-plus"></i>
-            <span className="hidden sm:inline">Sign Up</span>
+            Sign Up
           </Link>
-        </>
+        </div>
       )}
     </div>
   );

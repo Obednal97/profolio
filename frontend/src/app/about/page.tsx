@@ -3,254 +3,406 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button/button';
 import Link from 'next/link';
+import { useMemo } from 'react';
+
+const container = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.2,
+    },
+  },
+};
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 40 },
+  hidden: { opacity: 0, y: 60 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.8,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  },
+};
+
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 1,
       ease: 'easeOut',
     },
   },
 };
 
-const staggerChildren = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.15,
-    },
-  },
-};
-
-const VALUES = [
-  {
-    icon: 'fa-shield-alt',
-    title: 'Privacy First',
-    description: 'Your financial data stays yours. Self-host or use our encrypted cloud — you maintain complete control.',
-  },
-  {
-    icon: 'fa-puzzle-piece',
-    title: 'Modular Design',
-    description: 'Built to adapt to your needs. Add features, integrate tools, and customize your experience.',
-  },
-  {
-    icon: 'fa-chart-line',
-    title: 'Real Complexity',
-    description: 'Designed for real portfolios with crypto, equity, real estate, and international assets.',
-  },
-];
-
 export default function AboutPage() {
+  const values = useMemo(() => [
+    {
+      icon: 'fa-shield-alt',
+      title: 'Privacy First',
+      description: 'Your financial data stays yours. Self-host or use our encrypted cloud — you maintain complete control.',
+      gradient: 'from-emerald-500 to-teal-500'
+    },
+    {
+      icon: 'fa-puzzle-piece',
+      title: 'Modular Design',
+      description: 'Built to adapt to your needs. Add features, integrate tools, and customize your experience.',
+      gradient: 'from-blue-500 to-cyan-500'
+    },
+    {
+      icon: 'fa-chart-line',
+      title: 'Real Complexity',
+      description: 'Designed for real portfolios with crypto, equity, real estate, and international assets.',
+      gradient: 'from-purple-500 to-pink-500'
+    },
+  ], []);
+
+  const roadmapItems = useMemo(() => ({
+    comingSoon: [
+      'Automated asset syncing via APIs',
+      'Multi-jurisdictional tax calculations',
+      'Price alerts and portfolio triggers',
+      'CoinGecko & Yahoo Finance integration'
+    ],
+    future: [
+      'Collaboration with accountants & advisors',
+      'Encrypted cloud backups',
+      'Optional managed hosting',
+      'Developer API & plugin system'
+    ]
+  }), []);
+
   return (
-    <main className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        {/* Background gradient - removed since it's now on the section */}
-        
-        {/* Animated blobs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-20 dark:opacity-10 animate-blob" />
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-20 dark:opacity-10 animate-blob animation-delay-2000" />
-        </div>
+    <div className="relative min-h-screen">
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent from-20% via-slate-50/40 to-indigo-100/60 dark:from-transparent dark:from-20% dark:via-slate-800/20 dark:to-indigo-900/30"></div>
 
-        {/* Multi-layer fade for smooth transition */}
-        <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-50 via-gray-50/95 via-gray-50/80 via-gray-50/60 via-gray-50/40 via-gray-50/20 via-gray-50/10 to-transparent dark:from-gray-900 dark:via-gray-900/95 dark:via-gray-900/80 dark:via-gray-900/60 dark:via-gray-900/40 dark:via-gray-900/20 dark:via-gray-900/10 dark:to-transparent" />
-        </div>
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <motion.div 
+          className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-400 to-teal-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
+          animate={{
+            x: [0, 30, -20, 0],
+            y: [0, -20, 30, 0],
+            scale: [1, 1.1, 0.9, 1],
+          }}
+          transition={{
+            duration: 20,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+        />
+        <motion.div 
+          className="absolute top-1/4 -left-40 w-96 h-96 bg-gradient-to-tr from-blue-400 to-indigo-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
+          animate={{
+            x: [0, -40, 20, 0],
+            y: [0, 20, -40, 0],
+            scale: [1, 0.9, 1.1, 1],
+          }}
+          transition={{
+            duration: 25,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: 2,
+          }}
+        />
+        <motion.div 
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400 to-pink-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl"
+          animate={{
+            x: [0, 40, -40, 0],
+            y: [0, -40, 40, 0],
+            scale: [1, 1.2, 0.8, 1],
+          }}
+          transition={{
+            duration: 30,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: 4,
+          }}
+        />
+        <motion.div 
+          className="absolute top-3/4 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-400 to-blue-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
+          animate={{
+            x: [0, 50, -30, 0],
+            y: [0, -30, 50, 0],
+            scale: [1, 1.05, 0.95, 1],
+          }}
+          transition={{
+            duration: 28,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: 6,
+          }}
+        />
+        <motion.div 
+          className="absolute bottom-10 left-1/4 w-80 h-80 bg-gradient-to-tr from-indigo-400 to-purple-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
+          animate={{
+            x: [0, -35, 40, 0],
+            y: [0, 40, -35, 0],
+            scale: [1, 1.15, 0.85, 1],
+          }}
+          transition={{
+            duration: 32,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: 8,
+          }}
+        />
+      </div>
 
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden z-10 pt-20">
         <motion.div
+          className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto text-center"
           initial="hidden"
           animate="visible"
-          variants={staggerChildren}
-          className="relative z-10 px-6 sm:px-12 py-24 max-w-6xl mx-auto"
+          variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-16">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
-              About <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">Profolio</span>
-            </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              A next-generation personal wealth operating system designed for founders, operators, and builders who need more than just spreadsheets.
-            </p>
+          <motion.h1 
+            className="text-6xl sm:text-7xl lg:text-8xl font-black text-gray-900 dark:text-white mb-8 tracking-tight leading-none"
+            variants={fadeUp}
+          >
+            About
+            <br />
+            <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 dark:from-emerald-400 dark:via-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+              Profolio
+            </span>
+          </motion.h1>
+          
+          <motion.p
+            className="text-xl sm:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-16 leading-relaxed font-medium"
+            variants={fadeUp}
+          >
+            A next-generation personal wealth operating system designed for founders, operators, and builders who need more than just spreadsheets.
+          </motion.p>
+
+          <motion.div 
+            className="flex flex-wrap justify-center items-center gap-8 text-sm text-gray-600 dark:text-gray-400"
+            variants={fadeIn}
+          >
+            <div className="flex items-center gap-2">
+              <i className="fas fa-users text-emerald-500"></i>
+              <span>Built by founders</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <i className="fas fa-code-branch text-blue-500"></i>
+              <span>Open source</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <i className="fas fa-lock text-purple-500"></i>
+              <span>Privacy focused</span>
+            </div>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-20 px-6 sm:px-12 bg-gray-50 dark:bg-gray-900">
+      <section className="relative py-32 px-6 sm:px-12 z-10">
         <motion.div
+          className="max-w-7xl mx-auto"
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerChildren}
-          className="max-w-6xl mx-auto"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={container}
         >
-          <motion.h2 
-            variants={fadeUp}
-            className="text-3xl sm:text-4xl font-bold text-center text-gray-900 dark:text-white mb-16"
-          >
-            Built on Core Principles
-          </motion.h2>
+          <motion.div variants={fadeUp} className="text-center mb-20">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+              Built on
+              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Core Principles</span>
+            </h2>
+            <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
+              Every design decision reflects our commitment to privacy, flexibility, and real-world complexity.
+            </p>
+          </motion.div>
+
           <div className="grid md:grid-cols-3 gap-8">
-            {VALUES.map((value, index) => (
+            {values.map((value, index) => (
               <motion.div
                 key={index}
                 variants={fadeUp}
-                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow"
+                className="group relative"
               >
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-6">
-                  <i className={`fas ${value.icon} text-2xl text-white`} />
+                <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
+                  <div className={`w-16 h-16 bg-gradient-to-br ${value.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <i className={`fas ${value.icon} text-2xl text-white`} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                    {value.title}
+                  </h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {value.description}
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {value.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {value.description}
-                </p>
               </motion.div>
             ))}
           </div>
         </motion.div>
       </section>
 
-      {/* Story Section */}
-      <section className="py-20 px-6 sm:px-12 bg-white dark:bg-gray-800">
+      <section className="relative py-32 px-6 sm:px-12 z-10">
         <motion.div
+          className="max-w-4xl mx-auto"
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerChildren}
-          className="max-w-4xl mx-auto"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={container}
         >
-          <motion.div variants={fadeUp} className="prose prose-lg dark:prose-invert max-w-none">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-8">
-              Why We Built Profolio
+          <motion.div variants={fadeUp} className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+              Why
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Profolio</span>
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-              Most personal finance tools are either too simplistic or too invasive. They force you into rigid categories, 
-              harvest your data, or simply can&apos;t handle the complexity of modern wealth — crypto wallets, international 
-              assets, startup equity, and tax optimization across jurisdictions.
+            <p className="text-xl text-gray-700 dark:text-gray-300">
+              The story behind building a better way to manage wealth.
             </p>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-              Profolio is different. We&apos;re building a modular, self-hosted platform that works the way you do. 
-              No subscriptions, no data harvesting, just powerful insights and complete control over your financial life.
-            </p>
-            
-            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mt-12 mb-6">
-              Privacy as a Right, Not a Feature
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-              We believe you shouldn&apos;t have to trust a third party with your complete financial picture just to get 
-              the insights you need. Profolio is designed from the ground up to run on your own server, behind your 
-              own firewall, with your data stored locally or encrypted in the cloud.
-            </p>
+          </motion.div>
 
-            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mt-12 mb-6">
-              Built by Founders, for Founders
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-              I built Profolio because I was frustrated. My financial life didn&apos;t fit in neat boxes: crypto holdings, 
-              a limited company, stock options, international assets, and complex tax situations. No existing tool 
-              helped me see it all clearly.
-            </p>
-            <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-              What started as a personal tool has grown into something bigger. Now, we&apos;re opening it up to anyone 
-              who feels underserved by the current ecosystem.
-            </p>
-            
-            <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-6 mt-12">
-              <p className="text-gray-700 dark:text-gray-300 italic mb-2">
-                &quot;If you&apos;re tired of spreadsheets but wary of giving your data to yet another startup, welcome. 
-                I hope Profolio helps you feel more in control of your money, your future, and your freedom.&quot;
+          <motion.div variants={fadeUp} className="glass-tile p-12 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
+            <div className="space-y-6 text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p>
+                After years of juggling spreadsheets, disparate financial apps, and endless manual updates, 
+                it became clear that existing solutions either lacked the depth needed for complex portfolios 
+                or required surrendering complete control of sensitive financial data.
               </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                — Ollie Bednal, Creator of Profolio
+              
+              <p>
+                Profolio was born from the belief that you shouldn&apos;t have to choose between powerful 
+                functionality and data ownership. Whether you&apos;re tracking crypto across multiple wallets, 
+                managing international real estate, or simply want a unified view of your investments — 
+                you deserve tools that respect both your privacy and your intelligence.
               </p>
+              
+              <p>
+                We&apos;re building for those who understand that true wealth management isn&apos;t just about 
+                tracking numbers — it&apos;s about maintaining sovereignty over your financial future while 
+                having the insights needed to make informed decisions.
+              </p>
+              
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-2xl p-8 mt-12 border border-gray-200/50 dark:border-gray-700/50">
+                <blockquote className="text-xl text-gray-800 dark:text-gray-200 italic mb-4 text-center">
+                  &quot;If you&apos;re tired of spreadsheets but wary of giving your data to yet another startup, welcome. 
+                  I hope Profolio helps you feel more in control of your money, your future, and your freedom.&quot;
+                </blockquote>
+                <cite className="text-gray-600 dark:text-gray-400 text-center block">
+                  — Ollie Bednal, Creator of Profolio
+                </cite>
+              </div>
             </div>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* Roadmap Section */}
-      <section className="py-20 px-6 sm:px-12">
+      <section className="relative py-32 px-6 sm:px-12 z-10">
         <motion.div
+          className="max-w-6xl mx-auto"
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerChildren}
-          className="max-w-6xl mx-auto"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={container}
         >
-          <motion.h2 
-            variants={fadeUp}
-            className="text-3xl sm:text-4xl font-bold text-center text-gray-900 dark:text-white mb-16"
-          >
-            Where We&apos;re Heading
-          </motion.h2>
+          <motion.div variants={fadeUp} className="text-center mb-20">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+              Where We&apos;re
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"> Heading</span>
+            </h2>
+            <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
+              Our roadmap focuses on automation, global tax complexity, and enterprise features.
+            </p>
+          </motion.div>
           
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
-            <motion.div variants={fadeUp} className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                <i className="fas fa-rocket text-blue-500" />
+          <div className="grid md:grid-cols-2 gap-8 mb-16">
+            <motion.div variants={fadeUp} className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                  <i className="fas fa-rocket text-white text-lg" />
+                </div>
                 Coming Soon
               </h3>
-              <ul className="space-y-3 text-gray-600 dark:text-gray-400">
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-check text-green-500 mt-1" />
-                  <span>Automated asset syncing via APIs</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-check text-green-500 mt-1" />
-                  <span>Multi-jurisdictional tax calculations</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-check text-green-500 mt-1" />
-                  <span>Price alerts and portfolio triggers</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-check text-green-500 mt-1" />
-                  <span>CoinGecko & Yahoo Finance integration</span>
-                </li>
+              <ul className="space-y-4">
+                {roadmapItems.comingSoon.map((item, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                      <i className="fas fa-check text-white text-xs" />
+                    </div>
+                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                  </li>
+                ))}
               </ul>
             </motion.div>
 
-            <motion.div variants={fadeUp} className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                <i className="fas fa-compass text-purple-500" />
+            <motion.div variants={fadeUp} className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <i className="fas fa-compass text-white text-lg" />
+                </div>
                 Future Vision
               </h3>
-              <ul className="space-y-3 text-gray-600 dark:text-gray-400">
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-lightbulb text-yellow-500 mt-1" />
-                  <span>Collaboration with accountants & advisors</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-lightbulb text-yellow-500 mt-1" />
-                  <span>Encrypted cloud backups</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-lightbulb text-yellow-500 mt-1" />
-                  <span>Optional managed hosting</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <i className="fas fa-lightbulb text-yellow-500 mt-1" />
-                  <span>Developer API & plugin system</span>
-                </li>
+              <ul className="space-y-4">
+                {roadmapItems.future.map((item, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                      <i className="fas fa-lightbulb text-white text-xs" />
+                    </div>
+                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                  </li>
+                ))}
               </ul>
             </motion.div>
           </div>
 
           <motion.div variants={fadeUp} className="text-center">
-            <Button asChild size="lg" className="text-lg px-8 py-6">
-              <Link href="/auth/signUp">
-                Join the Journey
-                <i className="fas fa-arrow-right ml-2" />
-              </Link>
-            </Button>
+            <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl inline-block">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                Ready to Join the Journey?
+              </h3>
+              <p className="text-gray-700 dark:text-gray-300 mb-6 max-w-md">
+                Be part of building the future of personal wealth management.
+              </p>
+              <Button asChild size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105">
+                <Link href="/auth/signUp">
+                  <i className="fas fa-rocket mr-2" />
+                  Join the Journey
+                  <i className="fas fa-arrow-right ml-2" />
+                </Link>
+              </Button>
+            </div>
           </motion.div>
         </motion.div>
       </section>
-    </main>
+
+      <section className="relative py-32 px-6 sm:px-12 z-10">
+        <motion.div
+          className="max-w-5xl mx-auto text-center"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeUp}
+        >
+          <div className="glass-tile p-16 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+              Ready to Build Your
+              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Financial Future</span>?
+            </h2>
+            <p className="text-xl text-gray-700 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
+              Join the growing community of users who value both powerful insights and complete privacy.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Button asChild size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105">
+                <Link href="/auth/signUp">
+                  Start Free Trial
+                  <i className="fas fa-arrow-right ml-3" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10">
+                <Link href="/how-it-works">
+                  Learn More
+                </Link>
+              </Button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-500 mt-8">
+              Self-hosted or cloud • Your data, your choice • Forever free tier
+            </p>
+          </div>
+        </motion.div>
+      </section>
+    </div>
   );
 }

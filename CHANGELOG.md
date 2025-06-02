@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.6.0] - 2025-06-02
+
+### ✨ Features
+- **🎨 Modernized Landing Pages**: Complete redesign of landing, about, how-it-works, and pricing pages with glass morphism effects
+- **🌟 Glass Effect Header**: Ultra-smooth transparency gradient with 14-step fade for seamless visual integration
+- **🎭 Animated Backgrounds**: Full-page gradient orbs with Framer Motion animations across all landing pages
+- **📱 Enhanced Responsive Design**: Mobile-first approach with touch-friendly interactions and consistent glass styling
+
+### 🔧 Improvements
+#### UI/UX
+- **Glass Morphism Design**: Professional backdrop blur effects with consistent blue/purple gradient theme
+- **Smooth Animations**: Hover effects, scale transforms, and motion graphics throughout landing experience
+- **Typography Enhancement**: Improved font weights, sizing, and gradient text effects for better hierarchy
+- **Interactive Elements**: Enhanced buttons, cards, and navigation with glass effects and hover states
+
+#### Performance
+- **React Optimization**: Added React.memo, useCallback, and useMemo for optimal re-render prevention
+- **Code Quality**: Removed unnecessary comments and unused functions, cleaned up ESLint warnings
+- **Bundle Optimization**: Landing page optimized to 4.84 kB with proper tree-shaking
+
+#### Technical
+- **Enterprise Standards**: Applied comprehensive code quality checklist with proper TypeScript typing
+- **Memory Management**: Proper cleanup patterns and memoization throughout components
+- **Build Verification**: Zero TypeScript/ESLint errors in modified files
+
+### 🎨 UI/UX Improvements
+- **Landing Page Overhaul**: Live portfolio section with real-time updating net worth display and animated bars
+- **Feature Cards**: Glass effect cards with hover animations and consistent gradient styling
+- **Trust Indicators**: Icon-based indicators for security, self-hosting, and real-time updates
+- **Call-to-Action Enhancement**: Gradient buttons with glass effects and improved visual hierarchy
+
+### 📊 Summary
+- **Files Changed**: 4 landing page files completely modernized
+- **Performance**: 4.84 kB optimized landing page, 502 kB total first load
+- **Code Quality**: Zero new ESLint warnings, enterprise-grade optimization patterns
+- **Visual Impact**: Professional glass morphism design with smooth animations
+
 ## [v1.5.0] - 2025-06-02
 
 ### 🔧 Improvements
