@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useEffect, useState } from "react";
+import React, { useCallback, useMemo, useEffect, useState, useRef } from "react";
 import { useAuth } from '@/lib/unifiedAuth';
 import { BaseModal as Modal } from "@/components/modals/modal";
 import { AssetModal } from "@/components/modals/AssetModal";
@@ -15,29 +15,34 @@ import { FinancialCalculator } from '@/lib/financial';
 
 // Asset type configuration
 const assetTypeConfig = {
-  stock: { icon: "fa-chart-line", color: "blue", gradient: "from-blue-500 to-blue-600" },
-  crypto: { icon: "fa-bitcoin", color: "orange", gradient: "from-orange-500 to-orange-600" },
-  property: { icon: "fa-home", color: "green", gradient: "from-green-500 to-green-600" },
-  cash: { icon: "fa-dollar-sign", color: "purple", gradient: "from-purple-500 to-purple-600" },
-  savings: { icon: "fa-piggy-bank", color: "emerald", gradient: "from-emerald-500 to-emerald-600" },
-  bond: { icon: "fa-university", color: "indigo", gradient: "from-indigo-500 to-indigo-600" },
-  stock_options: { icon: "fa-certificate", color: "pink", gradient: "from-pink-500 to-pink-600" },
-  other: { icon: "fa-box", color: "gray", gradient: "from-gray-500 to-gray-600" },
+  stock: { icon: "fa-chart-line", color: "#22c55e", gradient: "from-green-400 to-green-600" },
+  crypto: { icon: "fa-bitcoin", color: "#f59e0b", gradient: "from-yellow-400 to-yellow-600" },
+  savings: { icon: "fa-piggy-bank", color: "#3b82f6", gradient: "from-blue-400 to-blue-600" },
+  stock_options: { icon: "fa-chart-bar", color: "#a855f7", gradient: "from-purple-400 to-purple-600" },
+  cash: { icon: "fa-dollar-sign", color: "#10b981", gradient: "from-emerald-400 to-emerald-600" },
+  bond: { icon: "fa-file-contract", color: "#6366f1", gradient: "from-indigo-400 to-indigo-600" },
+  other: { icon: "fa-coins", color: "#64748b", gradient: "from-slate-400 to-slate-600" },
 };
 
 // Crypto-specific icons
 const getCryptoIcon = (symbol: string) => {
-  const symbolUpper = symbol?.toUpperCase();
-  switch (symbolUpper) {
-    case 'BTC':
-    case 'BITCOIN':
-      return 'fa-bitcoin';
-    case 'ETH':
-    case 'ETHEREUM':
-      return 'fa-ethereum';
-    default:
-      return 'fa-coins'; // Generic crypto icon for other cryptocurrencies
-  }
+  const cryptoIcons: Record<string, string> = {
+    BTC: 'fa-bitcoin',
+    ETH: 'fa-ethereum',
+    ADA: 'fa-coins',
+    DOT: 'fa-circle',
+    LINK: 'fa-link',
+    XRP: 'fa-coins',
+    LTC: 'fa-coins',
+    BCH: 'fa-coins',
+    BNB: 'fa-coins',
+    SOL: 'fa-sun',
+    DOGE: 'fa-dog',
+    AVAX: 'fa-mountain',
+    MATIC: 'fa-coins',
+    ATOM: 'fa-atom',
+  };
+  return cryptoIcons[symbol.toUpperCase()] || 'fa-coins';
 };
 
 export default function AssetManager() {
@@ -54,35 +59,55 @@ export default function AssetManager() {
   const [filterType, setFilterType] = useState<string>("all");
   const [showApiConfig, setShowApiConfig] = useState(false);
 
+  // Use refs to track abort controllers for cleanup
+  const chartAbortControllerRef = useRef<AbortController | null>(null);
+
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use Firebase user data or demo user data
-  const currentUser = user ? {
-    id: user.id,
-    name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
-    email: user.email || ''
-  } : (isDemoMode ? {
-    id: 'demo-user-id',
-    name: 'Demo User',
-    email: 'demo@profolio.com'
-  } : null);
+  // Use Firebase user data or demo user data - memoized
+  const currentUser = useMemo(() => {
+    if (user) {
+      return {
+        id: user.id,
+        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
+        email: user.email || '',
+      };
+    } else if (isDemoMode) {
+      return {
+        id: 'demo-user-id',
+        name: 'Demo User',
+        email: 'demo@profolio.com',
+      };
+    }
+    return null;
+  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+
+  // Cleanup function for chart requests
+  const cleanupChartRequest = useCallback(() => {
+    if (chartAbortControllerRef.current) {
+      chartAbortControllerRef.current.abort();
+      chartAbortControllerRef.current = null;
+    }
+  }, []);
 
   const fetchAssets = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
     setLoading(true);
     try {
       const { apiCall } = await import('@/lib/mockApi');
-
+      
       const response = await apiCall("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "READ", userId: currentUser?.id || "demo-user-id" }),
+        body: JSON.stringify({ method: "READ", userId: currentUser.id }),
       });
       
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setAssets(data.assets || []);
-      setError(null); // Clear any previous errors
+      setError(null);
     } catch (err) {
       console.error("Asset fetch error:", err);
       setError("Failed to load assets");
@@ -96,6 +121,13 @@ export default function AssetManager() {
   }, [fetchAssets]);
 
   const fetchChartData = useCallback(async () => {
+    // Cancel any ongoing chart request
+    cleanupChartRequest();
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    chartAbortControllerRef.current = controller;
+
     setChartLoading(true);
     try {
       if (!currentUser?.id) {
@@ -103,7 +135,7 @@ export default function AssetManager() {
         return;
       }
 
-      // Calculate current total value for fallback scenarios
+      // Calculate current total value for fallback scenarios - memoized
       const currentTotalValue = assets.reduce((sum, asset) => {
         const valueInDollars = asset.current_value || 0;
         return sum + valueInDollars;
@@ -117,13 +149,18 @@ export default function AssetManager() {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       if (!response.ok) {
         throw new Error('Failed to fetch portfolio history');
       }
 
       const data = await response.json();
+      
+      if (controller.signal.aborted) return;
       
       if (data.status === 'OK' && data.data) {
         setChartData(data.data);
@@ -146,9 +183,16 @@ export default function AssetManager() {
           });
         }
         
-        setChartData(fallbackData);
+        if (!controller.signal.aborted) {
+          setChartData(fallbackData);
+        }
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
+      
       console.error('Chart data fetch error:', error);
       
       // Calculate current total value for error fallback
@@ -172,16 +216,25 @@ export default function AssetManager() {
         });
       }
       
-      setChartData(fallbackData);
+      if (!controller.signal.aborted) {
+        setChartData(fallbackData);
+      }
       console.log(`📊 Using fallback data due to API error: ${error}`);
     } finally {
-      setChartLoading(false);
+      if (!controller.signal.aborted) {
+        setChartLoading(false);
+      }
     }
-  }, [timeframe, currentUser?.id, assets, token, isDemoMode]);
+  }, [timeframe, currentUser?.id, assets, token, isDemoMode, cleanupChartRequest]);
 
   useEffect(() => {
       fetchChartData();
   }, [timeframe, fetchChartData]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanupChartRequest;
+  }, [cleanupChartRequest]);
 
   const handleEdit = useCallback((asset: Asset) => {
       setEditingAsset(asset);
@@ -346,9 +399,9 @@ export default function AssetManager() {
     }));
   }, [chartData]);
 
-  // Table View Component
-  const AssetTable = ({
-    assets,
+  // Memoized AssetTable component to prevent unnecessary re-renders
+  const AssetTable = useCallback(({
+    assets: tableAssets,
     onEdit,
     onDelete,
   }: {
@@ -372,18 +425,20 @@ export default function AssetManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {assets.map((asset) => {
+              {tableAssets.map((asset) => {
                 const config = assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other;
                 const iconClass = asset.type === 'crypto' && asset.symbol 
                   ? getCryptoIcon(asset.symbol) 
                   : config.icon;
                 
-                const appreciation = asset.purchase_price && asset.current_value && asset.quantity ? 
-                  FinancialCalculator.calculateAssetGainLoss(
-                    asset.current_value,
-                    asset.purchase_price,
-                    asset.quantity
-                  ) : null;
+                // Calculate appreciation for each asset
+                const appreciation = asset.purchase_price && asset.current_value && asset.quantity 
+                  ? FinancialCalculator.calculateAssetGainLoss(
+                      asset.current_value,
+                      asset.purchase_price,
+                      asset.quantity
+                    )
+                  : null;
 
                 return (
                   <tr key={asset.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -391,7 +446,7 @@ export default function AssetManager() {
                       <div className="flex items-center">
                         <div className={`p-2 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 flex-shrink-0`}>
                           <i className={`fas ${iconClass} text-white text-sm`}></i>
-            </div>
+                        </div>
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{asset.name}</div>
                         </div>
@@ -449,7 +504,7 @@ export default function AssetManager() {
         </div>
       </div>
     );
-  };
+  }, []); // Memoized to prevent unnecessary re-renders
 
   if (loading) {
     return (

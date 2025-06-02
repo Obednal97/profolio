@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Property } from '@/types/global';
 import { PropertyCard } from '@/components/cards/PropertyCard';
 import { useAuth } from '@/lib/unifiedAuth';
@@ -55,22 +55,47 @@ export default function PropertiesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use ref to track abort controller for cleanup
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use Firebase user data or demo user data
-  const currentUser = user ? {
-    id: user.id,
-    name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
-    email: user.email || ''
-  } : (isDemoMode ? {
-    id: 'demo-user-id',
-    name: 'Demo User',
-    email: 'demo@profolio.com'
-  } : null);
+  // Use Firebase user data or demo user data - memoized
+  const currentUser = useMemo(() => {
+    if (user) {
+      return {
+        id: user.id,
+        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
+        email: user.email || ''
+      };
+    } else if (isDemoMode) {
+      return {
+        id: 'demo-user-id',
+        name: 'Demo User',
+        email: 'demo@profolio.com'
+      };
+    }
+    return null;
+  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+
+  // Cleanup function for abort controller
+  const cleanup = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
 
   const fetchProperties = useCallback(async () => {
     if (!currentUser?.id) return;
+    
+    // Cancel any ongoing request
+    cleanup();
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     
     try {
       setLoading(true);
@@ -84,27 +109,46 @@ export default function PropertiesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ method: 'READ', userId: currentUser.id }),
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
+
       const data = await response.json();
       
       if (data.error) {
         throw new Error(data.error);
       }
       
-      setProperties(data.properties || []);
+      if (!controller.signal.aborted) {
+        setProperties(data.properties || []);
+      }
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.error('Error fetching properties:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch properties');
+      if (!controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch properties');
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, cleanup]);
 
   useEffect(() => {
     if (currentUser?.id) {
       fetchProperties();
     }
   }, [currentUser?.id, fetchProperties]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
   const handleAddProperty = () => {
     setSelectedProperty(null);

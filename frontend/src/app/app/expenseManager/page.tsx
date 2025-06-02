@@ -1,9 +1,8 @@
 "use client";
 import type { Expense } from "@/types/global";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from '@/lib/unifiedAuth';
 import { useAppContext } from "@/components/layout/layoutWrapper";
-import { BaseModal as Modal } from "@/components/modals/modal";
 import { ExpenseModal } from "@/components/modals/ExpenseModal";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,45 +20,42 @@ import {
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
+  const { user } = useAuth();
+  
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("30");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
   const [activeTab, setActiveTab] = useState<"expenses" | "insights">("expenses");
-  const { user } = useAuth();
-
-  // Bulk selection state
-  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [openCategoryDropdown, setOpenCategoryDropdown] = useState<string | null>(null);
   
-  // Advanced filters state
   const [filters, setFilters] = useState({
-    type: 'all', // all, debit, credit, recurring
+    type: 'all',
     amountMin: '',
     amountMax: '',
     dateFrom: '',
     dateTo: '',
     subcategory: '',
   });
-  
-  // Category dropdown state
-  const [openCategoryDropdown, setOpenCategoryDropdown] = useState<string | null>(null);
 
-  // Advanced search state
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Get all available categories
-  const allCategories = getAllCategories();
+  // Use refs to track abort controllers for cleanup
+  const fetchAbortControllerRef = useRef<AbortController | null>(null);
+  const submitAbortControllerRef = useRef<AbortController | null>(null);
+  const deleteAbortControllerRef = useRef<AbortController | null>(null);
+  const bulkDeleteAbortControllerRef = useRef<AbortController | null>(null);
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use Firebase user data or demo user data
+  // Use Firebase user data or demo user data - memoized
   const currentUser = useMemo(() => {
     if (user) {
       return {
@@ -77,8 +73,37 @@ function ExpenseManager() {
     return null;
   }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
 
+  // Cleanup function for all abort controllers
+  const cleanup = useCallback(() => {
+    if (fetchAbortControllerRef.current) {
+      fetchAbortControllerRef.current.abort();
+      fetchAbortControllerRef.current = null;
+    }
+    if (submitAbortControllerRef.current) {
+      submitAbortControllerRef.current.abort();
+      submitAbortControllerRef.current = null;
+    }
+    if (deleteAbortControllerRef.current) {
+      deleteAbortControllerRef.current.abort();
+      deleteAbortControllerRef.current = null;
+    }
+    if (bulkDeleteAbortControllerRef.current) {
+      bulkDeleteAbortControllerRef.current.abort();
+      bulkDeleteAbortControllerRef.current = null;
+    }
+  }, []);
+
   const fetchExpenses = useCallback(async () => {
     if (!currentUser?.id) return;
+    
+    // Cancel any ongoing fetch request
+    if (fetchAbortControllerRef.current) {
+      fetchAbortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    fetchAbortControllerRef.current = controller;
     
     setLoading(true);
     try {
@@ -92,24 +117,42 @@ function ExpenseManager() {
           userId: currentUser.id,
           days: parseInt(timeRange)
         }),
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      setExpenses(data.expenses || []);
-      setError(null);
+      if (!controller.signal.aborted) {
+        setExpenses(data.expenses || []);
+        setError(null);
+      }
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.error('Error loading expenses:', err);
-      setError('Failed to load expenses');
+      if (!controller.signal.aborted) {
+        setError('Failed to load expenses');
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [currentUser?.id, timeRange]);
 
   useEffect(() => {
     if (currentUser?.id) fetchExpenses();
   }, [currentUser?.id, fetchExpenses]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
   // Auto-clear notifications
   useEffect(() => {
@@ -140,6 +183,15 @@ function ExpenseManager() {
   const handleSubmit = useCallback(async (expenseData: Omit<Expense, 'id'> & { id?: string }) => {
     if (!currentUser) return;
     
+    // Cancel any ongoing submit request
+    if (submitAbortControllerRef.current) {
+      submitAbortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    submitAbortControllerRef.current = controller;
+    
     try {
       const { apiCall } = await import('@/lib/mockApi');
       
@@ -160,23 +212,43 @@ function ExpenseManager() {
           ...expenseWithId,
           ...(editingExpense?.id ? { id: editingExpense.id } : {}),
         }),
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      setShowModal(false);
-      setEditingExpense(null);
-      fetchExpenses();
+      if (!controller.signal.aborted) {
+        setShowModal(false);
+        setEditingExpense(null);
+        fetchExpenses();
+      }
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.error('Expense save error:', err);
-      setError('Failed to save expense');
+      if (!controller.signal.aborted) {
+        setError('Failed to save expense');
+      }
     }
   }, [editingExpense, currentUser, fetchExpenses]);
 
   const handleDelete = useCallback(async (expenseId: string) => {
     if (!currentUser) return;
     if (!confirm('Are you sure you want to delete this expense?')) return;
+
+    // Cancel any ongoing delete request
+    if (deleteAbortControllerRef.current) {
+      deleteAbortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    deleteAbortControllerRef.current = controller;
 
     try {
       const { apiCall } = await import('@/lib/mockApi');
@@ -189,15 +261,26 @@ function ExpenseManager() {
           userId: currentUser.id,
           id: expenseId,
         }),
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      fetchExpenses();
+      if (!controller.signal.aborted) {
+        fetchExpenses();
+      }
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.error('Expense deletion error:', err);
-      setError('Failed to delete expense');
+      if (!controller.signal.aborted) {
+        setError('Failed to delete expense');
+      }
     }
   }, [currentUser, fetchExpenses]);
 
@@ -214,6 +297,9 @@ function ExpenseManager() {
     setEditingExpense(expense);
     setShowModal(true);
   }, []);
+
+  // Memoized categories for performance
+  const allCategories = useMemo(() => getAllCategories(), []);
 
   // Calculate metrics
   const totalExpenses = useMemo(() => {
@@ -310,7 +396,7 @@ function ExpenseManager() {
     return expenses.filter(e => e.recurrence === 'recurring' || e.frequency).length;
   }, [expenses]);
 
-  // CSV Export functionality
+  // CSV Export functionality - memoized for performance
   const exportToCSV = useCallback(() => {
     const headers = [
       'Date',
@@ -352,7 +438,7 @@ function ExpenseManager() {
     document.body.removeChild(link);
     
     setSuccess('Expenses exported successfully!');
-  }, [filteredExpenses, setSuccess]);
+  }, [filteredExpenses]);
 
   // Enhanced Filters Component
   const AdvancedFilters = () => (
@@ -1321,96 +1407,105 @@ function ExpenseManager() {
                         <i className="fas fa-receipt"></i>
                       </div>
                       <h3 className="text-xl font-medium text-gray-400 mb-2">
-                        {filterCategory === "all" ? "No Expenses Yet" : `No ${getCategoryInfo(filterCategory).name} expenses`}
+                        {filterCategory === "all" ? "No Expenses Yet" : `No ${getCategoryInfo(filterCategory).name} Expenses`}
                       </h3>
                       <p className="text-gray-500 mb-6">
                         {filterCategory === "all" 
-                          ? "Start tracking your expenses by adding your first expense."
-                          : "You don't have any expenses in this category yet."}
+                          ? "Start by adding your first expense to track your spending"
+                          : "No expenses found in this category"}
                       </p>
-                      <Button
+                      <button
                         onClick={handleOpenModal}
-                        className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium"
+                        className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 py-3 rounded-xl transition-all duration-200"
                       >
                         <i className="fas fa-plus mr-2"></i>
                         Add Your First Expense
-                      </Button>
-                    </motion.div>
-                  ) : viewMode === "table" ? (
-                    <motion.div
-                      key="table"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-                    >
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-gray-50 dark:bg-[#101828]">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedExpenses.size === filteredExpenses.length && filteredExpenses.length > 0}
-                                  onChange={handleSelectAll}
-                                  className="form-checkbox h-4 w-4 text-blue-500 rounded"
-                                />
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Description
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Amount
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Date
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Type
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Actions
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {filteredExpenses.map((expense) => (
-                              <ExpenseTableRow
-                                key={expense.id}
-                                expense={expense}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
-                                isSelected={selectedExpenses.has(expense.id || '')}
-                                onSelect={handleSelectExpense}
-                              />
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      </button>
                     </motion.div>
                   ) : (
                     <motion.div
-                      key={viewMode}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      layout
-                      className={viewMode === "grid" 
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
-                        : "space-y-4"
-                      }
+                      key={`${viewMode}-${filterCategory}-${JSON.stringify(filters)}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
                     >
-                      {filteredExpenses.map((expense) => (
-                        <ExpenseCard
-                          key={expense.id}
-                          expense={expense}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                          isSelected={selectedExpenses.has(expense.id || '')}
-                          onSelect={handleSelectExpense}
-                          showCheckbox={viewMode === "list"}
-                        />
-                      ))}
+                      {viewMode === "grid" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {filteredExpenses.map((expense) => (
+                            <ExpenseCard
+                              key={expense.id}
+                              expense={expense}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              isSelected={selectedExpenses.has(expense.id || '')}
+                              onSelect={handleSelectExpense}
+                              showCheckbox={filteredExpenses.length > 1}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {viewMode === "list" && (
+                        <div className="space-y-4">
+                          {filteredExpenses.map((expense) => (
+                            <ExpenseCard
+                              key={expense.id}
+                              expense={expense}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              isSelected={selectedExpenses.has(expense.id || '')}
+                              onSelect={handleSelectExpense}
+                              showCheckbox={filteredExpenses.length > 1}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {viewMode === "table" && (
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-gray-50 dark:bg-gray-700">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedExpenses.size === filteredExpenses.length && filteredExpenses.length > 0}
+                                    onChange={handleSelectAll}
+                                    className="form-checkbox h-4 w-4 text-blue-500 rounded"
+                                  />
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Expense
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Amount
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Date
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Type
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                              {filteredExpenses.map((expense) => (
+                                <ExpenseTableRow
+                                  key={expense.id}
+                                  expense={expense}
+                                  onEdit={handleEdit}
+                                  onDelete={handleDelete}
+                                  isSelected={selectedExpenses.has(expense.id || '')}
+                                  onSelect={handleSelectExpense}
+                                />
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </ErrorBoundary>
@@ -1419,28 +1514,29 @@ function ExpenseManager() {
           ) : (
             <motion.div
               key="insights"
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
+              exit={{ opacity: 0, x: -20 }}
             >
-              <FinancialInsights expenses={expenses} timeRange={timeRange} />
+              <FinancialInsights
+                expenses={expenses}
+                timeRange={timeRange}
+              />
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
 
-      {/* Modal - Moved outside the relative z-10 container */}
-      {(showModal || editingExpense) && (
-        <Modal isOpen={showModal || !!editingExpense} onClose={handleCloseModal}>
+        {/* Modal */}
+        {showModal && (
           <ExpenseModal
             onClose={handleCloseModal}
             onSubmit={handleSubmit}
             initialData={editingExpense}
-            categories={allCategories}
             currentUserId={currentUser?.id}
+            categories={allCategories}
           />
-        </Modal>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUnifiedAuth } from '@/lib/unifiedAuth';
 
 export interface UpdateInfo {
@@ -51,6 +51,11 @@ export function useUpdates(): UseUpdatesReturn {
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
 
+  // Use refs to track abort controllers for cleanup
+  const githubAbortControllerRef = useRef<AbortController | null>(null);
+  const backendAbortControllerRef = useRef<AbortController | null>(null);
+  const statusAbortControllerRef = useRef<AbortController | null>(null);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // Check if we're in self-hosted mode or development (for testing)
@@ -69,17 +74,51 @@ export function useUpdates(): UseUpdatesReturn {
     return process.env.NODE_ENV === 'development' || !token;
   };
 
-  // API headers with auth
-  const getHeaders = () => ({
+  // API headers with auth - memoized
+  const getHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })
-  });
+  }), [token]);
 
-  // Fetch real GitHub releases for demo purposes
-  const fetchGitHubReleases = async () => {
+  // Cleanup function for all abort controllers
+  const cleanup = useCallback(() => {
+    if (githubAbortControllerRef.current) {
+      githubAbortControllerRef.current.abort();
+      githubAbortControllerRef.current = null;
+    }
+    if (backendAbortControllerRef.current) {
+      backendAbortControllerRef.current.abort();
+      backendAbortControllerRef.current = null;
+    }
+    if (statusAbortControllerRef.current) {
+      statusAbortControllerRef.current.abort();
+      statusAbortControllerRef.current = null;
+    }
+    if (eventSource) {
+      eventSource.close();
+      setEventSource(null);
+    }
+  }, [eventSource]);
+
+  // Fetch real GitHub releases for demo purposes - optimized with proper cleanup
+  const fetchGitHubReleases = useCallback(async () => {
+    // Cancel any ongoing GitHub request
+    if (githubAbortControllerRef.current) {
+      githubAbortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    githubAbortControllerRef.current = controller;
+
     try {
       // Use the actual Profolio repository
-      const response = await fetch('https://api.github.com/repos/Obednal97/profolio/releases?per_page=10');
+      const response = await fetch('https://api.github.com/repos/Obednal97/profolio/releases?per_page=10', {
+        signal: controller.signal,
+      });
+      
+      if (controller.signal.aborted) return null;
+      
       if (response.ok) {
         const releases = await response.json() as Array<{
           tag_name: string;
@@ -89,6 +128,8 @@ export function useUpdates(): UseUpdatesReturn {
           html_url: string;
           prerelease: boolean;
         }>;
+        
+        if (controller.signal.aborted) return null;
         
         // Filter out prereleases and map to our format
         const stableReleases = releases
@@ -104,13 +145,17 @@ export function useUpdates(): UseUpdatesReturn {
           
         return stableReleases;
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return null;
+      }
       console.log('GitHub API not available, using mock data for demo');
     }
     return null;
-  };
+  }, []);
 
-  // Check for updates
+  // Check for updates - optimized with proper cleanup
   const checkForUpdates = useCallback(async (force = false, includeAllReleases = false) => {
     setIsChecking(true);
     
@@ -139,12 +184,25 @@ export function useUpdates(): UseUpdatesReturn {
         setIsChecking(false);
         return;
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.log('Failed to fetch from GitHub, using mock data');
     }
     
     // Fallback to backend API only for self-hosted installations with auth
     if (isSelfHosted() && token) {
+      // Cancel any ongoing backend request
+      if (backendAbortControllerRef.current) {
+        backendAbortControllerRef.current.abort();
+      }
+
+      // Create new AbortController for this request
+      const controller = new AbortController();
+      backendAbortControllerRef.current = controller;
+
       try {
         const endpoint = force ? '/api/api/updates/check' : '/api/api/updates/check';
         const method = force ? 'POST' : 'GET';
@@ -158,17 +216,26 @@ export function useUpdates(): UseUpdatesReturn {
         
         const response = await fetch(url, {
           method,
-          headers: getHeaders()
+          headers: getHeaders(),
+          signal: controller.signal,
         });
+
+        if (controller.signal.aborted) return;
 
         if (response.ok) {
           const data: UpdateInfo | null = await response.json();
-          setUpdateInfo(data);
-          setLastChecked(new Date());
-          setIsChecking(false);
+          if (!controller.signal.aborted) {
+            setUpdateInfo(data);
+            setLastChecked(new Date());
+            setIsChecking(false);
+          }
           return;
         }
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Request was aborted, this is expected
+          return;
+        }
         console.log('Backend API failed, falling back to mock data');
       }
     }
@@ -349,9 +416,9 @@ export function useUpdates(): UseUpdatesReturn {
     setUpdateInfo(mockUpdateInfo);
     setLastChecked(new Date());
     setIsChecking(false);
-  }, [token, API_BASE]);
+  }, [token, API_BASE, fetchGitHubReleases, getHeaders]);
 
-  // Start update process
+  // Start update process - optimized
   const startUpdate = useCallback(async (version?: string) => {
     // Prevent updates in demo mode
     if (isDemoMode()) {
@@ -414,9 +481,9 @@ export function useUpdates(): UseUpdatesReturn {
       setIsUpdating(false);
       throw new Error('Failed to start update');
     }
-  }, [token, API_BASE, checkForUpdates, isDemoMode]);
+  }, [token, API_BASE, checkForUpdates, isDemoMode, getHeaders]);
 
-  // Cancel ongoing update
+  // Cancel ongoing update - optimized
   const cancelUpdate = useCallback(async () => {
     if (!isSelfHosted() || !token) return;
 
@@ -437,9 +504,9 @@ export function useUpdates(): UseUpdatesReturn {
     } catch {
       // Error handling removed for cleaner development experience
     }
-  }, [token, API_BASE, eventSource]);
+  }, [token, API_BASE, eventSource, getHeaders]);
 
-  // Clear update status
+  // Clear update status - optimized
   const clearUpdateStatus = useCallback(() => {
     setUpdateProgress(null);
     
@@ -464,45 +531,60 @@ export function useUpdates(): UseUpdatesReturn {
 
       return () => {
         clearInterval(interval);
-        if (eventSource) {
-          eventSource.close();
-        }
+        cleanup();
       };
     }
 
     // Cleanup for demo mode
-    return () => {
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
+    return cleanup;
   }, []); // Remove checkForUpdates from dependencies to prevent infinite loop
 
-  // Get current update status on mount
+  // Get current update status on mount - optimized with cleanup
   useEffect(() => {
     // Only check update status for non-demo installations
     if (isDemoMode() || !isSelfHosted() || !token) return;
 
     const getUpdateStatus = async () => {
+      // Cancel any ongoing status request
+      if (statusAbortControllerRef.current) {
+        statusAbortControllerRef.current.abort();
+      }
+
+      // Create new AbortController for this request
+      const controller = new AbortController();
+      statusAbortControllerRef.current = controller;
+
       try {
         const response = await fetch(`${API_BASE}/api/api/updates/status`, {
-          headers: getHeaders()
+          headers: getHeaders(),
+          signal: controller.signal,
         });
+
+        if (controller.signal.aborted) return;
 
         if (response.ok) {
           const progress: UpdateProgress | null = await response.json();
-          if (progress) {
+          if (progress && !controller.signal.aborted) {
             setUpdateProgress(progress);
             setIsUpdating(!['complete', 'error'].includes(progress.stage));
           }
         }
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Request was aborted, this is expected
+          return;
+        }
         // Error handling removed for cleaner development experience
       }
     };
 
     getUpdateStatus();
-  }, [token, API_BASE]); // Remove isDemoMode from dependencies
+  }, [token, API_BASE, getHeaders]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
   return {
     updateInfo,

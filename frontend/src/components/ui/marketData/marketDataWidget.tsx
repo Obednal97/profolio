@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/unifiedAuth';
-import { DemoSessionManager } from '@/lib/demoSession';
 
 interface MarketData {
   symbol: string;
@@ -30,20 +29,37 @@ export function MarketDataWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check demo session validity
-  const demoSession = DemoSessionManager.checkDemoSession();
-  const isDemoMode = demoSession.isValid;
+  // Use ref to track abort controller for cleanup
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Check if user is in demo mode
+  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use Firebase user data or demo user data
-  const currentUser = user ? {
-    id: user.id,
-    name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
-    email: user.email || ''
-  } : (isDemoMode ? {
-    id: 'demo-user-id',
-    name: 'Demo User',
-    email: 'demo@profolio.com'
-  } : null);
+  // Use Firebase user data or demo user data - memoized
+  const currentUser = useMemo(() => {
+    if (user) {
+      return {
+        id: user.id,
+        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
+        email: user.email || ''
+      };
+    } else if (isDemoMode) {
+      return {
+        id: 'demo-user-id',
+        name: 'Demo User',
+        email: 'demo@profolio.com'
+      };
+    }
+    return null;
+  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+
+  // Cleanup function for abort controller
+  const cleanup = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
 
   // Default top index funds for new users
   const defaultSymbols = [
@@ -144,6 +160,13 @@ export function MarketDataWidget() {
         return;
       }
 
+      // Cancel any ongoing request
+      cleanup();
+
+      // Create new AbortController for this request
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       try {
         setLoading(true);
         setError(null);
@@ -156,7 +179,10 @@ export function MarketDataWidget() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ method: 'read', userId: currentUser.id }),
+          signal: controller.signal,
         });
+
+        if (controller.signal.aborted) return;
         
         const assetsData = await response.json();
         const userAssets: Asset[] = assetsData.assets || [];
@@ -226,8 +252,12 @@ export function MarketDataWidget() {
         const marketDataResults = await Promise.all(marketDataPromises);
         setMarketData(marketDataResults.filter(Boolean));
 
-      } catch (err) {
-        console.error('Error fetching market data:', err);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Request was aborted, this is expected
+          return;
+        }
+        console.error('Error fetching market data:', error);
         
         // Enhanced error handling with fallback to demo data
         if (isDemoMode) {
@@ -251,12 +281,19 @@ export function MarketDataWidget() {
         
         setMarketData(fallbackData);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchMarketData();
-  }, [currentUser?.id, isDemoMode]);
+  }, [currentUser?.id, isDemoMode, cleanup]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
   if (loading) {
     return (

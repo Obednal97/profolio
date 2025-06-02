@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Asset } from '@/types/global';
 import { Button } from '@/components/ui/button/button';
 import { FinancialCalculator } from '@/lib/financial';
@@ -249,7 +249,8 @@ interface AssetModalProps {
 }
 
 export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalProps) {
-  const [formData, setFormData] = useState<AssetFormData>(() =>
+  // Optimize initial form data creation with useMemo to prevent recreating on every render
+  const initialFormData = useMemo(() => (
     initialData
       ? {
           name: initialData.name || "",
@@ -274,7 +275,7 @@ export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalPr
         }
       : {
           name: "",
-          type: "stock",
+          type: "stock" as AssetType,
           quantity: "",
           current_value: "",
           purchase_price: "",
@@ -291,111 +292,164 @@ export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalPr
           termLength: "",
           maturityDate: "",
         }
-  );
+  ), [initialData]);
 
+  const [formData, setFormData] = useState<AssetFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [priceSource, setPriceSource] = useState<'manual' | 'live' | 'error'>('manual');
 
-  useEffect(() => {
-    const fetchSymbolData = async () => {
-      if (!formData.symbol || !["stock", "crypto"].includes(formData.type))
-        return;
+  // Use ref to track current abort controller and prevent stale closures
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-      // Only fetch if this is a new symbol being typed by the user, not form initialization
-      if (initialData?.symbol === formData.symbol) {
-        return; // Skip search for existing symbols during form load
-      }
+  // Cleanup function to cancel ongoing requests
+  const cleanup = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+  }, []);
 
-      setLoading(true);
-      setPriceSource('manual');
+  // Optimized symbol data fetch with proper cleanup
+  const fetchSymbolData = useCallback(async (symbol: string, type: string, quantity: string) => {
+    if (!symbol || !["stock", "crypto"].includes(type)) {
+      return;
+    }
+
+    // Only fetch if this is a new symbol being typed by the user, not form initialization
+    if (initialData?.symbol === symbol) {
+      return; // Skip search for existing symbols during form load
+    }
+
+    // Cancel any ongoing request
+    cleanup();
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setLoading(true);
+    setPriceSource('manual');
+    
+    try {
+      // Check for demo mode
+      const isDemoMode = typeof window !== 'undefined' && 
+                        localStorage.getItem('demo-mode') === 'true';
       
-      try {
-        // Check for demo mode
-        const isDemoMode = typeof window !== 'undefined' && 
-                          localStorage.getItem('demo-mode') === 'true';
-        
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        
-        // Add demo mode header if in demo mode
-        if (isDemoMode) {
-          headers['x-demo-mode'] = 'true';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add demo mode header if in demo mode
+      if (isDemoMode) {
+        headers['x-demo-mode'] = 'true';
+      }
+      
+      // First try to get cached price data (no live search)
+      const cachedResponse = await fetch(
+        `/api/integrations/symbols/cached-price/${encodeURIComponent(symbol)}`,
+        { 
+          headers,
+          signal: controller.signal 
         }
-        
-        // First try to get cached price data (no live search)
-        const cachedResponse = await fetch(
-          `/api/integrations/symbols/cached-price/${encodeURIComponent(formData.symbol)}`,
-          { headers }
-        );
-        
-        if (cachedResponse.ok) {
-          const cachedData = await cachedResponse.json();
-          if (cachedData.price) {
-            const quantity = parseFloat(formData.quantity) || 1;
-            const totalValue = cachedData.price * quantity;
-            
-            setFormData((prev) => ({
-              ...prev,
-              current_value: totalValue.toFixed(2),
-            }));
-            
-            setPriceSource('live');
-            setLoading(false);
-            return;
-          }
-        }
-        
-        // Only if no cached data AND user is actively searching (not form initialization)
-        // trigger a search which will queue the symbol for processing
-        const response = await fetch(
-          `/api/integrations/product-search/search?q=${encodeURIComponent(
-            formData.symbol
-          )}`,
-          { headers }
-        );
-        
-        const data = await response.json();
-
-        if (data.status === "OK" && data.data.length > 0) {
-          const price = parseFloat(
-            data.data[0].offer.price.replace(/[^0-9.]/g, "")
-          );
+      );
+      
+      if (cachedResponse.ok) {
+        const cachedData = await cachedResponse.json();
+        if (cachedData.price && !controller.signal.aborted) {
+          const qty = parseFloat(quantity) || 1;
+          const totalValue = cachedData.price * qty;
           
-          if (price > 0) {
-            const quantity = parseFloat(formData.quantity) || 1;
-            const totalValue = price * quantity;
-            
-            setFormData((prev) => ({
-              ...prev,
-              current_value: totalValue.toFixed(2),
-            }));
-            
-            setPriceSource('live');
-          } else {
-            setPriceSource('error');
-          }
-        } else if (data.fallback) {
-          // Service is temporarily unavailable, but don't clear existing value
-          setPriceSource('error');
+          setFormData((prev) => ({
+            ...prev,
+            current_value: totalValue.toFixed(2),
+          }));
+          
+          setPriceSource('live');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Only if no cached data AND user is actively searching (not form initialization)
+      // trigger a search which will queue the symbol for processing
+      const response = await fetch(
+        `/api/integrations/product-search/search?q=${encodeURIComponent(symbol)}`,
+        { 
+          headers,
+          signal: controller.signal 
+        }
+      );
+      
+      if (controller.signal.aborted) return;
+      
+      const data = await response.json();
+
+      if (data.status === "OK" && data.data.length > 0) {
+        const price = parseFloat(
+          data.data[0].offer.price.replace(/[^0-9.]/g, "")
+        );
+        
+        if (price > 0 && !controller.signal.aborted) {
+          const qty = parseFloat(quantity) || 1;
+          const totalValue = price * qty;
+          
+          setFormData((prev) => ({
+            ...prev,
+            current_value: totalValue.toFixed(2),
+          }));
+          
+          setPriceSource('live');
         } else {
           setPriceSource('error');
         }
-      } catch (error) {
-        console.error("Error fetching symbol data:", error);
+      } else if (data.fallback) {
+        // Service is temporarily unavailable, but don't clear existing value
         setPriceSource('error');
-      } finally {
+      } else {
+        setPriceSource('error');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
+      console.error("Error fetching symbol data:", error);
+      setPriceSource('error');
+    } finally {
+      if (!controller.signal.aborted) {
         setLoading(false);
       }
-    };
+    }
+  }, [initialData?.symbol, cleanup]);
 
-    // Debounce the API call to avoid too many requests, and add longer delay for user input
-    const timeoutId = setTimeout(fetchSymbolData, 1000); // Increased to 1 second
-    return () => clearTimeout(timeoutId);
-  }, [formData.symbol, formData.type, formData.quantity, initialData?.symbol]);
+  // Effect for symbol data fetching with proper debouncing and cleanup
+  useEffect(() => {
+    // Cleanup previous timeout and request
+    cleanup();
 
-  const handleSubmit = (e: React.FormEvent) => {
+    // Debounce the API call to avoid too many requests
+    debounceTimeoutRef.current = setTimeout(() => {
+      fetchSymbolData(formData.symbol, formData.type, formData.quantity);
+    }, 1000); // 1 second debounce
+
+    return cleanup;
+  }, [formData.symbol, formData.type, formData.quantity, fetchSymbolData]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Cancel any ongoing API requests
+    cleanup();
     
     // Validate all monetary inputs
     const currentValueValidation = FinancialCalculator.validateMonetaryInput(formData.current_value);
@@ -447,7 +501,7 @@ export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalPr
       maturityDate: formData.maturityDate || undefined,
     };
     onSave(assetData);
-  };
+  }, [formData, initialData?.id, onSave, cleanup]);
 
   interface Field {
     name: string;
@@ -458,7 +512,8 @@ export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalPr
     step?: string;
   }
 
-  const renderField = (field: Field) => {
+  // Memoize renderField to prevent recreation on every render
+  const renderField = useCallback((field: Field) => {
     const commonClasses =
       "w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200";
 
@@ -586,7 +641,7 @@ export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalPr
         )}
       </div>
     );
-  };
+  }, [formData, loading, priceSource]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl mt-4 sm:mt-8 relative z-50">

@@ -1,5 +1,8 @@
 import Decimal from 'decimal.js';
 
+// Type alias for Decimal instances for better readability
+type DecimalValue = InstanceType<typeof Decimal>;
+
 // Configure Decimal.js for financial precision
 Decimal.config({
   precision: 20,
@@ -10,28 +13,60 @@ Decimal.config({
 
 export class FinancialCalculator {
   /**
-   * Convert dollars to cents with precision
+   * Convert dollars to cents with precision - returns Decimal for chaining
    */
-  static dollarsToCents(dollars: string | number): number {
+  static dollarsToCentsDecimal(dollars: string | number): DecimalValue {
     try {
       const decimal = new Decimal(dollars);
-      return decimal.times(100).round().toNumber();
+      return decimal.times(100).round();
     } catch (error) {
       console.error('Error converting dollars to cents:', error);
-      return 0;
+      return new Decimal(0);
     }
   }
 
   /**
-   * Convert cents to dollars with precision
+   * Convert dollars to cents with precision - returns number for database storage
    */
-  static centsToDollars(cents: number): string {
+  static dollarsToCents(dollars: string | number): number {
+    return this.dollarsToCentsDecimal(dollars).toNumber();
+  }
+
+  /**
+   * Convert cents to dollars with precision - returns Decimal for chaining
+   */
+  static centsToDollarsDecimal(cents: number): DecimalValue {
     try {
-      const decimal = new Decimal(cents);
-      return decimal.dividedBy(100).toFixed(2);
+      return new Decimal(cents).dividedBy(100);
     } catch (error) {
       console.error('Error converting cents to dollars:', error);
-      return '0.00';
+      return new Decimal(0);
+    }
+  }
+
+  /**
+   * Convert cents to dollars with precision - returns string for display
+   */
+  static centsToDollars(cents: number): string {
+    return this.centsToDollarsDecimal(cents).toFixed(2);
+  }
+
+  /**
+   * Calculate percentage change between two values - maintains precision
+   */
+  static calculatePercentageChangeDecimal(oldValue: number, newValue: number): DecimalValue {
+    try {
+      if (oldValue === 0) return new Decimal(0);
+      
+      const oldDecimal = new Decimal(oldValue);
+      const newDecimal = new Decimal(newValue);
+      const change = newDecimal.minus(oldDecimal);
+      const percentage = change.dividedBy(oldDecimal).times(100);
+      
+      return percentage;
+    } catch (error) {
+      console.error('Error calculating percentage change:', error);
+      return new Decimal(0);
     }
   }
 
@@ -39,18 +74,33 @@ export class FinancialCalculator {
    * Calculate percentage change between two values
    */
   static calculatePercentageChange(oldValue: number, newValue: number): number {
+    return this.calculatePercentageChangeDecimal(oldValue, newValue).toNumber();
+  }
+
+  /**
+   * Calculate gain/loss between purchase price and current value - maintains precision
+   */
+  static calculateGainLossDecimal(purchasePrice: number, currentValue: number): {
+    gain: DecimalValue;
+    percentage: DecimalValue;
+  } {
     try {
-      if (oldValue === 0) return 0;
+      const purchase = new Decimal(purchasePrice);
+      const current = new Decimal(currentValue);
+      const gain = current.minus(purchase);
       
-      const oldDecimal = new Decimal(oldValue);
-      const newDecimal = new Decimal(newValue);
-      const change = newDecimal.minus(oldDecimal);
-      const percentage = change.dividedBy(oldDecimal).times(100);
+      let percentage = new Decimal(0);
+      if (!purchase.isZero()) {
+        percentage = gain.dividedBy(purchase).times(100);
+      }
       
-      return percentage.toNumber();
+      return {
+        gain: gain,
+        percentage: percentage,
+      };
     } catch (error) {
-      console.error('Error calculating percentage change:', error);
-      return 0;
+      console.error('Error calculating gain/loss:', error);
+      return { gain: new Decimal(0), percentage: new Decimal(0) };
     }
   }
 
@@ -61,30 +111,17 @@ export class FinancialCalculator {
     gain: number;
     percentage: number;
   } {
-    try {
-      const purchase = new Decimal(purchasePrice);
-      const current = new Decimal(currentValue);
-      const gain = current.minus(purchase);
-      
-      let percentage = 0;
-      if (!purchase.isZero()) {
-        percentage = gain.dividedBy(purchase).times(100).toNumber();
-      }
-      
-      return {
-        gain: gain.toNumber(),
-        percentage: percentage,
-      };
-    } catch (error) {
-      console.error('Error calculating gain/loss:', error);
-      return { gain: 0, percentage: 0 };
-    }
+    const result = this.calculateGainLossDecimal(purchasePrice, currentValue);
+    return {
+      gain: result.gain.toNumber(),
+      percentage: result.percentage.toNumber(),
+    };
   }
 
   /**
-   * Calculate total portfolio value from assets
+   * Calculate total portfolio value from assets - maintains precision
    */
-  static calculatePortfolioValue(assets: Array<{ current_value?: number }>): number {
+  static calculatePortfolioValueDecimal(assets: Array<{ current_value?: number }>): DecimalValue {
     try {
       let total = new Decimal(0);
       
@@ -94,22 +131,29 @@ export class FinancialCalculator {
         }
       }
       
-      return total.toNumber();
+      return total;
     } catch (error) {
       console.error('Error calculating portfolio value:', error);
-      return 0;
+      return new Decimal(0);
     }
   }
 
   /**
-   * Calculate compound interest for savings accounts
+   * Calculate total portfolio value from assets
    */
-  static calculateCompoundInterest(
+  static calculatePortfolioValue(assets: Array<{ current_value?: number }>): number {
+    return this.calculatePortfolioValueDecimal(assets).toNumber();
+  }
+
+  /**
+   * Calculate compound interest for savings accounts - maintains precision
+   */
+  static calculateCompoundInterestDecimal(
     principal: number,
     rate: number,
     compoundsPerYear: number,
     years: number
-  ): number {
+  ): DecimalValue {
     try {
       const p = new Decimal(principal);
       const r = new Decimal(rate).dividedBy(100); // Convert percentage to decimal
@@ -122,10 +166,45 @@ export class FinancialCalculator {
       const exponent = n.times(t);
       const amount = p.times(base.pow(exponent));
       
-      return amount.toNumber();
+      return amount;
     } catch (error) {
       console.error('Error calculating compound interest:', error);
-      return principal;
+      return new Decimal(principal);
+    }
+  }
+
+  /**
+   * Calculate compound interest for savings accounts
+   */
+  static calculateCompoundInterest(
+    principal: number,
+    rate: number,
+    compoundsPerYear: number,
+    years: number
+  ): number {
+    return this.calculateCompoundInterestDecimal(principal, rate, compoundsPerYear, years).toNumber();
+  }
+
+  /**
+   * Calculate simple interest for savings accounts - maintains precision
+   */
+  static calculateSimpleInterestDecimal(
+    principal: number,
+    rate: number,
+    years: number
+  ): DecimalValue {
+    try {
+      const p = new Decimal(principal);
+      const r = new Decimal(rate).dividedBy(100); // Convert percentage to decimal
+      const t = new Decimal(years);
+      
+      // A = P(1 + rt)
+      const amount = p.times(new Decimal(1).plus(r.times(t)));
+      
+      return amount;
+    } catch (error) {
+      console.error('Error calculating simple interest:', error);
+      return new Decimal(principal);
     }
   }
 
@@ -137,19 +216,7 @@ export class FinancialCalculator {
     rate: number,
     years: number
   ): number {
-    try {
-      const p = new Decimal(principal);
-      const r = new Decimal(rate).dividedBy(100); // Convert percentage to decimal
-      const t = new Decimal(years);
-      
-      // A = P(1 + rt)
-      const amount = p.times(new Decimal(1).plus(r.times(t)));
-      
-      return amount.toNumber();
-    } catch (error) {
-      console.error('Error calculating simple interest:', error);
-      return principal;
-    }
+    return this.calculateSimpleInterestDecimal(principal, rate, years).toNumber();
   }
 
   /**
@@ -165,18 +232,19 @@ export class FinancialCalculator {
   }
 
   /**
-   * Validate monetary input
+   * Validate monetary input with overflow protection
    */
   static validateMonetaryInput(value: string): {
     isValid: boolean;
     error?: string;
     sanitized?: string;
+    decimal?: DecimalValue;
   } {
     try {
-      // Remove any non-numeric characters except decimal point
+      // Remove any non-numeric characters except decimal point and negative sign
       const sanitized = value.replace(/[^0-9.-]/g, '');
       
-      if (sanitized === '' || sanitized === '.') {
+      if (sanitized === '' || sanitized === '.' || sanitized === '-') {
         return { isValid: false, error: 'Please enter a valid amount' };
       }
       
@@ -190,24 +258,38 @@ export class FinancialCalculator {
         return { isValid: false, error: 'Amount cannot be negative' };
       }
       
-      if (decimal.greaterThan(1000000000)) {
-        return { isValid: false, error: 'Amount too large' };
+      // Check for overflow - set a reasonable maximum
+      const maxValue = new Decimal('999999999999.99'); // ~1 trillion
+      if (decimal.greaterThan(maxValue)) {
+        return { isValid: false, error: 'Amount too large (maximum: $999,999,999,999.99)' };
       }
       
-      // Round to 2 decimal places for currency
-      const rounded = decimal.toFixed(2);
+      // Check for too many decimal places
+      if (decimal.decimalPlaces() > 2) {
+        // Round to 2 decimal places for currency
+        const rounded = decimal.toDecimalPlaces(2);
+        return { 
+          isValid: true, 
+          sanitized: rounded.toFixed(2),
+          decimal: rounded
+        };
+      }
       
-      return { isValid: true, sanitized: rounded };
+      return { 
+        isValid: true, 
+        sanitized: decimal.toFixed(2),
+        decimal: decimal
+      };
     } catch {
       return { isValid: false, error: 'Invalid number format' };
     }
   }
 
   /**
-   * Format currency for display
+   * Format currency for display with proper precision
    */
   static formatCurrency(
-    amount: number | string,
+    amount: number | string | DecimalValue,
     options: {
       currency?: string;
       locale?: string;
@@ -223,8 +305,15 @@ export class FinancialCalculator {
         maximumFractionDigits = 2,
       } = options;
       
-      const decimal = new Decimal(amount);
+      // Convert to Decimal first to maintain precision
+      const decimal = amount instanceof Decimal ? amount : new Decimal(amount);
       const number = decimal.toNumber();
+      
+      // Check for overflow in Intl.NumberFormat
+      if (Math.abs(number) > Number.MAX_SAFE_INTEGER) {
+        // For very large numbers, format manually
+        return `${currency === 'USD' ? '$' : ''}${decimal.toFixed(maximumFractionDigits)}`;
+      }
       
       return new Intl.NumberFormat(locale, {
         style: 'currency',
@@ -239,12 +328,12 @@ export class FinancialCalculator {
   }
 
   /**
-   * Format percentage for display
+   * Format percentage for display with precision
    */
-  static formatPercentage(value: number, decimals: number = 2, includeSign: boolean = false): string {
+  static formatPercentage(value: number | DecimalValue, decimals: number = 2, includeSign: boolean = false): string {
     try {
-      const decimal = new Decimal(value);
-      const sign = includeSign && value > 0 ? '+' : '';
+      const decimal = value instanceof Decimal ? value : new Decimal(value);
+      const sign = includeSign && decimal.greaterThan(0) ? '+' : '';
       const formatted = decimal.toFixed(decimals);
       return `${sign}${formatted}%`;
     } catch (error) {
@@ -254,18 +343,40 @@ export class FinancialCalculator {
   }
 
   /**
-   * Safe addition for financial values
+   * Safe addition for financial values - maintains precision
    */
-  static add(...values: number[]): number {
+  static addDecimal(...values: (number | DecimalValue)[]): DecimalValue {
     try {
       let result = new Decimal(0);
       for (const value of values) {
-        result = result.plus(value);
+        const decimal = value instanceof Decimal ? value : new Decimal(value);
+        result = result.plus(decimal);
       }
-      return result.toNumber();
+      return result;
     } catch (error) {
       console.error('Error in addition:', error);
-      return 0;
+      return new Decimal(0);
+    }
+  }
+
+  /**
+   * Safe addition for financial values
+   */
+  static add(...values: number[]): number {
+    return this.addDecimal(...values).toNumber();
+  }
+
+  /**
+   * Safe subtraction for financial values - maintains precision
+   */
+  static subtractDecimal(a: number | DecimalValue, b: number | DecimalValue): DecimalValue {
+    try {
+      const decimalA = a instanceof Decimal ? a : new Decimal(a);
+      const decimalB = b instanceof Decimal ? b : new Decimal(b);
+      return decimalA.minus(decimalB);
+    } catch (error) {
+      console.error('Error in subtraction:', error);
+      return new Decimal(0);
     }
   }
 
@@ -273,13 +384,20 @@ export class FinancialCalculator {
    * Safe subtraction for financial values
    */
   static subtract(a: number, b: number): number {
+    return this.subtractDecimal(a, b).toNumber();
+  }
+
+  /**
+   * Safe multiplication for financial values - maintains precision
+   */
+  static multiplyDecimal(a: number | DecimalValue, b: number | DecimalValue): DecimalValue {
     try {
-      const decimalA = new Decimal(a);
-      const decimalB = new Decimal(b);
-      return decimalA.minus(decimalB).toNumber();
+      const decimalA = a instanceof Decimal ? a : new Decimal(a);
+      const decimalB = b instanceof Decimal ? b : new Decimal(b);
+      return decimalA.times(decimalB);
     } catch (error) {
-      console.error('Error in subtraction:', error);
-      return 0;
+      console.error('Error in multiplication:', error);
+      return new Decimal(0);
     }
   }
 
@@ -287,13 +405,21 @@ export class FinancialCalculator {
    * Safe multiplication for financial values
    */
   static multiply(a: number, b: number): number {
+    return this.multiplyDecimal(a, b).toNumber();
+  }
+
+  /**
+   * Safe division for financial values - maintains precision
+   */
+  static divideDecimal(a: number | DecimalValue, b: number | DecimalValue): DecimalValue {
     try {
-      const decimalA = new Decimal(a);
-      const decimalB = new Decimal(b);
-      return decimalA.times(decimalB).toNumber();
+      const decimalA = a instanceof Decimal ? a : new Decimal(a);
+      const decimalB = b instanceof Decimal ? b : new Decimal(b);
+      if (decimalB.isZero()) return new Decimal(0);
+      return decimalA.dividedBy(decimalB);
     } catch (error) {
-      console.error('Error in multiplication:', error);
-      return 0;
+      console.error('Error in division:', error);
+      return new Decimal(0);
     }
   }
 
@@ -301,14 +427,43 @@ export class FinancialCalculator {
    * Safe division for financial values
    */
   static divide(a: number, b: number): number {
+    return this.divideDecimal(a, b).toNumber();
+  }
+
+  /**
+   * Calculate proper gain/loss for an asset with maintained precision
+   */
+  static calculateAssetGainLossDecimal(currentValue: number | DecimalValue, purchasePricePerUnit: number | DecimalValue, quantity: number | DecimalValue): {
+    totalInvestment: DecimalValue;
+    currentValue: DecimalValue;
+    gain: DecimalValue;
+    gainPercent: DecimalValue;
+  } {
     try {
-      if (b === 0) return 0;
-      const decimalA = new Decimal(a);
-      const decimalB = new Decimal(b);
-      return decimalA.dividedBy(decimalB).toNumber();
+      const currentVal = currentValue instanceof Decimal ? currentValue : new Decimal(currentValue);
+      const purchasePrice = purchasePricePerUnit instanceof Decimal ? purchasePricePerUnit : new Decimal(purchasePricePerUnit);
+      const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
+      
+      const totalInvestment = purchasePrice.times(qty);
+      const gain = currentVal.minus(totalInvestment);
+      const gainPercent = totalInvestment.greaterThan(0) ? 
+        gain.dividedBy(totalInvestment).times(100) : 
+        new Decimal(0);
+
+      return {
+        totalInvestment,
+        currentValue: currentVal,
+        gain,
+        gainPercent
+      };
     } catch (error) {
-      console.error('Error in division:', error);
-      return 0;
+      console.error('Error calculating asset gain/loss:', error);
+      return {
+        totalInvestment: new Decimal(0),
+        currentValue: new Decimal(0),
+        gain: new Decimal(0),
+        gainPercent: new Decimal(0)
+      };
     }
   }
 
@@ -321,41 +476,58 @@ export class FinancialCalculator {
     gain: number;
     gainPercent: number;
   } {
-    const totalInvestment = purchasePricePerUnit * quantity;
-    const gain = currentValue - totalInvestment;
-    const gainPercent = totalInvestment > 0 ? (gain / totalInvestment) * 100 : 0;
-
+    const result = this.calculateAssetGainLossDecimal(currentValue, purchasePricePerUnit, quantity);
     return {
-      totalInvestment,
-      currentValue,
-      gain,
-      gainPercent
+      totalInvestment: result.totalInvestment.toNumber(),
+      currentValue: result.currentValue.toNumber(),
+      gain: result.gain.toNumber(),
+      gainPercent: result.gainPercent.toNumber()
     };
+  }
+
+  /**
+   * Calculate annualized return (APY) based on purchase date with precision
+   */
+  static calculateAPYDecimal(currentValue: number | DecimalValue, purchasePricePerUnit: number | DecimalValue, quantity: number | DecimalValue, purchaseDate: string): DecimalValue {
+    try {
+      if (!purchaseDate || !purchasePricePerUnit || !quantity || !currentValue) return new Decimal(0);
+
+      const currentVal = currentValue instanceof Decimal ? currentValue : new Decimal(currentValue);
+      const purchasePrice = purchasePricePerUnit instanceof Decimal ? purchasePricePerUnit : new Decimal(purchasePricePerUnit);
+      const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
+
+      const totalInvestment = purchasePrice.times(qty);
+      if (totalInvestment.isZero()) return new Decimal(0);
+
+      const gain = currentVal.minus(totalInvestment);
+      const gainPercent = gain.dividedBy(totalInvestment);
+
+      // Calculate time period in years
+      const purchaseDateObj = new Date(purchaseDate);
+      const currentDate = new Date();
+      const timeDiffMs = currentDate.getTime() - purchaseDateObj.getTime();
+      const timeDiffYears = new Decimal(timeDiffMs).dividedBy(1000 * 60 * 60 * 24 * 365.25);
+
+      // Avoid division by zero or negative time
+      if (timeDiffYears.lessThanOrEqualTo(0)) return new Decimal(0);
+
+      // APY formula: (1 + total_return)^(1/years) - 1
+      const base = new Decimal(1).plus(gainPercent);
+      const exponent = new Decimal(1).dividedBy(timeDiffYears);
+      const apy = base.pow(exponent).minus(1);
+      
+      return apy.times(100); // Convert to percentage
+    } catch (error) {
+      console.error('Error calculating APY:', error);
+      return new Decimal(0);
+    }
   }
 
   /**
    * Calculate annualized return (APY) based on purchase date
    */
   static calculateAPY(currentValue: number, purchasePricePerUnit: number, quantity: number, purchaseDate: string): number {
-    if (!purchaseDate || !purchasePricePerUnit || !quantity || !currentValue) return 0;
-
-    const totalInvestment = purchasePricePerUnit * quantity;
-    const gain = currentValue - totalInvestment;
-    const gainPercent = gain / totalInvestment;
-
-    // Calculate time period in years
-    const purchaseDateObj = new Date(purchaseDate);
-    const currentDate = new Date();
-    const timeDiffMs = currentDate.getTime() - purchaseDateObj.getTime();
-    const timeDiffYears = timeDiffMs / (1000 * 60 * 60 * 24 * 365.25);
-
-    // Avoid division by zero or negative time
-    if (timeDiffYears <= 0) return 0;
-
-    // APY formula: (1 + total_return)^(1/years) - 1
-    const apy = Math.pow(1 + gainPercent, 1 / timeDiffYears) - 1;
-    
-    return apy * 100; // Convert to percentage
+    return this.calculateAPYDecimal(currentValue, purchasePricePerUnit, quantity, purchaseDate).toNumber();
   }
 
   /**
@@ -387,11 +559,45 @@ export class FinancialCalculator {
   }
 
   /**
-   * Format APY with context
+   * Format APY with context and precision
    */
-  static formatAPY(apy: number): string {
-    if (Math.abs(apy) < 0.01) return '0.00% APY';
-    const sign = apy > 0 ? '+' : '';
-    return `${sign}${apy.toFixed(2)}% APY`;
+  static formatAPY(apy: number | DecimalValue): string {
+    try {
+      const apyDecimal = apy instanceof Decimal ? apy : new Decimal(apy);
+      if (apyDecimal.abs().lessThan(0.01)) return '0.00% APY';
+      const sign = apyDecimal.greaterThan(0) ? '+' : '';
+      return `${sign}${apyDecimal.toFixed(2)}% APY`;
+    } catch (error) {
+      console.error('Error formatting APY:', error);
+      return '0.00% APY';
+    }
+  }
+
+  /**
+   * Round to nearest cent with proper banker's rounding
+   */
+  static roundToCents(value: number | DecimalValue): DecimalValue {
+    try {
+      const decimal = value instanceof Decimal ? value : new Decimal(value);
+      return decimal.toDecimalPlaces(2);
+    } catch (error) {
+      console.error('Error rounding to cents:', error);
+      return new Decimal(0);
+    }
+  }
+
+  /**
+   * Check if two financial values are equal within tolerance
+   */
+  static isEqual(a: number | DecimalValue, b: number | DecimalValue, tolerance: number = 0.001): boolean {
+    try {
+      const decimalA = a instanceof Decimal ? a : new Decimal(a);
+      const decimalB = b instanceof Decimal ? b : new Decimal(b);
+      const diff = decimalA.minus(decimalB).abs();
+      return diff.lessThanOrEqualTo(tolerance);
+    } catch (error) {
+      console.error('Error comparing financial values:', error);
+      return false;
+    }
   }
 } 

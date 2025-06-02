@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUnifiedAuth } from '@/lib/unifiedAuth';
 
 export interface Notification {
@@ -53,13 +53,22 @@ export function useNotifications(): UseNotificationsReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use ref to avoid recreating the interval when notifications change
+  const notificationsRef = useRef<Notification[]>([]);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update ref when notifications change
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  // API headers with auth
-  const getHeaders = () => ({
+  // API headers with auth - memoized to prevent recreation
+  const getHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })
-  });
+  }), [token]);
 
   // Fetch notifications
   const fetchNotifications = useCallback(async (filters: NotificationFilters = {}) => {
@@ -228,7 +237,7 @@ export function useNotifications(): UseNotificationsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [token, API_BASE]);
+  }, [token, API_BASE, getHeaders]);
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
@@ -280,7 +289,7 @@ export function useNotifications(): UseNotificationsReturn {
       console.error('Failed to mark notification as read:', err);
       throw err;
     }
-  }, [token, API_BASE]);
+  }, [token, API_BASE, getHeaders]);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
@@ -321,13 +330,13 @@ export function useNotifications(): UseNotificationsReturn {
       console.error('Failed to mark all notifications as read:', err);
       throw err;
     }
-  }, [token, API_BASE]);
+  }, [token, API_BASE, getHeaders]);
 
   // Delete notification
   const deleteNotification = useCallback(async (notificationId: string) => {
     if (!token) {
       // Demo mode - update local state
-      const deletedNotification = notifications.find(n => n.id === notificationId);
+      const deletedNotification = notificationsRef.current.find(n => n.id === notificationId);
       setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
       setTotalCount(prev => prev - 1);
       
@@ -349,7 +358,7 @@ export function useNotifications(): UseNotificationsReturn {
       }
 
       // Update local state
-      const deletedNotification = notifications.find(n => n.id === notificationId);
+      const deletedNotification = notificationsRef.current.find(n => n.id === notificationId);
       setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
       setTotalCount(prev => prev - 1);
       
@@ -361,7 +370,7 @@ export function useNotifications(): UseNotificationsReturn {
       console.error('Failed to delete notification:', err);
       throw err;
     }
-  }, [token, API_BASE, notifications]);
+  }, [token, API_BASE, getHeaders]);
 
   // Delete all read notifications
   const deleteAllRead = useCallback(async () => {
@@ -389,13 +398,13 @@ export function useNotifications(): UseNotificationsReturn {
       console.error('Failed to delete read notifications:', err);
       throw err;
     }
-  }, [token, API_BASE, unreadCount]);
+  }, [token, API_BASE, getHeaders, unreadCount]);
 
-  // Refresh unread count only
+  // Refresh unread count only - stable function that doesn't depend on notifications
   const refreshUnreadCount = useCallback(async () => {
     if (!token) {
-      // Demo mode - calculate from current notifications
-      const currentUnreadCount = notifications.filter(n => !n.isRead).length;
+      // Demo mode - calculate from current notifications using ref
+      const currentUnreadCount = notificationsRef.current.filter(n => !n.isRead).length;
       setUnreadCount(currentUnreadCount);
       return;
     }
@@ -416,10 +425,16 @@ export function useNotifications(): UseNotificationsReturn {
       console.error('Failed to refresh unread count:', err);
       // Don't show error to user for count refresh failures
     }
-  }, [token, API_BASE, notifications]);
+  }, [token, API_BASE, getHeaders]); // Removed notifications dependency
 
-  // Auto-refresh unread count every 30 seconds
+  // Auto-refresh unread count every 30 seconds - MEMORY LEAK FIX
   useEffect(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     if (!token) {
       // Demo mode - calculate unread count from current notifications
       const currentUnreadCount = notifications.filter(n => !n.isRead).length;
@@ -430,11 +445,16 @@ export function useNotifications(): UseNotificationsReturn {
     // Initial load
     refreshUnreadCount();
 
-    // Set up interval for periodic refresh
-    const interval = setInterval(refreshUnreadCount, 30000); // 30 seconds
+    // Set up interval for periodic refresh - store in ref for cleanup
+    intervalRef.current = setInterval(refreshUnreadCount, 30000); // 30 seconds
 
-    return () => clearInterval(interval);
-  }, [token, refreshUnreadCount]); // Remove notifications from dependencies
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [token, refreshUnreadCount]); // Stable dependencies
 
   // Initial load effect - load notifications on mount
   useEffect(() => {
@@ -454,6 +474,16 @@ export function useNotifications(): UseNotificationsReturn {
     loadInitialNotifications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, authLoading]); // Wait for both token and loading state
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
 
   return {
     notifications,

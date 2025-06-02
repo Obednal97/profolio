@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import LineChart from '@/components/charts/line';
 import PieChart from '@/components/charts/pie';
@@ -45,19 +45,51 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'overview' | 'detailed' | 'allocation'>('overview');
 
+  // Use refs to track abort controllers for cleanup
+  const metricsAbortControllerRef = useRef<AbortController | null>(null);
+  const chartAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup function for all abort controllers
+  const cleanup = useCallback(() => {
+    if (metricsAbortControllerRef.current) {
+      metricsAbortControllerRef.current.abort();
+      metricsAbortControllerRef.current = null;
+    }
+    if (chartAbortControllerRef.current) {
+      chartAbortControllerRef.current.abort();
+      chartAbortControllerRef.current = null;
+    }
+  }, []);
+
   const loadPerformanceData = useCallback(async () => {
+    // Cancel any ongoing requests
+    cleanup();
+
     setLoading(true);
     try {
-      // Load performance metrics
+      // Create separate AbortControllers for each request
+      const metricsController = new AbortController();
+      const chartController = new AbortController();
+      metricsAbortControllerRef.current = metricsController;
+      chartAbortControllerRef.current = chartController;
+
+      // Load performance metrics with cleanup
       const metricsResponse = await fetch('/api/assets/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: userId || 'demo-user-id' }),
+        signal: metricsController.signal,
       });
+      
+      if (metricsController.signal.aborted) return;
+      
       const metricsData = await metricsResponse.json();
-      setMetrics(metricsData);
+      
+      if (!metricsController.signal.aborted) {
+        setMetrics(metricsData);
+      }
 
-      // Load chart data
+      // Load chart data with cleanup
       const chartResponse = await fetch('/api/assets/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,40 +97,57 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
           userId: userId || 'demo-user-id',
           days: timeframe === 'max' ? null : parseInt(timeframe)
         }),
+        signal: chartController.signal,
       });
+      
+      if (chartController.signal.aborted) return;
+      
       const chartData = await chartResponse.json();
       
-      if (chartData.history) {
+      if (chartData.history && !chartController.signal.aborted) {
         setChartData(chartData.history.map((item: ChartHistoryItem) => ({
           date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           value: item.totalValue
         })));
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.error('Failed to load performance data:', error);
     } finally {
-      setLoading(false);
+      if (!metricsAbortControllerRef.current?.signal.aborted && 
+          !chartAbortControllerRef.current?.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [userId, timeframe]);
+  }, [userId, timeframe, cleanup]);
 
   useEffect(() => {
     loadPerformanceData();
   }, [loadPerformanceData]);
 
-  const refreshData = async () => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
+
+  const refreshData = useCallback(async () => {
     setRefreshing(true);
     await loadPerformanceData();
     setRefreshing(false);
-  };
+  }, [loadPerformanceData]);
 
-  const timeFrameOptions = [
+  // Memoized timeframe options to prevent recreation
+  const timeFrameOptions = useMemo(() => [
     { value: '7', label: '7D' },
     { value: '30', label: '30D' },
     { value: '90', label: '3M' },
     { value: '180', label: '6M' },
     { value: '365', label: '1Y' },
     { value: 'max', label: 'All' },
-  ];
+  ], []);
 
   const allocationData = useMemo(() => {
     if (!metrics?.assetsByType) return [];
@@ -112,7 +161,8 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
     }));
   }, [metrics]);
 
-  const getTypeColor = (type: string): string => {
+  // Memoized color function to prevent recreation
+  const getTypeColor = useCallback((type: string): string => {
     const colors: Record<string, string> = {
       STOCK: '#3B82F6',
       CRYPTO: '#F59E0B',
@@ -122,7 +172,22 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
       OTHER: '#6B7280',
     };
     return colors[type] || '#6B7280';
-  };
+  }, []);
+
+  // Memoized top performers calculation
+  const topPerformers = useMemo(() => {
+    if (!metrics?.topPerformers) return [];
+    return metrics.topPerformers.slice(0, 5);
+  }, [metrics?.topPerformers]);
+
+  // Memoized view mode handlers
+  const handleViewModeChange = useCallback((mode: 'overview' | 'detailed' | 'allocation') => {
+    setViewMode(mode);
+  }, []);
+
+  const handleTimeframeChange = useCallback((newTimeframe: string) => {
+    setTimeframe(newTimeframe);
+  }, []);
 
   if (loading) {
     return (
@@ -172,7 +237,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
         ].map((mode) => (
           <button
             key={mode.key}
-            onClick={() => setViewMode(mode.key as 'overview' | 'detailed' | 'allocation')}
+            onClick={() => handleViewModeChange(mode.key as 'overview' | 'detailed' | 'allocation')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               viewMode === mode.key
                 ? 'bg-white text-gray-900 shadow'
@@ -286,7 +351,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
                 {timeFrameOptions.map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => setTimeframe(option.value)}
+                    onClick={() => handleTimeframeChange(option.value)}
                     className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                       timeframe === option.value
                         ? 'bg-blue-600 text-white'
@@ -336,7 +401,7 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Performers</h3>
           <div className="space-y-4">
-            {metrics?.topPerformers?.slice(0, 5).map((asset, index) => (
+            {topPerformers.map((asset, index) => (
               <div key={asset.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${

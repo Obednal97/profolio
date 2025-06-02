@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Asset } from '@/types/global';
 import { AssetCard } from '@/components/cards/AssetCard';
 import { AssetModal } from '@/components/modals/AssetModal';
@@ -13,6 +13,8 @@ import {
   SkeletonStat,
   SkeletonButton
 } from '@/components/ui/skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 // Asset type configuration
 const assetTypeConfig = {
@@ -98,22 +100,47 @@ export default function PortfolioPage() {
   const [filter, setFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'value' | 'change' | 'name'>('value');
 
+  // Use ref to track abort controller for cleanup
+  const fetchAbortControllerRef = useRef<AbortController | null>(null);
+
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use Firebase user data or demo user data
-  const currentUser = user ? {
-    id: user.id,
-    name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
-    email: user.email || ''
-  } : (isDemoMode ? {
-    id: 'demo-user-id',
-    name: 'Demo User',
-    email: 'demo@profolio.com'
-  } : null);
+  // Use Firebase user data or demo user data - memoized
+  const currentUser = useMemo(() => {
+    if (user) {
+      return {
+        id: user.id,
+        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
+        email: user.email || ''
+      };
+    } else if (isDemoMode) {
+      return {
+        id: 'demo-user-id',
+        name: 'Demo User',
+        email: 'demo@profolio.com'
+      };
+    }
+    return null;
+  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+
+  // Cleanup function for abort controller
+  const cleanup = useCallback(() => {
+    if (fetchAbortControllerRef.current) {
+      fetchAbortControllerRef.current.abort();
+      fetchAbortControllerRef.current = null;
+    }
+  }, []);
 
   const fetchAssets = useCallback(async () => {
     if (!currentUser?.id) return;
+    
+    // Cancel any ongoing fetch request
+    cleanup();
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    fetchAbortControllerRef.current = controller;
     
     try {
       setLoading(true);
@@ -127,21 +154,35 @@ export default function PortfolioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ method: 'READ', userId: currentUser.id }),
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
+      
       const data = await response.json();
       
       if (data.error) {
         throw new Error(data.error);
       }
       
-      setAssets(data.assets || []);
+      if (!controller.signal.aborted) {
+        setAssets(data.assets || []);
+      }
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.error('Error fetching assets:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch assets');
+      if (!controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch assets');
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, cleanup]);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -149,41 +190,74 @@ export default function PortfolioPage() {
     }
   }, [currentUser?.id, fetchAssets]);
 
-  const handleSaveAsset = async (asset: Asset) => {
-    if (!currentUser?.id) return;
-    
-    try {
-      const { apiCall } = await import('@/lib/mockApi');
-      const method = asset.id ? 'UPDATE' : 'CREATE';
-      const response = await apiCall('/api/assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method,
-          userId: currentUser.id,
-          data: asset,
-        }),
-      });
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      setShowModal(false);
-      setSelectedAsset(null);
-      fetchAssets();
-    } catch (err) {
-      console.error('Error saving asset:', err);
-    }
-  };
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
-  const handleDeleteAsset = async (assetId: string) => {
-    if (!currentUser?.id) return;
+  // Memoized calculations for performance
+  const portfolioMetrics = useMemo(() => {
+    const totalValue = assets.reduce((sum, asset) => sum + (asset.current_value || 0), 0);
+    const totalInvested = assets.reduce((sum, asset) => {
+      return sum + (asset.purchase_price && asset.quantity ? asset.purchase_price * asset.quantity : 0);
+    }, 0);
+    const totalGainLoss = totalValue - totalInvested;
+    const gainLossPercent = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
+
+    return {
+      totalValue,
+      totalInvested,
+      totalGainLoss,
+      gainLossPercent,
+      assetCount: assets.length
+    };
+  }, [assets]);
+
+  // Memoized filtered and sorted assets
+  const filteredAndSortedAssets = useMemo(() => {
+    let filtered = assets;
     
+    if (filter !== 'all') {
+      filtered = assets.filter(asset => asset.type === filter);
+    }
+    
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'value':
+          return (b.current_value || 0) - (a.current_value || 0);
+        case 'change':
+          const aGain = a.current_value && a.purchase_price && a.quantity
+            ? a.current_value - (a.purchase_price * a.quantity)
+            : 0;
+          const bGain = b.current_value && b.purchase_price && b.quantity
+            ? b.current_value - (b.purchase_price * b.quantity)
+            : 0;
+          return bGain - aGain;
+        case 'name':
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
+  }, [assets, filter, sortBy]);
+
+  // Memoized asset types for filter buttons
+  const assetTypes = useMemo(() => {
+    const types = new Set(assets.map(asset => asset.type).filter(Boolean));
+    return Array.from(types);
+  }, [assets]);
+
+  const handleEdit = useCallback((asset: Asset) => {
+    setSelectedAsset(asset);
+    setShowModal(true);
+  }, []);
+
+  const handleDelete = useCallback(async (assetId: string) => {
+    if (!currentUser || !confirm('Are you sure you want to delete this asset?')) return;
+
     try {
       const { apiCall } = await import('@/lib/mockApi');
-      const response = await apiCall('/api/assets', {
+      await apiCall('/api/assets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,41 +266,20 @@ export default function PortfolioPage() {
           id: assetId,
         }),
       });
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
       
       fetchAssets();
     } catch (err) {
       console.error('Error deleting asset:', err);
+      setError('Failed to delete asset');
     }
-  };
+  }, [currentUser, fetchAssets]);
 
-  // Filter and sort assets
-  const filteredAndSortedAssets = assets
-    .filter(asset => filter === 'all' || asset.type === filter)
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'value':
-          return (b.current_value || 0) - (a.current_value || 0);
-        case 'change':
-          const aChange = ((a.current_value || 0) - (a.purchase_price || 0)) / (a.purchase_price || 1);
-          const bChange = ((b.current_value || 0) - (b.purchase_price || 0)) / (b.purchase_price || 1);
-          return bChange - aChange;
-        case 'name':
-          return (a.name || '').localeCompare(b.name || '');
-        default:
-          return 0;
-      }
-    });
-
-  // Calculate portfolio stats
-  const totalValue = assets.reduce((sum, asset) => sum + (asset.current_value || 0), 0);
-  const totalCost = assets.reduce((sum, asset) => sum + (asset.purchase_price || 0), 0);
-  const totalGain = totalValue - totalCost;
-  const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
+  const formatCurrency = useCallback((amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  }, []);
 
   if (loading) {
     return <PortfolioSkeleton />;
@@ -242,7 +295,7 @@ export default function PortfolioPage() {
           </h3>
           <p className="text-red-600 dark:text-red-300">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => fetchAssets()}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             Try Again
@@ -281,25 +334,35 @@ export default function PortfolioPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            ${totalValue.toLocaleString()}
+            {formatCurrency(portfolioMetrics.totalValue)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Gain/Loss</p>
-          <p className={`text-2xl font-bold ${totalGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            ${Math.abs(totalGain).toLocaleString()}
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Invested</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            {formatCurrency(portfolioMetrics.totalInvested)}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
+          <p className={`text-2xl font-bold ${
+            portfolioMetrics.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {portfolioMetrics.totalGainLoss >= 0 ? '+' : ''}{formatCurrency(portfolioMetrics.totalGainLoss)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">Return</p>
-          <p className={`text-2xl font-bold ${totalGainPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {totalGainPercent.toFixed(2)}%
+          <p className={`text-2xl font-bold ${
+            portfolioMetrics.gainLossPercent >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {portfolioMetrics.gainLossPercent >= 0 ? '+' : ''}{portfolioMetrics.gainLossPercent.toFixed(2)}%
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">Assets</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {assets.length}
+            {portfolioMetrics.assetCount}
           </p>
         </div>
       </div>
@@ -367,19 +430,16 @@ export default function PortfolioPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedAssets.map((asset) => (
-            <AssetCard
-              key={asset.id}
-              asset={asset}
-              onEdit={() => {
-                setSelectedAsset(asset);
-                setShowModal(true);
-              }}
-              onDelete={() => handleDeleteAsset(asset.id!)}
-              config={assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other}
-              getCryptoIcon={getCryptoIcon}
-            />
-          ))}
+          <AnimatePresence>
+            {filteredAndSortedAssets.map((asset) => (
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
@@ -387,7 +447,7 @@ export default function PortfolioPage() {
       {showModal && (
         <AssetModal
           asset={selectedAsset}
-          onSave={handleSaveAsset}
+          onSave={handleEdit}
           onClose={() => {
             setShowModal(false);
             setSelectedAsset(null);

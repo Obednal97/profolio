@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button/button";
 import { FinancialCalculator } from '@/lib/financial';
@@ -20,54 +20,104 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
   const [isTestingConnection, setIsTestingConnection] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, 'success' | 'error' | null>>({});
 
+  // Use refs to track abort controllers and prevent race conditions
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const testingControllerRef = useRef<AbortController | null>(null);
+
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
 
-  // Load existing API keys
-  useEffect(() => {
-    const loadApiKeys = async () => {
-      try {
-        if (isDemoMode) {
-          // For demo mode, load from localStorage
-          const demoApiKeys = localStorage.getItem('demo-api-keys');
-          if (demoApiKeys) {
-            const parsedKeys = JSON.parse(demoApiKeys);
-            setApiKeys(prev => ({ ...prev, ...parsedKeys }));
-          }
-          return;
-        }
+  // Cleanup function to cancel ongoing requests
+  const cleanup = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (testingControllerRef.current) {
+      testingControllerRef.current.abort();
+      testingControllerRef.current = null;
+    }
+  }, []);
 
-        // For real users, load from secure server storage
-        const authToken = token || (isDemoMode ? 'demo-token' : null);
-        if (!authToken) {
-          console.log('No auth token available, skipping API key load');
-          return;
-        }
+  // Load existing API keys with proper cleanup
+  const loadApiKeys = useCallback(async () => {
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-        const response = await fetch('/api/user/api-keys', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-        if (response.ok) {
-          const data = await response.json();
-          setApiKeys(prev => ({ ...prev, ...data.apiKeys }));
-        } else {
-          console.log('API keys not found, starting with empty keys');
+    try {
+      if (isDemoMode) {
+        // For demo mode, load from localStorage (no network request needed)
+        const demoApiKeys = localStorage.getItem('demo-api-keys');
+        if (demoApiKeys && !controller.signal.aborted) {
+          const parsedKeys = JSON.parse(demoApiKeys);
+          setApiKeys(prev => ({ ...prev, ...parsedKeys }));
         }
-      } catch (error) {
-        console.error('Error loading API keys:', error);
+        return;
       }
-    };
 
-    loadApiKeys();
+      // For real users, load from secure server storage
+      const authToken = token || (isDemoMode ? 'demo-token' : null);
+      if (!authToken) {
+        console.log('No auth token available, skipping API key load');
+        return;
+      }
+
+      const response = await fetch('/api/user/api-keys', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+
+      if (controller.signal.aborted) return;
+
+      if (response.ok) {
+        const data = await response.json();
+        if (!controller.signal.aborted) {
+          setApiKeys(prev => ({ ...prev, ...data.apiKeys }));
+        }
+      } else {
+        console.log('API keys not found, starting with empty keys');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
+      console.error('Error loading API keys:', error);
+    }
   }, [isDemoMode, token]);
 
-  const testApiConnection = async (provider: string, apiKey: string) => {
+  // Load API keys on mount
+  useEffect(() => {
+    loadApiKeys();
+    return cleanup;
+  }, [loadApiKeys, cleanup]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
+
+  const testApiConnection = useCallback(async (provider: string, apiKey: string) => {
     if (!apiKey.trim()) return;
     
+    // Cancel any ongoing test request
+    if (testingControllerRef.current) {
+      testingControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this test
+    const controller = new AbortController();
+    testingControllerRef.current = controller;
+
     setIsTestingConnection(provider);
     setConnectionStatus(prev => ({ ...prev, [provider]: null }));
 
@@ -85,7 +135,10 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
               'Authorization': `Bearer ${authToken}`,
             },
             body: JSON.stringify({ apiKey }),
+            signal: controller.signal,
           });
+          
+          if (controller.signal.aborted) return;
           
           if (response.ok) {
             isValid = true;
@@ -115,7 +168,12 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
         
         case 'alphaVantage':
           // Test Alpha Vantage API
-          const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${apiKey}`);
+          const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${apiKey}`, {
+            signal: controller.signal,
+          });
+          
+          if (controller.signal.aborted) return;
+          
           const avData = await avResponse.json();
           isValid = !avData['Error Message'] && !avData['Note'];
           break;
@@ -127,13 +185,25 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
         
         case 'polygon':
           // Test Polygon API
-          const polygonResponse = await fetch(`https://api.polygon.io/v2/aggs/ticker/AAPL/prev?apikey=${apiKey}`);
+          const polygonResponse = await fetch(`https://api.polygon.io/v2/aggs/ticker/AAPL/prev?apikey=${apiKey}`, {
+            signal: controller.signal,
+          });
+          
+          if (controller.signal.aborted) return;
+          
           isValid = polygonResponse.ok;
           break;
       }
 
-      setConnectionStatus(prev => ({ ...prev, [provider]: isValid ? 'success' : 'error' }));
+      if (!controller.signal.aborted) {
+        setConnectionStatus(prev => ({ ...prev, [provider]: isValid ? 'success' : 'error' }));
+      }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
+      
       console.error(`Error testing ${provider} API:`, error);
       
       // Handle network errors
@@ -143,17 +213,30 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
         alert(`❌ ${provider} Test Failed\n\n${error instanceof Error ? error.message : 'Unknown error'}`);
       }
       
-      setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+      if (!controller.signal.aborted) {
+        setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+      }
     } finally {
-      setIsTestingConnection(null);
+      if (!controller.signal.aborted) {
+        setIsTestingConnection(null);
+      }
     }
-  };
+  }, [token, isDemoMode]);
 
-  const syncTrading212Data = async () => {
+  const syncTrading212Data = useCallback(async () => {
     if (!apiKeys.trading212.trim()) {
       alert('Please enter your Trading 212 API key first');
       return;
     }
+
+    // Cancel any ongoing test request
+    if (testingControllerRef.current) {
+      testingControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this sync
+    const controller = new AbortController();
+    testingControllerRef.current = controller;
 
     try {
       setIsTestingConnection('trading212-sync');
@@ -167,7 +250,10 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({ apiKey: apiKeys.trading212 }),
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -188,6 +274,8 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
       }
 
       const data = await response.json();
+      
+      if (controller.signal.aborted) return;
       
       // Notify parent component to refresh assets
       if (onApiKeysUpdated) {
@@ -215,6 +303,11 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
       alert(message);
       onClose();
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
+      
       console.error('Error syncing Trading 212 data:', error);
       
       // Handle network errors
@@ -224,12 +317,17 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
         alert(`❌ Trading 212 Sync Failed\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nIf you\'re seeing rate limit errors, please wait a few minutes before trying again.`);
       }
     } finally {
-      setIsTestingConnection(null);
+      if (!controller.signal.aborted) {
+        setIsTestingConnection(null);
+      }
     }
-  };
+  }, [apiKeys.trading212, token, isDemoMode, onApiKeysUpdated, onClose]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Cancel any ongoing requests
+    cleanup();
     
     try {
       if (isDemoMode) {
@@ -268,7 +366,7 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
       console.error('Error saving API keys:', error);
       alert(`Failed to save API keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  };
+  }, [apiKeys, isDemoMode, token, onClose, cleanup]);
 
   const apiProviders = [
     {

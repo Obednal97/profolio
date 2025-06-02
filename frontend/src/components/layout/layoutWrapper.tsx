@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { HeaderLayout as Header } from "@/components/layout/headerLayout";
 import { FooterLayout as Footer } from "@/components/layout/footerLayout";
@@ -36,6 +36,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   // Safe auth hook usage - call unconditionally but handle errors
   const { user, userProfile } = useAuth();
+
+  // Use ref to track abort controller for cleanup
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -105,27 +108,49 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     return null;
   }, [user?.id, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
 
-  // Load user preferences from API when user is available
+  // Cleanup function for abort controller
+  const cleanup = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  // Load user preferences from API when user is available - optimized with cleanup
   useEffect(() => {
     if (!mounted) return;
 
     const loadUserPreferences = async () => {
       if (currentUser?.id && !preferencesLoaded) {
+        // Cancel any ongoing request
+        cleanup();
+
+        // Create new AbortController for this request
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         try {
           const { apiCall } = await import('@/lib/mockApi');
           const response = await apiCall('/api/user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ method: 'GET_PROFILE', userId: currentUser.id }),
+            signal: controller.signal,
           });
+
+          if (controller.signal.aborted) return;
           
           const data = await response.json();
-          if (data.user?.preferences?.currency) {
+          if (data.user?.preferences?.currency && !controller.signal.aborted) {
             setCurrencyState(data.user.preferences.currency);
             setPreferencesLoaded(true);
             return;
           }
         } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            // Request was aborted, this is expected
+            return;
+          }
           console.error('Failed to load user preferences:', error);
         }
       }
@@ -139,7 +164,12 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     };
 
     loadUserPreferences();
-  }, [currentUser?.id, preferencesLoaded, mounted]);
+  }, [currentUser?.id, preferencesLoaded, mounted, cleanup]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
   const setCurrency = async (newCurrency: string) => {
     setCurrencyState(newCurrency);

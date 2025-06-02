@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button/button";
 import { GooglePlacesApiKeyModal } from "./GooglePlacesApiKeyModal";
@@ -208,6 +208,22 @@ export function PropertyModal({
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeySource, setApiKeySource] = useState<'stored' | 'env' | 'none'>('none');
 
+  // Use refs to track abort controllers and prevent race conditions
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup function to cancel ongoing requests
+  const cleanup = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     setFormData(memoizedInitialData);
     setAddressInput(memoizedInitialData.address || "");
@@ -231,15 +247,15 @@ export function PropertyModal({
     checkApiKeySource();
   }, []);
 
-  // Get the active Google API key (stored key takes precedence)
-  const getGoogleApiKey = () => {
+  // Get the active Google API key (stored key takes precedence) - memoized
+  const getGoogleApiKey = useCallback(() => {
     return localStorage.getItem('google_places_api_key') || 
            process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY || 
            null;
-  };
+  }, []);
 
-  // Handle API key modal updates
-  const handleApiKeyUpdated = () => {
+  // Handle API key modal updates - memoized
+  const handleApiKeyUpdated = useCallback(() => {
     const storedKey = localStorage.getItem('google_places_api_key');
     const envKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
     
@@ -250,10 +266,10 @@ export function PropertyModal({
     } else {
       setApiKeySource('none');
     }
-  };
+  }, []);
 
-  // Handle country change and clear region if new country doesn't have states
-  const handleCountryChange = (newCountry: string) => {
+  // Handle country change and clear region if new country doesn't have states - memoized
+  const handleCountryChange = useCallback((newCountry: string) => {
     const newFormData = { ...formData, country: newCountry };
     
     // If the new country doesn't have predefined states, clear the region
@@ -262,14 +278,21 @@ export function PropertyModal({
     }
     
     setFormData(newFormData);
-  };
+  }, [formData]);
 
-  // Address auto-fill functionality with Google Places API (with Nominatim fallback)
-  const searchAddresses = async (query: string) => {
+  // Address auto-fill functionality with Google Places API (with Nominatim fallback) - optimized with proper cleanup
+  const searchAddresses = useCallback(async (query: string) => {
     if (query.length < 3) {
       setAddressSuggestions([]);
       return;
     }
+
+    // Cancel any ongoing request
+    cleanup();
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setLoadingAddress(true);
     try {
@@ -279,8 +302,11 @@ export function PropertyModal({
       if (googleApiKey) {
         // Use the official Google Places Autocomplete API
         const autocompleteResponse = await fetch(
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=address&key=${googleApiKey}&sessiontoken=${Date.now()}`
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=address&key=${googleApiKey}&sessiontoken=${Date.now()}`,
+          { signal: controller.signal }
         );
+        
+        if (controller.signal.aborted) return;
         
         if (autocompleteResponse.ok) {
           const autocompleteData = await autocompleteResponse.json();
@@ -290,10 +316,16 @@ export function PropertyModal({
             const detailedSuggestions = await Promise.all(
               autocompleteData.predictions.slice(0, 5).map(async (prediction: GooglePlacesPrediction) => {
                 try {
+                  // Check if still valid before making request
+                  if (controller.signal.aborted) return undefined;
+                  
                   // Use Place Details API to get structured address components
                   const detailResponse = await fetch(
-                    `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=address_components,formatted_address&key=${googleApiKey}`
+                    `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=address_components,formatted_address&key=${googleApiKey}`,
+                    { signal: controller.signal }
                   );
+                  
+                  if (controller.signal.aborted) return undefined;
                   
                   if (detailResponse.ok) {
                     const detailData = await detailResponse.json();
@@ -351,6 +383,9 @@ export function PropertyModal({
                     };
                   }
                 } catch (error) {
+                  if (error instanceof Error && error.name === 'AbortError') {
+                    return undefined;
+                  }
                   console.error('Error getting Google place details:', error);
                 }
                 
@@ -372,10 +407,9 @@ export function PropertyModal({
                 suggestion !== undefined && (suggestion.street || suggestion.city || suggestion.display_name)
             );
             
-            if (validSuggestions.length > 0) {
+            if (validSuggestions.length > 0 && !controller.signal.aborted) {
               setAddressSuggestions(validSuggestions);
               setShowSuggestions(true);
-              setLoadingAddress(false);
               return;
             }
           }
@@ -387,8 +421,11 @@ export function PropertyModal({
       // Fallback to Nominatim (OpenStreetMap) if Google Places fails or is unavailable
       console.log('Using OpenStreetMap fallback for address search');
       const nominatimResponse = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}&countrycodes=us,ca,gb,au,de,fr`
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}&countrycodes=us,ca,gb,au,de,fr`,
+        { signal: controller.signal }
       );
+      
+      if (controller.signal.aborted) return;
       
       if (!nominatimResponse.ok) throw new Error('Geocoding service unavailable');
       
@@ -405,29 +442,48 @@ export function PropertyModal({
         country: item.address?.country || ''
       })).filter((suggestion: AddressSuggestion) => suggestion.street && suggestion.city);
 
-      setAddressSuggestions(suggestions);
-      setShowSuggestions(true);
+      if (!controller.signal.aborted) {
+        setAddressSuggestions(suggestions);
+        setShowSuggestions(true);
+      }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was aborted, this is expected
+        return;
+      }
       console.error('Address lookup failed:', error);
-      setAddressSuggestions([]);
+      if (!controller.signal.aborted) {
+        setAddressSuggestions([]);
+      }
     } finally {
-      setLoadingAddress(false);
+      if (!controller.signal.aborted) {
+        setLoadingAddress(false);
+      }
     }
-  };
+  }, [getGoogleApiKey, cleanup]);
 
-  // Debounced address search - only when not in manual mode
+  // Debounced address search - only when not in manual mode - optimized with proper cleanup
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    // Cleanup previous timeout and request
+    cleanup();
+
+    // Debounce the API call to avoid too many requests
+    debounceTimeoutRef.current = setTimeout(() => {
       if (addressInput && !manualAddressEntry) {
         searchAddresses(addressInput);
       }
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [addressInput, manualAddressEntry]);
+    return cleanup;
+  }, [addressInput, manualAddressEntry, searchAddresses]);
 
-  // Handle address selection - ONLY update address-related fields
-  const handleAddressSelect = (suggestion: AddressSuggestion) => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
+
+  // Handle address selection - ONLY update address-related fields - memoized
+  const handleAddressSelect = useCallback((suggestion: AddressSuggestion) => {
     // Create a new form data object with ONLY address fields updated
     const updatedFormData = {
       ...formData, // Keep all existing fields
@@ -443,25 +499,32 @@ export function PropertyModal({
     setFormData(updatedFormData);
     setAddressInput(suggestion.display_name);
     setShowSuggestions(false);
-  };
+  }, [formData]);
 
-  // Handle manual address mode toggle
-  const handleManualAddressToggle = () => {
+  // Handle manual address mode toggle - memoized
+  const handleManualAddressToggle = useCallback(() => {
     setManualAddressEntry(!manualAddressEntry);
     setShowSuggestions(false);
     setAddressSuggestions([]);
-  };
+    // Cancel any ongoing requests when switching modes
+    cleanup();
+  }, [manualAddressEntry, cleanup]);
 
-  // Handle manual address field changes
-  const handleManualFieldChange = (field: string, value: string) => {
+  // Handle manual address field changes - memoized
+  const handleManualFieldChange = useCallback((field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
-  };
+  }, [formData]);
 
-  // Get available states for the selected country
-  const availableStates = COUNTRIES_WITH_STATES[formData.country as keyof typeof COUNTRIES_WITH_STATES] || [];
+  // Get available states for the selected country - memoized
+  const availableStates = useMemo(() => 
+    COUNTRIES_WITH_STATES[formData.country as keyof typeof COUNTRIES_WITH_STATES] || []
+  , [formData.country]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Cancel any ongoing API requests
+    cleanup();
     
     const propertyData: Property = {
       id: initialData?.id ?? '',
@@ -514,7 +577,7 @@ export function PropertyModal({
     };
     
     onSubmit(propertyData);
-  };
+  }, [formData, initialData?.id, currentUserId, onSubmit, cleanup]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl mt-4 sm:mt-8 relative z-50">
