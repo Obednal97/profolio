@@ -5,14 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v1.2.2] - 2025-01-02
 
-### Added
-- Initial public release preparation
-- Comprehensive security audit and fixes
-- Professional documentation suite
+### 🏠 **MAJOR: Proxmox LXC Container Support**
+- **NEW**: Native Proxmox host detection and automatic LXC container creation
+- **NEW**: Optimized container configuration wizard (4GB RAM, 2 CPU, 20GB disk)
+- **NEW**: Support for DHCP and static IP network configuration
+- **NEW**: Automatic Ubuntu 24.04 LTS template download and setup
+- **NEW**: Container management integration with Proxmox tools
+- **NEW**: Comprehensive Proxmox installation guide with troubleshooting
 
-## [1.2.1] - 2025-06-02
+### 🐛 **CRITICAL: Demo Mode Sign-Out Fix**
+- **FIXED**: Demo mode users can now properly sign out (previously required cache clearing)
+- **FIXED**: `DemoSessionManager.endDemoSession()` now properly called in all sign-out paths
+- **FIXED**: Updated `useAuth`, `localAuth`, and `AuthProvider` to handle demo mode correctly
+- **IMPROVED**: Demo session cleanup now works consistently across all authentication methods
+
+### 🧹 **Repository Cleanup**
+- **REMOVED**: `fix_firebase_env.sh` (functionality integrated into main installer)
+- **REMOVED**: `cleanup-dependencies.sh` (handled by installer dependency management)
+- **REMOVED**: `setup.sh` (replaced by enhanced installer setup functionality)
+- **REMOVED**: `deploy.sh` (deployment now handled by installer with rollback protection)
+- **IMPROVED**: Simplified repository structure with single installer script
+
+### 📚 **Documentation Enhancements**
+- **NEW**: Complete Proxmox installation guide (`docs/installation/PROXMOX_INSTALLATION.md`)
+- **UPDATED**: README.md with Proxmox LXC container section and benefits
+- **UPDATED**: Quick Start Guide with Proxmox container creation workflow
+- **IMPROVED**: Installation documentation now covers all deployment scenarios
+
+### 🔧 **Technical Improvements**
+- **NEW**: Proxmox host detection functions (`detect_proxmox_host`, `detect_lxc_container`)
+- **NEW**: Container creation wizard with hardware and network configuration
+- **NEW**: Automatic VMID allocation and template management
+- **NEW**: Container resource management and monitoring integration
+- **IMPROVED**: Installer now handles Proxmox environments intelligently
+
+### 🏗️ **Architecture Changes**
+- **IMPROVED**: Enhanced installer supports three deployment modes:
+  - Proxmox LXC containers (new, recommended for Proxmox users)
+  - Standard Linux installations (existing)
+  - Air-gapped/offline installations (existing)
+- **IMPROVED**: Better separation of concerns with dedicated Proxmox handling functions
+
+## [v1.2.1] - 2025-01-02
 
 ### 🚨 CRITICAL INSTALLER FIX 🚨
 - **🔥 Firebase Authentication Preservation**: Fixed critical issue where installer overwrote environment files during updates

@@ -23,6 +23,28 @@ Profolio supports **two deployment modes** from the same codebase:
 
 ## 📦 **Installation**
 
+### 🏠 **Proxmox LXC Container** (Recommended for Proxmox users)
+
+**Automatic container creation and installation:**
+
+```bash
+# Run directly on Proxmox host - it will detect and offer container creation
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+```
+
+**What happens automatically:**
+- ✅ **Detects Proxmox host** and offers container creation
+- ✅ **Creates optimized LXC container** (Ubuntu 24.04, 4GB RAM, 2 CPU, 20GB disk)
+- ✅ **Configures networking** (DHCP or static IP)
+- ✅ **Installs Profolio** inside the container
+- ✅ **Provides container access info** and management commands
+
+**Container benefits:**
+- 🛡️ **Isolation**: Profolio runs in dedicated environment
+- 💾 **Easy backups**: Snapshot entire container
+- ⚙️ **Resource management**: Dedicated CPU/memory allocation
+- 🔄 **Migration**: Move container between Proxmox hosts
+
 ### 🚀 **One-Command Installation**
 
 **Quick start for Ubuntu/Debian:**

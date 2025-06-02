@@ -230,6 +230,16 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
   const signOut = async () => {
     setLoading(true);
     try {
+      // Check for demo mode first and handle it properly
+      if (typeof window !== 'undefined') {
+        const { DemoSessionManager } = await import('@/lib/demoSession');
+        if (DemoSessionManager.isDemoMode()) {
+          DemoSessionManager.endDemoSession();
+          // endDemoSession() handles redirect automatically
+          return;
+        }
+      }
+      
       if (authMode === 'local') {
         await localAuth.signOut();
       } else {

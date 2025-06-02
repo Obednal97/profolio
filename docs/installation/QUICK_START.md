@@ -2,11 +2,66 @@
 
 **Get Profolio running in minutes with the enhanced installer**
 
-## 🎯 **Choose Your Path**
+## 🎯 **Choose Your Platform**
 
+### 🏠 **Proxmox Users** → [Proxmox LXC Container](#-proxmox-lxc-container)
 ### 🟢 **Most Users** → [Default Installation](#-default-installation)
 ### 🔧 **Power Users** → [Advanced Installation](#-advanced-installation)  
 ### 🌐 **Air-Gapped** → [Offline Installation](OFFLINE_INSTALLATION.md)
+
+---
+
+## 🏠 **Proxmox LXC Container**
+
+**Perfect for Proxmox homelab environments - automatic container creation and installation**
+
+### **1. One Command on Proxmox Host**
+```bash
+# SSH into your Proxmox host and run:
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+```
+
+### **2. Automatic Detection & Setup**
+The installer will:
+- 🏠 **Detect Proxmox host** automatically
+- 📋 **Offer container creation** with optimized settings
+- ⚙️ **Configure hardware** (4GB RAM, 2 CPU cores, 20GB disk)
+- 🌐 **Setup networking** (DHCP or static IP)
+- 🔐 **Set container security** (root password, unprivileged)
+
+### **3. Container Configuration**
+**Default specs (optimized for Profolio):**
+- **OS**: Ubuntu 24.04 LTS
+- **Memory**: 4GB (minimum 2GB)
+- **CPU**: 2 cores (minimum 1)
+- **Storage**: 20GB (minimum 15GB)
+- **Network**: DHCP on vmbr0
+- **Features**: Nesting enabled, auto-start
+
+### **4. Access Your Installation**
+```bash
+# Enter container
+pct enter [CONTAINER_ID]
+
+# Or access via web
+http://[CONTAINER_IP]:3000
+```
+
+### **5. Container Management**
+```bash
+# Container status
+pct status [CONTAINER_ID]
+
+# Start/stop container
+pct start [CONTAINER_ID]
+pct stop [CONTAINER_ID]
+
+# Container backup
+vzdump [CONTAINER_ID] --storage local
+
+# View container list
+pct list
+```
 
 ---
 

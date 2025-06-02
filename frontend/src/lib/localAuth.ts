@@ -150,6 +150,14 @@ class LocalAuthService {
 
   async signOut(): Promise<void> {
     try {
+      // Check if we're in demo mode and handle it properly
+      if (this.isDemoMode()) {
+        const { DemoSessionManager } = await import('@/lib/demoSession');
+        DemoSessionManager.endDemoSession();
+        // endDemoSession() handles redirect automatically
+        return;
+      }
+      
       // Call backend signout endpoint if user is authenticated
       if (this.currentUser?.token) {
         await this.apiRequest('/api/auth/signout', {
@@ -163,7 +171,7 @@ class LocalAuthService {
         });
       }
     } finally {
-      // Always clear local state
+      // Always clear local state (only reached for non-demo mode)
       this.clearStorage();
       this.currentUser = null;
       this.notifyListeners();

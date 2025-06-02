@@ -95,6 +95,14 @@ export function useAuth() {
         return;
       }
       
+      // Check if we're in demo mode and handle it properly
+      if (DemoSessionManager.isDemoMode()) {
+        console.log('Demo mode: Ending demo session');
+        DemoSessionManager.endDemoSession();
+        // endDemoSession() handles redirect automatically
+        return;
+      }
+      
       // Clear all authentication-related localStorage items
       localStorage.removeItem('auth-token');
       localStorage.removeItem('demo-mode');

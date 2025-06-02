@@ -319,6 +319,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
+      // Check if we're in demo mode and handle it properly
+      if (typeof window !== 'undefined') {
+        const { DemoSessionManager } = await import('@/lib/demoSession');
+        if (DemoSessionManager.isDemoMode()) {
+          console.log('Demo mode: Ending demo session');
+          DemoSessionManager.endDemoSession();
+          // endDemoSession() handles redirect automatically
+          return;
+        }
+      }
+      
       // Clear any demo mode data first
       localStorage.removeItem('auth-token');
       localStorage.removeItem('demo-mode');
