@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const withMDX = require('@next/mdx')({
   extension: /\.mdx?$/,
   options: {
@@ -5,6 +6,9 @@ const withMDX = require('@next/mdx')({
     rehypePlugins: [],
   },
 });
+
+// Read version from package.json
+const { version } = require('./package.json');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -16,6 +20,9 @@ const nextConfig = {
   eslint: {
     // Allow production builds to successfully complete even if there are ESLint errors
     ignoreDuringBuilds: true,
+  },
+  env: {
+    NEXT_PUBLIC_APP_VERSION: version,
   },
 };
 

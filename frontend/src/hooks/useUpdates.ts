@@ -121,7 +121,8 @@ export function useUpdates(): UseUpdatesReturn {
       if (githubReleases && githubReleases.length > 0) {
         // Use real GitHub data
         const latestRelease = githubReleases[0];
-        const currentVersion = '2.1.2'; // This should come from your app's package.json or environment
+        // Get current version from environment variable set at build time or fallback
+        const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.3.0';
         
         const updateInfo: UpdateInfo = {
           currentVersion,
@@ -175,130 +176,127 @@ export function useUpdates(): UseUpdatesReturn {
     // Final fallback to mock data for development/demo
     const mockReleases = [
       {
-        version: '2.2.0',
-        name: 'Profolio v2.2.0 - Major Update',
+        version: '1.4.0',
+        name: 'Profolio v1.4.0 - Enhanced Analytics',
         body: `## 🚀 New Features
-- Advanced notification system with real-time updates
-- Comprehensive changelog with sidebar navigation
-- Improved update management interface
-- Enhanced dark mode theme support
-- Mobile-responsive design improvements
+- Advanced portfolio analytics dashboard
+- Real-time market alerts and notifications
+- Enhanced asset allocation visualization
+- Automated rebalancing suggestions
+- Multi-timeframe performance analysis
 
 ## ✨ Improvements  
-- Faster asset synchronization
-- Better error handling and user feedback
-- Optimized API performance
-- Improved accessibility features
+- Faster portfolio synchronization
 - Enhanced security measures
+- Better error handling and user feedback
+- Improved mobile responsiveness
+- Optimized database performance
 
 ## 🐛 Bug Fixes
-- Fixed authentication token refresh issues
-- Resolved dashboard loading performance
-- Fixed notification badge counter accuracy
-- Corrected timezone handling in date displays
-- Fixed responsive layout issues on mobile`,
-        publishedAt: new Date().toISOString(),
+- Fixed portfolio calculation edge cases
+- Resolved timezone issues in transactions
+- Fixed notification delivery reliability
+- Corrected asset import validation
+- Fixed responsive layout on tablets`,
+        publishedAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
         downloadUrl: 'https://github.com/Obednal97/profolio/releases/latest',
         isLatest: true
       },
       {
-        version: '2.1.2',
-        name: 'Profolio v2.1.2 - Hotfix Release',
-        body: `## 🐛 Bug Fixes
-- Critical security patch for authentication
-- Fixed portfolio sync timeout issues
-- Resolved API rate limiting problems
-- Fixed dashboard crash on large portfolios
+        version: '1.3.0',
+        name: 'Profolio v1.3.0 - Enhanced Notification System & Critical Fixes',
+        body: `## 🚀 New Features
+- Notification badges on user menu for instant visibility
+- Demo mode banner with clear signup call-to-action  
+- Smart auto-updates toggle for self-hosted deployments
+- Enhanced notification system with real-time updates
+- Cross-deployment compatibility improvements
+
+## 🐛 Critical Bug Fixes
+- Fixed Next.js 15+ dynamic route parameter issues
+- Unified Yahoo Finance rate limiting for better reliability
+- Resolved updates page layout and viewport issues
+- Fixed notification badge positioning and display
 
 ## ✨ Improvements
+- Simplified notifications UI with streamlined interface
+- Better rate limiting synchronization across services
+- Enhanced demo session management
+- Improved documentation organization`,
+        publishedAt: '2025-02-06T10:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.3.0',
+        isLatest: false
+      },
+      {
+        version: '1.2.3',
+        name: 'Profolio v1.2.3 - MDX Components and Development Fixes',
+        body: `## 🐛 Bug Fixes
+- Fixed MDX Components TypeScript configuration
+- Resolved development server compatibility issues
+- Fixed component type definitions
+- Corrected build process for documentation
+
+## ✨ Improvements
+- Enhanced development experience
 - Better error messages for failed operations
 - Improved logging for debugging
 - Enhanced performance monitoring`,
-        publishedAt: '2024-05-28T10:00:00Z',
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v2.1.2',
+        publishedAt: '2025-01-02T14:30:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.2.3',
         isLatest: false
       },
       {
-        version: '2.1.1',
-        name: 'Profolio v2.1.1 - Stability Update',
-        body: `## 🐛 Bug Fixes
-- Fixed asset import validation errors
-- Resolved memory leaks in portfolio calculations
-- Fixed timezone issues in transaction history
-- Corrected currency conversion edge cases
-
-## ✨ Improvements
-- Enhanced CSV import performance
-- Better validation for manual asset entries
-- Improved error recovery mechanisms`,
-        publishedAt: '2024-05-20T14:30:00Z',
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v2.1.1',
-        isLatest: false
-      },
-      {
-        version: '2.1.0',
-        name: 'Profolio v2.1.0 - Feature Release',
+        version: '1.2.1',
+        name: 'Profolio v1.2.1 - Proxmox LXC Support',
         body: `## 🚀 New Features
-- Real-time portfolio notifications
-- Advanced filtering and search capabilities
-- Bulk asset management operations
-- Export functionality for reports
-- Custom dashboard widgets
-
-## ✨ Improvements
-- Enhanced portfolio dashboard performance
-- Improved API key management interface
-- Better error messages for failed syncs
-- Updated asset pricing accuracy
-- Faster data synchronization
+- Full Proxmox LXC container support
+- Environment preservation system
+- Enhanced demo mode functionality
+- Unified authentication improvements
 
 ## 🐛 Bug Fixes
-- Fixed asset sync timeout issues
-- Resolved chart rendering on Safari
-- Fixed settings page validation
-- Corrected currency conversion accuracy`,
-        publishedAt: '2024-05-15T10:00:00Z',
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v2.1.0',
+- Fixed container deployment issues
+- Resolved authentication edge cases
+- Fixed environment variable handling
+- Corrected service startup sequences
+
+## ✨ Improvements
+- Better container resource management
+- Enhanced logging for troubleshooting
+- Improved installation reliability`,
+        publishedAt: '2024-12-15T16:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.2.1',
         isLatest: false
       },
       {
-        version: '2.0.8',
-        name: 'Profolio v2.0.8 - Maintenance Release',
-        body: `## 🐛 Bug Fixes
-- Fixed authentication session expiry handling
-- Resolved duplicate transaction imports
-- Fixed portfolio value calculation edge cases
-- Corrected asset allocation percentages
+        version: '1.2.0',
+        name: 'Profolio v1.2.0 - Authentication & Deployment Enhancements',
+        body: `## 🚀 New Features
+- Unified authentication system (local + Firebase)
+- Self-hosted and cloud deployment modes
+- Enhanced demo mode with session management
+- Advanced installer with rollback protection
 
 ## ✨ Improvements
 - Better error handling for API failures
 - Enhanced logging for troubleshooting
-- Improved data validation`,
-        publishedAt: '2024-05-05T16:00:00Z',
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v2.0.8',
+- Improved data validation
+- Optimized performance for large portfolios`,
+        publishedAt: '2024-12-01T10:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.2.0',
         isLatest: false
       },
       {
-        version: '2.0.7',
-        name: 'Profolio v2.0.7 - Security Update',
-        body: `## 🔒 Security
-- Updated dependencies with security patches
-- Enhanced authentication security
-- Improved API key protection
-- Better session management
+        version: '1.1.0',
+        name: 'Profolio v1.1.0 - Foundation Release',
+        body: `## 🚀 New Features
+- Complete portfolio management system
+- Real-time market data integration
+- Asset tracking and performance analysis
+- Secure authentication system
+- Responsive web interface
 
-## 🐛 Bug Fixes
-- Fixed cross-browser compatibility issues
-- Resolved mobile layout problems
-- Fixed date picker timezone issues`,
-        publishedAt: '2024-04-25T12:00:00Z',
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v2.0.7',
-        isLatest: false
-      },
-      {
-        version: '2.0.5',
-        name: 'Profolio v2.0.5 - Performance Update',
-        body: `## ✨ Improvements
+## ✨ Improvements
 - Enhanced portfolio dashboard performance
 - Improved API key management interface
 - Better error messages for failed syncs
@@ -307,72 +305,43 @@ export function useUpdates(): UseUpdatesReturn {
 
 ## 🐛 Bug Fixes
 - Fixed asset sync timeout issues
-- Resolved chart rendering on Safari
+- Resolved chart rendering across browsers
 - Fixed settings page validation
-- Corrected currency conversion accuracy
-- Fixed notification display issues`,
-        publishedAt: '2024-04-15T10:00:00Z',
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v2.0.5',
-        isLatest: false
-      },
-      {
-        version: '2.0.0',
-        name: 'Profolio v2.0.0 - Major Release',
-        body: `## 🎉 Major Release
-- Complete UI/UX redesign with modern interface
-- New portfolio analytics and insights
-- Advanced asset management capabilities
-- Multi-currency support
-- Real-time market data integration
-
-## ✨ New Features
-- Interactive portfolio charts
-- Advanced filtering and sorting
-- Bulk operations for assets
-- Customizable dashboard
-- Dark mode support
-
-## ⚠️ Breaking Changes
-- Updated API endpoints for better REST compliance
-- Changed configuration file format
-- Migrated to new authentication system
-- Updated database schema (automatic migration included)
-
-## 🐛 Bug Fixes
-- Fixed numerous legacy issues
-- Improved error handling
-- Better mobile responsiveness`,
-        publishedAt: '2024-04-01T10:00:00Z',
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v2.0.0',
+- Corrected currency conversion accuracy`,
+        publishedAt: '2024-11-15T12:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.1.0',
         isLatest: false
       }
     ];
     
+    // Get current version from environment or fallback
+    const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.3.0';
+    
     const mockUpdateInfo: UpdateInfo = {
-      currentVersion: '2.1.2',
-      latestVersion: '2.2.0',
-      hasUpdate: true,
+      currentVersion,
+      latestVersion: '1.4.0',
+      hasUpdate: currentVersion !== '1.4.0',
       releaseNotes: `## 🚀 New Features
-- Advanced notification system with real-time updates
-- Comprehensive changelog with sidebar navigation
-- Improved update management interface
-- Enhanced dark mode theme support
-- Mobile-responsive design improvements
+- Advanced portfolio analytics dashboard
+- Real-time market alerts and notifications
+- Enhanced asset allocation visualization
+- Automated rebalancing suggestions
+- Multi-timeframe performance analysis
 
 ## ✨ Improvements  
-- Faster asset synchronization
-- Better error handling and user feedback
-- Optimized API performance
-- Improved accessibility features
+- Faster portfolio synchronization
 - Enhanced security measures
+- Better error handling and user feedback
+- Improved mobile responsiveness
+- Optimized database performance
 
 ## 🐛 Bug Fixes
-- Fixed authentication token refresh issues
-- Resolved dashboard loading performance
-- Fixed notification badge counter accuracy
-- Corrected timezone handling in date displays
-- Fixed responsive layout issues on mobile`,
-      publishedAt: new Date().toISOString(),
+- Fixed portfolio calculation edge cases
+- Resolved timezone issues in transactions
+- Fixed notification delivery reliability
+- Corrected asset import validation
+- Fixed responsive layout on tablets`,
+      publishedAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       downloadUrl: 'https://github.com/Obednal97/profolio/releases/latest',
       allReleases: mockReleases
     };
