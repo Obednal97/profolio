@@ -468,6 +468,10 @@ GENERATE_SSH_KEY=""
 OPERATION_TYPE="install"
 OPERATION_SUCCESS=false
 
+# UX Flow Variables (set by wizard)
+USER_ACTION_CHOICE=""
+SKIP_ENV_PRESERVATION=false
+
 # Banner with improved centering
 show_banner() {
     # Set TERM if not already set to prevent clear command failures
@@ -809,7 +813,7 @@ check_version_update_available() {
     return 0  # Assume update available if we can't determine
 }
 
-# Enhanced update wizard with proper version checking
+# Enhanced update wizard with improved UX flow - collect all preferences upfront
 run_update_wizard() {
     echo -e "${WHITE}🔄 PROFOLIO UPDATE WIZARD${NC}"
     echo -e "${YELLOW}Update your existing Profolio installation${NC}"
@@ -824,115 +828,222 @@ run_update_wizard() {
         echo -e "${BLUE}Current Version:${NC} $current_version"
     fi
     
-    # If version is specified via command line, use it
-    if [ -n "$TARGET_VERSION" ]; then
-        echo -e "${BLUE}Target Version:${NC} $TARGET_VERSION"
-        
-        if [ "$current_version" = "$TARGET_VERSION" ] || [ "$current_version" = "v$TARGET_VERSION" ]; then
-            warn "Target version ($TARGET_VERSION) is same as current version ($current_version)"
-            echo ""
-            read -p "Continue anyway? (y/n) [n]: " force_same_version
-            if [[ ! "$force_same_version" =~ ^[Yy]$ ]]; then
-                info "Update cancelled - same version"
-                exit 0
-            fi
-        fi
+    # Get latest version
+    info "Checking for updates..."
+    latest_version=$(curl -s --connect-timeout 5 --max-time 10 "https://api.github.com/repos/Obednal97/profolio/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//' 2>/dev/null || echo "unknown")
+    
+    if [ "$latest_version" != "unknown" ]; then
+        echo -e "${BLUE}Latest Stable Version:${NC} $latest_version"
     else
-        # Check for latest version if no target specified
-        info "Checking for updates..."
-        latest_version=$(curl -s --connect-timeout 5 --max-time 10 "https://api.github.com/repos/Obednal97/profolio/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//' 2>/dev/null || echo "unknown")
+        echo -e "${BLUE}Latest Stable Version:${NC} Unable to check"
+    fi
+    echo ""
+    
+    # STEP 1: Choose Experience Level
+    echo -e "${CYAN}🎛️ Choose Your Experience:${NC}"
+    echo -e "  1) ${GREEN}Default Mode${NC} (recommended - quick update with sensible defaults)"
+    echo -e "  2) ${BLUE}Advanced Mode${NC} (full control over all options)"
+    echo ""
+    read -p "Select mode [1]: " experience_mode
+    experience_mode=${experience_mode:-1}
+    
+    # Initialize preferences with defaults
+    local action_choice=""
+    local version_choice=""
+    local preserve_env="yes"
+    local enable_rollback="yes"
+    
+    if [ "$experience_mode" = "1" ]; then
+        # DEFAULT MODE - Set sensible defaults based on current state
+        echo -e "${GREEN}📋 Default Mode Selected${NC}"
+        echo ""
         
-        if [ "$latest_version" != "unknown" ]; then
-            echo -e "${BLUE}Latest Version:${NC} $latest_version"
-            
-            if [ "$current_version" = "$latest_version" ]; then
-                warn "You already have the latest version ($current_version)"
-                echo ""
-                echo -e "${CYAN}Available options:${NC}"
-                echo -e "  1) ${YELLOW}Force update${NC} (rebuild current version)"
-                echo -e "  2) ${BLUE}Select different version${NC} (upgrade/downgrade)"
-                echo -e "  3) ${RED}Cancel${NC}"
-                echo ""
-                read -p "Select option [3]: " update_option
-                update_option=${update_option:-3}
-                
-                case $update_option in
-                    1)
-                        info "Force updating current version"
-                        ;;
-                    2)
-                        echo ""
-                        get_available_versions
-                        read -p "Enter version to install (e.g., v1.0.2): " TARGET_VERSION
-                        if [ -z "$TARGET_VERSION" ]; then
-                            info "Update cancelled - no version specified"
-                            exit 0
-                        fi
-                        if ! validate_version "$TARGET_VERSION"; then
-                            error "Invalid version format: $TARGET_VERSION"
-                            exit 1
-                        fi
-                        ;;
-                    *)
-                        info "Update cancelled"
-                        exit 0
-                        ;;
-                esac
-            else
-                success "Update available: $current_version → $latest_version"
-            fi
+        if [ "$current_version" = "$latest_version" ]; then
+            action_choice="rebuild"
+            version_choice="$current_version"
+            echo -e "${YELLOW}ℹ️  You have the latest stable version${NC}"
+            echo -e "${CYAN}Default Action:${NC} Rebuild current version"
         else
-            echo -e "${BLUE}Latest Version:${NC} Unable to check (proceeding anyway)"
+            action_choice="update"
+            version_choice="$latest_version"
+            echo -e "${CYAN}Default Action:${NC} Update to latest stable version ($latest_version)"
+        fi
+        
+        echo -e "${CYAN}Environment Preservation:${NC} Yes (Firebase credentials preserved)"
+        echo -e "${CYAN}Rollback Protection:${NC} Yes (automatic rollback on failure)"
+        echo ""
+        
+        read -p "Proceed with default settings? (y/n) [y]: " default_confirm
+        if [[ ! "$default_confirm" =~ ^[Yy]?$ ]]; then
+            info "Update cancelled by user"
+            exit 0
+        fi
+        
+    else
+        # ADVANCED MODE - Collect all preferences
+        echo -e "${BLUE}🔧 Advanced Mode Selected${NC}"
+        echo ""
+        
+        # STEP 2: Choose Action
+        echo -e "${CYAN}Choose Update Action:${NC}"
+        
+        # Check if services are running to offer repair option
+        local services_running=false
+        if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
+            services_running=true
+        fi
+        
+        if [ "$current_version" = "$latest_version" ]; then
+            echo -e "  1) ${YELLOW}Rebuild current version${NC} (recommended - you have latest stable)"
+            echo -e "  2) ${BLUE}Update to specific version${NC} (upgrade/downgrade)"
+            echo -e "  3) ${PURPLE}Update to development version${NC} (main branch)"
+            if [ "$services_running" = false ]; then
+                echo -e "  4) ${CYAN}Repair installation${NC} (fix services and rebuild)"
+            fi
+            echo ""
+            read -p "Select action [1]: " action_input
+            action_input=${action_input:-1}
+            
+            case $action_input in
+                1) action_choice="rebuild"; version_choice="$current_version" ;;
+                2) action_choice="select" ;;
+                3) action_choice="development"; version_choice="main" ;;
+                4) if [ "$services_running" = false ]; then action_choice="repair"; version_choice="$current_version"; fi ;;
+                *) action_choice="rebuild"; version_choice="$current_version" ;;
+            esac
+        else
+            echo -e "  1) ${GREEN}Update to latest stable${NC} (recommended - $latest_version)"
+            echo -e "  2) ${BLUE}Select specific version${NC} (upgrade/downgrade)"
+            echo -e "  3) ${PURPLE}Update to development version${NC} (main branch)"
+            echo -e "  4) ${YELLOW}Rebuild current version${NC} (keep $current_version)"
+            if [ "$services_running" = false ]; then
+                echo -e "  5) ${CYAN}Repair installation${NC} (fix services and rebuild)"
+            fi
+            echo ""
+            read -p "Select action [1]: " action_input
+            action_input=${action_input:-1}
+            
+            case $action_input in
+                1) action_choice="update"; version_choice="$latest_version" ;;
+                2) action_choice="select" ;;
+                3) action_choice="development"; version_choice="main" ;;
+                4) action_choice="rebuild"; version_choice="$current_version" ;;
+                5) if [ "$services_running" = false ]; then action_choice="repair"; version_choice="$current_version"; fi ;;
+                *) action_choice="update"; version_choice="$latest_version" ;;
+            esac
+        fi
+        
+        # STEP 3: Version Selection (if needed)
+        if [ "$action_choice" = "select" ]; then
+            echo ""
+            echo -e "${CYAN}📋 Available Versions:${NC}"
+            get_available_versions
+            read -p "Enter version to install (e.g., v1.0.2, main): " version_input
+            if [ -z "$version_input" ]; then
+                error "No version specified"
+                exit 1
+            fi
+            version_choice="$version_input"
+        fi
+        
+        # STEP 4: Environment Preservation
+        echo ""
+        echo -e "${CYAN}Environment Configuration:${NC}"
+        echo -e "  Do you want to preserve existing Firebase credentials and settings?"
+        echo -e "  ${GREEN}Recommended: Yes${NC} (prevents authentication breaking)"
+        echo ""
+        read -p "Preserve environment configuration? (y/n) [y]: " preserve_input
+        preserve_env=${preserve_input:-y}
+        if [[ "$preserve_env" =~ ^[Yy] ]]; then
+            preserve_env="yes"
+        else
+            preserve_env="no"
+        fi
+        
+        # STEP 5: Rollback Protection
+        echo ""
+        echo -e "${CYAN}Rollback Protection:${NC}"
+        echo -e "  Enable automatic rollback if update fails?"
+        echo -e "  ${GREEN}Recommended: Yes${NC} (safer updates)"
+        echo ""
+        read -p "Enable rollback protection? (y/n) [y]: " rollback_input
+        enable_rollback=${rollback_input:-y}
+        if [[ "$enable_rollback" =~ ^[Yy] ]]; then
+            enable_rollback="yes"
+        else
+            enable_rollback="no"
         fi
     fi
     
+    # STEP 6: Show Summary and Confirm
     echo ""
+    echo -e "${WHITE}📋 UPDATE SUMMARY${NC}"
+    echo -e "${CYAN}════════════════════════════════════════${NC}"
+    
+    case "$action_choice" in
+        "update") echo -e "${BLUE}Action:${NC} Update to latest stable version" ;;
+        "rebuild") echo -e "${BLUE}Action:${NC} Rebuild current version" ;;
+        "development") echo -e "${BLUE}Action:${NC} Update to development version" ;;
+        "select") echo -e "${BLUE}Action:${NC} Install specific version" ;;
+        "repair") echo -e "${BLUE}Action:${NC} Repair installation" ;;
+    esac
+    
+    echo -e "${BLUE}Target Version:${NC} $version_choice"
+    echo -e "${BLUE}Environment Preservation:${NC} $preserve_env"
+    echo -e "${BLUE}Rollback Protection:${NC} $enable_rollback"
+    echo ""
+    
     echo -e "${CYAN}Update Process:${NC}"
-    if [ "$ROLLBACK_ENABLED" = true ]; then
+    if [ "$enable_rollback" = "yes" ]; then
         echo "  1. 🛡️  Create rollback point (automatic)"
     fi
     echo "  2. 💾 Create backup"
     echo "  3. 🛑 Stop running services"
-    if [ -n "$TARGET_VERSION" ]; then
-        echo "  4. 📥 Download version $TARGET_VERSION"
-    else
-        echo "  4. 📥 Download latest version"
-    fi
+    echo "  4. 📥 Download version $version_choice"
     echo "  5. 🔨 Update dependencies and rebuild"
     echo "  6. 🚀 Restart services"
     echo "  7. ✅ Verify update success"
-    
-    echo ""
-    echo -e "${GREEN}🔧 Environment Configuration Protection:${NC}"
-    echo -e "   ${YELLOW}•${NC} ${GREEN}Firebase credentials${NC} will be preserved automatically"
-    echo -e "   ${YELLOW}•${NC} ${GREEN}Authentication settings${NC} will be maintained"
-    echo -e "   ${YELLOW}•${NC} ${GREEN}API configurations${NC} will be kept intact"
-    echo -e "   ${YELLOW}•${NC} You'll be prompted before any environment changes"
-    echo -e "   ${CYAN}Note:${NC} This prevents Firebase authentication breaking during updates"
-    
-    if [ "$ROLLBACK_ENABLED" = true ]; then
-        echo ""
-        echo -e "${GREEN}🛡️  Rollback Protection:${NC} Enabled"
-        echo -e "   ${YELLOW}•${NC} Automatic rollback on failure"
-        echo -e "   ${YELLOW}•${NC} Git-based restoration with backup fallback"
-        echo -e "   ${YELLOW}•${NC} Manual rollback available: ${CYAN}$0 --rollback${NC}"
-    else
-        echo ""
-        echo -e "${YELLOW}⚠️  Rollback Protection:${NC} Disabled"
-    fi
     echo ""
     
-    read -p "Proceed with update? (y/n) [y]: " update_confirm
-    if [[ ! "$update_confirm" =~ ^[Yy]?$ ]]; then
-        warn "Update cancelled by user"
-        exit 0
-    fi
+    # Final confirmation with options
+    echo -e "${CYAN}What would you like to do?${NC}"
+    echo -e "  1) ${GREEN}Proceed${NC} with update"
+    echo -e "  2) ${YELLOW}Change${NC} settings"
+    echo -e "  3) ${RED}Cancel${NC}"
+    echo ""
+    read -p "Select option [1]: " final_choice
+    final_choice=${final_choice:-1}
     
-    if [ -n "$TARGET_VERSION" ]; then
-        success "Update confirmed. Installing version: $TARGET_VERSION"
-    else
-        success "Update confirmed. Installing latest version"
-    fi
+    case $final_choice in
+        1)
+            # Set global variables for the update process
+            TARGET_VERSION="$version_choice"
+            if [ "$enable_rollback" = "no" ]; then
+                ROLLBACK_ENABLED=false
+            fi
+            
+            # Store environment preference for later use
+            if [ "$preserve_env" = "no" ]; then
+                SKIP_ENV_PRESERVATION=true
+            else
+                SKIP_ENV_PRESERVATION=false
+            fi
+            
+            # Store action choice for main function
+            USER_ACTION_CHOICE="$action_choice"
+            
+            success "Update confirmed. Installing version: $version_choice"
+            ;;
+        2)
+            info "Restarting configuration..."
+            run_update_wizard  # Recursive call to restart
+            return
+            ;;
+        *)
+            info "Update cancelled by user"
+            exit 0
+            ;;
+    esac
 }
 
 # Manage backups with improved feedback
@@ -1070,48 +1181,25 @@ setup_environment() {
                 # During rollback, automatically preserve without prompting
                 preserve_frontend_env=true
                 info "Rollback mode: Automatically preserving existing environment configuration"
+            elif [ "${SKIP_ENV_PRESERVATION:-false}" = true ]; then
+                # User chose not to preserve environment during wizard
+                preserve_frontend_env=false
+                info "User selected: Reset environment configuration to defaults"
             else
-                # Normal mode: prompt user
-                echo ""
-                info "Existing frontend environment configuration detected in: $frontend_env_file"
+                # User chose to preserve environment (or default behavior)
+                preserve_frontend_env=true
+                info "Preserving existing environment configuration as selected in wizard"
                 
+                # Show what we detected for transparency
+                echo -e "   ${GREEN}✅ Environment configuration detected in: $frontend_env_file${NC}"
                 if [ "$has_firebase_config" = true ]; then
-                    echo -e "   ${GREEN}✅ Firebase configuration found${NC}"
+                    echo -e "   ${GREEN}✅ Firebase configuration will be preserved${NC}"
                 fi
                 if [ "$has_auth_mode" = true ]; then
-                    echo -e "   ${GREEN}✅ Authentication mode configured${NC}"
+                    echo -e "   ${GREEN}✅ Authentication mode will be preserved${NC}"
                 fi
                 if [ "$has_api_url" = true ]; then
-                    echo -e "   ${GREEN}✅ API URL configured${NC}"
-                fi
-                
-                echo ""
-                echo -e "${YELLOW}🤔 Would you like to preserve your existing frontend environment configuration?${NC}"
-                echo -e "   ${WHITE}This includes Firebase credentials, authentication mode, and API settings.${NC}"
-                echo -e "   ${GREEN}Recommended: Keep existing configuration (press Enter)${NC}"
-                echo ""
-                
-                if [ "$AUTO_INSTALL" = true ]; then
-                    echo -e "${CYAN}Auto-install mode: Preserving existing environment configuration${NC}"
-                    preserve_frontend_env=true
-                else
-                    read -p "Preserve existing environment configuration? [Y/n]: " -r preserve_env_choice
-                    preserve_env_choice=${preserve_env_choice:-Y}  # Default to Y if empty
-                    
-                    case "$preserve_env_choice" in
-                        [Yy]*|"")
-                            preserve_frontend_env=true
-                            success "Will preserve existing frontend environment configuration"
-                            ;;
-                        [Nn]*)
-                            preserve_frontend_env=false
-                            warn "Will reset frontend environment configuration to defaults"
-                            ;;
-                        *)
-                            info "Invalid choice, defaulting to preserve existing configuration"
-                            preserve_frontend_env=true
-                            ;;
-                    esac
+                    echo -e "   ${GREEN}✅ API URL will be preserved${NC}"
                 fi
             fi
             
@@ -1514,13 +1602,26 @@ main() {
             fresh_install
             ;;
         1)
-            info "Application action: Repair (installed but not running)"
-            repair_installation
+            info "Application action: Existing installation detected (services not running)"
+            run_update_wizard  # Use same wizard for both running and non-running
+            
+            # Determine action based on user choice
+            if [ "${USER_ACTION_CHOICE:-}" = "repair" ]; then
+                repair_installation
+            else
+                update_installation
+            fi
             ;;
         2)
-            info "Application action: Update (running installation detected)"
+            info "Application action: Existing installation detected (services running)"
             run_update_wizard
-            update_installation
+            
+            # Determine action based on user choice  
+            if [ "${USER_ACTION_CHOICE:-}" = "repair" ]; then
+                repair_installation
+            else
+                update_installation
+            fi
             ;;
         *)
             error "Unknown application state: $install_state"

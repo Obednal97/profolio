@@ -21,26 +21,89 @@ Profolio supports **two deployment modes** from the same codebase:
 
 ---
 
-## 📦 **Quick Self-Hosted Installation**
+## 📦 **Installation**
 
-**One-command installation for Ubuntu/Debian:**
+### 🚀 **One-Command Installation**
+
+**Quick start for Ubuntu/Debian:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
 ```
 
-**Manual installation:**
+**Manual download:**
 ```bash
-git clone https://github.com/Obednal97/profolio.git
-cd profolio
+wget https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh
+chmod +x install-or-update.sh
 sudo ./install-or-update.sh
 ```
 
-**Features:**
-- 🛡️ **Automatic rollback** on failed updates
-- 🎯 **Version control** (install any version)
-- 🔧 **Smart configuration** (auto-detects environment)
-- 💾 **Backup management** (automatic backups)
+### 🎛️ **Installation Modes**
+
+The installer offers **two experience levels**:
+
+#### **Default Mode** (Recommended)
+- ✅ **One-click setup** with sensible defaults
+- ✅ **Smart version detection** (latest stable or rebuild if current)
+- ✅ **Automatic environment preservation** (Firebase credentials safe)
+- ✅ **Rollback protection** enabled by default
+
+#### **Advanced Mode** (Full Control)
+- 🔧 **Choose action**: Update, rebuild, version select, or repair
+- 📦 **Version selection**: Any release version or development branch
+- 🛡️ **Environment options**: Preserve or reset configuration
+- 🔄 **Rollback control**: Enable/disable automatic rollback
+
+### 🔄 **Update Options**
+
+**Simple Update:**
+```bash
+sudo ./install-or-update.sh
+```
+
+**Advanced Options:**
+```bash
+# Install specific version
+sudo ./install-or-update.sh --version v1.2.1
+
+# Update to development version
+sudo ./install-or-update.sh --version main
+
+# List available versions
+sudo ./install-or-update.sh --list-versions
+
+# Disable rollback protection
+sudo ./install-or-update.sh --no-rollback
+
+# Emergency rollback
+sudo ./install-or-update.sh --rollback
+
+# Unattended installation
+sudo ./install-or-update.sh --auto
+```
+
+### 🔒 **Security Features**
+
+- 🛡️ **Environment Preservation**: Firebase credentials automatically protected during updates
+- 🔄 **Automatic Rollback**: Git-based restoration on failed updates
+- 💾 **Backup Management**: Automatic backups with retention policies
+- 🔐 **Permission Handling**: Secure file ownership and permissions
+
+### 🌐 **Offline Installation**
+
+For air-gapped or offline environments, see our [**Offline Installation Guide**](docs/installation/OFFLINE_INSTALLATION.md).
+
+Quick offline setup:
+```bash
+# On internet-connected machine
+git clone --depth 1 https://github.com/Obednal97/profolio.git
+tar -czf profolio-offline.tar.gz profolio/
+
+# Transfer to offline machine and extract
+tar -xzf profolio-offline.tar.gz
+cd profolio
+sudo ./scripts/offline-install.sh
+```
 
 ---
 
