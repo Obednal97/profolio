@@ -46,7 +46,6 @@ export class UpdatesService {
   
   private readonly GITHUB_API = 'https://api.github.com/repos/Obednal97/profolio';
   private readonly UPDATE_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
-  private readonly INSTALLER_PATH = '/opt/profolio/install-or-update.sh';
 
   constructor() {}
 
@@ -77,8 +76,8 @@ export class UpdatesService {
    * Simple version comparison (semver alternative)
    */
   private compareVersions(v1: string, v2: string): number {
-    const parts1 = v1.split('.').map(n => parseInt(n, 10));
-    const parts2 = v2.split('.').map(n => parseInt(n, 10));
+    const parts1 = v1.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+    const parts2 = v2.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
     
     for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
       const part1 = parts1[i] || 0;
@@ -92,14 +91,27 @@ export class UpdatesService {
   }
 
   /**
-   * Fetch latest release from GitHub
+   * Fetch latest release from GitHub with proper error handling
    */
   private async fetchLatestRelease(): Promise<GitHubRelease | null> {
     try {
-      const response = await fetch(`${this.GITHUB_API}/releases/latest`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${this.GITHUB_API}/releases/latest`, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'Profolio-Update-Checker'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status}`);
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
       }
+      
       return await response.json() as GitHubRelease;
     } catch (error) {
       this.logger.error('Failed to fetch latest release:', error);
@@ -193,7 +205,8 @@ export class UpdatesService {
   }
 
   /**
-   * Start update process
+   * SECURITY: Updates now require manual intervention or external orchestration
+   * This removes the dangerous sudo execution capabilities
    */
   async startUpdate(version?: string): Promise<boolean> {
     if (!this.isSelfHosted()) {
@@ -205,49 +218,43 @@ export class UpdatesService {
     }
 
     try {
-      this.logger.log(`Starting update process${version ? ` to ${version}` : ''}...`);
+      this.logger.log(`Update requested${version ? ` to ${version}` : ''}...`);
       
       this.updateProgress = {
         stage: 'checking',
-        message: 'Preparing update...',
+        message: 'Update request received. Manual intervention required.',
         progress: 0,
-        logs: []
+        logs: [
+          'SECURITY NOTICE: Automatic updates have been disabled for security reasons.',
+          'Please update manually using one of these methods:',
+          '1. Docker: Pull latest image and restart containers',
+          '2. Git: Pull latest code and restart services externally',
+          '3. Package manager: Update via your distribution\'s package manager',
+          '',
+          'This change prevents privilege escalation vulnerabilities.'
+        ]
       };
 
-      // Verify installer exists
-      try {
-        await fs.access(this.INSTALLER_PATH);
-      } catch {
-        throw new Error('Installer script not found. Manual update required.');
-      }
+      // Instead of executing dangerous sudo commands, we provide safe instructions
+      setTimeout(() => {
+        if (this.updateProgress) {
+          this.updateProgress = {
+            stage: 'error',
+            message: 'Manual update required - automatic updates disabled for security',
+            progress: 0,
+            error: 'Automatic updates disabled. Please update manually.',
+            logs: this.updateProgress.logs
+          };
+        }
+      }, 3000);
 
-      // Build installer command
-      const args = ['--auto', '--no-interaction'];
-      if (version) {
-        args.push('--version', version);
-      }
-
-      this.updateProgress = {
-        stage: 'downloading',
-        message: 'Downloading update...',
-        progress: 25,
-        logs: ['Starting installer...']
-      };
-
-      // Execute installer
-      this.updateProcess = spawn('sudo', [this.INSTALLER_PATH, ...args], {
-        stdio: 'pipe',
-        env: { ...process.env, SKIP_SERVICE_RESTART: 'true' }
-      });
-
-      this.setupUpdateProcessHandlers();
-      return true;
+      return false; // Always return false as automatic updates are disabled
 
     } catch (error) {
-      this.logger.error('Failed to start update:', error);
+      this.logger.error('Update request failed:', error);
       this.updateProgress = {
         stage: 'error',
-        message: 'Failed to start update',
+        message: 'Update request failed',
         progress: 0,
         error: error instanceof Error ? error.message : String(error)
       };
@@ -256,158 +263,20 @@ export class UpdatesService {
   }
 
   /**
-   * Setup handlers for update process
-   */
-  private setupUpdateProcessHandlers() {
-    if (!this.updateProcess) return;
-
-    let logBuffer = '';
-
-    this.updateProcess.stdout?.on('data', (data) => {
-      const output = data.toString();
-      logBuffer += output;
-      
-      // Update progress based on installer output
-      this.parseInstallerOutput(output);
-      
-      if (this.updateProgress?.logs) {
-        this.updateProgress.logs.push(output.trim());
-      }
-    });
-
-    this.updateProcess.stderr?.on('data', (data) => {
-      const error = data.toString();
-      this.logger.error('Update process error:', error);
-      
-      if (this.updateProgress?.logs) {
-        this.updateProgress.logs.push(`ERROR: ${error.trim()}`);
-      }
-    });
-
-    this.updateProcess.on('close', async (code) => {
-      this.logger.log(`Update process exited with code ${code}`);
-      
-      if (code === 0) {
-        this.updateProgress = {
-          stage: 'complete',
-          message: 'Update completed successfully',
-          progress: 100,
-          logs: this.updateProgress?.logs || []
-        };
-        
-        // Schedule service restart
-        setTimeout(() => {
-          this.restartServices();
-        }, 2000);
-      } else {
-        this.updateProgress = {
-          stage: 'error',
-          message: 'Update failed',
-          progress: this.updateProgress?.progress || 0,
-          error: `Installer exited with code ${code}`,
-          logs: this.updateProgress?.logs || []
-        };
-      }
-      
-      this.updateProcess = null;
-    });
-
-    this.updateProcess.on('error', (error) => {
-      this.logger.error('Update process error:', error);
-      this.updateProgress = {
-        stage: 'error',
-        message: 'Update process failed',
-        progress: this.updateProgress?.progress || 0,
-        error: error.message,
-        logs: this.updateProgress?.logs || []
-      };
-      this.updateProcess = null;
-    });
-  }
-
-  /**
-   * Parse installer output to update progress
-   */
-  private parseInstallerOutput(output: string) {
-    if (!this.updateProgress) return;
-
-    const lines = output.split('\n').map(line => line.trim()).filter(Boolean);
-    
-    for (const line of lines) {
-      if (line.includes('Downloading')) {
-        this.updateProgress.stage = 'downloading';
-        this.updateProgress.message = 'Downloading update...';
-        this.updateProgress.progress = 30;
-      } else if (line.includes('Installing') || line.includes('Building')) {
-        this.updateProgress.stage = 'installing';
-        this.updateProgress.message = 'Installing update...';
-        this.updateProgress.progress = 60;
-      } else if (line.includes('Starting services') || line.includes('Restarting')) {
-        this.updateProgress.stage = 'restarting';
-        this.updateProgress.message = 'Restarting services...';
-        this.updateProgress.progress = 90;
-      } else if (line.includes('INSTALLATION COMPLETE') || line.includes('UPDATE COMPLETE')) {
-        this.updateProgress.stage = 'complete';
-        this.updateProgress.message = 'Update completed successfully';
-        this.updateProgress.progress = 100;
-      }
-    }
-  }
-
-  /**
-   * Restart Profolio services
-   */
-  private async restartServices() {
-    try {
-      this.logger.log('Restarting Profolio services...');
-      
-      // Restart backend and frontend services
-      spawn('sudo', ['systemctl', 'restart', 'profolio-backend', 'profolio-frontend'], {
-        detached: true,
-        stdio: 'ignore'
-      });
-      
-      // Exit current process to allow restart
-      setTimeout(() => {
-        process.exit(0);
-      }, 1000);
-      
-    } catch (error) {
-      this.logger.error('Failed to restart services:', error);
-    }
-  }
-
-  /**
    * Cancel ongoing update
    */
   async cancelUpdate(): Promise<boolean> {
-    if (!this.updateProcess) {
-      return false;
-    }
-
-    try {
-      this.logger.log('Cancelling update process...');
-      this.updateProcess.kill('SIGTERM');
-      
-      setTimeout(() => {
-        if (this.updateProcess) {
-          this.updateProcess.kill('SIGKILL');
-        }
-      }, 5000);
-
+    if (this.updateProgress) {
       this.updateProgress = {
         stage: 'error',
-        message: 'Update cancelled by user',
-        progress: this.updateProgress?.progress || 0,
-        error: 'Cancelled',
-        logs: this.updateProgress?.logs || []
+        message: 'Update cancelled',
+        progress: 0,
+        error: 'Cancelled by user',
+        logs: this.updateProgress.logs || []
       };
-
       return true;
-    } catch (error) {
-      this.logger.error('Failed to cancel update:', error);
-      return false;
     }
+    return false;
   }
 
   /**
@@ -418,11 +287,33 @@ export class UpdatesService {
   }
 
   /**
-   * Get update history from installer logs
+   * Get update history - now safer implementation
    */
   async getUpdateHistory(): Promise<Array<{ version: string; date: string; success: boolean }>> {
-    // This could read from installer logs or a dedicated update history file
-    // For now, return empty array as placeholder
-    return [];
+    try {
+      // Read from safe log file instead of executing system commands
+      const logPath = join(process.cwd(), 'logs', 'update-history.json');
+      
+      try {
+        const historyData = await fs.readFile(logPath, 'utf-8');
+        return JSON.parse(historyData);
+      } catch {
+        // Return empty array if file doesn't exist
+        return [];
+      }
+    } catch (error) {
+      this.logger.error('Failed to read update history:', error);
+      return [];
+    }
+  }
+
+  /**
+   * SECURITY: Remove all privileged operations
+   * This method previously executed dangerous sudo commands
+   */
+  private async logSecurityNotice() {
+    this.logger.warn('SECURITY NOTICE: Privileged update operations have been removed');
+    this.logger.warn('For security reasons, automatic system updates are disabled');
+    this.logger.warn('Please update the application manually or use containerized deployment');
   }
 } 

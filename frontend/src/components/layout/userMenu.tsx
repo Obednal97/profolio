@@ -13,11 +13,56 @@ interface UserMenuProps {
   };
 }
 
+/**
+ * Sanitize user input to prevent XSS attacks
+ */
+function sanitizeText(text: string | undefined | null): string {
+  if (!text) return "";
+  
+  // Strip HTML tags and encode special characters
+  return text
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim();
+}
+
+/**
+ * Get safe initials from name
+ */
+function getSafeInitials(name: string | undefined | null): string {
+  const sanitizedName = sanitizeText(name);
+  if (!sanitizedName) return "?";
+  
+  // Get first character of first word only
+  const firstChar = sanitizedName.charAt(0).toUpperCase();
+  
+  // Ensure it's a letter or number
+  return /^[A-Z0-9]$/.test(firstChar) ? firstChar : "?";
+}
+
+/**
+ * Truncate text safely
+ */
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength - 3) + '...';
+}
+
 export default function UserMenu({ user }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const { unreadCount } = useNotifications();
+
+  // Sanitize user data
+  const safeName = sanitizeText(user?.name);
+  const safeEmail = sanitizeText(user?.email);
+  const safeInitials = getSafeInitials(user?.name);
 
   const handleSignOut = async () => {
     try {
@@ -70,7 +115,7 @@ export default function UserMenu({ user }: UserMenuProps) {
             >
               <div className="relative">
                 <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
-                  {user?.name?.charAt(0) || "?"}
+                  {safeInitials}
                 </div>
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-gray-800">
@@ -78,7 +123,9 @@ export default function UserMenu({ user }: UserMenuProps) {
                   </span>
                 )}
               </div>
-              <span className="hidden sm:inline text-sm font-medium">{user?.name}</span>
+              <span className="hidden sm:inline text-sm font-medium">
+                {truncateText(safeName || 'User', 20)}
+              </span>
               <i className={`fas fa-chevron-${isProfileOpen ? 'up' : 'down'} text-xs transition-transform`}></i>
             </button>
 
@@ -92,8 +139,12 @@ export default function UserMenu({ user }: UserMenuProps) {
                 
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50">
                   <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {truncateText(safeName || 'User', 25)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {truncateText(safeEmail || 'No email', 30)}
+                    </p>
                   </div>
                   {profileMenuItems.map((item) => (
                     item.path ? (

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-properties.dto';
@@ -7,7 +7,7 @@ import { UpdatePropertyDto } from './dto/update-properties.dto';
 export class PropertiesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreatePropertyDto) {
+  async create(dto: CreatePropertyDto & { userId: string }) {
     const createData: any = {
       userId: dto.userId,
       address: dto.address,
@@ -54,7 +54,20 @@ export class PropertiesService {
     return this.convertCentsToDollars(property);
   }
 
-  async update(id: string, dto: UpdatePropertyDto) {
+  async update(id: string, dto: UpdatePropertyDto, userId: string) {
+    // First verify the property exists and belongs to the user
+    const existingProperty = await this.prisma.property.findUnique({
+      where: { id },
+    });
+
+    if (!existingProperty) {
+      throw new NotFoundException('Property not found');
+    }
+
+    if (existingProperty.userId !== userId) {
+      throw new ForbiddenException('You can only update your own properties');
+    }
+
     const updateData: any = {};
     
     // Only update provided fields with proper type handling
@@ -100,6 +113,7 @@ export class PropertiesService {
     return this.convertCentsToDollars(property);
   }
 
+  // Keep the old findAll method for backwards compatibility if needed, but restrict to admin use
   async findAll() {
     const properties = await this.prisma.property.findMany({
       orderBy: { createdAt: 'desc' },
@@ -108,24 +122,46 @@ export class PropertiesService {
     return properties.map(property => this.convertCentsToDollars(property));
   }
 
-  async findByUserId(userId: string) {
+  async findByUserId(userId: string, limit = 50) {
     const properties = await this.prisma.property.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
+      take: limit,
     });
 
     return properties.map(property => this.convertCentsToDollars(property));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, userId: string) {
     const property = await this.prisma.property.findUnique({
       where: { id },
     });
 
-    return property ? this.convertCentsToDollars(property) : null;
+    if (!property) {
+      throw new NotFoundException('Property not found');
+    }
+
+    if (property.userId !== userId) {
+      throw new ForbiddenException('You can only access your own properties');
+    }
+
+    return this.convertCentsToDollars(property);
   }
 
-  async delete(id: string) {
+  async delete(id: string, userId: string) {
+    // First verify the property exists and belongs to the user
+    const existingProperty = await this.prisma.property.findUnique({
+      where: { id },
+    });
+
+    if (!existingProperty) {
+      throw new NotFoundException('Property not found');
+    }
+
+    if (existingProperty.userId !== userId) {
+      throw new ForbiddenException('You can only delete your own properties');
+    }
+
     return this.prisma.property.delete({
       where: { id },
     });
