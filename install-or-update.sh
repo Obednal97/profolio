@@ -418,6 +418,12 @@ checkout_version() {
         
         # Checkout main and reset to match remote exactly
         if sudo -u profolio git checkout main && sudo -u profolio git reset --hard origin/main; then
+            # Optimize installation size by removing non-essential directories (version checkout)
+            info "Optimizing installation size..."
+            rm -rf docs/ .github/ www/ policies/ scripts/ .cursor/ || true
+            rm -f CONTRIBUTING.md SECURITY.md README.md .DS_Store || true
+            success "Installation optimized (removed documentation and development files)"
+            
             success "Switched to main branch (latest development)"
             return 0
         else
@@ -2065,6 +2071,12 @@ update_installation() {
             show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
             return 1
         fi
+        
+        # Optimize installation size by removing non-essential directories (update scenario)
+        info "Optimizing installation size..."
+        rm -rf docs/ .github/ www/ policies/ scripts/ || true
+        rm -f CONTRIBUTING.md SECURITY.md README.md .DS_Store || true
+        success "Installation optimized (removed documentation and development files)"
     fi
     
     success "Code updated successfully"
@@ -2448,6 +2460,13 @@ fresh_install() {
     
     cd /opt
     if git clone https://github.com/Obednal97/profolio.git; then
+        # Optimize installation size by removing non-essential directories
+        info "Optimizing installation size..."
+        cd /opt/profolio
+        rm -rf docs/ .github/ www/ policies/ scripts/ .cursor/ || true
+        rm -f CONTRIBUTING.md SECURITY.md README.md .DS_Store || true
+        success "Installation optimized (removed documentation and development files)"
+        
         chown -R profolio:profolio /opt/profolio
         success "Repository downloaded"
     else
