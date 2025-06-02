@@ -55,3 +55,6 @@ api-keys.json
 
 # Google Places API configuration
 /src/config/google-places-config.json
+
+# Generated logo files (use script to regenerate)
+profolio-logo-*px.svg

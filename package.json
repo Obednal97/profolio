@@ -1,6 +1,6 @@
 {
   "name": "profolio",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
   "main": "install-or-update.sh",
   "scripts": {

@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import Link from 'next/link';
 import Navbar from '../navigation/navbar';
 import UserMenu from './userMenu';
+import ProfolioLogo from '../ui/logo/ProfolioLogo';
 
 interface HeaderLayoutProps {
   user?: { name?: string; email?: string };
@@ -37,9 +38,7 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = React.memo(({ user, cur
           <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
             <Link href={user ? '/app/dashboard' : '/'} className="group flex items-center space-x-3 min-w-0">
               {/* Logo icon with subtle glow */}
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-105 group-hover:shadow-blue-500/20 transition-all duration-300">
-                <i className="fas fa-chart-pie text-white text-lg"></i>
-              </div>
+              <ProfolioLogo size="md" />
               
               {/* Logo text */}
               <div className="flex flex-col leading-tight min-w-0">

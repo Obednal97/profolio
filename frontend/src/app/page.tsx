@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getAuthModeSync } from '@/lib/authConfig';
+import ProfolioLogo from '@/components/ui/logo/ProfolioLogo';
 
 const container = {
   hidden: {},
@@ -67,22 +68,23 @@ export default function LandingPage() {
 
   const features = useMemo(() => [
     {
+      icon: "fa-chart-line",
+      title: "Smart Portfolio Tracking",
+      description: "Track all your assets in one place. From stocks and crypto to real estate and savings accounts.",
+      gradient: "from-blue-500 to-blue-600"
+    },
+    {
       icon: "fa-chart-pie",
-      title: "Unified Dashboard",
-      description: "See your entire financial picture at a glance with real-time updates and beautiful visualizations.",
-      gradient: "from-blue-500 to-cyan-500"
+      title: "Beautiful Analytics",
+      description: "Visualise your wealth with stunning charts and insights powered by real-time data.",
+      gradient: "from-purple-500 to-purple-600",
+      isLogo: true
     },
     {
       icon: "fa-shield-alt",
-      title: "Bank-Level Security",
-      description: "Your data is encrypted end-to-end. Self-host for complete control or use our secure cloud.",
-      gradient: "from-emerald-500 to-teal-500"
-    },
-    {
-      icon: "fa-mobile-alt",
-      title: "Everywhere Access",
-      description: "Native-quality experience on desktop, tablet, and mobile. Your wealth, accessible anywhere.",
-      gradient: "from-purple-500 to-pink-500"
+      title: "Bank-Grade Security",
+      description: "Your financial data is encrypted and secured with the same standards used by major banks.",
+      gradient: "from-green-500 to-green-600"
     }
   ], []);
 
@@ -333,9 +335,15 @@ export default function LandingPage() {
                 className="group relative"
               >
                 <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
-                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <i className={`fas ${feature.icon} text-2xl text-white`} />
-                  </div>
+                  {feature.isLogo ? (
+                    <div className="mb-6">
+                      <ProfolioLogo size="lg" className="group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                  ) : (
+                    <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <i className={`fas ${feature.icon} text-2xl text-white`} />
+                    </div>
+                  )}
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                     {feature.title}
                   </h3>

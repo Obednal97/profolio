@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button/button';
 import Link from 'next/link';
 import { useMemo } from 'react';
+import ProfolioLogo from '@/components/ui/logo/ProfolioLogo';
 
 const container = {
   hidden: {},
@@ -43,12 +44,13 @@ export default function AboutPage() {
       icon: 'fa-shield-alt',
       title: 'Privacy First',
       description: 'Your financial data stays yours. Self-host or use our encrypted cloud — you maintain complete control.',
-      gradient: 'from-emerald-500 to-teal-500'
+      gradient: 'from-emerald-500 to-teal-500',
+      isLogo: true
     },
     {
       icon: 'fa-puzzle-piece',
       title: 'Modular Design',
-      description: 'Built to adapt to your needs. Add features, integrate tools, and customize your experience.',
+      description: 'Built to adapt to your needs. Add features, integrate tools, and customise your experience.',
       gradient: 'from-blue-500 to-cyan-500'
     },
     {
@@ -221,9 +223,15 @@ export default function AboutPage() {
                 className="group relative"
               >
                 <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
-                  <div className={`w-16 h-16 bg-gradient-to-br ${value.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <i className={`fas ${value.icon} text-2xl text-white`} />
-                  </div>
+                  {value.isLogo ? (
+                    <div className="mb-6">
+                      <ProfolioLogo size="lg" className="group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                  ) : (
+                    <div className={`w-16 h-16 bg-gradient-to-br ${value.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <i className={`fas ${value.icon} text-2xl text-white`} />
+                    </div>
+                  )}
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                     {value.title}
                   </h3>
