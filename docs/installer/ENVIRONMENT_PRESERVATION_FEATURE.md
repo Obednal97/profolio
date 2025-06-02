@@ -19,7 +19,7 @@ Previously, the installer would **overwrite frontend environment files** during 
 The enhanced installer now **preserves environment configurations** during updates:
 
 ### 🔍 **Detection Phase**
-- Automatically detects existing environment files (`.env.production`, `.env`)
+- Automatically detects existing environment files (`.env.production`, `.env.local`, `.env`)
 - Scans for Firebase credentials (`NEXT_PUBLIC_FIREBASE_*`)
 - Identifies authentication mode (`NEXT_PUBLIC_AUTH_MODE`)
 - Checks API configurations (`NEXT_PUBLIC_API_URL`)
@@ -109,8 +109,9 @@ sudo ./install-or-update.sh
 ## 🛠️ Technical Details
 
 ### File Priority
-1. `/opt/profolio/frontend/.env.production` (preferred)
-2. `/opt/profolio/frontend/.env` (fallback)
+1. `/opt/profolio/frontend/.env.production` (preferred for production)
+2. `/opt/profolio/frontend/.env.local` (local development overrides)
+3. `/opt/profolio/frontend/.env` (general fallback)
 
 ### Smart URL Updates
 If preserving configuration, the installer automatically updates:

@@ -1024,9 +1024,11 @@ setup_environment() {
     local preserve_frontend_env=false
     local frontend_env_file=""
     
-    # Determine which frontend env file to check (prioritize .env.production in production)
+    # Determine which frontend env file to check (prioritize .env.production, then .env.local, then .env)
     if [ -f "/opt/profolio/frontend/.env.production" ]; then
         frontend_env_file="/opt/profolio/frontend/.env.production"
+    elif [ -f "/opt/profolio/frontend/.env.local" ]; then
+        frontend_env_file="/opt/profolio/frontend/.env.local"
     elif [ -f "/opt/profolio/frontend/.env" ]; then
         frontend_env_file="/opt/profolio/frontend/.env"
     fi
@@ -1201,10 +1203,10 @@ EOF
         # Preserve existing frontend environment configuration
         info "Preserving existing frontend environment configuration"
         
-        # Determine the target file (prefer .env.production for production environments)
-        local target_frontend_env="/opt/profolio/frontend/.env.production"
+        # Use the same file that we detected (preserve the original filename)
+        local target_frontend_env="$frontend_env_file"
         
-        # Write preserved configuration to the target file
+        # Write preserved configuration to the same file
         echo "$existing_frontend_env" > "$target_frontend_env"
         
         # Ensure API URL is updated to current server if it's using old localhost
@@ -1220,6 +1222,7 @@ EOF
         info "Creating new frontend environment configuration"
         local current_ip=$(hostname -I | awk '{print $1}')
         
+        # For new configurations, prefer .env.production for production environments
         cat > /opt/profolio/frontend/.env.production << EOF
 # Authentication mode
 NEXT_PUBLIC_AUTH_MODE=local
@@ -1246,9 +1249,14 @@ EOF
 
     # Set proper permissions
     chown profolio:profolio /opt/profolio/backend/.env 2>/dev/null || true
+    # Handle permissions for different possible frontend env files
     chown profolio:profolio /opt/profolio/frontend/.env.production 2>/dev/null || true
+    chown profolio:profolio /opt/profolio/frontend/.env.local 2>/dev/null || true
+    chown profolio:profolio /opt/profolio/frontend/.env 2>/dev/null || true
     chmod 600 /opt/profolio/backend/.env
     chmod 600 /opt/profolio/frontend/.env.production 2>/dev/null || true
+    chmod 600 /opt/profolio/frontend/.env.local 2>/dev/null || true
+    chmod 600 /opt/profolio/frontend/.env 2>/dev/null || true
     
     if [ "$credentials_preserved" = true ]; then
         success "Preserved existing database credentials"
