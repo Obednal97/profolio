@@ -901,6 +901,15 @@ run_update_wizard() {
     echo "  5. 🔨 Update dependencies and rebuild"
     echo "  6. 🚀 Restart services"
     echo "  7. ✅ Verify update success"
+    
+    echo ""
+    echo -e "${GREEN}🔧 Environment Configuration Protection:${NC}"
+    echo -e "   ${YELLOW}•${NC} ${GREEN}Firebase credentials${NC} will be preserved automatically"
+    echo -e "   ${YELLOW}•${NC} ${GREEN}Authentication settings${NC} will be maintained"
+    echo -e "   ${YELLOW}•${NC} ${GREEN}API configurations${NC} will be kept intact"
+    echo -e "   ${YELLOW}•${NC} You'll be prompted before any environment changes"
+    echo -e "   ${CYAN}Note:${NC} This prevents Firebase authentication breaking during updates"
+    
     if [ "$ROLLBACK_ENABLED" = true ]; then
         echo ""
         echo -e "${GREEN}🛡️  Rollback Protection:${NC} Enabled"
@@ -1010,6 +1019,91 @@ setup_environment() {
     local existing_api_key=""
     local credentials_preserved=false
     
+    # Check for existing frontend environment variables
+    local existing_frontend_env=""
+    local preserve_frontend_env=false
+    local frontend_env_file=""
+    
+    # Determine which frontend env file to check (prioritize .env.production in production)
+    if [ -f "/opt/profolio/frontend/.env.production" ]; then
+        frontend_env_file="/opt/profolio/frontend/.env.production"
+    elif [ -f "/opt/profolio/frontend/.env" ]; then
+        frontend_env_file="/opt/profolio/frontend/.env"
+    fi
+    
+    # Check for existing Firebase and other frontend environment variables
+    if [ -n "$frontend_env_file" ] && [ -f "$frontend_env_file" ]; then
+        local has_firebase_config=false
+        local has_auth_mode=false
+        local has_api_url=false
+        
+        # Check for Firebase configuration
+        if grep -q "NEXT_PUBLIC_FIREBASE_" "$frontend_env_file"; then
+            has_firebase_config=true
+        fi
+        
+        # Check for auth mode
+        if grep -q "NEXT_PUBLIC_AUTH_MODE=" "$frontend_env_file"; then
+            has_auth_mode=true
+        fi
+        
+        # Check for API URL
+        if grep -q "NEXT_PUBLIC_API_URL=" "$frontend_env_file"; then
+            has_api_url=true
+        fi
+        
+        # If we have any existing environment configuration, ask user
+        if [ "$has_firebase_config" = true ] || [ "$has_auth_mode" = true ] || [ "$has_api_url" = true ]; then
+            echo ""
+            info "Existing frontend environment configuration detected in: $frontend_env_file"
+            
+            if [ "$has_firebase_config" = true ]; then
+                echo -e "   ${GREEN}✅ Firebase configuration found${NC}"
+            fi
+            if [ "$has_auth_mode" = true ]; then
+                echo -e "   ${GREEN}✅ Authentication mode configured${NC}"
+            fi
+            if [ "$has_api_url" = true ]; then
+                echo -e "   ${GREEN}✅ API URL configured${NC}"
+            fi
+            
+            echo ""
+            echo -e "${YELLOW}🤔 Would you like to preserve your existing frontend environment configuration?${NC}"
+            echo -e "   ${WHITE}This includes Firebase credentials, authentication mode, and API settings.${NC}"
+            echo -e "   ${GREEN}Recommended: Keep existing configuration (press Enter)${NC}"
+            echo ""
+            
+            if [ "$AUTO_INSTALL" = true ]; then
+                echo -e "${CYAN}Auto-install mode: Preserving existing environment configuration${NC}"
+                preserve_frontend_env=true
+            else
+                read -p "Preserve existing environment configuration? [Y/n]: " -r preserve_env_choice
+                preserve_env_choice=${preserve_env_choice:-Y}  # Default to Y if empty
+                
+                case "$preserve_env_choice" in
+                    [Yy]*|"")
+                        preserve_frontend_env=true
+                        success "Will preserve existing frontend environment configuration"
+                        ;;
+                    [Nn]*)
+                        preserve_frontend_env=false
+                        warn "Will reset frontend environment configuration to defaults"
+                        ;;
+                    *)
+                        info "Invalid choice, defaulting to preserve existing configuration"
+                        preserve_frontend_env=true
+                        ;;
+                esac
+            fi
+            
+            if [ "$preserve_frontend_env" = true ]; then
+                # Read existing environment variables
+                existing_frontend_env=$(cat "$frontend_env_file")
+                info "Preserving existing frontend environment configuration"
+            fi
+        fi
+    fi
+    
     # Try to preserve existing credentials during updates/repairs
     if [ -f "/opt/profolio/backend/.env" ]; then
         info "Checking for existing credentials..."
@@ -1102,21 +1196,71 @@ PORT=3001
 NODE_ENV=production
 EOF
 
-    # Create frontend .env
-    cat > /opt/profolio/frontend/.env << EOF
-NEXT_PUBLIC_API_URL=http://localhost:3001
+    # Create frontend environment configuration
+    if [ "$preserve_frontend_env" = true ] && [ -n "$existing_frontend_env" ]; then
+        # Preserve existing frontend environment configuration
+        info "Preserving existing frontend environment configuration"
+        
+        # Determine the target file (prefer .env.production for production environments)
+        local target_frontend_env="/opt/profolio/frontend/.env.production"
+        
+        # Write preserved configuration to the target file
+        echo "$existing_frontend_env" > "$target_frontend_env"
+        
+        # Ensure API URL is updated to current server if it's using old localhost
+        local current_ip=$(hostname -I | awk '{print $1}')
+        if grep -q "NEXT_PUBLIC_API_URL=http://localhost:3001" "$target_frontend_env"; then
+            sed -i "s|NEXT_PUBLIC_API_URL=http://localhost:3001|NEXT_PUBLIC_API_URL=http://$current_ip:3001|g" "$target_frontend_env"
+            info "Updated API URL to current server IP: $current_ip"
+        fi
+        
+        success "Frontend environment configuration preserved in $target_frontend_env"
+    else
+        # Create new frontend .env configuration
+        info "Creating new frontend environment configuration"
+        local current_ip=$(hostname -I | awk '{print $1}')
+        
+        cat > /opt/profolio/frontend/.env.production << EOF
+# Authentication mode
+NEXT_PUBLIC_AUTH_MODE=local
+
+# Backend API URL (your server's URL)
+NEXT_PUBLIC_API_URL=http://$current_ip:3001
+
+# Node environment
 NODE_ENV=production
+
+# Firebase configuration (add your Firebase project details here)
+# Uncomment and configure these lines if using Firebase authentication:
+# NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+# NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+# NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+# NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+# NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
+# NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 EOF
+        
+        success "Created new frontend environment configuration with local authentication"
+        info "To use Firebase authentication, edit /opt/profolio/frontend/.env.production with your Firebase project details"
+    fi
 
     # Set proper permissions
-    chown profolio:profolio /opt/profolio/backend/.env /opt/profolio/frontend/.env
-    chmod 600 /opt/profolio/backend/.env /opt/profolio/frontend/.env
+    chown profolio:profolio /opt/profolio/backend/.env 2>/dev/null || true
+    chown profolio:profolio /opt/profolio/frontend/.env.production 2>/dev/null || true
+    chmod 600 /opt/profolio/backend/.env
+    chmod 600 /opt/profolio/frontend/.env.production 2>/dev/null || true
     
     if [ "$credentials_preserved" = true ]; then
         success "Preserved existing database credentials"
     else
         success "Generated new database credentials"
         info "Database password: $db_password"
+    fi
+    
+    if [ "$preserve_frontend_env" = true ]; then
+        success "Preserved existing frontend environment configuration"
+    else
+        success "Created new frontend environment configuration"
     fi
 }
 
