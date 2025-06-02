@@ -327,7 +327,7 @@ execute_rollback() {
         # Rebuild with previous version
         info "Rebuilding previous version..."
         cd /opt/profolio
-        setup_environment
+        setup_environment true  # Pass true to indicate rollback mode (prevents re-prompting)
         
         if build_application; then
             # Restart services
@@ -999,6 +999,13 @@ detect_installation_state() {
 
 # Build application with dynamic progress
 build_application() {
+    # Clean up any existing build artifacts with permission issues
+    info "Cleaning build directories..."
+    rm -rf /opt/profolio/frontend/.next /opt/profolio/backend/dist 2>/dev/null || true
+    
+    # Ensure proper ownership of the entire project
+    chown -R profolio:profolio /opt/profolio
+    
     local steps=(
         "Installing backend dependencies" "cd /opt/profolio/backend && sudo -u profolio npm install"
         "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio npx prisma generate"
@@ -1013,6 +1020,8 @@ build_application() {
 
 # Setup environment configuration with proper credential preservation and database sync
 setup_environment() {
+    local is_rollback_mode="${1:-false}"  # Parameter to indicate if called during rollback
+    
     # Check if we're updating an existing installation
     local existing_db_password=""
     local existing_jwt_secret=""
@@ -1054,48 +1063,56 @@ setup_environment() {
             has_api_url=true
         fi
         
-        # If we have any existing environment configuration, ask user
+        # If we have any existing environment configuration, handle preservation
         if [ "$has_firebase_config" = true ] || [ "$has_auth_mode" = true ] || [ "$has_api_url" = true ]; then
-            echo ""
-            info "Existing frontend environment configuration detected in: $frontend_env_file"
             
-            if [ "$has_firebase_config" = true ]; then
-                echo -e "   ${GREEN}✅ Firebase configuration found${NC}"
-            fi
-            if [ "$has_auth_mode" = true ]; then
-                echo -e "   ${GREEN}✅ Authentication mode configured${NC}"
-            fi
-            if [ "$has_api_url" = true ]; then
-                echo -e "   ${GREEN}✅ API URL configured${NC}"
-            fi
-            
-            echo ""
-            echo -e "${YELLOW}🤔 Would you like to preserve your existing frontend environment configuration?${NC}"
-            echo -e "   ${WHITE}This includes Firebase credentials, authentication mode, and API settings.${NC}"
-            echo -e "   ${GREEN}Recommended: Keep existing configuration (press Enter)${NC}"
-            echo ""
-            
-            if [ "$AUTO_INSTALL" = true ]; then
-                echo -e "${CYAN}Auto-install mode: Preserving existing environment configuration${NC}"
+            if [ "$is_rollback_mode" = true ]; then
+                # During rollback, automatically preserve without prompting
                 preserve_frontend_env=true
+                info "Rollback mode: Automatically preserving existing environment configuration"
             else
-                read -p "Preserve existing environment configuration? [Y/n]: " -r preserve_env_choice
-                preserve_env_choice=${preserve_env_choice:-Y}  # Default to Y if empty
+                # Normal mode: prompt user
+                echo ""
+                info "Existing frontend environment configuration detected in: $frontend_env_file"
                 
-                case "$preserve_env_choice" in
-                    [Yy]*|"")
-                        preserve_frontend_env=true
-                        success "Will preserve existing frontend environment configuration"
-                        ;;
-                    [Nn]*)
-                        preserve_frontend_env=false
-                        warn "Will reset frontend environment configuration to defaults"
-                        ;;
-                    *)
-                        info "Invalid choice, defaulting to preserve existing configuration"
-                        preserve_frontend_env=true
-                        ;;
-                esac
+                if [ "$has_firebase_config" = true ]; then
+                    echo -e "   ${GREEN}✅ Firebase configuration found${NC}"
+                fi
+                if [ "$has_auth_mode" = true ]; then
+                    echo -e "   ${GREEN}✅ Authentication mode configured${NC}"
+                fi
+                if [ "$has_api_url" = true ]; then
+                    echo -e "   ${GREEN}✅ API URL configured${NC}"
+                fi
+                
+                echo ""
+                echo -e "${YELLOW}🤔 Would you like to preserve your existing frontend environment configuration?${NC}"
+                echo -e "   ${WHITE}This includes Firebase credentials, authentication mode, and API settings.${NC}"
+                echo -e "   ${GREEN}Recommended: Keep existing configuration (press Enter)${NC}"
+                echo ""
+                
+                if [ "$AUTO_INSTALL" = true ]; then
+                    echo -e "${CYAN}Auto-install mode: Preserving existing environment configuration${NC}"
+                    preserve_frontend_env=true
+                else
+                    read -p "Preserve existing environment configuration? [Y/n]: " -r preserve_env_choice
+                    preserve_env_choice=${preserve_env_choice:-Y}  # Default to Y if empty
+                    
+                    case "$preserve_env_choice" in
+                        [Yy]*|"")
+                            preserve_frontend_env=true
+                            success "Will preserve existing frontend environment configuration"
+                            ;;
+                        [Nn]*)
+                            preserve_frontend_env=false
+                            warn "Will reset frontend environment configuration to defaults"
+                            ;;
+                        *)
+                            info "Invalid choice, defaulting to preserve existing configuration"
+                            preserve_frontend_env=true
+                            ;;
+                    esac
+                fi
             fi
             
             if [ "$preserve_frontend_env" = true ]; then
