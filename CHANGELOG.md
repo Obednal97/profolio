@@ -12,6 +12,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive security audit and fixes
 - Professional documentation suite
 
+## [1.2.1] - 2025-06-02
+
+### 🚨 CRITICAL INSTALLER FIX 🚨
+- **🔥 Firebase Authentication Preservation**: Fixed critical issue where installer overwrote environment files during updates
+- **💥 Production Downtime Prevention**: Eliminated "API key not valid" errors that broke Firebase auth after updates
+- **🛡️ Environment Configuration Protection**: Comprehensive preservation of frontend environment variables
+
+### Added
+- **Environment Preservation System**: Automatic detection and preservation of existing environment configurations
+- **User-Friendly Prompts**: Interactive prompts with "Yes" default to preserve existing settings
+- **Multi-File Support**: Support for `.env.production`, `.env.local`, and `.env` files with proper priority
+- **Smart API URL Updates**: Automatic localhost → server IP conversion during preservation
+- **Auto-Preserve Mode**: Unattended installations automatically preserve existing configurations
+- **Enhanced Update Wizard**: Clear information about environment protection features
+
+### Fixed
+- **🚨 CRITICAL: Environment File Overwriting**: Installer no longer resets Firebase credentials to template values
+- **🔧 Firebase Authentication Breaking**: Zero-downtime updates for Firebase authentication users
+- **📁 File Priority Handling**: Proper Next.js environment file precedence (production → local → general)
+- **🔒 Permission Management**: Enhanced permission handling for multiple environment file types
+- **🏗️ Filename Preservation**: Maintains original environment file names during preservation
+
+### Enhanced
+- **User Experience**: Clear explanations of what will be preserved with green checkmarks
+- **Safety Features**: Fallback to template generation if preservation fails
+- **Documentation**: Comprehensive feature documentation and usage examples
+- **Error Handling**: Graceful handling of invalid configurations with clear guidance
+
+### Technical Improvements
+- **Detection Logic**: Scans for Firebase credentials, auth mode, and API configurations
+- **Preservation Algorithm**: Reads existing files and writes to same filenames
+- **Smart Updates**: Updates API URLs while preserving all other settings
+- **Permission Security**: Proper file ownership and permissions for preserved configurations
+- **Backward Compatibility**: Works with existing installations without breaking changes
+
+### Impact
+- **✅ Zero Downtime**: Firebase authentication continues working during updates
+- **✅ No Manual Reconfiguration**: Eliminates post-update Firebase credential restoration
+- **✅ Production Safe**: Prevents authentication breaking in production environments
+- **✅ User Choice**: Clear prompts with sensible defaults for environment handling
+- **✅ Comprehensive Support**: Works with all Next.js environment file patterns
+
+### Documentation
+- **Environment Preservation Feature Guide**: Complete documentation with examples and use cases
+- **Update Workflow**: Enhanced update wizard with protection feature explanations
+- **Technical Details**: File priority, preservation logic, and error handling documentation
+- **Migration Notes**: Guidance for users who experienced previous authentication issues
+
 ## [1.2.0] - 2025-01-06
 
 ### Added
