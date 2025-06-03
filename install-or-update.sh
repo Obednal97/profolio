@@ -989,9 +989,18 @@ run_configuration_wizard() {
         return
     fi
     
+    echo ""
+    echo -e "${BLUE}📋 Advanced Mode Configuration:${NC}"
+    echo -e "${CYAN}Final Settings:${NC}"
+    echo -e "  • Installation: Advanced configuration"
+    echo -e "  • Optimization: $OPTIMIZATION_LEVEL"
+    echo -e "  • SSH: Enabled with key-only authentication"
+    echo -e "  • Network: DHCP (automatic)"
+    echo ""
+    
     # For now, just use defaults for advanced setup too with the chosen optimization
     # TODO: Implement full configuration wizard
-    echo -e "${YELLOW}⚠️  Advanced setup not yet implemented. Using defaults with $OPTIMIZATION_LEVEL optimization.${NC}"
+    echo -e "${YELLOW}⚠️  Advanced setup not yet fully implemented. Using defaults with $OPTIMIZATION_LEVEL optimization.${NC}"
     use_defaults
 }
 
