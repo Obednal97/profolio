@@ -500,6 +500,7 @@ MEMORY_USAGE_PEAK=""
 DATABASE_MIGRATIONS_COUNT=""
 BACKUP_SIZE=""
 DOWNLOAD_SIZE=""
+APP_SIZE=""
 
 # UX Flow Variables (set by wizard)
 USER_ACTION_CHOICE=""
@@ -1829,13 +1830,6 @@ show_completion_status() {
         BACKUP_SIZE="none"
     fi
     
-    # Calculate download size
-    if [ -d "/opt/profolio" ]; then
-        DOWNLOAD_SIZE=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
-    else
-        DOWNLOAD_SIZE="unknown"
-    fi
-    
     echo ""
     if [ "$operation_success" = true ]; then
         echo -e "${GREEN}"
@@ -2006,8 +2000,8 @@ show_operation_statistics() {
     # File and Data Statistics  
     echo -e "${CYAN}║${NC} ${WHITE}📁 Data Statistics${NC}                                           ${CYAN}║${NC}"
     format_stat_row "Files Processed" "$FILES_CHANGED_COUNT" "${GREEN}"
-    format_stat_row "Download Size" "$DOWNLOAD_SIZE" "${BLUE}"
-    format_stat_row "Current App Size" "$app_size" "${CYAN}"
+    format_stat_row "Actual Download" "$DOWNLOAD_SIZE" "${BLUE}"
+    format_stat_row "Total App Size" "${APP_SIZE:-$app_size}" "${CYAN}"
     if [ "$BACKUP_SIZE" != "none" ]; then
         format_stat_row "Backup Created" "$BACKUP_SIZE" "${YELLOW}"
     fi
@@ -2411,6 +2405,14 @@ update_installation() {
 repair_installation() {
     OPERATION_TYPE="REPAIR"
     info "Starting repair process"
+    
+    # Set download size for repair (no new downloads)
+    DOWNLOAD_SIZE="0 bytes (rebuild only)"
+    
+    # Set app size for statistics
+    if [ -d "/opt/profolio" ]; then
+        APP_SIZE=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
+    fi
     
     # Stop any running services first
     info "Stopping any running services..."
@@ -2832,12 +2834,13 @@ EOF
 calculate_download_stats() {
     local repo_dir="$1"
     local is_incremental="$2"
+    local actual_download_size="$3"  # New parameter for actual download size
     
     if [ -d "$repo_dir" ]; then
-        # Calculate actual size downloaded
-        local total_size=$(du -sh "$repo_dir" 2>/dev/null | cut -f1 || echo "unknown")
+        # Calculate total application size (includes node_modules, builds, etc.)
+        local total_app_size=$(du -sh "$repo_dir" 2>/dev/null | cut -f1 || echo "unknown")
         
-        # Calculate git object size (what was actually downloaded)
+        # Calculate git repository size (bare git data)
         local git_size="unknown"
         if [ -d "$repo_dir/.git" ]; then
             git_size=$(du -sh "$repo_dir/.git" 2>/dev/null | cut -f1 || echo "unknown")
@@ -2845,18 +2848,29 @@ calculate_download_stats() {
         
         if [ "$is_incremental" = true ]; then
             info "📊 Incremental Update Statistics:"
-            echo "   Total app size: $total_size"
+            echo "   Actual download: ${actual_download_size:-"~3-5 KiB (incremental)"}"
+            echo "   Total app size: $total_app_size"
             echo "   Git data size: $git_size"
             echo "   ✅ Only downloaded changes (efficient!)"
+            
+            # Set accurate download size for statistics
+            if [ -n "$actual_download_size" ]; then
+                DOWNLOAD_SIZE="$actual_download_size"
+            else
+                DOWNLOAD_SIZE="~3-5 KiB"  # Estimate for incremental
+            fi
         else
             info "📊 Download Statistics:"
-            echo "   Total download: $total_size"
-            echo "   Git repository: $git_size"
+            echo "   Repository download: ${actual_download_size:-$git_size}"
+            echo "   Total app size: $total_app_size"
             echo "   ✅ Optimized with sparse checkout"
+            
+            # For fresh downloads, use git size as download size
+            DOWNLOAD_SIZE="${actual_download_size:-$git_size}"
         fi
         
-        # Update global download size for statistics
-        DOWNLOAD_SIZE="$total_size"
+        # Track application size separately for statistics
+        APP_SIZE="$total_app_size"
     fi
 }
 
@@ -2881,9 +2895,22 @@ download_profolio_incremental() {
             setup_sparse_checkout "/opt/profolio"
         fi
         
-        # Fetch only the changes (incremental!)
+        # Fetch only the changes (incremental!) and capture the output to estimate download size
         info "Fetching incremental changes from repository..."
-        if sudo -u profolio git fetch origin main --progress; then
+        local fetch_output=$(sudo -u profolio git fetch origin main --progress 2>&1)
+        local actual_download_size="~3-5 KiB"  # Default estimate
+        
+        # Try to extract download size from git fetch output
+        if echo "$fetch_output" | grep -q "KiB\|MiB\|GiB"; then
+            actual_download_size=$(echo "$fetch_output" | grep -o '[0-9.]\+ [KMG]iB' | tail -1)
+        elif echo "$fetch_output" | grep -q "objects:.*done"; then
+            local objects_count=$(echo "$fetch_output" | grep -o 'objects: [0-9]\+' | grep -o '[0-9]\+')
+            if [ -n "$objects_count" ] && [ "$objects_count" -gt 0 ]; then
+                actual_download_size="${objects_count} objects (~${objects_count} KiB)"
+            fi
+        fi
+        
+        if [ $? -eq 0 ]; then
             success "✅ Incremental fetch completed"
             
             # Show what's being updated
@@ -2897,14 +2924,14 @@ download_profolio_incremental() {
                 fi
             else
                 success "✅ Already up to date - no download needed!"
-                calculate_download_stats "/opt/profolio" true
+                calculate_download_stats "/opt/profolio" true "0 bytes"
                 return 0
             fi
             
             # Apply the changes
             if sudo -u profolio git reset --hard origin/main; then
                 success "✅ Incremental update applied successfully"
-                calculate_download_stats "/opt/profolio" true
+                calculate_download_stats "/opt/profolio" true "$actual_download_size"
                 return 0
             else
                 error "Failed to apply incremental changes"
@@ -2928,8 +2955,29 @@ download_profolio_incremental() {
     
     # Use shallow clone to reduce initial download size
     info "Starting optimized repository download..."
-    if git clone --depth=1 --single-branch --branch main https://github.com/Obednal97/profolio.git --progress; then
+    local clone_output=$(git clone --depth=1 --single-branch --branch main https://github.com/Obednal97/profolio.git --progress 2>&1)
+    local clone_download_size="unknown"
+    
+    # Try to extract download size from git clone output
+    if echo "$clone_output" | grep -q "KiB\|MiB\|GiB"; then
+        clone_download_size=$(echo "$clone_output" | grep -o '[0-9.]\+ [KMG]iB' | tail -1)
+    elif echo "$clone_output" | grep -q "objects:.*done"; then
+        local objects_count=$(echo "$clone_output" | grep -o 'objects: [0-9]\+' | grep -o '[0-9]\+')
+        if [ -n "$objects_count" ] && [ "$objects_count" -gt 0 ]; then
+            clone_download_size="${objects_count} objects"
+        fi
+    fi
+    
+    if [ $? -eq 0 ]; then
         success "✅ Repository downloaded successfully"
+        
+        # Get actual repository size before building
+        if [ -d "/opt/profolio/.git" ]; then
+            local repo_size=$(du -sh /opt/profolio/.git 2>/dev/null | cut -f1 || echo "unknown")
+            if [ "$clone_download_size" = "unknown" ]; then
+                clone_download_size="$repo_size"
+            fi
+        fi
         
         # Setup sparse checkout for future efficiency
         setup_sparse_checkout "/opt/profolio"
@@ -2944,7 +2992,7 @@ download_profolio_incremental() {
         chown -R profolio:profolio /opt/profolio
         
         success "✅ Installation optimized for production"
-        calculate_download_stats "/opt/profolio" false
+        calculate_download_stats "/opt/profolio" false "$clone_download_size"
         return 0
     else
         error "Failed to download repository"
