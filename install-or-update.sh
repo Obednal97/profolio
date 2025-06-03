@@ -1525,32 +1525,102 @@ cleanup_build_artifacts() {
     success "Build artifacts cleaned up successfully"
 }
 
-# Optimize dependencies for production deployment (SAFE VERSION)
-# This runs AFTER build is complete to avoid service startup issues
+# Optimize dependencies for production deployment (SMART SELECTIVE VERSION)
+# This runs AFTER build is complete and only removes truly unnecessary dev dependencies
 optimize_production_deployment() {
-    info "🚀 Optimizing for production deployment..."
+    info "🚀 Optimizing for production deployment (smart selective removal)..."
     
-    # Backend: Remove dev dependencies (keeping built dist/ folder)
-    info "  → Backend: Removing dev dependencies (keeping compiled code)..."
+    # Backend: Remove specific dev-only dependencies while keeping runtime essentials
+    info "  → Backend: Removing development-only dependencies..."
     cd /opt/profolio/backend
     
-    # Remove node_modules and reinstall production-only
-    sudo -u profolio rm -rf node_modules package-lock.json
-    sudo -u profolio npm ci --production --silent --no-audit
+    # Define dev dependencies that are safe to remove (testing, linting, building tools)
+    local backend_dev_to_remove=(
+        "@types/*"
+        "@typescript-eslint/*" 
+        "eslint*"
+        "prettier*"
+        "jest*"
+        "@jest/*"
+        "supertest*"
+        "ts-jest*"
+        "ts-node*"
+        "@nestjs/testing*"
+        "@nestjs/cli*"
+        "typescript*"
+        "source-map-support*"
+        "tsconfig-paths*"
+        "webpack*"
+        "nodemon*"
+        "concurrently*"
+    )
     
-    # Frontend: Remove dev dependencies (keeping built .next/ folder)  
-    info "  → Frontend: Removing dev dependencies (keeping built app)..."
+    # Remove specific dev packages that are not needed for runtime
+    for package in "${backend_dev_to_remove[@]}"; do
+        sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+    done
+    
+    # Keep essential packages like dotenv, prisma, etc. that are needed for runtime
+    success "  ✅ Backend: Removed testing and build tools, kept runtime essentials"
+    
+    # Frontend: Remove specific dev-only dependencies while keeping Next.js essentials  
+    info "  → Frontend: Removing development-only dependencies..."
     cd /opt/profolio/frontend
     
-    # Remove node_modules and reinstall production-only
-    sudo -u profolio rm -rf node_modules package-lock.json
-    sudo -u profolio npm ci --production --silent --no-audit
+    # Define frontend dev dependencies that are safe to remove
+    local frontend_dev_to_remove=(
+        "@types/*"
+        "@typescript-eslint/*"
+        "eslint*"
+        "prettier*"
+        "jest*"
+        "@jest/*"
+        "testing-library*"
+        "@testing-library/*"
+        "cypress*"
+        "playwright*"
+        "typescript*"
+        "webpack*"
+        "babel*"
+        "@babel/*"
+        "postcss*"
+        "autoprefixer*"
+        "tailwindcss*"
+        "@tailwindcss/*"
+        "sass*"
+        "less*"
+        "stylus*"
+        "storybook*"
+        "@storybook/*"
+        "chromatic*"
+        "husky*"
+        "lint-staged*"
+        "commitizen*"
+        "@commitlint/*"
+        "nodemon*"
+        "concurrently*"
+        "cross-env*"
+    )
     
-    # Remove unnecessary frontend build files
-    info "  → Removing unnecessary frontend build cache..."
-    sudo -u profolio rm -rf .next/cache .next/standalone/node_modules/.cache
+    # Remove specific dev packages that are not needed for runtime
+    for package in "${frontend_dev_to_remove[@]}"; do
+        sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+    done
     
-    success "✅ Production optimization completed - dev dependencies removed"
+    # Keep Next.js, React, and other runtime essentials
+    success "  ✅ Frontend: Removed dev tools, kept Next.js runtime essentials"
+    
+    # Remove unnecessary cache and temp files
+    info "  → Cleaning caches and temporary files..."
+    sudo -u profolio rm -rf frontend/.next/cache backend/node_modules/.cache 2>/dev/null || true
+    sudo -u profolio rm -rf frontend/node_modules/.cache backend/.npm 2>/dev/null || true
+    sudo -u profolio npm cache clean --force 2>/dev/null || true
+    
+    # Calculate and show space savings
+    local final_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
+    info "  → Final optimized size: $final_size"
+    
+    success "✅ Smart production optimization completed - kept runtime essentials, removed dev tools"
 }
 
 # Update the installer script itself to latest version
