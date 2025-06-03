@@ -213,8 +213,7 @@ export default function NotificationsPage() {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    deleteAllRead
+    deleteNotification
   } = useNotifications();
 
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
@@ -245,14 +244,6 @@ export default function NotificationsPage() {
       await deleteNotification(notificationId);
     } catch (error) {
       console.error('Failed to delete notification:', error);
-    }
-  };
-
-  const handleDeleteAllRead = async () => {
-    try {
-      await deleteAllRead();
-    } catch (error) {
-      console.error('Failed to delete read notifications:', error);
     }
   };
 
