@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.8.7] - 2025-06-03
+
+### 🚨 CRITICAL BUG FIXES
+- **FIXED: Production Deployment Failures**: Resolved "untracked working tree files would be overwritten" error preventing successful updates
+- **FIXED: Package Lock Conflicts**: Removed `frontend/package-lock.json` from repository to prevent git checkout conflicts
+- **FIXED: Installer Rollbacks**: Eliminated automatic rollbacks caused by file conflicts during version switching
+
+### 🔧 Improvements
+#### Installation & Updates
+- **Enhanced .gitignore**: Added `package-lock.json` files to prevent future tracking of environment-specific files
+- **Production Compatibility**: Installer now works reliably across all deployment environments without file conflicts
+- **Deployment Stability**: Eliminated the root cause of failed production updates and rollbacks
+
+### 📊 Summary
+- **Critical Issue**: Production deployment failures resolved
+- **Root Cause**: package-lock.json file conflicts during git checkout eliminated
+- **Impact**: Reliable production updates restored, no more automatic rollbacks
+
 ## [v1.8.6] - 2025-06-03
 
 ### 🔧 Improvements
