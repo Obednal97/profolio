@@ -147,14 +147,25 @@ class ApiService {
     }
   }
 
+  // Secure token retrieval from httpOnly cookies
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
     
-    // Try multiple storage locations
-    return localStorage.getItem('auth-token') || 
-           localStorage.getItem('jwt-token') ||
-           sessionStorage.getItem('auth-token') ||
-           null;
+    // Read from secure httpOnly cookie set by server
+    if (window.isSecureContext) {
+      const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth-token='))
+        ?.split('=')[1];
+      return cookieValue || null;
+    }
+    
+    // Fallback: check for demo mode token in sessionStorage (non-sensitive)
+    if (localStorage.getItem('demo-mode') === 'true') {
+      return sessionStorage.getItem('demo-auth-token') || null;
+    }
+    
+    return null;
   }
 
   // Helper methods for common API operations

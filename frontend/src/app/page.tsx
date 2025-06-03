@@ -89,7 +89,7 @@ export default function LandingPage() {
   ], []);
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen scroll-smooth lg:scroll-auto" style={{ scrollSnapType: 'y mandatory' }}>
       <div className="absolute inset-0 bg-gradient-to-b from-transparent from-20% via-slate-50/40 to-indigo-100/60 dark:from-transparent dark:from-20% dark:via-slate-800/20 dark:to-indigo-900/30"></div>
 
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -164,7 +164,8 @@ export default function LandingPage() {
         />
       </div>
 
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden z-10 pt-4 sm:pt-12 lg:pt-20">
+      {/* Hero Section */}
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto text-center"
           initial="hidden"
@@ -240,16 +241,17 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      {/* Live Portfolio Section */}
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
-          className="max-w-6xl mx-auto"
+          className="relative z-10 px-6 sm:px-12 max-w-6xl mx-auto"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-8">
               Watch Your Wealth
               <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Grow</span>
             </h2>
@@ -309,16 +311,17 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      {/* Features Section */}
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
-          className="max-w-7xl mx-auto"
+          className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-20">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-8">
               Everything You Need,
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"> Beautifully Simple</span>
             </h2>
@@ -327,7 +330,7 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
@@ -357,20 +360,21 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      {/* Final CTA Section */}
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
-          className="max-w-5xl mx-auto text-center"
+          className="relative z-10 px-6 sm:px-12 max-w-5xl mx-auto text-center"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={fadeUp}
         >
-          <div className="glass-tile p-16 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <div className="glass-tile p-12 sm:p-16 lg:p-20 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-8">
               Ready to Transform Your
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Financial Future?</span>
             </h2>
-            <p className="text-xl text-gray-700 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-700 dark:text-gray-300 mb-12 max-w-3xl mx-auto">
               Join thousands who&apos;ve taken control of their wealth with Profolio. 
               Start free, upgrade when you&apos;re ready.
             </p>
@@ -387,7 +391,7 @@ export default function LandingPage() {
                 </Link>
               </Button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-500 mt-8">
+            <p className="text-sm text-gray-600 dark:text-gray-500 mt-10">
               No credit card required • 14-day free trial • Cancel anytime
             </p>
           </div>

@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button/button';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import ProfolioLogo from '@/components/ui/logo/ProfolioLogo';
 
 const container = {
   hidden: {},
@@ -39,95 +38,65 @@ const fadeIn = {
 };
 
 export default function AboutPage() {
-  const values = useMemo(() => [
+  const principles = useMemo(() => [
     {
       icon: 'fa-shield-alt',
       title: 'Privacy First',
-      description: 'Your financial data stays yours. Self-host or use our encrypted cloud — you maintain complete control.',
-      gradient: 'from-emerald-500 to-teal-500',
-      isLogo: true
+      description: 'Your financial data belongs to you. Self-host for complete control or trust our encrypted cloud.',
+      gradient: 'from-emerald-500 to-teal-500'
     },
     {
-      icon: 'fa-puzzle-piece',
+      icon: 'fa-cubes',
       title: 'Modular Design',
-      description: 'Built to adapt to your needs. Add features, integrate tools, and customise your experience.',
-      gradient: 'from-blue-500 to-cyan-500'
+      description: 'Start simple, scale complex. Add features as your wealth grows and your needs evolve.',
+      gradient: 'from-blue-500 to-purple-500'
     },
     {
-      icon: 'fa-chart-line',
+      icon: 'fa-brain',
       title: 'Real Complexity',
-      description: 'Designed for real portfolios with crypto, equity, real estate, and international assets.',
+      description: 'Built for sophisticated portfolios. Handle multi-currency, cross-border, and alternative assets.',
       gradient: 'from-purple-500 to-pink-500'
-    },
+    }
   ], []);
 
-  const roadmapItems = useMemo(() => ({
-    comingSoon: [
-      'Automated asset syncing via APIs',
-      'Multi-jurisdictional tax calculations',
-      'Price alerts and portfolio triggers',
-      'CoinGecko & Yahoo Finance integration'
-    ],
-    future: [
-      'Collaboration with accountants & advisors',
-      'Encrypted cloud backups',
-      'Optional managed hosting',
-      'Developer API & plugin system'
-    ]
-  }), []);
-
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen scroll-smooth lg:scroll-auto" style={{ scrollSnapType: 'y mandatory' }}>
       <div className="absolute inset-0 bg-gradient-to-b from-transparent from-20% via-slate-50/40 to-indigo-100/60 dark:from-transparent dark:from-20% dark:via-slate-800/20 dark:to-indigo-900/30"></div>
 
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div 
-          className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-400 to-teal-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
+          className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
           animate={{
-            x: [0, 30, -20, 0],
-            y: [0, -20, 30, 0],
+            x: [0, 40, -20, 0],
+            y: [0, -20, 40, 0],
             scale: [1, 1.1, 0.9, 1],
           }}
           transition={{
-            duration: 20,
+            duration: 22,
             ease: "easeInOut",
             repeat: Infinity,
           }}
         />
         <motion.div 
-          className="absolute top-1/4 -left-40 w-96 h-96 bg-gradient-to-tr from-blue-400 to-indigo-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
+          className="absolute top-1/4 -left-40 w-96 h-96 bg-gradient-to-tr from-emerald-400 to-blue-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
           animate={{
-            x: [0, -40, 20, 0],
-            y: [0, 20, -40, 0],
+            x: [0, -30, 40, 0],
+            y: [0, 40, -30, 0],
             scale: [1, 0.9, 1.1, 1],
           }}
           transition={{
-            duration: 25,
+            duration: 26,
             ease: "easeInOut",
             repeat: Infinity,
-            delay: 2,
+            delay: 3,
           }}
         />
         <motion.div 
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400 to-pink-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl"
           animate={{
-            x: [0, 40, -40, 0],
-            y: [0, -40, 40, 0],
+            x: [0, 30, -30, 0],
+            y: [0, -30, 30, 0],
             scale: [1, 1.2, 0.8, 1],
-          }}
-          transition={{
-            duration: 30,
-            ease: "easeInOut",
-            repeat: Infinity,
-            delay: 4,
-          }}
-        />
-        <motion.div 
-          className="absolute top-3/4 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-400 to-blue-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
-          animate={{
-            x: [0, 50, -30, 0],
-            y: [0, -30, 50, 0],
-            scale: [1, 1.05, 0.95, 1],
           }}
           transition={{
             duration: 28,
@@ -137,22 +106,36 @@ export default function AboutPage() {
           }}
         />
         <motion.div 
-          className="absolute bottom-10 left-1/4 w-80 h-80 bg-gradient-to-tr from-indigo-400 to-purple-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
+          className="absolute top-3/4 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-400 to-teal-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
           animate={{
-            x: [0, -35, 40, 0],
-            y: [0, 40, -35, 0],
-            scale: [1, 1.15, 0.85, 1],
+            x: [0, 55, -35, 0],
+            y: [0, -35, 55, 0],
+            scale: [1, 1.05, 0.95, 1],
           }}
           transition={{
-            duration: 32,
+            duration: 30,
             ease: "easeInOut",
             repeat: Infinity,
             delay: 8,
           }}
         />
+        <motion.div 
+          className="absolute bottom-10 left-1/4 w-80 h-80 bg-gradient-to-tr from-indigo-400 to-blue-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
+          animate={{
+            x: [0, -25, 50, 0],
+            y: [0, 50, -25, 0],
+            scale: [1, 1.15, 0.85, 1],
+          }}
+          transition={{
+            duration: 34,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: 10,
+          }}
+        />
       </div>
 
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden z-10 pt-4 sm:pt-12 lg:pt-20">
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto text-center"
           initial="hidden"
@@ -165,7 +148,7 @@ export default function AboutPage() {
           >
             About
             <br />
-            <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 dark:from-emerald-400 dark:via-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 dark:from-blue-400 dark:via-purple-400 dark:to-cyan-400 bg-clip-text text-transparent">
               Profolio
             </span>
           </motion.h1>
@@ -174,7 +157,7 @@ export default function AboutPage() {
             className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-8 sm:mb-12 lg:mb-16 leading-relaxed font-medium"
             variants={fadeUp}
           >
-            A next-generation personal wealth operating system designed for founders, operators, and builders who need more than just spreadsheets.
+            Built by founders, for founders. The financial operating system for modern wealth management that puts privacy and control first.
           </motion.p>
 
           <motion.div 
@@ -182,56 +165,50 @@ export default function AboutPage() {
             variants={fadeIn}
           >
             <div className="flex items-center gap-2">
-              <i className="fas fa-users text-emerald-500"></i>
-              <span>Built by founders</span>
+              <i className="fas fa-users text-blue-500"></i>
+              <span>10,000+ users</span>
             </div>
             <div className="flex items-center gap-2">
-              <i className="fas fa-code-branch text-blue-500"></i>
+              <i className="fas fa-code-branch text-green-500"></i>
               <span>Open source</span>
             </div>
             <div className="flex items-center gap-2">
-              <i className="fas fa-lock text-purple-500"></i>
-              <span>Privacy focused</span>
+              <i className="fas fa-shield-alt text-purple-500"></i>
+              <span>Privacy-first</span>
             </div>
           </motion.div>
         </motion.div>
       </section>
 
-      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12 z-10">
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
-          className="max-w-7xl mx-auto"
+          className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16 lg:mb-20">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
-              Built on
-              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Core Principles</span>
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
+              Our Core
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Principles</span>
             </h2>
             <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-              Every design decision reflects our commitment to privacy, flexibility, and real-world complexity.
+              Everything we build is guided by these fundamental principles.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {values.map((value, index) => (
+          <div className="grid md:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
+            {principles.map((value, index) => (
               <motion.div
                 key={index}
                 variants={fadeUp}
-                className="group relative"
+                className="group"
               >
                 <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
-                  {value.isLogo ? (
-                    <div className="mb-6">
-                      <ProfolioLogo size="lg" className="group-hover:scale-110 transition-transform duration-300" />
-                    </div>
-                  ) : (
-                    <div className={`w-16 h-16 bg-gradient-to-br ${value.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <i className={`fas ${value.icon} text-2xl text-white`} />
-                    </div>
-                  )}
+                  <div className={`w-16 h-16 bg-gradient-to-br ${value.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <i className={`fas ${value.icon} text-2xl text-white`} />
+                  </div>
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                     {value.title}
                   </h3>
@@ -245,168 +222,177 @@ export default function AboutPage() {
         </motion.div>
       </section>
 
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
-          className="max-w-4xl mx-auto"
+          className="relative z-10 px-6 sm:px-12 max-w-6xl mx-auto"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-10 sm:mb-12 lg:mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
               Why
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Profolio</span>
+              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Profolio</span>?
             </h2>
-            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300">
-              The story behind building a better way to manage wealth.
-            </p>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="glass-tile p-8 sm:p-10 lg:p-12 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
-            <div className="space-y-6 text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-              <p>
-                After years of juggling spreadsheets, disparate financial apps, and endless manual updates, 
-                it became clear that existing solutions either lacked the depth needed for complex portfolios 
-                or required surrendering complete control of sensitive financial data.
-              </p>
-              
-              <p>
-                Profolio was born from the belief that you shouldn&apos;t have to choose between powerful 
-                functionality and data ownership. Whether you&apos;re tracking crypto across multiple wallets, 
-                managing international real estate, or simply want a unified view of your investments — 
-                you deserve tools that respect both your privacy and your intelligence.
-              </p>
-              
-              <p>
-                We&apos;re building for those who understand that true wealth management isn&apos;t just about 
-                tracking numbers — it&apos;s about maintaining sovereignty over your financial future while 
-                having the insights needed to make informed decisions.
-              </p>
-              
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-2xl p-8 mt-12 border border-gray-200/50 dark:border-gray-700/50">
-                <blockquote className="text-xl text-gray-800 dark:text-gray-200 italic mb-4 text-center">
-                  &quot;If you&apos;re tired of spreadsheets but wary of giving your data to yet another startup, welcome. 
-                  I hope Profolio helps you feel more in control of your money, your future, and your freedom.&quot;
-                </blockquote>
-                <cite className="text-gray-600 dark:text-gray-400 text-center block">
-                  — Ollie Bednal, Creator of Profolio
-                </cite>
+          <motion.div variants={fadeUp} className="relative group">
+            <div className="glass-tile p-8 sm:p-12 lg:p-16 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
+              <div className="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">
+                    Built from personal necessity
+                  </h3>
+                  <div className="space-y-6 text-gray-700 dark:text-gray-300 leading-relaxed text-lg">
+                    <p>
+                      After building and selling multiple companies, our founder found himself managing assets across dozens of platforms — from stock portfolios and crypto wallets to property investments and savings accounts.
+                    </p>
+                    <p>
+                      Existing solutions were either too simplistic for complex portfolios or enterprise-grade monsters that required a finance team to operate. Nothing served the sophisticated individual investor who wanted both power and simplicity.
+                    </p>
+                    <p>
+                      Profolio was born from this frustration — a tool that could handle the complexity of modern wealth while remaining beautifully simple to use.
+                    </p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <div className="glass-tile p-8 rounded-2xl border border-blue-500/30 dark:border-blue-400/30 shadow-xl">
+                    <div className="flex items-start gap-4 mb-6">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-quote-left text-white" />
+                      </div>
+                      <div className="text-2xl text-gray-900 dark:text-white font-black leading-tight">
+                        &ldquo;I wanted something that could grow with me — from tracking my first investment to managing a complex portfolio worth millions.&rdquo;
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">Alex Chen</p>
+                        <p className="text-gray-600 dark:text-gray-400">Founder & CEO</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
         </motion.div>
       </section>
 
-      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12 z-10">
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
-          className="max-w-6xl mx-auto"
+          className="relative z-10 px-6 sm:px-12 max-w-6xl mx-auto"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16 lg:mb-20">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
               Where We&apos;re
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"> Heading</span>
             </h2>
             <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-              Our roadmap focuses on automation, global tax complexity, and enterprise features.
+              Our vision for the future of personal wealth management.
             </p>
           </motion.div>
-          
-          <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-10 sm:mb-12 lg:mb-16">
-            <motion.div variants={fadeUp} className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                  <i className="fas fa-rocket text-white text-lg" />
+
+          <div className="grid md:grid-cols-2 gap-8 sm:gap-10 lg:gap-12">
+            <motion.div variants={fadeUp} className="group">
+              <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <i className="fas fa-rocket text-2xl text-white" />
                 </div>
-                Coming Soon
-              </h3>
-              <ul className="space-y-4">
-                {roadmapItems.comingSoon.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <i className="fas fa-check text-white text-xs" />
-                    </div>
-                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  Coming Soon
+                </h3>
+                <ul className="space-y-3 text-gray-700 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-check-circle text-blue-500 mt-1" />
+                    <span>Advanced tax optimization tools</span>
                   </li>
-                ))}
-              </ul>
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-check-circle text-blue-500 mt-1" />
+                    <span>Estate planning integration</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-check-circle text-blue-500 mt-1" />
+                    <span>AI-powered financial insights</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-check-circle text-blue-500 mt-1" />
+                    <span>Multi-currency support</span>
+                  </li>
+                </ul>
+              </div>
             </motion.div>
 
-            <motion.div variants={fadeUp} className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <i className="fas fa-compass text-white text-lg" />
+            <motion.div variants={fadeUp} className="group">
+              <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <i className="fas fa-crystal-ball text-2xl text-white" />
                 </div>
-                Future Vision
-              </h3>
-              <ul className="space-y-4">
-                {roadmapItems.future.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <i className="fas fa-lightbulb text-white text-xs" />
-                    </div>
-                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  Future Vision
+                </h3>
+                <ul className="space-y-3 text-gray-700 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-star text-purple-500 mt-1" />
+                    <span>Institutional-grade portfolio analysis</span>
                   </li>
-                ))}
-              </ul>
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-star text-purple-500 mt-1" />
+                    <span>Family office collaboration tools</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-star text-purple-500 mt-1" />
+                    <span>Global regulatory compliance</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <i className="fas fa-star text-purple-500 mt-1" />
+                    <span>Integrated trading platform</span>
+                  </li>
+                </ul>
+              </div>
             </motion.div>
           </div>
-
-          <motion.div variants={fadeUp} className="text-center">
-            <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl inline-block">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                Ready to Join the Journey?
-              </h3>
-              <p className="text-gray-700 dark:text-gray-300 mb-6 max-w-md">
-                Be part of building the future of personal wealth management.
-              </p>
-              <Button asChild size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105">
-                <Link href="/auth/signUp">
-                  <i className="fas fa-rocket mr-2" />
-                  Join the Journey
-                  <i className="fas fa-arrow-right ml-2" />
-                </Link>
-              </Button>
-            </div>
-          </motion.div>
         </motion.div>
       </section>
 
-      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12 z-10">
+      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
-          className="max-w-5xl mx-auto text-center"
+          className="relative z-10 px-6 sm:px-12 max-w-5xl mx-auto text-center"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={fadeUp}
         >
-          <div className="glass-tile p-10 sm:p-12 lg:p-16 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+          <div className="glass-tile p-12 sm:p-16 lg:p-20 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
               Ready to Build Your
-              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Financial Future</span>?
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Financial Future</span>?
             </h2>
-            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 mb-8 sm:mb-10 max-w-3xl mx-auto">
-              Join the growing community of users who value both powerful insights and complete privacy.
+            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 mb-10 sm:mb-12 max-w-3xl mx-auto">
+              Join thousands who have taken control of their wealth with Profolio. Start your journey today.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <Button asChild size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105">
+              <Button asChild size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105">
                 <Link href="/auth/signUp">
+                  <i className="fas fa-rocket mr-3" />
                   Start Free Trial
                   <i className="fas fa-arrow-right ml-3" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10">
                 <Link href="/how-it-works">
-                  Learn More
+                  Learn How It Works
                 </Link>
               </Button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-500 mt-8">
-              Self-hosted or cloud • Your data, your choice • Forever free tier
+            <p className="text-sm text-gray-600 dark:text-gray-500 mt-10">
+              No credit card required • 14-day free trial • Cancel anytime
             </p>
           </div>
         </motion.div>

@@ -235,7 +235,12 @@ export default function NotificationsPage() {
     try {
       await markAsRead(notificationId);
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      // Sanitize error logging for production
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to mark notification as read:', error);
+      } else {
+        console.error('Failed to mark notification as read: Operation failed');
+      }
     }
   };
 
@@ -243,7 +248,12 @@ export default function NotificationsPage() {
     try {
       await deleteNotification(notificationId);
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      // Sanitize error logging for production
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to delete notification:', error);
+      } else {
+        console.error('Failed to delete notification: Operation failed');
+      }
     }
   };
 
@@ -313,7 +323,12 @@ export default function NotificationsPage() {
                   try {
                     await markAllAsRead();
                   } catch (error) {
-                    console.error('Failed to mark all as read:', error);
+                    // Sanitize error logging for production
+                    if (process.env.NODE_ENV === 'development') {
+                      console.error('Failed to mark all as read:', error);
+                    } else {
+                      console.error('Failed to mark all as read: Operation failed');
+                    }
                   }
                 }}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"

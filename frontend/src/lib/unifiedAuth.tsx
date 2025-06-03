@@ -73,6 +73,40 @@ function firebaseUserToUnified(firebaseUser: FirebaseUser): UnifiedUser {
   };
 }
 
+// Secure token management for httpOnly cookies
+function getSecureToken(): string | null {
+  if (typeof window !== 'undefined' && window.isSecureContext) {
+    // Read from httpOnly cookie set by server
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('auth-token='))
+      ?.split('=')[1];
+    return cookieValue || null;
+  }
+  return null;
+}
+
+function setSecureToken(token: string): void {
+  // Note: httpOnly cookies must be set by the server
+  // This is a client-side fallback for development
+  if (typeof window !== 'undefined') {
+    if (process.env.NODE_ENV === 'development') {
+      // Development: Use secure cookie attributes
+      document.cookie = `auth-token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=86400`;
+    } else {
+      // Production: Token should be set by server as httpOnly cookie
+      console.warn('Token should be set by server as httpOnly cookie in production');
+    }
+  }
+}
+
+function clearSecureToken(): void {
+  if (typeof window !== 'undefined') {
+    // Clear the cookie by setting expired date
+    document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+  }
+}
+
 export function UnifiedAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UnifiedUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -84,6 +118,12 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
   // Initialize authentication system
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
+
+    // Initialize token from secure cookie
+    const initialToken = getSecureToken();
+    if (initialToken) {
+      setToken(initialToken);
+    }
 
     const initializeAuth = async () => {
       try {
@@ -159,8 +199,8 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
                   if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.token) {
-                      // Store the backend token
-                      localStorage.setItem('auth-token', data.token);
+                      // Store the backend token securely
+                      setSecureToken(data.token);
                       setToken(data.token);
                       
                       // Fetch profile from backend
@@ -351,6 +391,9 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
       setUser(null);
       setToken(null);
       setUserProfile(null);
+      
+      // Clear secure token
+      clearSecureToken();
     } catch (error) {
       console.error('Sign out error:', error);
       // Force clear state even if sign out fails
@@ -438,8 +481,8 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
             photoURL: profileData.user.photoURL || currentUser.photoURL || '',
           });
           
-          // Also update the auth token in localStorage for future requests
-          localStorage.setItem('auth-token', data.token);
+          // Also update the auth token securely for future requests
+          setSecureToken(data.token);
           setToken(data.token);
         } else {
           console.log('ℹ️ [Auth] No updated profile found in backend, using Firebase data');

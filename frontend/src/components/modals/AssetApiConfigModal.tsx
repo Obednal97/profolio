@@ -9,6 +9,49 @@ interface AssetApiConfigModalProps {
   onApiKeysUpdated?: () => void;
 }
 
+// Simple demo session token generation (local function)
+function generateDemoSessionToken(): string {
+  return `demo-${crypto.getRandomValues(new Uint8Array(16)).join('')}-${Date.now()}`;
+}
+
+// Secure demo session management
+let demoSessionCache: { token: string; userId: string; email: string } | null = null;
+
+async function getDemoSessionToken(): Promise<string | null> {
+  if (!demoSessionCache) {
+    try {
+      demoSessionCache = {
+        token: generateDemoSessionToken(),
+        userId: 'demo-user-id',
+        email: 'demo@profolio.com'
+      };
+    } catch (error) {
+      console.error('Failed to create demo session:', error);
+      return null;
+    }
+  }
+  return demoSessionCache.token;
+}
+
+// Secure error message sanitization for production
+function getPublicErrorMessage(error: { status?: number; details?: string; error?: string }): string {
+  if (process.env.NODE_ENV === 'development') {
+    return error.details || error.error || 'Unknown error';
+  }
+  
+  // Production: Generic user-friendly messages
+  if (error.status === 429 || error.details?.includes('429') || error.details?.includes('Too Many Requests')) {
+    return 'Rate limit exceeded. Please wait a few minutes.';
+  }
+  if (error.status === 401 || error.details?.includes('401') || error.details?.includes('Unauthorized')) {
+    return 'Invalid API credentials. Please check your API key.';
+  }
+  if (error.status === 403 || error.details?.includes('403') || error.details?.includes('Forbidden')) {
+    return 'Access denied. Please verify your API permissions.';
+  }
+  return 'Service temporarily unavailable. Please try again later.';
+}
+
 export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfigModalProps) {
   const { token } = useAuth();
   const [apiKeys, setApiKeys] = useState({
@@ -52,8 +95,8 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
 
     try {
       if (isDemoMode) {
-        // For demo mode, load from localStorage (no network request needed)
-        const demoApiKeys = localStorage.getItem('demo-api-keys');
+        // For demo mode, load from sessionStorage (secure for demo keys)
+        const demoApiKeys = sessionStorage.getItem('demo-api-keys');
         if (demoApiKeys && !controller.signal.aborted) {
           const parsedKeys = JSON.parse(demoApiKeys);
           setApiKeys(prev => ({ ...prev, ...parsedKeys }));
@@ -62,9 +105,11 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
       }
 
       // For real users, load from secure server storage
-      const authToken = token || (isDemoMode ? 'demo-token' : null);
+      const authToken = token || (isDemoMode ? await getDemoSessionToken() : null);
       if (!authToken) {
-        console.log('No auth token available, skipping API key load');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('No auth token available, skipping API key load');
+        }
         return;
       }
 
@@ -123,7 +168,7 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
 
     try {
       let isValid = false;
-      const authToken = token || (isDemoMode ? 'demo-token' : null);
+      const authToken = token || (isDemoMode ? await getDemoSessionToken() : null);
       
       switch (provider) {
         case 'trading212':
@@ -145,7 +190,10 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
           } else {
             const errorData = await response.json();
             
-            // Handle specific Trading 212 errors
+            // Use sanitized error messages for production
+            const publicMessage = getPublicErrorMessage(errorData);
+            
+            // Handle specific Trading 212 errors with user-friendly messages
             if (errorData.details?.includes('429') || errorData.details?.includes('Too Many Requests')) {
               alert('⏱️ Trading 212 Rate Limit Exceeded\n\nYou\'ve made too many API requests recently. Please wait a few minutes before testing again.\n\nTip: Trading 212 has strict rate limits to protect their servers.');
               setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
@@ -159,7 +207,7 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
               setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
               return;
             } else {
-              alert(`❌ Trading 212 Connection Failed\n\n${errorData.details || errorData.error || 'Unknown error'}\n\nPlease try again in a few minutes.`);
+              alert(`❌ Trading 212 Connection Failed\n\n${publicMessage}\n\nPlease try again in a few minutes.`);
               setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
               return;
             }
@@ -240,7 +288,7 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
 
     try {
       setIsTestingConnection('trading212-sync');
-      const authToken = token || (isDemoMode ? 'demo-token' : null);
+      const authToken = token || (isDemoMode ? await getDemoSessionToken() : null);
       
       // Fetch Trading 212 portfolio data
       const response = await fetch('/api/trading212/sync', {
@@ -258,7 +306,10 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
       if (!response.ok) {
         const errorData = await response.json();
         
-        // Handle specific Trading 212 errors
+        // Use sanitized error messages for production
+        const publicMessage = getPublicErrorMessage(errorData);
+        
+        // Handle specific Trading 212 errors with user-friendly messages
         if (errorData.details?.includes('429') || errorData.details?.includes('Too Many Requests')) {
           alert('⏱️ Trading 212 Rate Limit Exceeded\n\nYou\'ve made too many API requests recently. Trading 212 has strict rate limits.\n\nPlease wait 5-10 minutes before trying to sync again.\n\nTip: Once synced successfully, your portfolio data will be cached and you won\'t need to sync frequently.');
           return;
@@ -269,7 +320,7 @@ export function AssetApiConfigModal({ onClose, onApiKeysUpdated }: AssetApiConfi
           alert('🚫 Trading 212 API Access Denied\n\nYour API key doesn\'t have the required permissions for portfolio access.\n\nPlease check your Trading 212 API settings and ensure you have the necessary permissions.');
           return;
         } else {
-          throw new Error(errorData.details || errorData.error || 'Failed to sync Trading 212 data');
+          throw new Error(publicMessage);
         }
       }
 
@@ -331,15 +382,15 @@ ${isDemoMode ? '\n💡 Demo Mode: Your data is stored locally and will be cleare
     
     try {
       if (isDemoMode) {
-        // For demo mode, store in localStorage only
-        localStorage.setItem('demo-api-keys', JSON.stringify(apiKeys));
+        // For demo mode, store in sessionStorage only (secure for demo keys)
+        sessionStorage.setItem('demo-api-keys', JSON.stringify(apiKeys));
         alert(`Demo Mode: API keys saved locally in your browser session only!\n\nProviders stored: ${Object.keys(apiKeys).filter(key => apiKeys[key as keyof typeof apiKeys].trim()).join(', ')}\n\nNote: These keys are only stored in your browser and will be cleared when you log out.`);
         onClose();
         return;
       }
 
       // For real users, save to secure server storage
-      const authToken = token || (isDemoMode ? 'demo-token' : null);
+      const authToken = token || (isDemoMode ? await getDemoSessionToken() : null);
       if (!authToken) {
         alert('Authentication token not available. Please try logging in again.');
         return;

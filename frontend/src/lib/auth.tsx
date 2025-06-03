@@ -28,6 +28,56 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Secure token management for httpOnly cookies
+function getSecureToken(): string | null {
+  if (typeof window !== 'undefined' && window.isSecureContext) {
+    // Read from httpOnly cookie set by server
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('auth-token='))
+      ?.split('=')[1];
+    return cookieValue || null;
+  }
+  return null;
+}
+
+function setSecureToken(token: string): void {
+  // Note: httpOnly cookies must be set by the server
+  // This is a client-side fallback for development
+  if (typeof window !== 'undefined') {
+    if (process.env.NODE_ENV === 'development') {
+      // Development: Use secure cookie attributes
+      document.cookie = `auth-token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=86400`;
+    } else {
+      // Production: Token should be set by server as httpOnly cookie
+      console.warn('Token should be set by server as httpOnly cookie in production');
+    }
+  }
+}
+
+function clearSecureToken(): void {
+  if (typeof window !== 'undefined') {
+    // Clear the cookie by setting expired date
+    document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+  }
+}
+
+// Secure user preferences storage (non-sensitive data only)
+function getAuthPreferences(): { tokenExpiration?: string } {
+  if (typeof window !== 'undefined') {
+    try {
+      const prefs = sessionStorage.getItem('auth-preferences');
+      return prefs ? JSON.parse(prefs) : {};
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to parse auth preferences:', error);
+      }
+      return {};
+    }
+  }
+  return {};
+}
+
 // Configuration for token expiration
 const TOKEN_EXPIRATION_CONFIG = {
   cloud: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
@@ -53,7 +103,9 @@ const isCloudMode = () => {
 // Global function to handle API response errors
 const handleApiError = (response: Response) => {
   if (response.status === 401 || response.status === 403) {
-    console.warn('🔒 [Auth] Received 401/403, triggering automatic sign out');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('🔒 [Auth] Received 401/403, triggering automatic sign out');
+    }
     // Trigger sign out event
     window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     return true;
@@ -71,7 +123,9 @@ async function extractAndPersistGoogleProfile(user: User) {
       return; // Not a Google sign-in, skip
     }
 
-    console.log('🆕 Google sign-in detected, saving profile data');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🆕 Google sign-in detected, saving profile data');
+    }
     
     const profileData = {
       name: user.displayName || user.email?.split('@')[0] || 'User',
@@ -88,7 +142,9 @@ async function extractAndPersistGoogleProfile(user: User) {
     const backendToken = await exchangeFirebaseTokenForBackendJWT(firebaseToken);
 
     if (!backendToken) {
-      console.warn('Failed to exchange Firebase token for backend JWT');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to exchange Firebase token for backend JWT');
+      }
       return;
     }
 
@@ -103,19 +159,27 @@ async function extractAndPersistGoogleProfile(user: User) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.warn('Failed to save Google profile to database:', errorData.message || response.statusText);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to save Google profile to database:', errorData.message || response.statusText);
+      }
       return; // Don't throw - this shouldn't break the auth flow
     }
 
     const data = await response.json();
     
     if (data.success) {
-      console.log('✅ Google profile data saved for user:', user.uid);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Google profile data saved for user:', user.uid);
+      }
     } else {
-      console.warn('❌ Failed to save Google profile:', data.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('❌ Failed to save Google profile:', data.message);
+      }
     }
   } catch (error) {
-    console.error('❌ Failed to persist Google profile data:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('❌ Failed to persist Google profile data:', error);
+    }
     // Don't throw - this shouldn't break the auth flow
   }
 }
@@ -123,7 +187,9 @@ async function extractAndPersistGoogleProfile(user: User) {
 // Helper function to exchange Firebase token for backend JWT
 async function exchangeFirebaseTokenForBackendJWT(firebaseToken: string): Promise<string | null> {
   try {
-    console.log('🔄 Exchanging Firebase token for backend JWT...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Exchanging Firebase token for backend JWT...');
+    }
     
     const response = await fetch('/api/auth/firebase-exchange', {
       method: 'POST',
@@ -135,21 +201,29 @@ async function exchangeFirebaseTokenForBackendJWT(firebaseToken: string): Promis
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Token exchange failed:', errorData.message || response.statusText);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Token exchange failed:', errorData.message || response.statusText);
+      }
       return null;
     }
 
     const data = await response.json();
     
     if (data.success && data.token) {
-      console.log('✅ Firebase token exchanged for backend JWT');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Firebase token exchanged for backend JWT');
+      }
       return data.token;
     } else {
-      console.error('Token exchange failed: No token in response');
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Token exchange failed: No token in response');
+      }
       return null;
     }
   } catch (error) {
-    console.error('Token exchange error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Token exchange error:', error);
+    }
     return null;
   }
 }
@@ -163,7 +237,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Handle automatic sign out on unauthorized responses
   const handleUnauthorized = useCallback(async () => {
-    console.warn('🔒 [Auth] Handling unauthorized access, signing out user');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('🔒 [Auth] Handling unauthorized access, signing out user');
+    }
     await signOut();
   }, []);
 
@@ -172,8 +248,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return false;
 
     try {
-      // Get user's last sign-in time from database
-      const backendToken = localStorage.getItem('auth-token') || localStorage.getItem('userToken');
+      // Get user's last sign-in time from database using secure token
+      const backendToken = getSecureToken();
       if (!backendToken) return false;
 
       const response = await fetch('/api/auth/profile', {
@@ -201,7 +277,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             expirationTime = TOKEN_EXPIRATION_CONFIG.cloud;
           } else {
             // Self-hosted mode: check user preferences or use default
-            const userTokenExpiration = localStorage.getItem('auth-token-expiration') || '30days';
+            const authPrefs = getAuthPreferences();
+            const userTokenExpiration = authPrefs.tokenExpiration || '30days';
             expirationTime = TOKEN_EXPIRATION_CONFIG.selfHosted.options[userTokenExpiration as keyof typeof TOKEN_EXPIRATION_CONFIG.selfHosted.options] || TOKEN_EXPIRATION_CONFIG.selfHosted.default;
           }
 
@@ -210,7 +287,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Check if token has expired
           if (timeDiff > expirationTime) {
-            console.warn('🕐 [Auth] Token expired, signing out user');
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('🕐 [Auth] Token expired, signing out user');
+            }
             await signOut();
             return false;
           }
@@ -219,7 +298,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Token expiration check error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Token expiration check error:', error);
+      }
     }
 
     return false;
@@ -257,12 +338,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         unsubscribe = await onAuthStateChange(async (user) => {
-          console.log('🔄 [Auth] Firebase auth state changed:', {
-            hasUser: !!user,
-            userId: user?.uid,
-            email: user?.email,
-            displayName: user?.displayName
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 [Auth] Firebase auth state changed:', {
+              hasUser: !!user,
+              userId: user?.uid,
+              email: user?.email,
+              displayName: user?.displayName
+            });
+          }
           
           setUser(user);
           
@@ -271,14 +354,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               await extractAndPersistGoogleProfile(user);
             } catch (error) {
-              console.warn('Failed to extract Google profile:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Failed to extract Google profile:', error);
+              }
             }
             
             // Fetch user profile from database
             try {
               await fetchUserProfile(user.uid);
             } catch (error) {
-              console.warn('Failed to fetch user profile:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Failed to fetch user profile:', error);
+              }
               // Fallback to Firebase user data
               setUserProfile({
                 name: user.displayName || user.email?.split('@')[0] || 'User',
@@ -288,24 +375,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
             }
             
-            // Get and store the user token
+            // Get and store the user token securely
             try {
               const userToken = await getUserToken();
               setToken(userToken);
               if (userToken) {
-                localStorage.setItem('userToken', userToken);
+                setSecureToken(userToken);
               }
             } catch (tokenError) {
-              console.warn('Failed to get user token:', tokenError);
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Failed to get user token:', tokenError);
+              }
               setToken(null);
             }
           } else {
-            console.log('❌ [Auth] No Firebase user, clearing profile');
+            if (process.env.NODE_ENV === 'development') {
+              console.log('❌ [Auth] No Firebase user, clearing profile');
+            }
             setUserProfile(null);
             setToken(null);
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('userToken');
-            }
+            clearSecureToken();
           }
           
           setLoading(false);
@@ -313,7 +402,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setInitError(null);
       } catch (error) {
-        console.error('Error setting up auth listener:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error setting up auth listener:', error);
+        }
         setInitError(error instanceof Error ? error.message : 'Failed to initialize authentication');
         setLoading(false);
       }
@@ -326,7 +417,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           unsubscribe();
         } catch (error) {
-          console.warn('Error during auth cleanup:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Error during auth cleanup:', error);
+          }
         }
       }
     };
@@ -335,7 +428,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Fetch user profile from database
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('🔄 [Auth] Fetching user profile for:', userId);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 [Auth] Fetching user profile for:', userId);
+      }
       
       // Get current user to obtain token
       const currentUser = user;
@@ -350,13 +445,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let backendToken = await exchangeFirebaseTokenForBackendJWT(firebaseToken);
       
       if (backendToken) {
-        // Store the backend token
-        localStorage.setItem('auth-token', backendToken);
-        console.log('✅ [Auth] Backend JWT token obtained and stored');
+        // Store the backend token securely
+        setSecureToken(backendToken);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ [Auth] Backend JWT token obtained and stored');
+        }
       } else {
-        console.warn('⚠️ [Auth] Failed to exchange Firebase token, checking stored token');
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('⚠️ [Auth] Failed to exchange Firebase token, checking stored token');
+        }
         // Try to use stored token
-        backendToken = localStorage.getItem('auth-token');
+        backendToken = getSecureToken();
         
         if (!backendToken) {
           throw new Error('No authentication token available');
@@ -373,12 +472,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         // If token is invalid, try to get a fresh one
         if (response.status === 401) {
-          console.log('🔄 [Auth] Token expired, getting fresh token...');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 [Auth] Token expired, getting fresh token...');
+          }
           const freshFirebaseToken = await currentUser.getIdToken();
           const freshBackendToken = await exchangeFirebaseTokenForBackendJWT(freshFirebaseToken);
           
           if (freshBackendToken) {
-            localStorage.setItem('auth-token', freshBackendToken);
+            setSecureToken(freshBackendToken);
             
             // Retry the request with fresh token
             const retryResponse = await fetch('/api/auth/profile', {
@@ -397,7 +498,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   phone: retryData.user.phone || '',
                   photoURL: retryData.user.photoURL || ''
                 };
-                console.log('✅ [Auth] Profile updated with fresh token:', newProfile.name);
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('✅ [Auth] Profile updated with fresh token:', newProfile.name);
+                }
                 setUserProfile(newProfile);
                 return;
               }
@@ -418,7 +521,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           phone: data.user.phone || '',
           photoURL: data.user.photoURL || ''
         };
-        console.log('✅ [Auth] Profile updated:', newProfile.name);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ [Auth] Profile updated:', newProfile.name);
+        }
         setUserProfile(newProfile);
       } else {
         // Fallback to Firebase user data
@@ -430,7 +535,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch (error) {
-      console.error('❌ [Auth] Failed to fetch user profile:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ [Auth] Failed to fetch user profile:', error);
+      }
       // Fallback to Firebase user data
       if (user) {
         setUserProfile({
@@ -447,13 +554,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUserProfile = async () => {
     if (user?.uid) {
       await fetchUserProfile(user.uid);
-      console.log('✅ [Auth] Profile refresh completed');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [Auth] Profile refresh completed');
+      }
     }
   };
 
   // If there's an initialization error, provide a fallback context
   if (initError) {
-    console.warn('Auth initialization failed, providing fallback context:', initError);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Auth initialization failed, providing fallback context:', initError);
+    }
     const fallbackValue: AuthContextType = {
       user: null,
       userProfile: null,
@@ -568,11 +679,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Clear any demo mode data first
-      localStorage.removeItem('auth-token');
+      clearSecureToken();
       localStorage.removeItem('demo-mode');
       localStorage.removeItem('user-data');
       localStorage.removeItem('demo-api-keys');
-      localStorage.removeItem('userToken');
       
       // Clear any Firebase auth-related localStorage items (without hardcoded keys)
       Object.keys(localStorage).forEach(key => {

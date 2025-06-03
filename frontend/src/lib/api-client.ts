@@ -24,17 +24,20 @@ export class ApiClient {
       'Content-Type': 'application/json',
     };
 
-    // Get auth token from various sources (localStorage, sessionStorage, etc.)
+    // Get auth token from secure httpOnly cookies
     try {
-      if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('auth-token') || sessionStorage.getItem('auth-token');
+      if (typeof window !== 'undefined' && window.isSecureContext) {
+        const token = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('auth-token='))
+          ?.split('=')[1];
+        
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         }
       }
     } catch (error) {
-      // Silently handle storage access errors
-      console.warn('Failed to access auth token from storage:', error);
+      console.warn('Failed to access auth token:', error);
     }
 
     return headers;

@@ -5,9 +5,16 @@ import crypto from 'crypto';
 // Mark this route as dynamic to prevent static generation
 export const dynamic = 'force-dynamic';
 
-// Simple encryption/decryption for API keys
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-character-secret-key-here!';
-const ALGORITHM = 'aes-256-gcm';
+// Secure encryption implementation using AES-256-GCM (no fallback key)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+
+// Enforce encryption key requirement at runtime (not build time)
+function requireEncryptionKey(): string {
+  if (!ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY environment variable is required for secure API key storage');
+  }
+  return ENCRYPTION_KEY;
+}
 
 interface EncryptedData {
   encrypted: string;
@@ -21,9 +28,33 @@ interface UserJwtPayload extends JwtPayload {
   email: string;
 }
 
+// Demo token management with session-based security
+const demoTokens = new Map<string, { 
+  expires: number; 
+  userId: string;
+  email: string;
+}>();
+
+function validateDemoToken(token: string): { userId: string; email: string } | null {
+  const tokenData = demoTokens.get(token);
+  if (!tokenData) return null;
+  
+  if (Date.now() > tokenData.expires) {
+    demoTokens.delete(token);
+    return null;
+  }
+  
+  return {
+    userId: tokenData.userId,
+    email: tokenData.email
+  };
+}
+
+// Secure encryption implementation using AES-256-GCM
 function encrypt(text: string): EncryptedData {
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_KEY);
+  const cipher = crypto.createCipher('aes-256-gcm', Buffer.from(requireEncryptionKey(), 'hex'));
+  cipher.setAAD(Buffer.from('profolio-api-keys'));
   
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
@@ -38,7 +69,8 @@ function encrypt(text: string): EncryptedData {
 }
 
 function decrypt(encryptedData: EncryptedData): string {
-  const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
+  const decipher = crypto.createDecipher('aes-256-gcm', Buffer.from(requireEncryptionKey(), 'hex'));
+  decipher.setAAD(Buffer.from('profolio-api-keys'));
   decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
   
   let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
@@ -47,7 +79,8 @@ function decrypt(encryptedData: EncryptedData): string {
   return decrypted;
 }
 
-// WIPED: In-memory storage cleared - starting fresh
+// TODO: Replace with database storage for production (Redis or encrypted DB fields)
+// Current in-memory storage will lose data on server restart
 const userApiKeys = new Map<string, Record<string, EncryptedData>>();
 
 function getUserFromToken(request: NextRequest): { userId: string; email: string; isDemo: boolean } | null {
@@ -60,16 +93,25 @@ function getUserFromToken(request: NextRequest): { userId: string; email: string
 
     const token = authHeader.slice(7);
     
-    // Handle demo token specifically - demo users use localStorage only
-    if (token === 'demo-token-secure-123') {
-      return {
-        userId: 'demo-user-id',
-        email: 'demo@profolio.com',
-        isDemo: true
-      };
+    // Secure demo token validation (session-based)
+    if (token.startsWith('demo-')) {
+      const demoUser = validateDemoToken(token);
+      if (demoUser) {
+        return {
+          userId: demoUser.userId,
+          email: demoUser.email,
+          isDemo: true
+        };
+      }
+      return null;
     }
 
-    const decoded = verify(token, process.env.JWT_SECRET || 'fallback-secret') as UserJwtPayload;
+    // Verify JWT token with proper error handling
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
+
+    const decoded = verify(token, process.env.JWT_SECRET) as UserJwtPayload;
     
     return {
       userId: decoded.userId || decoded.id || '',
@@ -77,7 +119,12 @@ function getUserFromToken(request: NextRequest): { userId: string; email: string
       isDemo: false
     };
   } catch (error) {
-    console.error('Token verification failed:', error);
+    // Sanitized error logging for production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Token verification failed:', error);
+    } else {
+      console.error('Token verification failed: Invalid or expired token');
+    }
     return null;
   }
 }
@@ -103,19 +150,29 @@ export async function GET(request: NextRequest) {
     const encryptedKeys = userApiKeys.get(user.userId) || {};
     const decryptedKeys: Record<string, string> = {};
 
-    // Decrypt API keys for response
+    // Decrypt API keys for response with secure error handling
     for (const [provider, encryptedData] of Object.entries(encryptedKeys)) {
       try {
         decryptedKeys[provider] = decrypt(encryptedData);
       } catch (error) {
-        console.error(`Failed to decrypt ${provider} API key:`, error);
+        // Sanitized error logging for production
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`Failed to decrypt ${provider} API key:`, error);
+        } else {
+          console.error(`Failed to decrypt ${provider} API key: Decryption failed`);
+        }
         decryptedKeys[provider] = '';
       }
     }
 
     return NextResponse.json({ apiKeys: decryptedKeys });
   } catch (error) {
-    console.error('Error retrieving API keys:', error);
+    // Sanitized error logging for production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error retrieving API keys:', error);
+    } else {
+      console.error('Error retrieving API keys: Server error');
+    }
     return NextResponse.json({ error: 'Failed to retrieve API keys' }, { status: 500 });
   }
 }
@@ -149,7 +206,17 @@ export async function POST(request: NextRequest) {
     const encryptedKeys: Record<string, EncryptedData> = {};
     for (const [provider, apiKey] of Object.entries(apiKeys)) {
       if (typeof apiKey === 'string' && apiKey.trim()) {
-        encryptedKeys[provider] = encrypt(apiKey.trim());
+        try {
+          encryptedKeys[provider] = encrypt(apiKey.trim());
+        } catch (error) {
+          // Sanitized error logging for production
+          if (process.env.NODE_ENV === 'development') {
+            console.error(`Failed to encrypt ${provider} API key:`, error);
+          } else {
+            console.error(`Failed to encrypt ${provider} API key: Encryption failed`);
+          }
+          return NextResponse.json({ error: 'Failed to encrypt API key' }, { status: 500 });
+        }
       }
     }
 
@@ -162,7 +229,12 @@ export async function POST(request: NextRequest) {
       providersStored: Object.keys(encryptedKeys)
     });
   } catch (error) {
-    console.error('Error storing API keys:', error);
+    // Sanitized error logging for production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error storing API keys:', error);
+    } else {
+      console.error('Error storing API keys: Server error');
+    }
     return NextResponse.json({ error: 'Failed to store API keys' }, { status: 500 });
   }
 }
@@ -201,7 +273,12 @@ export async function DELETE(request: NextRequest) {
       message: `${provider} API key removed` 
     });
   } catch (error) {
-    console.error('Error removing API key:', error);
+    // Sanitized error logging for production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error removing API key:', error);
+    } else {
+      console.error('Error removing API key: Server error');
+    }
     return NextResponse.json({ error: 'Failed to remove API key' }, { status: 500 });
   }
 } 

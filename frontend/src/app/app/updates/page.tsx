@@ -19,6 +19,7 @@ import {
   Cloud,
   Server
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 interface ChangelogEntry {
   version: string;
@@ -490,12 +491,19 @@ export default function UpdatesPage() {
       );
     }
 
-    // Parse and render markdown
+    // Parse and render markdown with XSS protection
     const formattedContent = parseMarkdown(item);
+    
+    // Sanitize any HTML output before rendering to prevent XSS
+    const sanitizedContent = formattedContent.map(part => 
+      typeof part === 'string' 
+        ? DOMPurify.sanitize(part) 
+        : part
+    );
     
     return (
       <span>
-        {formattedContent.map((part, index) => 
+        {sanitizedContent.map((part, index) => 
           typeof part === 'string' ? part : React.cloneElement(part as React.ReactElement, { key: `final-${index}` })
         )}
       </span>

@@ -84,16 +84,20 @@ export class DemoSessionManager {
       const token = this.generateSecureToken();
       const startTime = Date.now();
 
-      // Store session data locally
+      // Store session data securely
       localStorage.setItem(this.DEMO_MODE_KEY, 'true');
       localStorage.setItem(this.DEMO_SESSION_KEY, startTime.toString());
-      localStorage.setItem(this.DEMO_SESSION_ID_KEY, sessionId);
-      localStorage.setItem(this.DEMO_TOKEN_KEY, token);
+      sessionStorage.setItem(this.DEMO_SESSION_ID_KEY, sessionId);
+      sessionStorage.setItem(this.DEMO_TOKEN_KEY, token);
       
-      console.log('🎭 Demo session started - expires in 24 hours');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🎭 Demo session started - expires in 24 hours');
+      }
       return true;
     } catch (error) {
-      console.error('Failed to start demo session:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to start demo session:', error);
+      }
       return false;
     }
   }
@@ -112,18 +116,22 @@ export class DemoSessionManager {
     }
 
     const demoStartTime = localStorage.getItem(this.DEMO_SESSION_KEY);
-    const sessionId = localStorage.getItem(this.DEMO_SESSION_ID_KEY);
-    const token = localStorage.getItem(this.DEMO_TOKEN_KEY);
+    const sessionId = sessionStorage.getItem(this.DEMO_SESSION_ID_KEY);
+    const token = sessionStorage.getItem(this.DEMO_TOKEN_KEY);
 
     if (!demoStartTime || !sessionId || !token) {
-      console.warn('🎭 Demo session data incomplete - ending session');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('🎭 Demo session data incomplete - ending session');
+      }
       this.endDemoSession();
       return { isValid: false, remainingTime: 0 };
     }
 
     // Validate token integrity first
     if (!this.validateToken(token)) {
-      console.warn('🎭 Demo session token invalid - ending session');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('🎭 Demo session token invalid - ending session');
+      }
       this.endDemoSession();
       return { isValid: false, remainingTime: 0 };
     }
@@ -133,14 +141,18 @@ export class DemoSessionManager {
 
     // Check client-side expiration
     if (sessionAge > this.DEMO_SESSION_DURATION) {
-      console.log('🎭 Demo session expired after 24 hours');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🎭 Demo session expired after 24 hours');
+      }
       this.endDemoSession();
       return { isValid: false, remainingTime: 0 };
     }
 
-    const remainingHours = Math.floor(remainingTime / (60 * 60 * 1000));
-    const remainingMinutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
-    console.log(`🎭 Demo session active - ${remainingHours}h ${remainingMinutes}m remaining`);
+    if (process.env.NODE_ENV === 'development') {
+      const remainingHours = Math.floor(remainingTime / (60 * 60 * 1000));
+      const remainingMinutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+      console.log(`🎭 Demo session active - ${remainingHours}h ${remainingMinutes}m remaining`);
+    }
     
     return { 
       isValid: true, 
@@ -156,15 +168,17 @@ export class DemoSessionManager {
   static endDemoSession(): void {
     if (typeof window === 'undefined') return;
     
-    // Clear all local storage
+    // Clear demo session storage
     localStorage.removeItem(this.DEMO_MODE_KEY);
     localStorage.removeItem(this.DEMO_SESSION_KEY);
-    localStorage.removeItem(this.DEMO_SESSION_ID_KEY);
-    localStorage.removeItem(this.DEMO_TOKEN_KEY);
+    sessionStorage.removeItem(this.DEMO_SESSION_ID_KEY);
+    sessionStorage.removeItem(this.DEMO_TOKEN_KEY);
     localStorage.removeItem('demo-last-server-check');
     localStorage.removeItem('user-data');
-    localStorage.removeItem('auth-token');
     localStorage.removeItem('demo-api-keys');
+    
+    // Clear auth cookies securely
+    document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
     
     // Clear periodic check interval
     if (this.periodicCheckInterval) {
@@ -172,7 +186,9 @@ export class DemoSessionManager {
       this.periodicCheckInterval = null;
     }
     
-    console.log('🎭 Demo session ended - all temporary data cleared');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎭 Demo session ended - all temporary data cleared');
+    }
     
     // Redirect to landing page
     window.location.href = '/';

@@ -22,20 +22,61 @@ interface User {
   name?: string;
 }
 
-// Demo user for development
-const DEMO_USER: User = {
-  id: 'demo-user-id',
-  email: 'demo@profolio.com',
-  token: 'demo-token-secure-123',
-  name: 'Demo User'
-};
+// Generate secure demo session token
+function generateDemoSessionToken(): string {
+  const timestamp = Date.now().toString();
+  const randomId = crypto.randomUUID?.() || Math.random().toString(36).substring(2, 15);
+  return `demo-${timestamp}-${randomId}`;
+}
+
+// Demo user factory for secure dynamic generation
+function createDemoUser(): User {
+  return {
+    id: 'demo-user-id',
+    email: 'demo@profolio.com',
+    token: generateDemoSessionToken(),
+    name: 'Demo User'
+  };
+}
+
+// Secure demo data storage (sessionStorage for demo tokens)
+function storeDemoUserData(user: User): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('demo-auth-token', user.token || '');
+    sessionStorage.setItem('demo-user-data', JSON.stringify(user));
+  }
+}
+
+function getDemoUserData(): User | null {
+  if (typeof window !== 'undefined') {
+    try {
+      const userData = sessionStorage.getItem('demo-user-data');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error parsing demo user data:', error);
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+function clearDemoUserData(): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('demo-auth-token');
+    sessionStorage.removeItem('demo-user-data');
+  }
+}
 
 export function useAuth() {
   return {
     signUpWithCredentials: async ({ name, email, password, callbackUrl, redirect }: SignUpParams) => {
       if (BYPASS_AUTH) {
         // Mock signup for development
-        console.log('Dev mode: Mock signup', { name, email });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Dev mode: Mock signup', { name, email });
+        }
         if (redirect && callbackUrl) {
           window.location.href = callbackUrl;
         }
@@ -57,9 +98,11 @@ export function useAuth() {
       await new Promise((r) => setTimeout(r, 150));
     },
     
-    // Demo mode function
+    // Demo mode function with secure token generation
     signInWithDemo: async ({ callbackUrl = '/app/dashboard', redirect = true } = {}) => {
-      console.log('Demo mode: Creating demo user session with 24-hour expiration');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Demo mode: Creating demo user session with 24-hour expiration');
+      }
       
       try {
         // Start demo session (now synchronous)
@@ -69,36 +112,46 @@ export function useAuth() {
           throw new Error('Failed to start demo session');
         }
         
-        // Store demo user token for API calls
-        localStorage.setItem('auth-token', DEMO_USER.token!);
+        // Create demo user with dynamic token
+        const demoUser = createDemoUser();
         
-        // Store demo user data
-        localStorage.setItem('user-data', JSON.stringify(DEMO_USER));
+        // Store demo user data securely
+        storeDemoUserData(demoUser);
         
         // Populate demo data
         try {
           await initializeDemoData();
-          console.log('Demo data populated successfully');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Demo data populated successfully');
+          }
         } catch (error) {
-          console.error('Failed to populate demo data:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to populate demo data:', error);
+          }
           // Don't fail the demo login if data population fails
         }
         
         if (redirect) {
-          console.log('Demo mode setup complete, redirecting to:', callbackUrl);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Demo mode setup complete, redirecting to:', callbackUrl);
+          }
           window.location.href = callbackUrl;
         }
         
-        return { success: true, user: DEMO_USER };
+        return { success: true, user: demoUser };
       } catch (error) {
-        console.error('Demo mode setup failed:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Demo mode setup failed:', error);
+        }
         throw error;
       }
     },
     
     signOut: async ({ callbackUrl = "/", redirect = true } = {}) => {
       if (BYPASS_AUTH) {
-        console.log('Dev mode: Mock signout');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Dev mode: Mock signout');
+        }
         if (redirect) {
           window.location.href = callbackUrl;
         }
@@ -107,14 +160,19 @@ export function useAuth() {
       
       // Check if we're in demo mode and handle it properly
       if (DemoSessionManager.isDemoMode()) {
-        console.log('Demo mode: Ending demo session');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Demo mode: Ending demo session');
+        }
         DemoSessionManager.endDemoSession();
         // endDemoSession() handles redirect automatically
         return;
       }
       
-      // Clear all authentication-related localStorage items
-      localStorage.removeItem('auth-token');
+      // Clear secure authentication data
+      clearDemoUserData();
+      document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+      
+      // Clear legacy localStorage items (cleanup)
       localStorage.removeItem('demo-mode');
       localStorage.removeItem('user-data');
       localStorage.removeItem('demo-api-keys');
@@ -134,14 +192,18 @@ export function useAuth() {
           await firebaseSignOut(auth);
         }
       } catch (error) {
-        console.error('Firebase sign out error:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Firebase sign out error:', error);
+        }
       }
       
       // Call backend signout endpoint
       try {
         await fetch("/api/signout", { method: "POST" });
       } catch (error) {
-        console.error('Backend signout error:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Backend signout error:', error);
+        }
       }
       
       if (redirect) {
@@ -149,17 +211,21 @@ export function useAuth() {
         window.location.replace(callbackUrl);
       }
     },
+    
     forceLogout: async () => {
       if (BYPASS_AUTH) {
-        console.log('Dev mode: Mock force logout');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Dev mode: Mock force logout');
+        }
         return;
       }
       
-      // Clear demo mode data and API keys
-      localStorage.removeItem('auth-token');
+      // Clear demo mode data securely
+      clearDemoUserData();
+      document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
       localStorage.removeItem('demo-mode');
       localStorage.removeItem('user-data');
-      localStorage.removeItem('demo-api-keys'); // Clear demo API keys
+      localStorage.removeItem('demo-api-keys');
       
       const auth = (await getFirebase()).auth!;
       await firebaseSignOut(auth);
@@ -175,24 +241,21 @@ export function useUser() {
     // Check for demo session validity first
     const demoSession = DemoSessionManager.checkDemoSession();
     if (demoSession.isValid) {
-      const userData = localStorage.getItem('user-data');
+      const userData = getDemoUserData();
       if (userData) {
-        try {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
-          setLoading(false);
-          return;
-        } catch (error) {
-          console.error('Error parsing demo user data:', error);
-          // Clear corrupted demo data
-          DemoSessionManager.endDemoSession();
-        }
+        setUser(userData);
+        setLoading(false);
+        return;
+      } else {
+        // Clear corrupted demo data
+        DemoSessionManager.endDemoSession();
       }
     }
 
     if (BYPASS_AUTH) {
       // Return mock user for development
-      setUser(DEMO_USER);
+      const demoUser = createDemoUser();
+      setUser(demoUser);
       setLoading(false);
       return;
     }

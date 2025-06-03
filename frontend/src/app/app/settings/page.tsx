@@ -334,11 +334,62 @@ const ProfileTab = ({
   </motion.div>
 );
 
+// Secure preferences storage (non-sensitive data only)
+function getSecurePreferences(): { tokenExpiration?: string } {
+  if (typeof window !== 'undefined') {
+    try {
+      const prefs = sessionStorage.getItem('app-preferences');
+      return prefs ? JSON.parse(prefs) : {};
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to parse app preferences:', error);
+      }
+      return {};
+    }
+  }
+  return {};
+}
+
+function setSecurePreferences(prefs: { tokenExpiration?: string }): void {
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem('app-preferences', JSON.stringify(prefs));
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to store app preferences:', error);
+      }
+    }
+  }
+}
+
+// Secure token management for httpOnly cookies
+function setSecureToken(token: string): void {
+  // Note: httpOnly cookies must be set by the server
+  // This is a client-side fallback for development
+  if (typeof window !== 'undefined') {
+    if (process.env.NODE_ENV === 'development') {
+      // Development: Use secure cookie attributes
+      document.cookie = `auth-token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=86400`;
+    } else {
+      // Production: Token should be set by server as httpOnly cookie
+      console.warn('Token should be set by server as httpOnly cookie in production');
+    }
+  }
+}
+
+function clearSecureToken(): void {
+  if (typeof window !== 'undefined') {
+    // Clear the cookie by setting expired date
+    document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+  }
+}
+
 // Security Tab component
 const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: (e: React.FormEvent) => Promise<void>; loading: boolean }) => {
   const [tokenExpiration, setTokenExpiration] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth-token-expiration') || '30days';
+      const prefs = getSecurePreferences();
+      return prefs.tokenExpiration || '30days';
     }
     return '30days';
   });
@@ -353,7 +404,7 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
   const handleTokenExpirationChange = (value: string) => {
     setTokenExpiration(value);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('auth-token-expiration', value);
+      setSecurePreferences({ tokenExpiration: value });
     }
   };
 
@@ -604,17 +655,22 @@ const AccountTab = ({ setShowDeleteModal }: { setShowDeleteModal: (value: boolea
 // Helper function to clear corrupted authentication data
 const clearAuthData = () => {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('auth-token');
+    clearSecureToken();
+    // Clear any remaining localStorage items (legacy cleanup)
     localStorage.removeItem('userToken');
     localStorage.removeItem('firebase-token');
-    console.log('🧹 [Settings] Cleared corrupted authentication data');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🧹 [Settings] Cleared corrupted authentication data');
+    }
   }
 };
 
 // Helper function to get fresh authentication token
 const getFreshAuthToken = async (): Promise<string | null> => {
   try {
-    console.log('🔄 [Settings] Getting fresh authentication token...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 [Settings] Getting fresh authentication token...');
+    }
     
     // Get Firebase auth instance
     const { getFirebaseAuth } = await import('@/lib/firebase');
@@ -622,13 +678,17 @@ const getFreshAuthToken = async (): Promise<string | null> => {
     const currentUser = auth.currentUser;
     
     if (!currentUser) {
-      console.warn('⚠️ [Settings] No Firebase user found');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ [Settings] No Firebase user found');
+      }
       return null;
     }
     
     // Get fresh Firebase token
     const firebaseToken = await currentUser.getIdToken(true); // Force refresh
-    console.log('✅ [Settings] Got fresh Firebase token');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ [Settings] Got fresh Firebase token');
+    }
     
     // Exchange for backend JWT
     const response = await fetch('/api/auth/firebase-exchange', {
@@ -639,27 +699,39 @@ const getFreshAuthToken = async (): Promise<string | null> => {
       body: JSON.stringify({ firebaseToken }),
     });
     
-    console.log('🔄 [Settings] Firebase token exchange response status:', response.status);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 [Settings] Firebase token exchange response status:', response.status);
+    }
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ [Settings] Token exchange failed:', response.status, errorText);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ [Settings] Token exchange failed:', response.status, errorText);
+      }
       return null;
     }
     
     const data = await response.json();
-    console.log('📄 [Settings] Token exchange response:', data);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📄 [Settings] Token exchange response:', data);
+    }
     
     if (data.success && data.token) {
-      localStorage.setItem('auth-token', data.token);
-      console.log('✅ [Settings] Fresh backend JWT obtained and stored');
+      setSecureToken(data.token);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [Settings] Fresh backend JWT obtained and stored');
+      }
       return data.token;
     } else {
-      console.error('❌ [Settings] Token exchange successful but no token in response');
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ [Settings] Token exchange successful but no token in response');
+      }
       return null;
     }
   } catch (error) {
-    console.error('❌ [Settings] Error getting fresh auth token:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('❌ [Settings] Error getting fresh auth token:', error);
+    }
     return null;
   }
 };

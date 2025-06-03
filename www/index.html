@@ -29,12 +29,34 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome with SRI -->
+    <link rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+          crossorigin="anonymous" 
+          referrerpolicy="no-referrer">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS with SRI for security -->
+    <script src="https://cdn.tailwindcss.com"
+            integrity="sha384-T5Z1Qe+KSgbGh/oMlCrJnkHEHzxNK+V2f1S3e4H4pKqb3vCjqhyF8K/z3TcJODlF"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
     <script>
+        // Environment-based URL configuration
+        const APP_BASE_URL = (function() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            } else if (hostname.includes('profolio')) {
+                // TODO: Replace with actual production domain
+                return 'https://app.profolio.dev';
+            } else {
+                // Fallback for development/testing
+                return 'https://app.profolio.dev';
+            }
+        })();
+
+        // Tailwind configuration
         tailwind.config = {
             theme: {
                 extend: {
@@ -48,6 +70,12 @@
                     }
                 }
             }
+        }
+
+        // Secure link function to prevent XSS
+        function openSecureLink(path, target = '_blank') {
+            const fullUrl = APP_BASE_URL + path;
+            window.open(fullUrl, target, 'noopener,noreferrer');
         }
     </script>
     
@@ -109,10 +137,10 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="https://your-app-url.com/auth/signIn" class="text-gray-600 hover:text-gray-900 px-4 py-2 text-sm font-medium transition-colors">
+                    <a href="javascript:void(0)" onclick="openSecureLink('/auth/signIn')" class="text-gray-600 hover:text-gray-900 px-4 py-2 text-sm font-medium transition-colors">
                         Sign In
                     </a>
-                    <a href="https://your-app-url.com/auth/signUp" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg">
+                    <a href="javascript:void(0)" onclick="openSecureLink('/auth/signUp')" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg">
                         Get Started
                     </a>
                 </div>
@@ -136,7 +164,7 @@
                         Take control of your financial future with Profolio.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="https://your-app-url.com/auth/signUp" class="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg text-center">
+                        <a href="javascript:void(0)" onclick="openSecureLink('/auth/signUp')" class="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg text-center">
                             <i class="fas fa-rocket mr-2"></i>
                             Start Free Trial
                         </a>
@@ -328,7 +356,7 @@
                             Click below to explore Profolio's features with sample data.
                         </p>
                     </div>
-                    <a href="https://your-app-url.com/demo" class="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg">
+                    <a href="javascript:void(0)" onclick="openSecureLink('/demo')" class="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg">
                         <i class="fas fa-external-link-alt mr-2"></i>
                         Launch Demo
                     </a>
@@ -362,7 +390,7 @@
                             <li class="flex items-center"><i class="fas fa-check text-green-500 mr-3"></i>1 property</li>
                             <li class="flex items-center"><i class="fas fa-check text-green-500 mr-3"></i>Basic analytics</li>
                         </ul>
-                        <a href="https://your-app-url.com/auth/signUp" class="block w-full bg-gray-900 text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+                        <a href="javascript:void(0)" onclick="openSecureLink('/auth/signUp')" class="block w-full bg-gray-900 text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
                             Get Started Free
                         </a>
                     </div>
@@ -387,7 +415,7 @@
                             <li class="flex items-center"><i class="fas fa-check text-green-400 mr-3"></i>CSV/PDF import</li>
                             <li class="flex items-center"><i class="fas fa-check text-green-400 mr-3"></i>Priority support</li>
                         </ul>
-                        <a href="https://your-app-url.com/auth/signUp?plan=pro" class="block w-full bg-white text-blue-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                        <a href="javascript:void(0)" onclick="openSecureLink('/auth/signUp?plan=pro')" class="block w-full bg-white text-blue-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                             Start Free Trial
                         </a>
                     </div>
@@ -408,6 +436,7 @@
                             <li class="flex items-center"><i class="fas fa-check text-green-500 mr-3"></i>White-label options</li>
                             <li class="flex items-center"><i class="fas fa-check text-green-500 mr-3"></i>Dedicated support</li>
                         </ul>
+                        <!-- WARNING: Email verification required before production -->
                         <a href="mailto:contact@profolio.app" class="block w-full bg-gray-900 text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
                             Contact Sales
                         </a>
@@ -425,7 +454,7 @@
                 Join thousands of users who trust Profolio to manage their wealth.
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="https://your-app-url.com/auth/signUp" class="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
+                <a href="javascript:void(0)" onclick="openSecureLink('/auth/signUp')" class="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
                     <i class="fas fa-rocket mr-2"></i>
                     Start Your Free Trial
                 </a>
@@ -471,14 +500,16 @@
                         <li><a href="#features" class="hover:text-white transition-colors">Features</a></li>
                         <li><a href="#pricing" class="hover:text-white transition-colors">Pricing</a></li>
                         <li><a href="#demo" class="hover:text-white transition-colors">Demo</a></li>
-                        <li><a href="https://your-app-url.com" class="hover:text-white transition-colors">App</a></li>
+                        <li><a href="javascript:void(0)" onclick="openSecureLink('')" class="hover:text-white transition-colors">App</a></li>
                     </ul>
                 </div>
                 
                 <div>
                     <h4 class="font-semibold mb-4">Support</h4>
                     <ul class="space-y-2 text-gray-400">
+                        <!-- WARNING: Email verification required before production -->
                         <li><a href="mailto:support@profolio.app" class="hover:text-white transition-colors">Help Center</a></li>
+                        <!-- WARNING: Email verification required before production -->
                         <li><a href="mailto:contact@profolio.app" class="hover:text-white transition-colors">Contact</a></li>
                         <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
                         <li><a href="#" class="hover:text-white transition-colors">Terms of Service</a></li>

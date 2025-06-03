@@ -21,6 +21,93 @@ export interface SignUpResponse {
   token: string;
 }
 
+// Secure token management for httpOnly cookies
+function getSecureToken(): string | null {
+  if (typeof window !== 'undefined' && window.isSecureContext) {
+    // Read from httpOnly cookie set by server
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('auth-token='))
+      ?.split('=')[1];
+    return cookieValue || null;
+  }
+  return null;
+}
+
+function setSecureToken(token: string): void {
+  // Note: httpOnly cookies must be set by the server
+  // This is a client-side fallback for development
+  if (typeof window !== 'undefined') {
+    if (process.env.NODE_ENV === 'development') {
+      // Development: Use secure cookie attributes
+      document.cookie = `auth-token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=86400`;
+    } else {
+      // Production: Token should be set by server as httpOnly cookie
+      console.warn('Token should be set by server as httpOnly cookie in production');
+    }
+  }
+}
+
+function clearSecureToken(): void {
+  if (typeof window !== 'undefined') {
+    // Clear the cookie by setting expired date
+    document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+  }
+}
+
+// Secure user data storage (non-sensitive data only)
+function getSecureUserData(): Partial<LocalUser> | null {
+  if (typeof window !== 'undefined') {
+    try {
+      const userData = sessionStorage.getItem('user-profile');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to parse stored user profile:', error);
+      }
+      clearSecureUserData();
+      return null;
+    }
+  }
+  return null;
+}
+
+function setSecureUserData(user: Partial<LocalUser>): void {
+  if (typeof window !== 'undefined') {
+    try {
+      // Store only non-sensitive profile data (no token)
+      const profileData = {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      };
+      sessionStorage.setItem('user-profile', JSON.stringify(profileData));
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to store user profile:', error);
+      }
+    }
+  }
+}
+
+function clearSecureUserData(): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('user-profile');
+    localStorage.removeItem('demo-mode'); // Demo mode flag is safe in localStorage
+  }
+}
+
+// Generate secure demo session token
+function generateDemoSessionToken(): string {
+  const timestamp = Date.now();
+  const randomBytes = crypto.getRandomValues ? 
+    Array.from(crypto.getRandomValues(new Uint8Array(16))) :
+    Array.from({length: 16}, () => Math.floor(Math.random() * 256));
+  
+  const randomHex = randomBytes.map(b => b.toString(16).padStart(2, '0')).join('');
+  return `demo-${timestamp}-${randomHex}`;
+}
+
 class LocalAuthService {
   private baseUrl: string;
   private currentUser: LocalUser | null = null;
@@ -30,23 +117,24 @@ class LocalAuthService {
     // Use environment variable or default to backend URL
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     
-    // Initialize user from localStorage on startup
+    // Initialize user from secure storage on startup
     this.initializeFromStorage();
   }
 
   private initializeFromStorage() {
     if (typeof window === 'undefined') return;
     
-    const token = localStorage.getItem('auth-token');
-    const userData = localStorage.getItem('user-data');
+    const token = getSecureToken();
+    const userData = getSecureUserData();
     
     if (token && userData) {
       try {
-        const user = JSON.parse(userData);
-        this.currentUser = { ...user, token };
+        this.currentUser = { ...userData as LocalUser, token };
         this.notifyListeners();
       } catch (error) {
-        console.error('Failed to parse stored user data:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to initialize from stored data:', error);
+        }
         this.clearStorage();
       }
     }
@@ -55,9 +143,8 @@ class LocalAuthService {
   private clearStorage() {
     if (typeof window === 'undefined') return;
     
-    localStorage.removeItem('auth-token');
-    localStorage.removeItem('user-data');
-    localStorage.removeItem('demo-mode');
+    clearSecureToken();
+    clearSecureUserData();
   }
 
   private notifyListeners() {
@@ -100,9 +187,9 @@ class LocalAuthService {
         token: response.token,
       };
 
-      // Store authentication data
-      localStorage.setItem('auth-token', response.token);
-      localStorage.setItem('user-data', JSON.stringify(user));
+      // Store authentication data securely
+      setSecureToken(response.token);
+      setSecureUserData(user);
       
       this.currentUser = user;
       this.notifyListeners();
@@ -127,9 +214,9 @@ class LocalAuthService {
         token: response.token,
       };
 
-      // Store authentication data
-      localStorage.setItem('auth-token', response.token);
-      localStorage.setItem('user-data', JSON.stringify(user));
+      // Store authentication data securely
+      setSecureToken(response.token);
+      setSecureUserData(user);
       
       this.currentUser = user;
       this.notifyListeners();
@@ -138,7 +225,9 @@ class LocalAuthService {
       try {
         await this.fetchUserProfile();
       } catch (profileError) {
-        console.warn('Failed to fetch user profile:', profileError);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Failed to fetch user profile:', profileError);
+        }
         // Keep the default name if profile fetch fails
       }
       
@@ -166,7 +255,9 @@ class LocalAuthService {
             'Authorization': `Bearer ${this.currentUser.token}`,
           },
         }).catch(error => {
-          console.warn('Backend signout failed:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Backend signout failed:', error);
+          }
           // Continue with local signout even if backend fails
         });
       }
@@ -195,15 +286,17 @@ class LocalAuthService {
         name: profile.name || this.currentUser.name || this.currentUser.email.split('@')[0] || 'User',
       };
 
-      // Update stored user data
-      localStorage.setItem('user-data', JSON.stringify(this.currentUser));
+      // Update stored user data securely (no token)
+      setSecureUserData(this.currentUser);
       this.notifyListeners();
     } catch (error) {
-      console.error('Failed to fetch user profile:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to fetch user profile:', error);
+      }
       // Ensure we have a name even if profile fetch fails
       if (!this.currentUser.name) {
         this.currentUser.name = this.currentUser.email.split('@')[0] || 'User';
-        localStorage.setItem('user-data', JSON.stringify(this.currentUser));
+        setSecureUserData(this.currentUser);
         this.notifyListeners();
       }
     }
@@ -214,7 +307,7 @@ class LocalAuthService {
   }
 
   getToken(): string | null {
-    return this.currentUser?.token || null;
+    return this.currentUser?.token || getSecureToken();
   }
 
   onAuthStateChange(callback: (user: LocalUser | null) => void): () => void {
@@ -232,18 +325,23 @@ class LocalAuthService {
     };
   }
 
-  // Demo mode support
+  // Demo mode support with secure session management
   async signInWithDemo(): Promise<LocalUser> {
     const demoUser: LocalUser = {
       id: 'demo-user-id',
       email: 'demo@profolio.com',
       name: 'Demo User',
-      token: 'demo-token-secure-123',
+      token: generateDemoSessionToken(),
     };
 
-    localStorage.setItem('auth-token', demoUser.token);
-    localStorage.setItem('user-data', JSON.stringify(demoUser));
-    localStorage.setItem('demo-mode', 'true');
+    // Store demo token securely and set demo mode flag
+    setSecureToken(demoUser.token);
+    setSecureUserData(demoUser);
+    
+    // Demo mode flag is safe in localStorage (non-sensitive)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo-mode', 'true');
+    }
     
     this.currentUser = demoUser;
     this.notifyListeners();

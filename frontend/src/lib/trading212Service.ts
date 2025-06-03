@@ -205,12 +205,16 @@ export class Trading212Service {
       const timeSinceLastRequest = now - this.lastRequestTime;
       if (timeSinceLastRequest < this.minRequestInterval) {
         const delay = this.minRequestInterval - timeSinceLastRequest;
-        console.log(`⏱️ Rate limiting: waiting ${delay}ms before ${endpoint}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`⏱️ Rate limiting: waiting ${delay}ms before ${endpoint}`);
+        }
         await new Promise(resolve => setTimeout(resolve, delay));
       }
       
       const url = `${this.baseUrl}${endpoint}`;
-      console.log(`🔄 Making request to: ${endpoint}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔄 Making request to: ${endpoint}`);
+      }
       
       // Enhanced logging for debugging
       const requestHeaders = {
@@ -220,15 +224,15 @@ export class Trading212Service {
         ...options?.headers,
       };
       
-      console.log(`📤 Request details:`, {
-        url,
-        method: options?.method || 'GET',
-        headers: {
-          ...requestHeaders,
-          'Authorization': `${this.apiKey.substring(0, 8)}...` // Mask API key for security
-        },
-        bodyLength: options?.body ? (options.body as string).length : 0
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📤 Request details:`, {
+          url,
+          method: options?.method || 'GET',
+          // Remove Authorization header from logs completely for security
+          headers: Object.keys(requestHeaders).filter(key => key !== 'Authorization'),
+          bodyLength: options?.body ? (options.body as string).length : 0
+        });
+      }
       
       // Create abort controller for timeout
       const controller = new AbortController();
@@ -251,19 +255,24 @@ export class Trading212Service {
           let errorMessage = `Trading 212 API error: ${response.status} ${response.statusText}`;
           let errorDetails = '';
           
-          // Enhanced error logging
-          console.error(`❌ API Error on ${endpoint}:`, {
-            status: response.status,
-            statusText: response.statusText,
-            url,
-            headers: {
-              'content-type': response.headers.get('content-type'),
-              'retry-after': response.headers.get('retry-after'),
-              'x-ratelimit-reset': response.headers.get('x-ratelimit-reset'),
-              'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
-            },
-            body: errorText
-          });
+          // Sanitize error logging for production
+          if (process.env.NODE_ENV === 'development') {
+            console.error(`❌ API Error on ${endpoint}:`, {
+              status: response.status,
+              statusText: response.statusText,
+              url,
+              headers: {
+                'content-type': response.headers.get('content-type'),
+                'retry-after': response.headers.get('retry-after'),
+                'x-ratelimit-reset': response.headers.get('x-ratelimit-reset'),
+                'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
+              },
+              body: errorText
+            });
+          } else {
+            // Production: Log generic error only
+            console.error(`API Error on ${endpoint}: ${response.status}`);
+          }
           
           try {
             const errorData = JSON.parse(errorText);
@@ -307,7 +316,9 @@ export class Trading212Service {
           throw error;
         }
 
-        console.log(`✅ Success: ${endpoint}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`✅ Success: ${endpoint}`);
+        }
         return response.json();
       } catch (fetchError) {
         clearTimeout(timeoutId);
@@ -671,27 +682,43 @@ export class Trading212Service {
   }>> {
     try {
       // Make requests sequentially to avoid rate limiting
-      console.log('Fetching portfolio positions...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching portfolio positions...');
+      }
       const positions = await this.getPortfolio();
-      console.log(`✅ Fetched ${positions.length} positions`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Fetched ${positions.length} positions`);
+      }
       
-      console.log('Fetching instruments metadata...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching instruments metadata...');
+      }
       const instruments = await this.getInstruments();
-      console.log(`✅ Fetched ${instruments.length} instruments`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Fetched ${instruments.length} instruments`);
+      }
       
-      console.log('Fetching account cash...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching account cash...');
+      }
       const accountCash = await this.getAccountCash().catch((error) => {
         console.warn('Failed to fetch account cash:', error);
         return { free: 0, total: 0, ppl: 0, result: 0, invested: 0, pieCash: 0, blocked: 0 };
       });
-      console.log(`✅ Fetched account cash: ${accountCash.free}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Fetched account cash: ${accountCash.free}`);
+      }
       
-      console.log('Fetching pies...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching pies...');
+      }
       const pies = await this.getPies().catch((error) => {
         console.warn('Failed to fetch pies:', error);
         return [];
       });
-      console.log(`✅ Fetched ${pies.length} pies`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Fetched ${pies.length} pies`);
+      }
 
       // Get detailed pie information sequentially
       const pieDetails = new Map<number, Trading212PieDetails>();

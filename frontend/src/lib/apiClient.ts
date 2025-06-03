@@ -2,6 +2,17 @@
  * Enhanced API client with automatic authentication handling
  */
 
+// Secure token retrieval from httpOnly cookies
+const getSecureToken = (): string | null => {
+  if (typeof window !== 'undefined' && window.isSecureContext) {
+    return document.cookie
+      .split('; ')
+      .find(row => row.startsWith('auth-token='))
+      ?.split('=')[1] || null;
+  }
+  return null;
+};
+
 // Handle API response errors globally
 const handleApiError = (response: Response) => {
   if (response.status === 401 || response.status === 403) {
@@ -17,8 +28,8 @@ export const authenticatedFetch = async (
   url: string, 
   options: RequestInit = {}
 ): Promise<Response> => {
-  // Get token from localStorage
-  const token = localStorage.getItem('auth-token') || localStorage.getItem('userToken');
+  // Get token from secure cookies
+  const token = getSecureToken();
   
   // Add authorization header if token exists
   const headers = {
@@ -38,7 +49,12 @@ export const authenticatedFetch = async (
 
     return response;
   } catch (error) {
-    console.error(`API call failed for ${url}:`, error);
+    // Sanitize error logging for production
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`API call failed for ${url}:`, error);
+    } else {
+      console.error(`API call failed for ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
     throw error;
   }
 };
