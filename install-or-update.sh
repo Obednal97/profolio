@@ -1548,6 +1548,47 @@ cleanup_build_artifacts() {
     success "Build artifacts cleaned up successfully"
 }
 
+# Update the installer script itself to latest version
+update_installer_script() {
+    info "🔄 Updating installer script to latest version..."
+    
+    # Create backup of current installer script
+    local installer_backup="/opt/profolio/installer-backup-$(date +%Y%m%d-%H%M%S).sh"
+    if [ -f "/opt/profolio/install-or-update.sh" ]; then
+        cp "/opt/profolio/install-or-update.sh" "$installer_backup" 2>/dev/null || true
+        success "Current installer backed up to: $(basename $installer_backup)"
+    fi
+    
+    # Download latest installer script
+    local temp_installer="/tmp/install-or-update-new.sh"
+    if curl -fsSL "https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh" -o "$temp_installer"; then
+        # Verify the downloaded script is valid bash
+        if bash -n "$temp_installer" 2>/dev/null; then
+            # Check if the new script is actually different
+            if ! cmp -s "$temp_installer" "/opt/profolio/install-or-update.sh" 2>/dev/null; then
+                # Replace the current installer
+                cp "$temp_installer" "/opt/profolio/install-or-update.sh"
+                chmod +x "/opt/profolio/install-or-update.sh"
+                chown profolio:profolio "/opt/profolio/install-or-update.sh" 2>/dev/null || true
+                rm -f "$temp_installer"
+                success "✅ Installer script updated to latest version"
+                return 0
+            else
+                rm -f "$temp_installer"
+                success "✅ Installer script already at latest version"
+                return 0
+            fi
+        else
+            error "Downloaded installer script failed syntax check - keeping current version"
+            rm -f "$temp_installer"
+            return 1
+        fi
+    else
+        error "Failed to download latest installer script - keeping current version"
+        return 1
+    fi
+}
+
 # Setup environment configuration with proper credential preservation and database sync
 setup_environment() {
     local is_rollback_mode="${1:-false}"  # Parameter to indicate if called during rollback
@@ -2301,6 +2342,9 @@ update_installation() {
     manage_backups "update"
     success "Backup created"
     
+    # Update installer script to latest version
+    update_installer_script
+    
     # Stop services properly
     info "Stopping services for update..."
     start_service_downtime
@@ -2477,6 +2521,9 @@ repair_installation() {
     if [ -d "/opt/profolio" ]; then
         APP_SIZE=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
     fi
+    
+    # Update installer script to latest version
+    update_installer_script
     
     # Stop any running services first
     info "Stopping any running services..."
