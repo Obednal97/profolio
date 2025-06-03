@@ -78,6 +78,10 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --safe-area-inset-top: env(safe-area-inset-top, 0);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
+  --safe-area-inset-left: env(safe-area-inset-left, 0);
+  --safe-area-inset-right: env(safe-area-inset-right, 0);
 }
 
 .dark {
@@ -231,3 +235,133 @@
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+
+/* === PWA-Specific Optimizations === */
+
+/* 
+TODO: Status Bar Glass Blur Effect - NEEDS FUTURE WORK
+=====================================
+GOAL: Add glass blur effect to iOS PWA status bar area (where time/battery/signal show)
+ATTEMPTS TRIED:
+1. CSS div with fixed positioning - only showed as thin line
+2. Body pseudo-element with negative top positioning - behind content
+3. Higher z-index (99999) - still not visible
+4. Red test background - worked, proving CSS can reach status bar area
+5. Native iOS method with body background - worked but looked terrible
+
+ISSUE: Blur effect positioning/layering not working correctly
+- Element exists (red test proved it)
+- Positioning is correct (covers status bar area)  
+- But blur doesn't show properly - may be layering or iOS PWA limitation
+
+CURRENT STATE: Disabled blur, basic PWA functionality working
+NEXT STEPS: Research iOS PWA backdrop-filter limitations or alternative approaches
+*/
+
+/* PWA Status Bar Glass Blur - DISABLED (see TODO above) */
+@media (display-mode: standalone) {
+  /* Normal body background */
+  body {
+    background: var(--background) !important;
+    padding-top: env(safe-area-inset-top, 44px) !important;
+    margin: 0 !important;
+  }
+  
+  /* DISABLED: Status bar blur attempt
+  body::before {
+    content: '';
+    position: fixed;
+    top: calc(-1 * env(safe-area-inset-top, 44px));
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 44px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.4);
+    z-index: 99999;
+    pointer-events: none;
+  }
+  
+  .dark body::before {
+    background: rgba(17, 24, 40, 0.5);
+  }
+  */
+  
+  /* PWA-ONLY Mobile Navigation Padding */
+  .pwa-mobile-nav,
+  .mobile-bottom-nav nav,
+  nav.pwa-mobile-nav {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px) + 16px) !important;
+  }
+}
+
+/* === Mobile Performance Optimizations - Issue #3 === */
+
+/* Hardware acceleration for mobile animations */
+@media (max-width: 768px) {
+  /* Optimize all animated elements for mobile performance */
+  [class*="motion-"] {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  /* Optimize framer-motion animations */
+  [data-framer-motion] {
+    transform: translateZ(0);
+    will-change: auto;
+  }
+
+  /* Disable complex animations on low-performance devices */
+  @media (prefers-reduced-motion: reduce) {
+    [class*="motion-"],
+    [data-framer-motion] {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* Optimize background gradient animations */
+  .gradient-animation {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    animation-duration: 8s; /* Slower for better performance */
+  }
+
+  /* Optimize blur effects for mobile */
+  [class*="backdrop-blur"] {
+    backdrop-filter: blur(8px); /* Reduced blur for better performance */
+  }
+
+  /* Smooth scroll behavior */
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Touch optimization */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Optimize transitions for 60fps */
+  * {
+    transition-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}
+
+/* === Enhanced Safe Area Support === */
+
+/* Universal safe area support for all devices */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
+  --safe-area-inset-left: env(safe-area-inset-left, 0);
+  --safe-area-inset-right: env(safe-area-inset-right, 0);
+}
+
+/* End of PWA CSS */
+

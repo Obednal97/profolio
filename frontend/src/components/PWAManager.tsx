@@ -21,7 +21,7 @@ interface ServiceWorkerRegistrationWithUpdate extends ServiceWorkerRegistration 
  */
 const PWAManager = memo(() => {
   // PWA installation logic from custom hook
-  const { canInstall, showInstallPrompt: triggerInstall, isInstalling } = usePWAInstall();
+  const { canInstall, showInstallPrompt: triggerInstall, isInstalling, isStandalone } = usePWAInstall();
   
   // State for popup banner display
   const [showBanner, setShowBanner] = useState(false);
@@ -137,6 +137,34 @@ const PWAManager = memo(() => {
 
   // Show banner after delay when app becomes installable
   useEffect(() => {
+    // Debug logging for standalone detection
+    if (typeof window !== 'undefined') {
+      console.log('🔍 PWA Debug:', {
+        isClient,
+        canInstall,
+        isStandalone,
+        showBanner,
+        displayMode: window.matchMedia?.('(display-mode: standalone)')?.matches,
+        navigatorStandalone: navigator?.standalone,
+        isBannerDismissed: isBannerDismissed()
+      });
+    }
+
+    // Don't show banner if already standalone
+    if (isStandalone) {
+      console.log('📱 PWA already installed - hiding banner');
+      setShowBanner(false);
+      // Clear session storage to prevent banner from reappearing
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem('pwa-prompt-dismissed');
+        } catch (error) {
+          console.warn('Failed to clear session storage:', error);
+        }
+      }
+      return;
+    }
+
     if (canInstall && !isBannerDismissed() && !showBanner) {
       // Clear any existing timeout
       if (timeoutRef.current) {
@@ -155,16 +183,24 @@ const PWAManager = memo(() => {
         timeoutRef.current = null;
       }
     };
-  }, [canInstall, showBanner, isBannerDismissed]);
+  }, [canInstall, showBanner, isBannerDismissed, isStandalone, isClient]);
 
   // Early returns for non-display states
-  if (!isClient || !showBanner || !canInstall) {
+  // Check standalone immediately with multiple detection methods
+  const isStandaloneMode = isStandalone || 
+    (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)')?.matches) ||
+    (typeof navigator !== 'undefined' && navigator.standalone === true);
+
+  if (!isClient || !showBanner || !canInstall || isStandaloneMode) {
     return null;
   }
 
   return (
     <div 
-      className="fixed bottom-4 left-4 right-4 md:left-auto md:w-80 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-lg shadow-lg z-50 border border-blue-500/20"
+      className="fixed left-4 right-4 md:left-auto md:right-4 md:w-80 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-lg shadow-lg z-[60] border border-blue-500/20 md:bottom-4"
+      style={{
+        bottom: 'calc(80px + 1rem)', // Above mobile nav on mobile only
+      }}
       role="dialog"
       aria-labelledby="pwa-install-title"
       aria-describedby="pwa-install-description"

@@ -11,17 +11,51 @@ interface HeaderLayoutProps {
 
 export const HeaderLayout: React.FC<HeaderLayoutProps> = React.memo(({ user, currentPath }) => {
   return (
-    <header className="sticky top-0 z-50">
+    <header className="sticky top-0 z-50 pwa-header">
       {/* Glass header with seamless transparency gradient */}
-      <div className="relative">
+      <div className="relative pwa-header-background">
         {/* Gradient blur layers - strongest to weakest */}
-        <div className="absolute inset-0 backdrop-blur-xl bg-gradient-to-b from-white/40 via-white/20 to-transparent dark:from-gray-900/50 dark:via-gray-900/25 dark:to-transparent" style={{maskImage: 'linear-gradient(to bottom, black 0%, black 30%, transparent 100%)'}}></div>
-        <div className="absolute inset-0 backdrop-blur-lg bg-gradient-to-b from-white/30 via-white/15 to-transparent dark:from-gray-900/40 dark:via-gray-900/20 dark:to-transparent" style={{maskImage: 'linear-gradient(to bottom, black 20%, black 50%, transparent 100%)'}}></div>
-        <div className="absolute inset-0 backdrop-blur-md bg-gradient-to-b from-white/20 via-white/10 to-transparent dark:from-gray-900/30 dark:via-gray-900/15 dark:to-transparent" style={{maskImage: 'linear-gradient(to bottom, black 40%, black 70%, transparent 100%)'}}></div>
-        <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-b from-white/10 to-transparent dark:from-gray-900/20 dark:to-transparent" style={{maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)'}}></div>
+        <div 
+          className="absolute inset-0 backdrop-blur-xl bg-gradient-to-b from-white/40 via-white/20 to-transparent dark:from-gray-900/50 dark:via-gray-900/25 dark:to-transparent" 
+          style={{
+            maskImage: 'linear-gradient(to bottom, black 0%, black 30%, transparent 100%)',
+            transform: 'translateZ(0)',
+            willChange: 'backdrop-filter'
+          }}
+        />
+        <div 
+          className="absolute inset-0 backdrop-blur-lg bg-gradient-to-b from-white/30 via-white/15 to-transparent dark:from-gray-900/40 dark:via-gray-900/20 dark:to-transparent" 
+          style={{
+            maskImage: 'linear-gradient(to bottom, black 20%, black 50%, transparent 100%)',
+            transform: 'translateZ(0)',
+            willChange: 'backdrop-filter'
+          }}
+        />
+        <div 
+          className="absolute inset-0 backdrop-blur-md bg-gradient-to-b from-white/20 via-white/10 to-transparent dark:from-gray-900/30 dark:via-gray-900/15 dark:to-transparent" 
+          style={{
+            maskImage: 'linear-gradient(to bottom, black 40%, black 70%, transparent 100%)',
+            transform: 'translateZ(0)',
+            willChange: 'backdrop-filter'
+          }}
+        />
+        <div 
+          className="absolute inset-0 backdrop-blur-sm bg-gradient-to-b from-white/10 to-transparent dark:from-gray-900/20 dark:to-transparent" 
+          style={{
+            maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+            transform: 'translateZ(0)',
+            willChange: 'backdrop-filter'
+          }}
+        />
         
         {/* Content */}
-        <div className="relative flex items-center px-4 sm:px-6 py-3 sm:py-4">
+        <div 
+          className="relative flex items-center px-4 sm:px-6 py-3 sm:py-4"
+          style={{
+            transform: 'translateZ(0)',
+            willChange: 'transform'
+          }}
+        >
           {/* Logo with enhanced typography */}
           <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
             <Link href={user ? '/app/dashboard' : '/'} className="group flex items-center space-x-3 min-w-0">

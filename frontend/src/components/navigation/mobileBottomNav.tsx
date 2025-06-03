@@ -69,7 +69,7 @@ export default function MobileBottomNav({
   }, [currentPath, navigationLinks]);
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-bottom-nav">
       {/* Glass background with seamless transparency gradient - multiple layers for depth */}
       <div className="relative">
         {/* Gradient blur layers - strongest to weakest, from bottom to top */}
@@ -82,7 +82,15 @@ export default function MobileBottomNav({
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent dark:via-white/10"></div>
         
         {/* Navigation content */}
-        <nav ref={navRef} className="relative flex items-center justify-around px-4 py-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+        <nav 
+          ref={navRef} 
+          className="relative flex items-center justify-around px-4 py-3 pwa-mobile-nav" 
+          style={{ 
+            paddingBottom: '12px', // Base padding for all modes
+            transform: 'translateZ(0)', // Hardware acceleration
+            willChange: 'transform' // Performance optimization
+          }}
+        >
           {/* Sliding background indicator */}
           <div
             className="absolute bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl shadow-lg pointer-events-none"
@@ -93,6 +101,7 @@ export default function MobileBottomNav({
               top: '12px', // py-3 offset
               zIndex: 0,
               transition: 'all 0.45s cubic-bezier(0.4, 0.0, 0.2, 1)',
+              transform: 'translateZ(0)', // Hardware acceleration
             }}
           />
           
@@ -108,6 +117,10 @@ export default function MobileBottomNav({
               }`}
               title={link.label}
               aria-label={link.label}
+              style={{
+                transform: 'translateZ(0)', // Hardware acceleration
+                willChange: 'transform' // Performance optimization
+              }}
             >
               <i className={`fas ${link.icon} text-xl`}></i>
             </Link>

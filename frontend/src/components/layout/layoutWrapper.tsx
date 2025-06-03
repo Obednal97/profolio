@@ -195,7 +195,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
         {isAppSection && (
           <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
             <motion.div 
-              className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400 to-indigo-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl"
+              className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400 to-indigo-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl gradient-animation"
               animate={{
                 x: [0, 50, -30, 0],
                 y: [0, -30, 50, 0],
@@ -206,9 +206,13 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 ease: "easeInOut",
                 repeat: Infinity,
               }}
+              style={{
+                transform: 'translateZ(0)',
+                willChange: 'transform',
+              }}
             />
             <motion.div 
-              className="absolute top-1/4 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400 to-pink-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl"
+              className="absolute top-1/4 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400 to-pink-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl gradient-animation"
               animate={{
                 x: [0, -40, 30, 0],
                 y: [0, 40, -30, 0],
@@ -220,9 +224,13 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 repeat: Infinity,
                 delay: 4,
               }}
+              style={{
+                transform: 'translateZ(0)',
+                willChange: 'transform',
+              }}
             />
             <motion.div 
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl"
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl gradient-animation"
               animate={{
                 x: [0, 30, -30, 0],
                 y: [0, -30, 30, 0],
@@ -234,9 +242,13 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 repeat: Infinity,
                 delay: 8,
               }}
+              style={{
+                transform: 'translateZ(0)',
+                willChange: 'transform',
+              }}
             />
             <motion.div 
-              className="absolute top-3/4 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-400 to-blue-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl"
+              className="absolute top-3/4 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-400 to-blue-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl gradient-animation"
               animate={{
                 x: [0, 45, -35, 0],
                 y: [0, -35, 45, 0],
@@ -248,9 +260,13 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 repeat: Infinity,
                 delay: 6,
               }}
+              style={{
+                transform: 'translateZ(0)',
+                willChange: 'transform',
+              }}
             />
             <motion.div 
-              className="absolute bottom-10 left-1/4 w-80 h-80 bg-gradient-to-tr from-orange-400 to-red-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl"
+              className="absolute bottom-10 left-1/4 w-80 h-80 bg-gradient-to-tr from-orange-400 to-red-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl gradient-animation"
               animate={{
                 x: [0, -40, 45, 0],
                 y: [0, 45, -40, 0],
@@ -261,6 +277,10 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 ease: "easeInOut",
                 repeat: Infinity,
                 delay: 12,
+              }}
+              style={{
+                transform: 'translateZ(0)',
+                willChange: 'transform',
               }}
             />
           </div>

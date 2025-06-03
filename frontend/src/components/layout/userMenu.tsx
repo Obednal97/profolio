@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "@/providers/theme-provider";
 import { useAuth } from "@/lib/unifiedAuth";
 import { useNotifications } from "@/hooks/useNotifications";
-import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { getUserInitials, sanitizeText } from "@/lib/userUtils";
 
 interface UserMenuProps {
@@ -49,7 +48,6 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
   const { theme, setTheme } = useTheme();
   const { signOut, userProfile } = useAuth();
   const { unreadCount } = useNotifications();
-  const { canInstall, showInstallPrompt, isInstalling, isStandalone } = usePWAInstall();
 
   // Use auth context userProfile if available, fallback to prop user
   const user = userProfile || propUser;
@@ -98,28 +96,6 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
     setTheme(theme === 'light' ? 'dark' : 'light');
   }, [theme, setTheme]);
 
-  const handleInstallApp = useCallback(async () => {
-    setIsProfileOpen(false);
-    await showInstallPrompt();
-  }, [showInstallPrompt]);
-
-  // Development utility to reset PWA state (only in development) - memoized
-  const handleResetPWAState = useCallback(() => {
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        localStorage.removeItem('pwa-installed');
-        localStorage.removeItem('pwa-prompt-dismissed');
-        sessionStorage.removeItem('pwa-prompt-dismissed');
-        setIsProfileOpen(false);
-        safeConsole.log('🔄 PWA state reset - reload page to test installation again');
-        // Use window.location.reload() only in development for testing
-        window.location.reload();
-      } catch (error) {
-        safeConsole.error('Failed to reset PWA state:', error);
-      }
-    }
-  }, []);
-
   const closeMenu = useCallback(() => {
     setIsProfileOpen(false);
   }, []);
@@ -133,22 +109,6 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
     { label: "Account Settings", path: "/app/settings", icon: "fa-cog", action: null },
     { label: "System Updates", path: "/app/updates", icon: "fa-download", action: null },
     { label: "Notifications", path: "/app/notifications", icon: "fa-bell", action: null },
-    // Add Install App option when available (only if not standalone and can install)
-    ...(canInstall && !isStandalone ? [{ 
-      label: "Install App", 
-      path: null, 
-      icon: "fa-mobile-alt", 
-      action: handleInstallApp,
-      isInstall: true
-    } as MenuItem] : []),
-    // Development reset option (only in development and when PWA is detected as installed)
-    ...(process.env.NODE_ENV === 'development' && isStandalone ? [{ 
-      label: "Reset PWA State", 
-      path: null, 
-      icon: "fa-undo", 
-      action: handleResetPWAState,
-      isDevelopment: true
-    } as MenuItem] : []),
     { 
       label: `Switch to ${theme === 'light' ? 'dark' : 'light'} mode`, 
       path: null, 
@@ -156,21 +116,7 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
       action: toggleTheme 
     },
     { label: "Sign Out", path: null, icon: "fa-sign-out-alt", action: handleSignOut },
-  ], [canInstall, isStandalone, handleInstallApp, handleResetPWAState, theme, themeUtils.icon, toggleTheme, handleSignOut]);
-
-  // Memoized debug info for development (only when values change)
-  useMemo(() => {
-    if (process.env.NODE_ENV === 'development') {
-      const info = {
-        canInstall,
-        isStandalone,
-        isInstalling,
-        showInstallOption: canInstall && !isStandalone,
-        menuItemsCount: profileMenuItems.length
-      };
-      safeConsole.log('🔍 UserMenu PWA State:', info);
-    }
-  }, [canInstall, isStandalone, isInstalling, profileMenuItems.length]);
+  ], [theme, themeUtils.icon, toggleTheme, handleSignOut]);
 
   return (
     <div className="relative flex items-center gap-3">
@@ -247,12 +193,6 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">{processedUserData.safeName || 'User'}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{processedUserData.safeEmail}</p>
-                        {/* PWA Status indicator in development */}
-                        {process.env.NODE_ENV === 'development' && (
-                          <p className="text-xs text-green-600 dark:text-green-400">
-                            PWA: {isStandalone ? 'Installed' : canInstall ? 'Available' : 'Not Available'}
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -279,33 +219,17 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
                         ) : (
                           <button
                             onClick={item.action || undefined}
-                            disabled={item.isInstall && isInstalling}
                             className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-all duration-200 ${
-                              item.isInstall 
-                                ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed' 
-                                : item.isDevelopment
-                                ? 'text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                                : item.label === 'Sign Out'
+                              item.label === 'Sign Out'
                                 ? 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
                                 : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-700/60'
                             }`}
                             role="menuitem"
-                            aria-disabled={item.isInstall && isInstalling}
                           >
-                            <i className={`fas ${item.icon} w-4 text-center ${isInstalling && item.isInstall ? 'animate-pulse' : ''}`} aria-hidden="true"></i>
+                            <i className={`fas ${item.icon} w-4 text-center`} aria-hidden="true"></i>
                             <span className="flex-1">
-                              {item.isInstall && isInstalling ? 'Installing...' : item.label}
+                              {item.label}
                             </span>
-                            {item.isInstall && (
-                              <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full" aria-label="Progressive Web App">
-                                PWA
-                              </span>
-                            )}
-                            {item.isDevelopment && (
-                              <span className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 px-2 py-1 rounded-full" aria-label="Development tool">
-                                DEV
-                              </span>
-                            )}
                           </button>
                         )}
                       </div>

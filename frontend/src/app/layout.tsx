@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ClientProviders } from "@/providers/client-providers";
 import "./globals.css";
+import PWAManager from "@/components/PWAManager";
 
 export const metadata: Metadata = {
   title: "Profolio",
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#2563eb',
+  themeColor: '#101828',
 };
 
 export default function RootLayout({
@@ -46,7 +47,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Profolio" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="Profolio" />
-        <meta name="msapplication-TileColor" content="#2563eb" />
+        <meta name="msapplication-TileColor" content="#101828" />
         <meta name="msapplication-TileImage" content="/icons/icon-144x144.svg" />
         <link
           rel="stylesheet"
@@ -59,8 +60,7 @@ export default function RootLayout({
       <body className="bg-background text-foreground antialiased min-h-screen">
         <ClientProviders>
           {children}
-          {/* PWAManager temporarily disabled for debugging mobile white screen */}
-          {/* <PWAManager /> */}
+          <PWAManager />
         </ClientProviders>
       </body>
     </html>

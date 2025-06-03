@@ -1,13 +1,25 @@
 {
   "name": "frontend",
-  "version": "1.8.8",
+  "version": "1.9.0",
   "private": true,
   "packageManager": "pnpm@9.14.4",
   "scripts": {
     "dev": "next dev",
+    "dev:https": "node scripts/dev-https.js",
+    "dev:https:simple": "node scripts/dev-https-simple.js",
+    "dev:pwa": "npm run dev:https",
+    "dev:mobile": "npm run dev:https",
     "build": "next build",
+    "build:analyze": "ANALYZE=true next build",
     "start": "next start",
-    "lint": "next lint"
+    "start:https": "HTTPS=true next start -p 3000",
+    "lint": "next lint",
+    "clean": "rm -rf .next && rm -rf node_modules/.cache",
+    "clean:all": "npm run clean && rm -rf node_modules && npm install",
+    "pwa:audit": "npx lighthouse https://localhost:3000 --only-categories=pwa --chrome-flags='--ignore-certificate-errors'",
+    "pwa:test": "echo 'Open https://localhost:3000 in Chrome > DevTools > Application > Service Workers'",
+    "pwa:clear": "echo 'Clear PWA cache: DevTools > Application > Storage > Clear storage'",
+    "pwa:setup": "echo 'Run: mkcert -install && mkdir -p .certificates && cd .certificates && mkcert localhost 127.0.0.1 ::1 $(ipconfig getifaddr en0)'"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.0",
@@ -46,6 +58,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
+    "http-proxy": "^1.18.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.9",
     "typescript": "^5"

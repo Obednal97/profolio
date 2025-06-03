@@ -157,13 +157,51 @@ export function usePWAInstall(): PWAInstallState & PWAInstallActions {
     return isStandaloneResult;
   }, [isStandalone, urlSearchParams, getStorageValue, safeConsole]);
 
-  // Optimized installability check with stable dependencies
+  // Enhanced installability check with Safari support
   const checkInstallability = useCallback(() => {
-    return isClient && !isStandalone && isInstallable && !!deferredPromptRef.current;
+    // For non-Safari browsers, require beforeinstallprompt event
+    const hasInstallPrompt = !!deferredPromptRef.current;
+    
+    // Detect Safari (both desktop and mobile)
+    const isSafari = typeof navigator !== 'undefined' && (
+      /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+      /iPad|iPhone|iPod/.test(navigator.userAgent)
+    );
+    
+    // Safari supports PWA installation but doesn't fire beforeinstallprompt
+    // So we consider Safari as "installable" if it's not already standalone
+    const safariInstallable = isSafari && !isStandalone && isClient;
+    
+    return isClient && !isStandalone && (
+      (isInstallable && hasInstallPrompt) || // Chrome/Edge with beforeinstallprompt
+      safariInstallable // Safari without beforeinstallprompt
+    );
   }, [isClient, isStandalone, isInstallable]);
 
-  // Show install prompt with comprehensive error handling
+  // Show install prompt with Safari support
   const showInstallPrompt = useCallback(async (): Promise<boolean> => {
+    // Detect Safari
+    const isSafari = typeof navigator !== 'undefined' && (
+      /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+      /iPad|iPhone|iPod/.test(navigator.userAgent)
+    );
+
+    // For Safari, show instructions since we can't trigger programmatically
+    if (isSafari && !deferredPromptRef.current) {
+      const isMobile = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const instructions = isMobile 
+        ? 'To install Profolio:\n1. Tap the Share button (□↗)\n2. Select "Add to Home Screen"\n3. Tap "Add"'
+        : 'To install Profolio:\n1. Click Safari menu\n2. Select "Add to Dock"\nOr bookmark this page for easy access';
+      
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert(instructions);
+      }
+      
+      safeConsole.log('📱 Safari install instructions shown');
+      return false; // Return false since we can't programmatically install
+    }
+
+    // For non-Safari browsers, use the standard prompt
     if (!deferredPromptRef.current) {
       safeConsole.warn('⚠️ No install prompt available');
       return false;
@@ -342,7 +380,7 @@ export function usePWAInstall(): PWAInstallState & PWAInstallActions {
       
       document.removeEventListener('visibilitychange', handleStandaloneChange);
     };
-  }, []); // Stable empty dependency array
+  }, [checkStandalone, getStorageValue, handleAppInstalled, handleBeforeInstallPrompt, handleStandaloneChange, isStandalone, safeConsole]);
 
   // Trigger state change check on key state changes
   useEffect(() => {

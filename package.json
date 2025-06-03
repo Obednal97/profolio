@@ -1,6 +1,6 @@
 {
   "name": "profolio",
-  "version": "1.8.8",
+  "version": "1.9.0",
   "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
   "main": "install-or-update.sh",
   "scripts": {
@@ -53,5 +53,8 @@
     "next": "^15.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "http-proxy": "^1.18.1"
   }
 }
