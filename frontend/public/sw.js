@@ -8,7 +8,10 @@ const urlsToCache = [
   '/app/settings',
   '/manifest.json',
   '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-512x512.png',
+  '/icons/icon-152x152.png',
+  '/icons/icon-144x144.png',
+  '/icons/icon-96x96.png'
 ];
 
 // Install event - cache resources
