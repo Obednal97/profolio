@@ -1479,10 +1479,11 @@ build_application() {
         "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio npx nest build"
         "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio npm install"
         "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio npm run build"
+        "Optimizing for production deployment" "optimize_production_deployment"
         "Cleaning build artifacts and cache" "cleanup_build_artifacts"
     )
     
-    execute_steps "Building Profolio Application" "${steps[@]}"
+    execute_steps "Building Profolio Application (Production Optimized)" "${steps[@]}"
 }
 
 # Clean up build artifacts and unnecessary cache
@@ -1522,6 +1523,34 @@ cleanup_build_artifacts() {
     info "  → Final application size: $final_size"
     
     success "Build artifacts cleaned up successfully"
+}
+
+# Optimize dependencies for production deployment (SAFE VERSION)
+# This runs AFTER build is complete to avoid service startup issues
+optimize_production_deployment() {
+    info "🚀 Optimizing for production deployment..."
+    
+    # Backend: Remove dev dependencies (keeping built dist/ folder)
+    info "  → Backend: Removing dev dependencies (keeping compiled code)..."
+    cd /opt/profolio/backend
+    
+    # Remove node_modules and reinstall production-only
+    sudo -u profolio rm -rf node_modules package-lock.json
+    sudo -u profolio npm ci --production --silent --no-audit
+    
+    # Frontend: Remove dev dependencies (keeping built .next/ folder)  
+    info "  → Frontend: Removing dev dependencies (keeping built app)..."
+    cd /opt/profolio/frontend
+    
+    # Remove node_modules and reinstall production-only
+    sudo -u profolio rm -rf node_modules package-lock.json
+    sudo -u profolio npm ci --production --silent --no-audit
+    
+    # Remove unnecessary frontend build files
+    info "  → Removing unnecessary frontend build cache..."
+    sudo -u profolio rm -rf .next/cache .next/standalone/node_modules/.cache
+    
+    success "✅ Production optimization completed - dev dependencies removed"
 }
 
 # Update the installer script itself to latest version
