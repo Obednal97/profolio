@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.8.2] - 2025-01-18
+
+### 🐛 Bug Fixes
+- **FIXED: PWA Home Screen Icon**: Resolved issue where "Add to Home Screen" showed generic "P" instead of Profolio logo
+- **FIXED: Missing Manifest Link**: Added proper PWA manifest link in HTML head for browser discovery
+- **FIXED: iOS Icon Compatibility**: Enhanced Apple touch icon configuration for better iOS home screen support
+
+### 🔧 Improvements
+#### Technical
+- **Enhanced PWA Configuration**: Updated manifest.json with both SVG and PNG icon references for maximum compatibility
+- **Service Worker Optimization**: Updated cached icon files to match manifest configuration
+- **Cross-Platform Icon Support**: Added comprehensive meta tags for iOS, Android, and Windows PWA installations
+
+#### UI/UX
+- **Progressive Enhancement**: Configured SVG icons with PNG fallbacks for older device compatibility
+- **Consistent Branding**: Home screen icons now display proper Profolio gradient logo across all platforms
+- **App Store Readiness**: Enhanced PWA metadata for better app store and installation presentation
+
+### 📦 Installation & Updates
+- **PNG Icon Generator**: Added script for generating PNG versions from SVG icons for enhanced compatibility
+- **Automatic Icon Caching**: Service worker now properly caches all icon sizes for offline functionality
+- **Cross-Platform Testing**: Improved "Add to Home Screen" experience on iOS Safari, Android Chrome, and desktop browsers
+
+### 📊 Summary
+- **Files Changed**: 5 files modified
+- **Issues Resolved**: 1 critical PWA display bug
+- **Platform Support**: Enhanced compatibility across iOS, Android, and desktop PWA installations
+- **User Experience**: Beautiful Profolio logo now appears when adding app to home screen
+
 ## [v1.8.1] - 2025-01-18
 
 ### ✨ Features
