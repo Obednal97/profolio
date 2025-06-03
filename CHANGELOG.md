@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.8.6] - 2025-06-03
+
+### 🔧 Improvements
+#### UI/UX
+- **Clean Loading Screen**: Removed debug text "Debug: Client=Yes, Loading=Yes" from loading screen for production experience
+- **Production Interface**: Eliminated all development debugging information visible to end users
+
+#### Technical
+- **PWA Service Worker**: Re-enabled service worker registration for full Progressive Web App functionality
+- **Code Cleanup**: Removed commented development code and unnecessary debugging statements
+- **Console Logging**: Cleaned up emoji-heavy console messages for production-appropriate logging
+
+### 📊 Summary
+- **Files Changed**: 3 files cleaned up for production
+- **Debug Code Removed**: All user-visible debugging text eliminated
+- **PWA Functionality**: Service worker fully re-enabled for offline capability
+
 ## [v1.8.5] - 2025-06-03
 
 ### 🐛 Bug Fixes

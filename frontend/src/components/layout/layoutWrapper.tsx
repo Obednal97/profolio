@@ -54,16 +54,6 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Debug localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      console.log('🔍 [Layout] localStorage debug:', {
-        demoMode: localStorage.getItem('demo-mode'),
-        userData: localStorage.getItem('user-data')
-      });
-    }
-  }, []);
-  
   // Create consistent user context using centralized utility
   const currentUser = useMemo(() => {
     return createUserContext(user, userProfile, isDemoMode);

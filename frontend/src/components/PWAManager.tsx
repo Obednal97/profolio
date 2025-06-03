@@ -43,12 +43,8 @@ const PWAManager = memo(() => {
 
   // Service worker registration with proper error handling
   const registerServiceWorker = useCallback(async () => {
-    // TEMPORARILY DISABLED FOR DEBUGGING MOBILE WHITE SCREEN
-    console.log('🚫 Service Worker registration temporarily disabled for debugging');
-    return;
-    
     if (!('serviceWorker' in navigator)) {
-      console.warn('⚠️ Service Worker not supported in this browser');
+      console.warn('Service Worker not supported in this browser');
       return;
     }
 
@@ -59,7 +55,6 @@ const PWAManager = memo(() => {
       });
       
       registrationRef.current = registration;
-      console.log('✅ Service Worker registered successfully:', registration);
       
       // Listen for updates with proper cleanup
       const handleUpdateFound = () => {
@@ -67,7 +62,6 @@ const PWAManager = memo(() => {
         if (newWorker) {
           const handleStateChange = () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('🔄 New version of the app is available');
               // Could emit event here for update notification
             }
           };
@@ -83,13 +77,8 @@ const PWAManager = memo(() => {
       
       registration.addEventListener('updatefound', handleUpdateFound);
       
-      // Check for existing service worker updates
-      if (registration.waiting) {
-        console.log('🔄 Service Worker update available');
-      }
-      
     } catch (error) {
-      console.error('❌ Service Worker registration failed:', error);
+      console.error('Service Worker registration failed:', error);
     }
   }, []);
 
@@ -116,7 +105,7 @@ const PWAManager = memo(() => {
       try {
         sessionStorage.setItem('pwa-prompt-dismissed', 'true');
       } catch (error) {
-        console.warn('⚠️ Failed to persist prompt dismissal:', error);
+        console.warn('Failed to persist prompt dismissal:', error);
       }
     }
   }, []);
