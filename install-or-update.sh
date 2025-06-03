@@ -1479,34 +1479,10 @@ build_application() {
         "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio npx nest build"
         "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio npm install"
         "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio npm run build"
-        "Optimizing production dependencies" "optimize_production_dependencies"
         "Cleaning build artifacts and cache" "cleanup_build_artifacts"
     )
     
-    execute_steps "Building Profolio Application (Production Optimized)" "${steps[@]}"
-}
-
-# Optimize dependencies for production deployment
-optimize_production_dependencies() {
-    info "Optimizing for production deployment..."
-    
-    # Backend: Clean install with production-only dependencies
-    info "  → Backend: Installing production-only dependencies..."
-    cd /opt/profolio/backend
-    
-    # Remove node_modules and reinstall production only
-    sudo -u profolio rm -rf node_modules
-    sudo -u profolio npm ci --production --silent
-    
-    # Frontend: Clean install with production-only dependencies  
-    info "  → Frontend: Installing production-only dependencies..."
-    cd /opt/profolio/frontend
-    
-    # Remove node_modules and reinstall production only
-    sudo -u profolio rm -rf node_modules
-    sudo -u profolio npm ci --production --silent
-    
-    success "Production dependencies optimized"
+    execute_steps "Building Profolio Application" "${steps[@]}"
 }
 
 # Clean up build artifacts and unnecessary cache
