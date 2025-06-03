@@ -1,6 +1,6 @@
 # Release Notes - v1.8.2
 
-**Released**: 18th January 2025  
+**Released**: 3rd June 2025  
 **Type**: Patch Release  
 **Compatibility**: Fully backward compatible
 

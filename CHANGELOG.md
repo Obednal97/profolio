@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v1.8.3] - 2025-01-03
+## [v1.8.3] - 2025-06-03
 
 ### 🎨 UI/UX Improvements
 - **Enhanced PWA Status Bar**: Updated status bar colour from blue-500 (`#3b82f6`) to blue-600 (`#2563eb`) to seamlessly match the app's beautiful blue-to-purple gradient background
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Visual Impact**: Eliminated jarring blue status bar break, achieved perfect gradient harmony
 - **Cross-Platform**: Enhanced PWA visual experience across iOS, Android, and desktop installations
 
-## [v1.8.2] - 2025-01-18
+## [v1.8.2] - 2025-06-03
 
 ### 🐛 Bug Fixes
 - **FIXED: PWA Home Screen Icon**: Resolved issue where "Add to Home Screen" showed generic "P" instead of Profolio logo
@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Platform Support**: Enhanced compatibility across iOS, Android, and desktop PWA installations
 - **User Experience**: Beautiful Profolio logo now appears when adding app to home screen
 
-## [v1.8.1] - 2025-01-18
+## [v1.8.1] - 2025-06-03
 
 ### ✨ Features
 - **🎯 Customizable Optimization Levels**: Added safe and aggressive optimization modes for space reduction (600-800MB vs 400-500MB)

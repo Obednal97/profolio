@@ -28,6 +28,33 @@ This guide ensures consistent, well-documented releases with proper version mana
 
 ## 🚀 Release Process Steps
 
+### **Step 0: Get Current Date (CRITICAL)**
+
+**BEFORE ANY RELEASE WORK** - Always get the current date to ensure chronological accuracy:
+
+```bash
+# Get current date in all required formats
+CURRENT_DATE=$(date +%Y-%m-%d)              # For CHANGELOG.md: 2025-06-03
+CURRENT_DATE_UK=$(date +%d-%m-%Y)           # For UK references: 03-06-2025  
+CURRENT_DATE_READABLE=$(date +"%d %B %Y")   # For release notes: 03 June 2025
+CURRENT_DATE_ORDINAL=$(date +"%d" | sed 's/1$/1st/; s/2$/2nd/; s/3$/3rd/; s/[4-9]$/th/; s/1[0-9]$/th/') && echo "${CURRENT_DATE_ORDINAL} $(date +"%B %Y")"  # 3rd June 2025
+
+echo "📅 Release Date Information:"
+echo "CHANGELOG format: $CURRENT_DATE"
+echo "Release Notes format: $(date +"%-d" | sed 's/1$/1st/; s/2$/2nd/; s/3$/3rd/; s/[4-9]$/th/; s/1[0-9]$/th/')$(date +" %B %Y")"
+echo "UK format: $CURRENT_DATE_UK"
+
+# Verify this date is AFTER the last release
+echo "📅 Last release date:"
+grep -m1 "##.*v[0-9]" CHANGELOG.md
+echo "⚠️  NEW DATE MUST BE AFTER THE ABOVE DATE"
+```
+
+**Critical Rules:**
+- ✅ **Always use TODAY'S date** - never hardcode or guess dates
+- ✅ **Check chronological order** - new releases must be after previous ones
+- ✅ **Use consistent formats** - ISO for changelog, readable for release notes
+
 ### Step 1: Version Update
 
 ```bash

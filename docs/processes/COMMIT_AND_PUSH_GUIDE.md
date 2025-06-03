@@ -2,6 +2,37 @@
 
 This guide ensures consistent, high-quality commits and maintains project standards.
 
+## 📅 **Critical: Date Management**
+
+**FUNDAMENTAL RULE**: Release dates MUST always be chronological. New releases cannot have dates before previous releases.
+
+### **Get Current Date Before Any Release Work**
+```bash
+# Always run this first to get the correct date
+CURRENT_DATE=$(date +%Y-%m-%d)
+CURRENT_DATE_UK=$(date +%d-%m-%Y)
+CURRENT_DATE_READABLE=$(date +"%d %B %Y")  # e.g., "03 June 2025"
+echo "Today: $CURRENT_DATE (ISO) | $CURRENT_DATE_UK (UK) | $CURRENT_DATE_READABLE (Readable)"
+```
+
+### **Date Format Standards**
+- **CHANGELOG.md**: Use ISO format `YYYY-MM-DD` (e.g., `2025-06-03`)
+- **Release Notes**: Use UK readable format (e.g., `3rd June 2025`)
+- **Commit Messages**: Use ISO format in any date references
+- **All Documentation**: Follow UK date conventions as per project standards
+
+### **Before Every Release**
+```bash
+# 1. Get current date
+echo "Current date: $(date +%Y-%m-%d)"
+
+# 2. Check last release date
+grep -m1 "##.*v[0-9]" CHANGELOG.md
+
+# 3. Verify new date is AFTER the last release date
+# NEVER use a date that's before the previous release!
+```
+
 ## 📋 Pre-Commit Checklist
 
 Before making any commit, complete this checklist:

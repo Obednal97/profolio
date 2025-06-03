@@ -1,6 +1,20 @@
 # Release Notes - v[VERSION]
 
-**Released**: [Month Day, Year]  
+**🚨 CRITICAL: GET CURRENT DATE FIRST**
+
+```bash
+# ALWAYS run this before creating release notes
+CURRENT_DATE_READABLE=$(date +"%-d %B %Y")  # e.g., "3 June 2025"
+CURRENT_DATE_ORDINAL=$(date +"%d" | sed 's/1$/1st/; s/2$/2nd/; s/3$/3rd/; s/[4-9]$/th/; s/1[0-9]$/th/')$(date +" %B %Y")  # e.g., "3rd June 2025"
+echo "Today's date for release notes: $CURRENT_DATE_ORDINAL"
+
+# Check last release date to ensure chronological order
+echo "Last release was:"
+grep -m1 "##.*v[0-9]" CHANGELOG.md
+echo "⚠️ NEW DATE MUST BE AFTER THE ABOVE DATE"
+```
+
+**Released**: [Use date from command above - e.g., "3rd June 2025"]  
 **Type**: [Major | Minor | Patch] Release  
 **Compatibility**: [Fully backward compatible | Manual migration required]
 

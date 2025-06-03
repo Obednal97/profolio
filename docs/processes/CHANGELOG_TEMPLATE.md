@@ -1,8 +1,22 @@
 # Changelog Entry Template
 
+**🚨 CRITICAL: GET CURRENT DATE FIRST**
+
+```bash
+# ALWAYS run this before creating changelog entry
+CURRENT_DATE=$(date +%Y-%m-%d)
+echo "Today's date for changelog: $CURRENT_DATE"
+
+# Check last release date to ensure chronological order
+echo "Last release was:"
+grep -m1 "##.*v[0-9]" CHANGELOG.md
+echo "⚠️ NEW DATE MUST BE AFTER THE ABOVE DATE"
+```
+
 Use this template for all changelog entries. **Only include sections that are relevant to the specific release** - omit sections with no content.
 
 ## [vX.Y.Z] - YYYY-MM-DD
+**⚠️ Replace YYYY-MM-DD with actual current date from command above**
 
 ### ✨ Features
 *New functionality added to the application*
