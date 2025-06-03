@@ -491,6 +491,9 @@ GENERATE_SSH_KEY=""
 OPERATION_TYPE="install"
 OPERATION_SUCCESS=false
 
+# NEW: Global variable to track optimization level choice
+OPTIMIZATION_LEVEL="safe"  # Default to safe optimization
+
 # Statistics tracking variables
 OPERATION_START_TIME=""
 OPERATION_END_TIME=""
@@ -896,15 +899,81 @@ run_configuration_wizard() {
     read -p "Select installation mode [1]: " install_mode
     install_mode=${install_mode:-1}
     
+    # NEW: Ask about optimization level for both quick and advanced install
+    echo ""
+    echo -e "${CYAN}🔧 Optimization Level Choice:${NC}"
+    echo -e "  Choose how aggressively to optimize the installation size:"
+    echo ""
+    echo -e "  1) ${GREEN}Safe Optimization${NC} (recommended - ~600-800MB)"
+    echo -e "     • Removes only development dependencies after build"
+    echo -e "     • Preserves all production-needed packages"
+    echo -e "     • ${GREEN}Safest option - all features guaranteed to work${NC}"
+    echo ""
+    echo -e "  2) ${YELLOW}Aggressive Optimization${NC} (⚠️  ~400-500MB - use with caution)"
+    echo -e "     • Removes development dependencies + Docker-style cleanup"
+    echo -e "     • Ultra-aggressive space reduction"
+    echo -e "     • ${YELLOW}May affect debugging capabilities${NC}"
+    echo ""
+    read -p "Select optimization level [1]: " opt_choice
+    opt_choice=${opt_choice:-1}
+    
+    if [ "$opt_choice" = "2" ]; then
+        echo ""
+        echo -e "${RED}⚠️  AGGRESSIVE OPTIMIZATION WARNING${NC}"
+        echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}This mode applies ultra-aggressive size reduction techniques:${NC}"
+        echo ""
+        echo -e "${RED}What it does:${NC}"
+        echo -e "  • Safe removal of ALL development dependencies"
+        echo -e "  • Docker-style aggressive cleanup and deduplication"
+        echo -e "  • Removes source maps, debug info, and test files"
+        echo -e "  • Compresses assets and removes platform-specific binaries"
+        echo -e "  • Cleans caches and temporary build artifacts"
+        echo ""
+        echo -e "${YELLOW}Potential trade-offs:${NC}"
+        echo -e "  • May remove dependencies needed for edge-case features"
+        echo -e "  • Debugging and development tools removed"
+        echo -e "  • Some advanced troubleshooting capabilities lost"
+        echo -e "  • Harder to diagnose issues if they occur"
+        echo ""
+        echo -e "${GREEN}Best for:${NC}"
+        echo -e "  • Production environments with storage constraints"
+        echo -e "  • Docker containers where size matters"
+        echo -e "  • VPS with limited disk space"
+        echo -e "  • When you prioritise disk usage over debugging capability"
+        echo ""
+        echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        read -p "Proceed with aggressive optimization? (y/n) [n]: " aggressive_confirm
+        if [[ "$aggressive_confirm" =~ ^[Yy]$ ]]; then
+            OPTIMIZATION_LEVEL="aggressive"
+            warn "Aggressive optimization confirmed"
+        else
+            OPTIMIZATION_LEVEL="safe"
+            success "Using safe optimization instead"
+        fi
+    else
+        OPTIMIZATION_LEVEL="safe"
+        success "Safe optimization selected"
+    fi
+    
     if [ "$install_mode" = "1" ]; then
         AUTO_INSTALL=true
+        echo ""
+        echo -e "${GREEN}📋 Quick Install Mode Selected${NC}"
+        echo -e "${CYAN}Final Settings:${NC}"
+        echo -e "  • Installation: Default configuration"
+        echo -e "  • Optimization: $OPTIMIZATION_LEVEL"
+        echo -e "  • SSH: Enabled with key-only authentication"
+        echo -e "  • Network: DHCP (automatic)"
+        echo ""
         use_defaults
         return
     fi
     
-    # For now, just use defaults for advanced setup too
+    # For now, just use defaults for advanced setup too with the chosen optimization
     # TODO: Implement full configuration wizard
-    echo -e "${YELLOW}⚠️  Advanced setup not yet implemented. Using defaults.${NC}"
+    echo -e "${YELLOW}⚠️  Advanced setup not yet implemented. Using defaults with $OPTIMIZATION_LEVEL optimization.${NC}"
     use_defaults
 }
 
@@ -1233,6 +1302,42 @@ run_update_wizard() {
         echo -e "${CYAN}Rollback Protection:${NC} Yes (automatic rollback on failure)"
         echo ""
         
+        # NEW: Ask about optimization level even in default mode
+        echo -e "${CYAN}🔧 Optimization Level Choice:${NC}"
+        echo -e "  1) ${GREEN}Safe Optimization${NC} (recommended - ~600-800MB, keeps all needed dependencies)"
+        echo -e "  2) ${YELLOW}Aggressive Optimization${NC} (⚠️  ~400-500MB, removes more dependencies - may break some features)"
+        echo ""
+        read -p "Select optimization level [1]: " opt_choice
+        opt_choice=${opt_choice:-1}
+        
+        if [ "$opt_choice" = "2" ]; then
+            OPTIMIZATION_LEVEL="aggressive"
+            echo ""
+            echo -e "${YELLOW}⚠️  AGGRESSIVE OPTIMIZATION WARNING${NC}"
+            echo -e "${RED}This will aggressively remove development dependencies and apply${NC}"
+            echo -e "${RED}Docker-style optimizations for maximum space savings.${NC}"
+            echo ""
+            echo -e "${CYAN}Potential risks:${NC}"
+            echo -e "  • May remove dependencies needed for some advanced features"
+            echo -e "  • Harder to debug issues if they occur"
+            echo -e "  • Some development tools may not work"
+            echo ""
+            echo -e "${GREEN}Benefits:${NC}"
+            echo -e "  • Significantly smaller disk usage (~400-500MB vs ~800MB)"
+            echo -e "  • Faster deployments and backups"
+            echo -e "  • More suitable for resource-constrained environments"
+            echo ""
+            read -p "Continue with aggressive optimization? (y/n) [n]: " aggressive_confirm
+            if [[ ! "$aggressive_confirm" =~ ^[Yy]$ ]]; then
+                OPTIMIZATION_LEVEL="safe"
+                echo -e "${GREEN}✅ Switched to safe optimization${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Aggressive optimization confirmed${NC}"
+            fi
+        else
+            OPTIMIZATION_LEVEL="safe"
+        fi
+        
         read -p "Proceed with default settings? (y/n) [y]: " default_confirm
         if [[ ! "$default_confirm" =~ ^[Yy]?$ ]]; then
             info "Update cancelled by user"
@@ -1333,9 +1438,68 @@ run_update_wizard() {
         else
             enable_rollback="no"
         fi
+        
+        # NEW STEP 6: Optimization Level
+        echo ""
+        echo -e "${CYAN}🔧 Optimization Level:${NC}"
+        echo -e "  Choose how aggressively to optimize the installation size:"
+        echo ""
+        echo -e "  1) ${GREEN}Safe Optimization${NC} (recommended)"
+        echo -e "     • Removes only known development dependencies"
+        echo -e "     • Preserves all production-needed packages"
+        echo -e "     • Final size: ~600-800MB"
+        echo -e "     • ${GREEN}Safest option - all features work${NC}"
+        echo ""
+        echo -e "  2) ${YELLOW}Aggressive Optimization${NC} (⚠️  use with caution)"
+        echo -e "     • Removes development dependencies + additional cleanup"
+        echo -e "     • Uses Docker-style optimizations"
+        echo -e "     • Final size: ~400-500MB"
+        echo -e "     • ${YELLOW}May affect debugging capabilities${NC}"
+        echo ""
+        read -p "Select optimization level [1]: " opt_level_input
+        opt_level_input=${opt_level_input:-1}
+        
+        if [ "$opt_level_input" = "2" ]; then
+            echo ""
+            echo -e "${RED}⚠️  AGGRESSIVE OPTIMIZATION WARNING${NC}"
+            echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${YELLOW}This mode will apply additional optimizations beyond safe removal:${NC}"
+            echo ""
+            echo -e "${RED}What it does:${NC}"
+            echo -e "  • Removes ALL development dependencies (safe removal)"
+            echo -e "  • Applies ultra-aggressive cleanup (Docker-style)"
+            echo -e "  • Removes duplicate packages and unused files"
+            echo -e "  • Compresses assets and removes debug information"
+            echo -e "  • Removes platform-specific binaries for other architectures"
+            echo ""
+            echo -e "${YELLOW}Potential risks:${NC}"
+            echo -e "  • May remove dependencies needed for edge-case features"
+            echo -e "  • Source maps and debugging info will be removed"
+            echo -e "  • Some development tools may not work if needed later"
+            echo -e "  • Harder to troubleshoot issues if they occur"
+            echo ""
+            echo -e "${GREEN}When to use aggressive mode:${NC}"
+            echo -e "  • Production environments with limited storage"
+            echo -e "  • Docker containers where size matters"
+            echo -e "  • Embedded systems or VPS with small disk"
+            echo -e "  • When you prioritise disk space over debugging capability"
+            echo ""
+            echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+            echo ""
+            read -p "Still proceed with aggressive optimization? (y/n) [n]: " aggressive_confirm
+            if [[ "$aggressive_confirm" =~ ^[Yy]$ ]]; then
+                OPTIMIZATION_LEVEL="aggressive"
+                warn "Aggressive optimization confirmed - proceed with caution"
+            else
+                OPTIMIZATION_LEVEL="safe"
+                success "Using safe optimization instead"
+            fi
+        else
+            OPTIMIZATION_LEVEL="safe"
+        fi
     fi
     
-    # STEP 6: Show Summary and Confirm
+    # STEP 7: Show Summary and Confirm
     echo ""
     echo -e "${WHITE}📋 UPDATE SUMMARY${NC}"
     echo -e "${CYAN}════════════════════════════════════════${NC}"
@@ -1351,6 +1515,7 @@ run_update_wizard() {
     echo -e "${BLUE}Target Version:${NC} $version_choice"
     echo -e "${BLUE}Environment Preservation:${NC} $preserve_env"
     echo -e "${BLUE}Rollback Protection:${NC} $enable_rollback"
+    echo -e "${BLUE}Optimization Level:${NC} $OPTIMIZATION_LEVEL"
     echo ""
     
     echo -e "${CYAN}Update Process:${NC}"
@@ -1530,10 +1695,23 @@ cleanup_build_artifacts() {
     success "Build artifacts cleaned up successfully"
 }
 
-# Optimize dependencies for production deployment (PRECISE SELECTIVE VERSION)
-# This runs AFTER build is complete and only removes packages listed in devDependencies
+# Production optimization dispatcher - chooses safe or aggressive based on user preference
 optimize_production_deployment() {
-    info "🚀 Optimizing for production deployment (precise selective removal)..."
+    info "🚀 Starting production optimization..."
+    info "   Selected level: ${OPTIMIZATION_LEVEL^^}"
+    
+    if [ "${OPTIMIZATION_LEVEL:-safe}" = "aggressive" ]; then
+        warn "⚠️  Applying AGGRESSIVE optimization (maximum space reduction)"
+        optimize_production_aggressive
+    else
+        info "✅ Applying SAFE optimization (recommended)"
+        optimize_production_safe
+    fi
+}
+
+# Safe production optimization - only removes actual devDependencies from package.json
+optimize_production_safe() {
+    info "🛡️  SAFE production optimization (precise selective removal)..."
     
     # Backend: Remove only packages that are in devDependencies
     info "  → Backend: Removing packages listed in devDependencies..."
@@ -1587,17 +1765,116 @@ optimize_production_deployment() {
         fi
     fi
     
-    # Remove unnecessary cache and temp files
-    info "  → Cleaning caches and temporary files..."
+    # Basic cleanup only
+    info "  → Basic cleanup (caches and temporary files)..."
     sudo -u profolio rm -rf frontend/.next/cache backend/node_modules/.cache 2>/dev/null || true
     sudo -u profolio rm -rf frontend/node_modules/.cache backend/.npm 2>/dev/null || true
     sudo -u profolio npm cache clean --force 2>/dev/null || true
     
-    # Calculate and show space savings
-    local final_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
-    info "  → Final optimized size: $final_size"
+    # Calculate and show results
+    cd /opt/profolio
+    local final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
+    local frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
+    local backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
     
-    success "✅ Precise production optimization completed - only removed true devDependencies"
+    success "✅ SAFE production optimization completed"
+    info "    Final application size: $final_size"
+    info "    Frontend node_modules: $frontend_nm_size"
+    info "    Backend node_modules: $backend_nm_size"
+    info "    Optimization level: SAFE (all features preserved)"
+}
+
+# Aggressive production optimization - applies ultra-aggressive cleanup
+optimize_production_aggressive() {
+    info "☢️  AGGRESSIVE production optimization (ultra-aggressive cleanup)..."
+    
+    # First do safe optimization
+    info "  → Step 1: Safe removal of devDependencies..."
+    optimize_production_safe
+    
+    cd /opt/profolio
+    
+    # Ultra-aggressive cleanup
+    info "  → Step 2: Ultra-aggressive cleanup (Docker-style optimization)..."
+    
+    # Remove duplicate packages and deduplicate node_modules
+    info "    • Deduplicating node_modules..."
+    cd frontend && sudo -u profolio npm dedupe --silent 2>/dev/null || true
+    cd ../backend && sudo -u profolio npm dedupe --silent 2>/dev/null || true
+    cd ..
+    
+    # Remove source maps and debug files
+    info "    • Removing source maps and debug files..."
+    sudo -u profolio find . -name "*.map" -delete 2>/dev/null || true
+    sudo -u profolio find . -name "*.d.ts.map" -delete 2>/dev/null || true
+    sudo -u profolio find . -name "tsconfig.tsbuildinfo" -delete 2>/dev/null || true
+    
+    # Remove test files and documentation
+    info "    • Removing test files and documentation..."
+    sudo -u profolio find ./node_modules -name "test" -type d -exec rm -rf {} + 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "__tests__" -type d -exec rm -rf {} + 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "*.test.js" -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "*.spec.js" -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "README*" -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "CHANGELOG*" -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "*.md" -delete 2>/dev/null || true
+    
+    # Remove example and demo files
+    info "    • Removing examples and demo files..."
+    sudo -u profolio find ./node_modules -name "example*" -type d -exec rm -rf {} + 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "demo*" -type d -exec rm -rf {} + 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "sample*" -type d -exec rm -rf {} + 2>/dev/null || true
+    
+    # Remove platform-specific binaries for other architectures
+    info "    • Removing platform-specific binaries..."
+    local current_arch=$(uname -m)
+    if [ "$current_arch" = "x86_64" ]; then
+        # Remove ARM binaries if we're on x86_64
+        sudo -u profolio find ./node_modules -path "*/prebuilds/linux-arm*" -exec rm -rf {} + 2>/dev/null || true
+        sudo -u profolio find ./node_modules -path "*/prebuilds/darwin-*" -exec rm -rf {} + 2>/dev/null || true
+        sudo -u profolio find ./node_modules -path "*/prebuilds/win32-*" -exec rm -rf {} + 2>/dev/null || true
+    fi
+    
+    # Remove unnecessary locale files
+    info "    • Removing unnecessary locale files..."
+    sudo -u profolio find ./node_modules -path "*/locales/*" ! -name "en*" -delete 2>/dev/null || true
+    
+    # Remove font files that aren't being used
+    info "    • Cleaning up unused font files..."
+    sudo -u profolio find ./node_modules -name "*.woff" -size +100k -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "*.woff2" -size +100k -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "*.ttf" -size +100k -delete 2>/dev/null || true
+    
+    # Remove large image files in node_modules
+    info "    • Removing large image files..."
+    sudo -u profolio find ./node_modules -name "*.png" -size +50k -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "*.jpg" -size +50k -delete 2>/dev/null || true
+    sudo -u profolio find ./node_modules -name "*.jpeg" -size +50k -delete 2>/dev/null || true
+    
+    # Aggressive cache cleanup
+    info "    • Aggressive cache and temporary file cleanup..."
+    sudo -u profolio rm -rf frontend/.next/trace frontend/.next/static/chunks/*.map 2>/dev/null || true
+    sudo -u profolio rm -rf backend/dist/*.map backend/.tsbuildinfo 2>/dev/null || true
+    sudo -u profolio rm -rf ~/.npm ~/.cache/npm ~/.config/npm 2>/dev/null || true
+    sudo -u profolio find . -name ".cache" -type d -exec rm -rf {} + 2>/dev/null || true
+    sudo -u profolio find . -name "*.log" -delete 2>/dev/null || true
+    
+    # Final calculations and warnings
+    cd /opt/profolio
+    local final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
+    local frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
+    local backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
+    
+    success "✅ AGGRESSIVE production optimization completed"
+    warn "    Final application size: $final_size"
+    warn "    Frontend node_modules: $frontend_nm_size"  
+    warn "    Backend node_modules: $backend_nm_size"
+    warn "    Optimization level: AGGRESSIVE (debugging capabilities reduced)"
+    echo ""
+    echo -e "${YELLOW}⚠️  AGGRESSIVE OPTIMIZATION APPLIED${NC}"
+    echo -e "${RED}Note: Some debugging and development capabilities have been removed${NC}"
+    echo -e "${RED}If you encounter issues, consider reinstalling with safe optimization${NC}"
 }
 
 # Update the installer script itself to latest version
