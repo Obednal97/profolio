@@ -303,6 +303,13 @@ docs/
 - [ ] README.md (if major changes or new features)
 - [ ] Installation guide (if process changed)
 
+### 🚨 CRITICAL: Release Notes Content Requirements
+- [ ] **NO LINKS**: Remove all GitHub links, documentation links, or external references
+- [ ] **NO SIGN-OFFS**: Remove "enjoy" messages or similar endings
+- [ ] **Clean Markdown**: Use simple formatting compatible with updates page parser
+- [ ] **Content Focus**: Include only information users need to know about the release
+- [ ] **Parser Compatibility**: Test that content displays correctly in updates page
+
 ## 🚨 Emergency Hotfix Process
 
 For critical fixes that can't wait for the next planned release:

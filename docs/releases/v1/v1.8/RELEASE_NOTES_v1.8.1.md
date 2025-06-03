@@ -115,22 +115,10 @@ systemctl status profolio-backend profolio-frontend
 
 ---
 
-## 🔗 **Links**
-- [GitHub Release](https://github.com/Obednal97/profolio/releases/tag/v1.8.1)
-- [Installation Guide](../../../README.md)
-- [Changelog](../../../CHANGELOG.md)
-- [Documentation](../../../docs/)
-
----
-
 ## 📊 **Release Statistics**
 - **Commits Since v1.8.0**: 13 commits with installer and optimization improvements
 - **Files Enhanced**: Multiple installer and optimization components
 - **Features Added**: 4 major installer improvements
 - **Critical Bugs Fixed**: 4 production deployment issues resolved
 - **Performance Impact**: Up to 66% space reduction with 99.8% bandwidth savings on updates
-- **Compatibility**: 100% backward compatible, zero breaking changes
-
----
-
-**This release represents a significant advancement in Profolio's installation and deployment experience, offering unprecedented control over space optimization while maintaining production reliability and safety.** 
+- **Compatibility**: 100% backward compatible, zero breaking changes 

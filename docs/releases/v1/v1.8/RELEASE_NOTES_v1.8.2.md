@@ -98,14 +98,6 @@ node scripts/generate-png-icons.mjs
 
 ---
 
-## 🔗 **Links**
-- [GitHub Release](https://github.com/Obednal97/profolio/releases/tag/v1.8.2)
-- [Installation Guide](../../../README.md)
-- [Changelog](../../../CHANGELOG.md)
-- [Documentation](../../../docs/)
-
----
-
 ## 📊 **Release Statistics**
 - **Files Modified**: 5 core PWA configuration files
 - **Bug Fixed**: 1 critical home screen icon display issue

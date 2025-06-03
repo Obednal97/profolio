@@ -85,16 +85,4 @@ The update automatically:
 After installation, verify the beautiful new status bar:
 1. **Install PWA**: Use browser's "Add to Home Screen" or "Install App"
 2. **Launch PWA**: Open from home screen or desktop
-3. **Visual Check**: Status bar should seamlessly match your gradient background
-
----
-
-## 🔗 **Links**
-- [GitHub Release](https://github.com/Obednal97/profolio/releases/tag/v1.8.3)
-- [Installation Guide](../../../README.md)
-- [PWA Documentation](../../../features/pwa-system.md)
-- [Full Changelog](../../../CHANGELOG.md)
-
----
-
-**Enjoy your beautifully cohesive PWA experience! 🎨✨** 
+3. **Visual Check**: Status bar should seamlessly match your gradient background 

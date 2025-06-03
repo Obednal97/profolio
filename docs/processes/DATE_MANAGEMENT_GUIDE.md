@@ -74,6 +74,24 @@ echo "Timezone: $(date +%Z)"
 
 ---
 
+## 🚨 **Critical Content Requirements**
+
+### **Release Notes Content Standards**
+- **❌ NO LINKS**: Remove all GitHub links, documentation links, or external references
+- **❌ NO SIGN-OFFS**: Remove "enjoy" messages or similar endings  
+- **✅ CLEAN MARKDOWN**: Use simple formatting compatible with updates page parser
+- **✅ CONTENT FOCUS**: Include only information users need to know about the release
+- **✅ PARSER COMPATIBILITY**: Test that content displays correctly in updates page
+
+### **Updates Page Compatibility**
+The updates page parses release notes markdown with specific requirements:
+- Handles headers (##, ###), lists (-), code blocks (```)
+- Breaks on complex nested links or reference-style formatting
+- Needs clean, straightforward markdown structure
+- Focuses on actual release content, not external navigation
+
+---
+
 ## ⚠️ **Common Mistakes to Avoid**
 
 ### **❌ Hardcoding Dates**

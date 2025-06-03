@@ -71,19 +71,11 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/[username]/[repo]/main/i
 
 ---
 
-## 🔗 **Links**
-- [GitHub Release](https://github.com/[username]/[repo]/releases/tag/v[VERSION])
-- [Installation Guide](README.md)
-- [Documentation](docs/)
-
----
-
 ## 📝 **Template Instructions**
 
 ### **Required Sections:**
 - New Features OR Bug Fixes OR Improvements (at least one)
 - Installation & Updates
-- Links
 
 ### **Optional Sections:**
 Remove sections that don't apply:
@@ -91,9 +83,22 @@ Remove sections that don't apply:
 - Bug Fixes (if none) 
 - Improvements (if none)
 
+### **❌ DO NOT INCLUDE:**
+- Links sections (GitHub links, documentation links, etc.)
+- Sign-offs or "enjoy" messages at the end
+- External references that break updates page parsing
+
+### **✅ UPDATES PAGE COMPATIBILITY:**
+- Use clean markdown without complex nested links
+- Keep formatting simple for parser compatibility
+- Focus on content that users need to know
+- Avoid reference-style links or complex formatting
+
 ### **Before Publishing:**
 1. Replace all `[placeholders]` with actual content
 2. Remove unused sections
-3. Update all links to point to correct locations
-4. Use "Month Day, Year" date format (e.g., "June 2, 2025")
-5. Keep descriptions concise and user-focused 
+3. **Remove links section entirely**
+4. **Remove any sign-off messages**
+5. Use "Month Day, Year" date format (e.g., "June 2, 2025")
+6. Keep descriptions concise and user-focused 
+7. Test that markdown parses correctly in updates page 
