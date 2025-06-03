@@ -216,6 +216,11 @@ get_available_versions() {
 version_exists() {
     local version="$1"
     
+    # Critical: Input validation for production reliability
+    if [[ -z "$version" ]]; then
+        return 1  # Fail silently for empty input
+    fi
+    
     # Special cases
     case "$version" in
         "main"|"latest"|"")
@@ -228,15 +233,15 @@ version_exists() {
         version="v$version"
     fi
     
-    # Check if tag exists on GitHub
+    # Check if tag exists on GitHub (suppress errors for clean output)
     local status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 30 \
-        "https://api.github.com/repos/Obednal97/profolio/releases/tags/$version")
+        "https://api.github.com/repos/Obednal97/profolio/releases/tags/$version" 2>/dev/null)
     
     if [ "$status_code" = "200" ]; then
         return 0
     else
-        # Fallback: check if it exists as a git tag
-        if git ls-remote --tags origin | grep -q "refs/tags/$version$"; then
+        # Fallback: check if it exists as a git tag (suppress errors)
+        if git ls-remote --tags origin 2>/dev/null | grep -q "refs/tags/$version$"; then
             return 0
         else
             return 1
