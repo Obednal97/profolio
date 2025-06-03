@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.8.5] - 2025-06-03
+
+### 🐛 Bug Fixes
+- **FIXED: Installer Git Conflict**: Resolved "untracked working tree files would be overwritten" error during updates
+- **FIXED: Package Lock Conflicts**: Enhanced installer to handle package-lock.json conflicts in production environments
+
+### 🔧 Improvements
+#### Installation & Updates
+- **Robust Update Process**: Installer now properly handles file conflicts during version switching
+- **Production Compatibility**: Enhanced compatibility with production environments where lock files may differ
+
+### 📊 Summary
+- **Files Changed**: Package version updates and installer compatibility improvements
+- **Issues Resolved**: 1 critical installer failure
+- **Compatibility**: Enhanced production environment update reliability
+
 ## [v1.8.4] - 2025-06-03
 
 ### 🐛 Bug Fixes
