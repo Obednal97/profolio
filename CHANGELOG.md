@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.8.3] - 2025-01-03
+
+### 🎨 UI/UX Improvements
+- **Enhanced PWA Status Bar**: Updated status bar colour from blue-500 (`#3b82f6`) to blue-600 (`#2563eb`) to seamlessly match the app's beautiful blue-to-purple gradient background
+- **Consistent Theme Colours**: Aligned PWA manifest theme colour, viewport theme colour, and Windows tile colour for perfect cross-platform visual harmony
+- **Seamless Gradient Flow**: Status bar now beautifully flows into the app's gradient instead of having a jarring colour break
+
+### 🔧 Improvements
+#### Technical
+- **PWA Manifest Enhancement**: Updated `theme_color` in manifest.json for consistent branding across all PWA installations
+- **Cross-Platform Consistency**: Updated viewport meta tag and Windows tile colour for unified visual experience
+- **Colour System Alignment**: Status bar now uses the exact starting colour of the app's gradient (`#2563eb` blue-600)
+
+### 📱 Platform Compatibility
+- **iOS Safari**: Status bar seamlessly blends with gradient on iPhone and iPad PWA installations
+- **Android Chrome**: Beautiful colour harmony when app is added to home screen
+- **Desktop PWA**: Consistent theme colour across all desktop PWA installations
+- **Windows Tiles**: Updated tile colour for Windows Start Menu integration
+
+### 📊 Summary
+- **Files Changed**: 2 files modified (manifest.json, layout.tsx)
+- **Visual Impact**: Eliminated jarring blue status bar break, achieved perfect gradient harmony
+- **Cross-Platform**: Enhanced PWA visual experience across iOS, Android, and desktop installations
+
 ## [v1.8.2] - 2025-01-18
 
 ### 🐛 Bug Fixes
