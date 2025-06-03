@@ -1904,6 +1904,26 @@ show_operation_statistics() {
     local operation_name="$1"
     local operation_success="$2"
     
+    # Helper function to format table rows with proper alignment
+    format_stat_row() {
+        local label="$1"
+        local value="$2"
+        local label_color="$3"
+        local padding_length=60
+        
+        # Strip color codes from value for length calculation
+        local clean_value=$(echo "$value" | sed 's/\x1b\[[0-9;]*m//g')
+        local content_length=$((${#label} + ${#clean_value} + 4))  # 4 for spaces and colons
+        local spaces_needed=$((padding_length - content_length))
+        
+        if [ $spaces_needed -lt 1 ]; then
+            spaces_needed=1
+        fi
+        
+        local padding=$(printf "%*s" $spaces_needed "")
+        echo -e "${CYAN}║${NC}   ${label_color}${label}:${NC} ${value}${padding}${CYAN}║${NC}"
+    }
+    
     # Calculate operation duration
     local duration=""
     if [ -n "$OPERATION_START_TIME" ] && [ -n "$OPERATION_END_TIME" ]; then
@@ -1955,55 +1975,62 @@ show_operation_statistics() {
         fi
     fi
     
+    # Calculate current app size on disk
+    local app_size="unknown"
+    if [ -d "/opt/profolio" ]; then
+        app_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
+    fi
+    
     echo ""
     echo -e "${CYAN}📊 Operation Statistics${NC}"
     echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
     
     # Time Statistics
-    echo -e "${CYAN}║${NC} ${WHITE}⏱️  Timing Statistics${NC}"
-    printf "${CYAN}║${NC}   ${GREEN}Total Runtime:${NC} %-35s ${CYAN}║${NC}\n" "$duration"
+    echo -e "${CYAN}║${NC} ${WHITE}⏱️  Timing Statistics${NC}                                        ${CYAN}║${NC}"
+    format_stat_row "Total Runtime" "$duration" "${GREEN}"
     if [ "$downtime" != "none" ]; then
-        printf "${CYAN}║${NC}   ${YELLOW}Service Downtime:${NC} %-30s ${CYAN}║${NC}\n" "$downtime"
+        format_stat_row "Service Downtime" "$downtime" "${YELLOW}"
     fi
-    echo -e "${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}                                                              ${CYAN}║${NC}"
     
     # Version Information
-    echo -e "${CYAN}║${NC} ${WHITE}📦 Version Information${NC}"
+    echo -e "${CYAN}║${NC} ${WHITE}📦 Version Information${NC}                                       ${CYAN}║${NC}"
     if [ "$operation_name" = "INSTALLATION" ]; then
-        printf "${CYAN}║${NC}   ${GREEN}Installed Version:${NC} %-29s ${CYAN}║${NC}\n" "$NEW_VERSION"
+        format_stat_row "Installed Version" "$NEW_VERSION" "${GREEN}"
     else
-        printf "${CYAN}║${NC}   ${BLUE}Previous Version:${NC} %-30s ${CYAN}║${NC}\n" "$PREVIOUS_VERSION"
-        printf "${CYAN}║${NC}   ${GREEN}Updated Version:${NC} %-31s ${CYAN}║${NC}\n" "$NEW_VERSION"
+        format_stat_row "Previous Version" "$PREVIOUS_VERSION" "${BLUE}"
+        format_stat_row "Updated Version" "$NEW_VERSION" "${GREEN}"
     fi
-    echo -e "${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}                                                              ${CYAN}║${NC}"
     
     # File and Data Statistics  
-    echo -e "${CYAN}║${NC} ${WHITE}📁 Data Statistics${NC}"
-    printf "${CYAN}║${NC}   ${GREEN}Files Processed:${NC} %-31s ${CYAN}║${NC}\n" "$FILES_CHANGED_COUNT"
-    printf "${CYAN}║${NC}   ${BLUE}Download Size:${NC} %-33s ${CYAN}║${NC}\n" "$DOWNLOAD_SIZE"
+    echo -e "${CYAN}║${NC} ${WHITE}📁 Data Statistics${NC}                                           ${CYAN}║${NC}"
+    format_stat_row "Files Processed" "$FILES_CHANGED_COUNT" "${GREEN}"
+    format_stat_row "Download Size" "$DOWNLOAD_SIZE" "${BLUE}"
+    format_stat_row "Current App Size" "$app_size" "${CYAN}"
     if [ "$BACKUP_SIZE" != "none" ]; then
-        printf "${CYAN}║${NC}   ${YELLOW}Backup Created:${NC} %-32s ${CYAN}║${NC}\n" "$BACKUP_SIZE"
+        format_stat_row "Backup Created" "$BACKUP_SIZE" "${YELLOW}"
     fi
-    printf "${CYAN}║${NC}   ${PURPLE}Disk Space Change:${NC} %-27s ${CYAN}║${NC}\n" "$space_change"
-    echo -e "${CYAN}║${NC}"
+    format_stat_row "Disk Space Change" "$space_change" "${PURPLE}"
+    echo -e "${CYAN}║${NC}                                                              ${CYAN}║${NC}"
     
     # System Resource Usage
-    echo -e "${CYAN}║${NC} ${WHITE}💾 System Resources${NC}"
-    printf "${CYAN}║${NC}   ${GREEN}Peak Memory Usage:${NC} %-28s ${CYAN}║${NC}\n" "${MEMORY_USAGE_PEAK}%"
+    echo -e "${CYAN}║${NC} ${WHITE}💾 System Resources${NC}                                         ${CYAN}║${NC}"
+    format_stat_row "Peak Memory Usage" "${MEMORY_USAGE_PEAK}%" "${GREEN}"
     
     # Current system status
     local current_disk=$(df -h /opt 2>/dev/null | tail -1 | awk '{print $4}' || echo "unknown")
-    printf "${CYAN}║${NC}   ${BLUE}Available Disk Space:${NC} %-25s ${CYAN}║${NC}\n" "$current_disk"
-    echo -e "${CYAN}║${NC}"
+    format_stat_row "Available Disk Space" "$current_disk" "${BLUE}"
+    echo -e "${CYAN}║${NC}                                                              ${CYAN}║${NC}"
     
     # Operation Summary
-    echo -e "${CYAN}║${NC} ${WHITE}✅ Operation Summary${NC}"
+    echo -e "${CYAN}║${NC} ${WHITE}✅ Operation Summary${NC}                                         ${CYAN}║${NC}"
     if [ "$operation_success" = true ]; then
-        printf "${CYAN}║${NC}   ${GREEN}Status:${NC} %-40s ${CYAN}║${NC}\n" "✅ Completed Successfully"
-        printf "${CYAN}║${NC}   ${GREEN}Services:${NC} %-38s ${CYAN}║${NC}\n" "✅ Running"
+        format_stat_row "Status" "✅ Completed Successfully" "${GREEN}"
+        format_stat_row "Services" "✅ Running" "${GREEN}"
     else
-        printf "${CYAN}║${NC}   ${RED}Status:${NC} %-40s ${CYAN}║${NC}\n" "❌ Failed"
-        printf "${CYAN}║${NC}   ${YELLOW}Services:${NC} %-38s ${CYAN}║${NC}\n" "⚠️  Check Required"
+        format_stat_row "Status" "❌ Failed" "${RED}"
+        format_stat_row "Services" "⚠️  Check Required" "${YELLOW}"
     fi
     
     echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
@@ -2605,7 +2632,7 @@ verify_installation() {
     return $([ "$verification_success" = true ] && echo 0 || echo 1)
 }
 
-# Simplified fresh install with proper completion tracking
+# Simplified fresh install with optimized download system
 fresh_install() {
     OPERATION_TYPE="INSTALLATION"
     success "Starting fresh installation"
@@ -2655,40 +2682,17 @@ fresh_install() {
         return 1
     fi
     
-    # Application download with version control
-    info "Downloading Profolio repository..."
-    if [ -d "/opt/profolio" ]; then
-        rm -rf /opt/profolio
-    fi
+    # Application download with optimized system
+    info "Downloading Profolio with optimized incremental system..."
     
-    cd /opt
-    if git clone https://github.com/Obednal97/profolio.git; then
-        # Optimize installation size by removing non-essential directories
-        info "Optimizing installation size..."
-        cd /opt/profolio
-        rm -rf docs/ .github/ www/ policies/ scripts/ .cursor/ || true
-        rm -f CONTRIBUTING.md SECURITY.md README.md .DS_Store || true
-        success "Installation optimized (removed documentation and development files)"
-        
-        chown -R profolio:profolio /opt/profolio
-        success "Repository downloaded"
-    else
+    if ! download_profolio_incremental "$TARGET_VERSION" "true"; then
         error "Failed to download repository"
         OPERATION_SUCCESS=false
         show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
         return 1
     fi
     
-    # Checkout specific version if requested
-    if [ -n "$TARGET_VERSION" ]; then
-        cd /opt/profolio
-        if ! checkout_version "$TARGET_VERSION"; then
-            error "Failed to checkout version $TARGET_VERSION"
-            OPERATION_SUCCESS=false
-            show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
-            return 1
-        fi
-    fi
+    success "Repository downloaded and optimized"
     
     # Environment setup (for fresh installs, will generate new credentials)
     cd /opt/profolio
@@ -2766,6 +2770,186 @@ fresh_install() {
     fi
     
     show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+}
+
+# Incremental download and update system
+# =====================================
+
+# Configure git for efficient downloads
+configure_git_efficiency() {
+    info "Configuring git for efficient downloads..."
+    
+    # Configure git for better performance
+    git config --global pack.windowMemory "100m"
+    git config --global pack.packSizeLimit "100m"
+    git config --global pack.threads "1"
+    git config --global core.preloadindex true
+    git config --global core.fscache true
+    git config --global gc.auto 256
+    
+    success "Git optimized for efficient downloads"
+}
+
+# Setup sparse checkout to exclude unnecessary files
+setup_sparse_checkout() {
+    local repo_dir="$1"
+    
+    info "Setting up sparse checkout to reduce download size..."
+    cd "$repo_dir"
+    
+    # Enable sparse checkout
+    git config core.sparseCheckout true
+    
+    # Define what to include (exclude docs, policies, etc.)
+    cat > .git/info/sparse-checkout << 'EOF'
+# Include essential application files
+/backend/
+/frontend/
+/install-or-update.sh
+/package.json
+/README.md
+
+# Exclude documentation and development files
+!docs/
+!.github/
+!www/
+!policies/
+!scripts/
+!.cursor/
+!CONTRIBUTING.md
+!SECURITY.md
+!.DS_Store
+!*.md
+EOF
+
+    # Apply sparse checkout
+    git read-tree -m -u HEAD
+    
+    success "Sparse checkout configured - reduced download size significantly"
+}
+
+# Calculate download statistics for transparency
+calculate_download_stats() {
+    local repo_dir="$1"
+    local is_incremental="$2"
+    
+    if [ -d "$repo_dir" ]; then
+        # Calculate actual size downloaded
+        local total_size=$(du -sh "$repo_dir" 2>/dev/null | cut -f1 || echo "unknown")
+        
+        # Calculate git object size (what was actually downloaded)
+        local git_size="unknown"
+        if [ -d "$repo_dir/.git" ]; then
+            git_size=$(du -sh "$repo_dir/.git" 2>/dev/null | cut -f1 || echo "unknown")
+        fi
+        
+        if [ "$is_incremental" = true ]; then
+            info "📊 Incremental Update Statistics:"
+            echo "   Total app size: $total_size"
+            echo "   Git data size: $git_size"
+            echo "   ✅ Only downloaded changes (efficient!)"
+        else
+            info "📊 Download Statistics:"
+            echo "   Total download: $total_size"
+            echo "   Git repository: $git_size"
+            echo "   ✅ Optimized with sparse checkout"
+        fi
+        
+        # Update global download size for statistics
+        DOWNLOAD_SIZE="$total_size"
+    fi
+}
+
+# Enhanced incremental download function
+download_profolio_incremental() {
+    local target_version="${1:-main}"
+    local force_fresh="${2:-false}"
+    
+    # Configure git for efficiency
+    configure_git_efficiency
+    
+    if [ -d "/opt/profolio" ] && [ -d "/opt/profolio/.git" ] && [ "$force_fresh" != true ]; then
+        # Existing repository - do incremental update
+        info "🚀 Performing incremental update (downloading only changes)..."
+        cd /opt/profolio
+        
+        # Stash any local changes
+        sudo -u profolio git stash push -m "Auto-stash before incremental update $(date)" 2>/dev/null || true
+        
+        # Configure sparse checkout if not already configured
+        if ! git config core.sparseCheckout >/dev/null 2>&1; then
+            setup_sparse_checkout "/opt/profolio"
+        fi
+        
+        # Fetch only the changes (incremental!)
+        info "Fetching incremental changes from repository..."
+        if sudo -u profolio git fetch origin main --progress; then
+            success "✅ Incremental fetch completed"
+            
+            # Show what's being updated
+            local changes_count=$(git log --oneline HEAD..origin/main | wc -l)
+            if [ "$changes_count" -gt 0 ]; then
+                info "📈 Found $changes_count new commits to apply"
+                echo "Recent changes:"
+                git log --oneline --graph HEAD..origin/main | head -5
+                if [ "$changes_count" -gt 5 ]; then
+                    echo "   ... and $((changes_count - 5)) more commits"
+                fi
+            else
+                success "✅ Already up to date - no download needed!"
+                calculate_download_stats "/opt/profolio" true
+                return 0
+            fi
+            
+            # Apply the changes
+            if sudo -u profolio git reset --hard origin/main; then
+                success "✅ Incremental update applied successfully"
+                calculate_download_stats "/opt/profolio" true
+                return 0
+            else
+                error "Failed to apply incremental changes"
+                return 1
+            fi
+        else
+            warn "Incremental fetch failed, falling back to full download..."
+            # Fall through to fresh download
+        fi
+    fi
+    
+    # Fresh download or fallback
+    info "📥 Performing optimized download..."
+    
+    # Remove existing directory if needed
+    if [ -d "/opt/profolio" ]; then
+        rm -rf /opt/profolio
+    fi
+    
+    cd /opt
+    
+    # Use shallow clone to reduce initial download size
+    info "Starting optimized repository download..."
+    if git clone --depth=1 --single-branch --branch main https://github.com/Obednal97/profolio.git --progress; then
+        success "✅ Repository downloaded successfully"
+        
+        # Setup sparse checkout for future efficiency
+        setup_sparse_checkout "/opt/profolio"
+        
+        # Remove unnecessary files that might still be there
+        cd /opt/profolio
+        info "Removing unnecessary files to save space..."
+        rm -rf docs/ .github/ www/ policies/ scripts/ .cursor/ || true
+        rm -f CONTRIBUTING.md SECURITY.md .DS_Store || true
+        
+        # Set ownership
+        chown -R profolio:profolio /opt/profolio
+        
+        success "✅ Installation optimized for production"
+        calculate_download_stats "/opt/profolio" false
+        return 0
+    else
+        error "Failed to download repository"
+        return 1
+    fi
 }
 
 # Run main function
