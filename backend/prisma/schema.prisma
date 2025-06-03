@@ -16,6 +16,26 @@ model User {
   password    String
   updatedAt   DateTime    @default(now()) @updatedAt
   name        String?
+  
+  // Additional profile fields
+  phone       String?     // Phone number
+  country     String?     // User's country (separate from tax country)
+  bio         String?     // User bio/description
+  photoURL    String?     // Profile photo URL
+  location    String?     // City/State/Region
+  
+  // User preferences
+  preferredCurrency String? @default("USD")
+  theme             String? @default("system")
+  timezone          String? @default("UTC")
+  language          String? @default("en")
+  
+  // Authentication metadata
+  provider          String? // 'firebase', 'local', 'demo'
+  emailVerified     Boolean @default(false)
+  lastSignIn        DateTime?
+  
+  // Relationships
   apiKeys     ApiKey[]
   assets      Asset[]
   expenses    Expense[]

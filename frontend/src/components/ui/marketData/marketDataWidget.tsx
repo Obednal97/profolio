@@ -122,7 +122,7 @@ export function MarketDataWidget() {
       
       // Use the backend's cached symbol data for both demo and real users
       const response = await fetch(
-        `/api/integrations/symbols/cached-price/${encodeURIComponent(symbol)}`,
+        `/api/market-data/cached-price/${encodeURIComponent(symbol)}`,
         { headers }
       );
       

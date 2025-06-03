@@ -2,10 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { HeaderLayout as Header } from "@/components/layout/headerLayout";
+import { HeaderLayout } from './headerLayout';
 import { FooterLayout as Footer } from "@/components/layout/footerLayout";
 import DemoModeBanner from "@/components/layout/DemoModeBanner";
+import MobileBottomNav from "@/components/navigation/mobileBottomNav";
 import { useAuth } from "@/lib/unifiedAuth";
+import { createUserContext } from '@/lib/userUtils';
+import { motion } from "framer-motion";
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -28,6 +31,10 @@ export const useAppContext = () => {
   return context;
 };
 
+/**
+ * Layout wrapper that provides consistent header and user context across the app
+ * Uses centralized user utilities for consistent display logic
+ */
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname();
   const [currency, setCurrencyState] = useState<string>('USD');
@@ -57,55 +64,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     }
   }, []);
   
-  // Use database user profile or demo user - memoized to prevent re-renders
+  // Create consistent user context using centralized utility
   const currentUser = useMemo(() => {
-    console.log('🔄 [Layout] Creating currentUser with:', {
-      hasUser: !!user,
-      hasUserProfile: !!userProfile,
-      userProfileName: userProfile?.name,
-      userDisplayName: user?.displayName,
-      userEmail: user?.email,
-      isDemoMode
-    });
-    
-    if (user) {
-      // Priority: database profile name > Firebase displayName > email username
-      const name = userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User';
-      const result = {
-        id: user.id,
-        name: name,
-        email: user.email || ''
-      };
-      console.log('✅ [Layout] Using user data with name:', result.name, 'from:', userProfile?.name ? 'database' : 'firebase');
-      return result;
-    } else if (isDemoMode) {
-      // Check for stored demo user data
-      const demoUser = {
-        id: 'demo-user-id',
-        name: 'Demo User',
-        email: 'demo@profolio.com'
-      };
-      
-      if (typeof window !== 'undefined') {
-        try {
-          const storedUserData = localStorage.getItem('user-data');
-          if (storedUserData) {
-            const parsedData = JSON.parse(storedUserData);
-            demoUser.name = parsedData.name || demoUser.name;
-            demoUser.email = parsedData.email || demoUser.email;
-            console.log('✅ [Layout] Using stored demo profile:', demoUser.name);
-          } else {
-            console.log('🎭 [Layout] Using default demo user');
-          }
-        } catch (error) {
-          console.error('Error parsing demo user data:', error);
-        }
-      }
-      
-      return demoUser;
-    }
-    console.log('❌ [Layout] No user available');
-    return null;
+    return createUserContext(user, userProfile, isDemoMode);
   }, [user?.id, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
 
   // Cleanup function for abort controller
@@ -215,16 +176,22 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     formatCurrency,
   };
 
-  // Hide layout on auth pages and legacy paths
-  const hideLayout = pathname.startsWith('/auth') || 
-    ["/login", "/signup", "/signout"].some((path) => pathname.startsWith(path));
-  
-  // Check if we're in the app section
-  const isAppSection = pathname.startsWith("/app");
-  
-  // For app section, show current user (Firebase or demo)
-  // For public pages, show no user
-  const headerUser = isAppSection && currentUser ? currentUser : undefined;
+  // Define which paths should not show the header (only auth pages)
+  const hideHeaderPaths = [
+    '/auth/signIn',
+    '/auth/signUp',
+    '/auth/forgotPassword'
+  ];
+
+  const shouldShowHeader = !hideHeaderPaths.includes(pathname);
+
+  // For public pages, don't pass user data (will show sign in buttons)
+  // For app pages, pass user data (will show user menu)
+  const isAppSection = pathname.startsWith('/app');
+  const headerUser = isAppSection && currentUser ? {
+    name: currentUser.name,
+    email: currentUser.email
+  } : undefined;
 
   // Don't render layout until mounted to prevent hydration issues
   if (!mounted) {
@@ -234,14 +201,100 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <AppContext.Provider value={appValue}>
       <>
-        {/* Demo Mode Banner - appears above header when in demo mode */}
-        {isDemoMode && !hideLayout && <DemoModeBanner />}
+        {/* Animated background for app pages */}
+        {isAppSection && (
+          <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+            <motion.div 
+              className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400 to-indigo-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl"
+              animate={{
+                x: [0, 50, -30, 0],
+                y: [0, -30, 50, 0],
+                scale: [1, 1.1, 0.9, 1],
+              }}
+              transition={{
+                duration: 24,
+                ease: "easeInOut",
+                repeat: Infinity,
+              }}
+            />
+            <motion.div 
+              className="absolute top-1/4 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400 to-pink-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl"
+              animate={{
+                x: [0, -40, 30, 0],
+                y: [0, 40, -30, 0],
+                scale: [1, 0.9, 1.1, 1],
+              }}
+              transition={{
+                duration: 28,
+                ease: "easeInOut",
+                repeat: Infinity,
+                delay: 4,
+              }}
+            />
+            <motion.div 
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl"
+              animate={{
+                x: [0, 30, -30, 0],
+                y: [0, -30, 30, 0],
+                scale: [1, 1.2, 0.8, 1],
+              }}
+              transition={{
+                duration: 30,
+                ease: "easeInOut",
+                repeat: Infinity,
+                delay: 8,
+              }}
+            />
+            <motion.div 
+              className="absolute top-3/4 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-400 to-blue-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl"
+              animate={{
+                x: [0, 45, -35, 0],
+                y: [0, -35, 45, 0],
+                scale: [1, 1.05, 0.95, 1],
+              }}
+              transition={{
+                duration: 26,
+                ease: "easeInOut",
+                repeat: Infinity,
+                delay: 6,
+              }}
+            />
+            <motion.div 
+              className="absolute bottom-10 left-1/4 w-80 h-80 bg-gradient-to-tr from-orange-400 to-red-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl"
+              animate={{
+                x: [0, -40, 45, 0],
+                y: [0, 45, -40, 0],
+                scale: [1, 1.15, 0.85, 1],
+              }}
+              transition={{
+                duration: 32,
+                ease: "easeInOut",
+                repeat: Infinity,
+                delay: 12,
+              }}
+            />
+          </div>
+        )}
         
-        {!hideLayout && <Header user={headerUser} currentPath={pathname} />}
-        <main className="relative z-10">
+        {/* Demo Mode Banner - appears above header when in demo mode */}
+        {isDemoMode && shouldShowHeader && <DemoModeBanner />}
+        
+        {shouldShowHeader && (
+          <HeaderLayout 
+            user={headerUser} 
+            currentPath={pathname} 
+          />
+        )}
+        <main className={`relative z-10 ${headerUser ? 'pb-8 md:pb-0' : ''}`}>
           {children}
         </main>
-        {!hideLayout && <Footer />}
+        {!hideHeaderPaths.includes(pathname) && <Footer />}
+        
+        {/* Mobile Bottom Navigation - now shows for all users except auth pages */}
+        {!hideHeaderPaths.includes(pathname) && <MobileBottomNav user={headerUser} currentPath={pathname} />}
+        
+        {/* Add bottom padding for mobile navigation on pages where it's visible */}
+        {!hideHeaderPaths.includes(pathname) && <div className="h-20 md:hidden"></div>}
       </>
     </AppContext.Provider>
   );

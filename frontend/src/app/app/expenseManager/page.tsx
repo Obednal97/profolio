@@ -683,7 +683,7 @@ function ExpenseManager() {
 
   // Comprehensive Expense Manager Skeleton
   const ExpenseManagerSkeleton = () => (
-    <div className="min-h-screen bg-white dark:bg-[#101828] text-gray-900 dark:text-white">
+    <div className="min-h-screen text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
         {/* Header skeleton */}
         <div className="mb-8">
@@ -943,11 +943,10 @@ function ExpenseManager() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#101828] text-gray-900 dark:text-white">
-      <BulkActionsBar />
-      
+    <div className="min-h-screen text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
-        {/* Header */}
+        <BulkActionsBar />
+        
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1012,7 +1011,6 @@ function ExpenseManager() {
           </motion.div>
         )}
 
-        {/* Smart Search Bar */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1045,7 +1043,6 @@ function ExpenseManager() {
           )}
         </motion.div>
 
-        {/* Tab Navigation */}
         <div className="flex space-x-1 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
           <button
             onClick={() => setActiveTab("expenses")}
@@ -1071,7 +1068,6 @@ function ExpenseManager() {
           </button>
         </div>
 
-        {/* Tab Content */}
         <AnimatePresence mode="wait">
           {activeTab === "expenses" ? (
             <motion.div
@@ -1080,7 +1076,6 @@ function ExpenseManager() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
             >
-              {/* Summary Cards */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1162,7 +1157,6 @@ function ExpenseManager() {
                 </div>
               </motion.div>
 
-              {/* Charts Section */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1210,7 +1204,6 @@ function ExpenseManager() {
                 </div>
               </motion.div>
 
-              {/* Filter and View Controls */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1334,10 +1327,8 @@ function ExpenseManager() {
                 </div>
               </motion.div>
 
-              {/* Advanced Filters */}
               <AdvancedFilters />
 
-              {/* Bulk Selection Controls for Table View */}
               {viewMode === "table" && filteredExpenses.length > 0 && (
                 <div className="flex items-center justify-between mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="flex items-center space-x-4">
@@ -1391,7 +1382,6 @@ function ExpenseManager() {
                 </div>
               )}
 
-              {/* Expenses Grid/List/Table */}
               <AnimatePresence mode="wait">
                 <ErrorBoundary error={error || undefined} retry={fetchExpenses}>
                   {loading ? (
@@ -1526,7 +1516,6 @@ function ExpenseManager() {
           )}
         </AnimatePresence>
 
-        {/* Modal */}
         {showModal && (
           <ExpenseModal
             onClose={handleCloseModal}

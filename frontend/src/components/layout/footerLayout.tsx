@@ -2,9 +2,13 @@ import React from "react";
 
 interface FooterLayoutProps {
   children?: React.ReactNode;
+  user?: {
+    name?: string;
+    email?: string;
+  };
 }
 
-export const FooterLayout: React.FC<FooterLayoutProps> = ({}) => {
+export const FooterLayout: React.FC<FooterLayoutProps> = () => {
   return (
     <div className="flex flex-col bg-background text-foreground flex-1">
       <footer className="w-full border-t border-white/10 px-6 py-6 text-sm text-muted-foreground">

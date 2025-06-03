@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, UserCredential } from 'firebase/auth';
 import {
   signInWithEmail,
@@ -23,9 +23,43 @@ interface AuthContextType {
   resetUserPassword: (email: string) => Promise<void>;
   token: string | null;
   refreshUserProfile: () => Promise<void>;
+  checkTokenExpiration: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Configuration for token expiration
+const TOKEN_EXPIRATION_CONFIG = {
+  cloud: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
+  selfHosted: {
+    default: 30 * 24 * 60 * 60 * 1000, // 30 days default
+    options: {
+      '1day': 24 * 60 * 60 * 1000,
+      '7days': 7 * 24 * 60 * 60 * 1000,
+      '30days': 30 * 24 * 60 * 60 * 1000,
+      'unlimited': 0
+    }
+  }
+};
+
+// Check if we're in cloud mode (you can adjust this logic based on your deployment)
+const isCloudMode = () => {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.includes('.vercel.app') || 
+         window.location.hostname.includes('.netlify.app') ||
+         process.env.NODE_ENV === 'production';
+};
+
+// Global function to handle API response errors
+const handleApiError = (response: Response) => {
+  if (response.status === 401 || response.status === 403) {
+    console.warn('🔒 [Auth] Received 401/403, triggering automatic sign out');
+    // Trigger sign out event
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    return true;
+  }
+  return false;
+};
 
 // Helper function to extract and persist Google profile data
 async function extractAndPersistGoogleProfile(user: User) {
@@ -37,54 +71,86 @@ async function extractAndPersistGoogleProfile(user: User) {
       return; // Not a Google sign-in, skip
     }
 
-    // First, check if we already have a profile for this user
-    const { apiCall } = await import('./mockApi');
-    const existingProfileResponse = await apiCall('/api/user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        method: 'GET_PROFILE_FROM_STORAGE',
-        userId: user.uid
-      }),
-    });
-    
-    const existingData = await existingProfileResponse.json();
-    
-    // If user already has a profile with data, don't overwrite it
-    if (existingData.user && existingData.user.name) {
-      console.log('✅ User profile already exists, skipping Google data import');
-      return;
-    }
-
-    // Only save Google data for new users (first sign-up)
-    console.log('🆕 New user detected, saving Google profile data');
+    console.log('🆕 Google sign-in detected, saving profile data');
     
     const profileData = {
       name: user.displayName || user.email?.split('@')[0] || 'User',
       email: user.email || '',
       phone: user.phoneNumber || '',
       photoURL: user.photoURL || '',
-      provider: 'google',
+      provider: 'firebase',
       emailVerified: user.emailVerified,
-      createdAt: user.metadata.creationTime,
-      lastSignIn: user.metadata.lastSignInTime,
-      lastUpdated: Date.now(),
+      lastSignIn: new Date().toISOString(),
     };
 
-    await apiCall('/api/user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        method: 'UPDATE_PROFILE',
-        userId: user.uid,
-        profileData
-      }),
+    // Get Firebase token and exchange it for backend JWT
+    const firebaseToken = await user.getIdToken();
+    const backendToken = await exchangeFirebaseTokenForBackendJWT(firebaseToken);
+
+    if (!backendToken) {
+      console.warn('Failed to exchange Firebase token for backend JWT');
+      return;
+    }
+
+    const response = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${backendToken}`,
+      },
+      body: JSON.stringify(profileData),
     });
 
-    console.log('✅ Google profile data saved for new user:', user.uid);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.warn('Failed to save Google profile to database:', errorData.message || response.statusText);
+      return; // Don't throw - this shouldn't break the auth flow
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('✅ Google profile data saved for user:', user.uid);
+    } else {
+      console.warn('❌ Failed to save Google profile:', data.message);
+    }
   } catch (error) {
     console.error('❌ Failed to persist Google profile data:', error);
     // Don't throw - this shouldn't break the auth flow
+  }
+}
+
+// Helper function to exchange Firebase token for backend JWT
+async function exchangeFirebaseTokenForBackendJWT(firebaseToken: string): Promise<string | null> {
+  try {
+    console.log('🔄 Exchanging Firebase token for backend JWT...');
+    
+    const response = await fetch('/api/auth/firebase-exchange', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ firebaseToken }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Token exchange failed:', errorData.message || response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.success && data.token) {
+      console.log('✅ Firebase token exchanged for backend JWT');
+      return data.token;
+    } else {
+      console.error('Token exchange failed: No token in response');
+      return null;
+    }
+  } catch (error) {
+    console.error('Token exchange error:', error);
+    return null;
   }
 }
 
@@ -94,6 +160,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+
+  // Handle automatic sign out on unauthorized responses
+  const handleUnauthorized = useCallback(async () => {
+    console.warn('🔒 [Auth] Handling unauthorized access, signing out user');
+    await signOut();
+  }, []);
+
+  // Check token expiration based on mode and settings
+  const checkTokenExpiration = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      // Get user's last sign-in time from database
+      const backendToken = localStorage.getItem('auth-token') || localStorage.getItem('userToken');
+      if (!backendToken) return false;
+
+      const response = await fetch('/api/auth/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${backendToken}`,
+        },
+      });
+
+      if (handleApiError(response)) {
+        return false;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user?.lastSignIn) {
+          const lastSignIn = new Date(data.user.lastSignIn);
+          const now = new Date();
+          const timeDiff = now.getTime() - lastSignIn.getTime();
+
+          let expirationTime: number;
+
+          if (isCloudMode()) {
+            // Cloud mode: 30 days fixed
+            expirationTime = TOKEN_EXPIRATION_CONFIG.cloud;
+          } else {
+            // Self-hosted mode: check user preferences or use default
+            const userTokenExpiration = localStorage.getItem('auth-token-expiration') || '30days';
+            expirationTime = TOKEN_EXPIRATION_CONFIG.selfHosted.options[userTokenExpiration as keyof typeof TOKEN_EXPIRATION_CONFIG.selfHosted.options] || TOKEN_EXPIRATION_CONFIG.selfHosted.default;
+          }
+
+          // If unlimited (0), never expire
+          if (expirationTime === 0) return true;
+
+          // Check if token has expired
+          if (timeDiff > expirationTime) {
+            console.warn('🕐 [Auth] Token expired, signing out user');
+            await signOut();
+            return false;
+          }
+
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error('Token expiration check error:', error);
+    }
+
+    return false;
+  }, [user]);
+
+  useEffect(() => {
+    // Listen for unauthorized events
+    const handleUnauthorizedEvent = () => {
+      handleUnauthorized();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorizedEvent);
+
+    // Check token expiration periodically (every 5 minutes)
+    const tokenCheckInterval = setInterval(checkTokenExpiration, 5 * 60 * 1000);
+
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorizedEvent);
+      clearInterval(tokenCheckInterval);
+    };
+  }, [handleUnauthorized, checkTokenExpiration]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -189,19 +336,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('🔄 [Auth] Fetching user profile for:', userId);
-      const { apiCall } = await import('./mockApi');
-      const response = await apiCall('/api/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          method: 'GET_PROFILE',
-          userId: userId
-        }),
-      });
       
+      // Get current user to obtain token
+      const currentUser = user;
+      if (!currentUser) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Always get fresh Firebase token
+      const firebaseToken = await currentUser.getIdToken(); // Get fresh token
+      
+      // Try to exchange Firebase token for backend JWT
+      let backendToken = await exchangeFirebaseTokenForBackendJWT(firebaseToken);
+      
+      if (backendToken) {
+        // Store the backend token
+        localStorage.setItem('auth-token', backendToken);
+        console.log('✅ [Auth] Backend JWT token obtained and stored');
+      } else {
+        console.warn('⚠️ [Auth] Failed to exchange Firebase token, checking stored token');
+        // Try to use stored token
+        backendToken = localStorage.getItem('auth-token');
+        
+        if (!backendToken) {
+          throw new Error('No authentication token available');
+        }
+      }
+
+      const response = await fetch('/api/auth/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${backendToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        // If token is invalid, try to get a fresh one
+        if (response.status === 401) {
+          console.log('🔄 [Auth] Token expired, getting fresh token...');
+          const freshFirebaseToken = await currentUser.getIdToken();
+          const freshBackendToken = await exchangeFirebaseTokenForBackendJWT(freshFirebaseToken);
+          
+          if (freshBackendToken) {
+            localStorage.setItem('auth-token', freshBackendToken);
+            
+            // Retry the request with fresh token
+            const retryResponse = await fetch('/api/auth/profile', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${freshBackendToken}`,
+              },
+            });
+            
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              if (retryData.success && retryData.user) {
+                const newProfile = {
+                  name: retryData.user.name || retryData.user.email?.split('@')[0] || 'User',
+                  email: retryData.user.email || '',
+                  phone: retryData.user.phone || '',
+                  photoURL: retryData.user.photoURL || ''
+                };
+                console.log('✅ [Auth] Profile updated with fresh token:', newProfile.name);
+                setUserProfile(newProfile);
+                return;
+              }
+            }
+          }
+        }
+        
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
       
-      if (data.user) {
+      if (data.success && data.user) {
         const newProfile = {
           name: data.user.name || data.user.email?.split('@')[0] || 'User',
           email: data.user.email || '',
@@ -210,9 +420,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         console.log('✅ [Auth] Profile updated:', newProfile.name);
         setUserProfile(newProfile);
+      } else {
+        // Fallback to Firebase user data
+        setUserProfile({
+          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email || '',
+          phone: currentUser.phoneNumber || '',
+          photoURL: currentUser.photoURL || ''
+        });
       }
     } catch (error) {
       console.error('❌ [Auth] Failed to fetch user profile:', error);
+      // Fallback to Firebase user data
+      if (user) {
+        setUserProfile({
+          name: user.displayName || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          phone: user.phoneNumber || '',
+          photoURL: user.photoURL || ''
+        });
+      }
       throw error;
     }
   };
@@ -240,6 +467,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetUserPassword: async () => { throw new Error('Authentication not available'); },
       token: null,
       refreshUserProfile: async () => { throw new Error('Authentication not available'); },
+      checkTokenExpiration: async () => { throw new Error('Authentication not available'); },
     };
 
     return (
@@ -267,30 +495,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Save initial profile data for email sign-ups
       if (userCredential.user) {
-        const { apiCall } = await import('./mockApi');
         const profileData = {
           name: displayName || email.split('@')[0] || 'User',
           email: email,
           phone: '',
           photoURL: '',
-          provider: 'email',
+          provider: 'firebase',
           emailVerified: false,
-          createdAt: new Date().toISOString(),
           lastSignIn: new Date().toISOString(),
-          lastUpdated: Date.now(),
         };
 
-        await apiCall('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            method: 'UPDATE_PROFILE',
-            userId: userCredential.user.uid,
-            profileData
-          }),
-        });
-        
-        console.log('✅ Initial profile created for email user:', userCredential.user.uid);
+        try {
+          // Get Firebase token to authenticate with backend
+          const token = await userCredential.user.getIdToken();
+
+          const response = await fetch('/api/auth/profile', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(profileData),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              console.log('✅ Initial profile created for email user:', userCredential.user.uid);
+            }
+          }
+        } catch (profileError) {
+          console.warn('Failed to save initial profile for email user:', profileError);
+          // Don't fail the entire sign-up process if profile save fails
+        }
       }
       
       // User state will be updated by the auth listener
@@ -385,6 +622,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetUserPassword,
     token,
     refreshUserProfile,
+    checkTokenExpiration,
   };
 
   return (

@@ -64,11 +64,57 @@ export function useNotifications(): UseNotificationsReturn {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+  // Get backend token with Firebase exchange if needed
+  const getBackendToken = useCallback(async (): Promise<string | null> => {
+    try {
+      // Try stored token first
+      const backendToken = localStorage.getItem('auth-token');
+      if (backendToken) {
+        return backendToken;
+      }
+
+      // If no stored token, try to exchange Firebase token
+      const { getFirebaseAuth } = await import('@/lib/firebase');
+      const auth = await getFirebaseAuth();
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        return null;
+      }
+
+      const firebaseToken = await currentUser.getIdToken();
+      
+      const response = await fetch('/api/auth/firebase-exchange', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ firebaseToken }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.token) {
+          localStorage.setItem('auth-token', data.token);
+          return data.token;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to get backend token:', error);
+      return null;
+    }
+  }, []);
+
   // API headers with auth - memoized to prevent recreation
-  const getHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  }), [token]);
+  const getHeaders = useCallback(async () => {
+    const backendToken = await getBackendToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(backendToken && { 'Authorization': `Bearer ${backendToken}` })
+    };
+  }, [getBackendToken]);
 
   // Fetch notifications
   const fetchNotifications = useCallback(async (filters: NotificationFilters = {}) => {
@@ -200,7 +246,7 @@ export function useNotifications(): UseNotificationsReturn {
       if (filters.offset) queryParams.set('offset', filters.offset.toString());
 
       const response = await fetch(`${API_BASE}/api/notifications?${queryParams}`, {
-        headers: getHeaders()
+        headers: await getHeaders()
       });
 
       if (!response.ok) {
@@ -267,7 +313,7 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       const response = await fetch(`${API_BASE}/api/notifications/${notificationId}/read`, {
         method: 'PUT',
-        headers: getHeaders()
+        headers: await getHeaders()
       });
 
       if (!response.ok) {
@@ -309,7 +355,7 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       const response = await fetch(`${API_BASE}/api/notifications/mark-all-read`, {
         method: 'PUT',
-        headers: getHeaders()
+        headers: await getHeaders()
       });
 
       if (!response.ok) {
@@ -350,7 +396,7 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       const response = await fetch(`${API_BASE}/api/notifications/${notificationId}`, {
         method: 'DELETE',
-        headers: getHeaders()
+        headers: await getHeaders()
       });
 
       if (!response.ok) {
@@ -384,7 +430,7 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       const response = await fetch(`${API_BASE}/api/notifications/read`, {
         method: 'DELETE',
-        headers: getHeaders()
+        headers: await getHeaders()
       });
 
       if (!response.ok) {
@@ -411,7 +457,7 @@ export function useNotifications(): UseNotificationsReturn {
 
     try {
       const response = await fetch(`${API_BASE}/api/notifications/unread-count`, {
-        headers: getHeaders()
+        headers: await getHeaders()
       });
 
       if (response.ok) {
@@ -425,7 +471,7 @@ export function useNotifications(): UseNotificationsReturn {
       console.error('Failed to refresh unread count:', err);
       // Don't show error to user for count refresh failures
     }
-  }, [token, API_BASE, getHeaders]); // Removed notifications dependency
+  }, [token, API_BASE, getHeaders]);
 
   // Auto-refresh unread count every 30 seconds - MEMORY LEAK FIX
   useEffect(() => {

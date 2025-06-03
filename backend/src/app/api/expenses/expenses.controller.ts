@@ -24,7 +24,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 
 @ApiTags('expenses')
 @ApiBearerAuth()
-@Controller('api/expenses')
+@Controller('expenses')
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class ExpensesController {

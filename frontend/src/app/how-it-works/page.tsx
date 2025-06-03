@@ -208,7 +208,7 @@ export default function HowItWorksPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden z-10 pt-20">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden z-10 pt-4 sm:pt-12 lg:pt-20">
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto text-center"
           initial="hidden"
@@ -216,7 +216,7 @@ export default function HowItWorksPage() {
           variants={container}
         >
           <motion.h1 
-            className="text-6xl sm:text-7xl lg:text-8xl font-black text-gray-900 dark:text-white mb-8 tracking-tight leading-none"
+            className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8 tracking-tight leading-none"
             variants={fadeUp}
           >
             How
@@ -229,7 +229,7 @@ export default function HowItWorksPage() {
           </motion.h1>
           
           <motion.p
-            className="text-xl sm:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-16 leading-relaxed font-medium"
+            className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-8 sm:mb-12 lg:mb-16 leading-relaxed font-medium"
             variants={fadeUp}
           >
             From scattered spreadsheets to complete financial clarity in minutes. 
@@ -238,7 +238,7 @@ export default function HowItWorksPage() {
 
           {/* Trust indicators */}
           <motion.div 
-            className="flex flex-wrap justify-center items-center gap-8 text-sm text-gray-600 dark:text-gray-400"
+            className="flex flex-wrap justify-center items-center gap-6 sm:gap-8 text-sm text-gray-600 dark:text-gray-400"
             variants={fadeIn}
           >
             <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* How It Works Steps */}
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12 z-10">
         <motion.div
           className="max-w-7xl mx-auto"
           initial="hidden"
@@ -266,17 +266,17 @@ export default function HowItWorksPage() {
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-20">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16 lg:mb-20">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Three Simple
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Steps</span>
             </h2>
-            <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
               Get up and running with Profolio in minutes. Start simple, scale as your needs grow.
             </p>
           </motion.div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             {steps.map((step, index) => (
               <motion.div key={index} variants={fadeUp} className="group relative">
                 <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
@@ -309,7 +309,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12 z-10">
         <motion.div
           className="max-w-6xl mx-auto"
           initial="hidden"
@@ -317,17 +317,17 @@ export default function HowItWorksPage() {
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-20">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16 lg:mb-20">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Powerful Features for
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"> Modern Wealth</span>
             </h2>
-            <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
               Everything you need to track, manage, and grow your wealth — without compromising on privacy or control.
             </p>
           </motion.div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
@@ -352,7 +352,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="relative py-32 px-6 sm:px-12">
+      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12">
         <motion.div
           className="max-w-6xl mx-auto"
           initial="hidden"
@@ -360,17 +360,17 @@ export default function HowItWorksPage() {
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-20">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16 lg:mb-20">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Trusted by
               <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Founders & Investors</span>
             </h2>
-            <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
               Join thousands who&apos;ve transformed their financial management with Profolio.
             </p>
           </motion.div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             {testimonials.map((testimonial, index) => (
               <motion.div
                 key={index}
@@ -399,7 +399,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12 z-10">
         <motion.div
           className="max-w-4xl mx-auto"
           initial="hidden"
@@ -407,12 +407,12 @@ export default function HowItWorksPage() {
           viewport={{ once: true, margin: "-100px" }}
           variants={container}
         >
-          <motion.div variants={fadeUp} className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <motion.div variants={fadeUp} className="text-center mb-10 sm:mb-12 lg:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Frequently Asked
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Questions</span>
             </h2>
-            <p className="text-xl text-gray-700 dark:text-gray-300">
+            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300">
               Get answers to common questions about Profolio.
             </p>
           </motion.div>
@@ -427,15 +427,30 @@ export default function HowItWorksPage() {
                   <span className="text-lg font-semibold text-gray-900 dark:text-white">
                     {faq.question}
                   </span>
-                  <i className={`fas fa-chevron-${openFaq === index ? 'up' : 'down'} text-gray-500 dark:text-gray-400 transition-transform duration-200`} />
+                  <motion.i 
+                    className={`fas fa-chevron-down text-gray-500 dark:text-gray-400`}
+                    animate={{ rotate: openFaq === index ? 180 : 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  />
                 </button>
-                {openFaq === index && (
+                <motion.div
+                  initial={false}
+                  animate={{
+                    height: openFaq === index ? "auto" : 0,
+                    opacity: openFaq === index ? 1 : 0
+                  }}
+                  transition={{
+                    height: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+                    opacity: { duration: 0.3, ease: "easeInOut" }
+                  }}
+                  className="overflow-hidden"
+                >
                   <div className="px-8 pb-6">
                     <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                       {faq.answer}
                     </p>
                   </div>
-                )}
+                </motion.div>
               </div>
             ))}
           </motion.div>
@@ -443,7 +458,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="relative py-32 px-6 sm:px-12 z-10">
+      <section className="relative py-16 sm:py-24 lg:py-32 px-6 sm:px-12 z-10">
         <motion.div
           className="max-w-5xl mx-auto text-center"
           initial="hidden"
@@ -451,12 +466,12 @@ export default function HowItWorksPage() {
           viewport={{ once: true }}
           variants={fadeUp}
         >
-          <div className="glass-tile p-16 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <div className="glass-tile p-10 sm:p-12 lg:p-16 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Ready to Take Control of Your
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Wealth</span>?
             </h2>
-            <p className="text-xl text-gray-700 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 mb-8 sm:mb-10 max-w-3xl mx-auto">
               Join thousands who have transformed how they manage their financial lives with Profolio.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">

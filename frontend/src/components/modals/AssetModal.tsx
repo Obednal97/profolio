@@ -351,7 +351,7 @@ export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalPr
       
       // First try to get cached price data (no live search)
       const cachedResponse = await fetch(
-        `/api/integrations/symbols/cached-price/${encodeURIComponent(symbol)}`,
+        `/api/market-data/cached-price/${encodeURIComponent(symbol)}`,
         { 
           headers,
           signal: controller.signal 

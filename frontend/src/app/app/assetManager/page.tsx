@@ -515,7 +515,7 @@ export default function AssetManager() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#101828] text-gray-900 dark:text-white">
+    <div className="min-h-screen text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
         <motion.div

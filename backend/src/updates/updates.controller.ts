@@ -23,7 +23,7 @@ export class StartUpdateDto {
 
 @ApiTags('updates')
 @ApiBearerAuth()
-@Controller('api/updates')
+@Controller('updates')
 @UseGuards(JwtAuthGuard)
 export class UpdatesController {
   constructor(private readonly updatesService: UpdatesService) {}

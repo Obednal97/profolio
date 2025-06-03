@@ -335,71 +335,144 @@ const ProfileTab = ({
 );
 
 // Security Tab component
-const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: (e: React.FormEvent) => Promise<void>; loading: boolean }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="space-y-6"
-  >
-    <form onSubmit={handlePasswordUpdate} className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Current Password
-        </label>
-        <input
-          type="password"
-          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-          required
-        />
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          New Password
-        </label>
-        <input
-          type="password"
-          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-          required
-        />
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Confirm New Password
-        </label>
-        <input
-          type="password"
-          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-          required
-        />
-      </div>
-      
-      <Button
-        type="submit"
-        disabled={loading}
-        className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 py-3"
-      >
-        {loading ? "Updating..." : "Update Password"}
-      </Button>
-    </form>
-    
-    <div className="border-t border-gray-200 dark:border-white/10 pt-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Two-Factor Authentication</h3>
-      <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-900 dark:text-white font-medium">Authenticator App</p>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Use an authenticator app to generate codes</p>
+const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: (e: React.FormEvent) => Promise<void>; loading: boolean }) => {
+  const [tokenExpiration, setTokenExpiration] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth-token-expiration') || '30days';
+    }
+    return '30days';
+  });
+
+  // Check if we're in cloud mode
+  const isCloudMode = typeof window !== 'undefined' && (
+    window.location.hostname.includes('.vercel.app') || 
+    window.location.hostname.includes('.netlify.app') ||
+    process.env.NODE_ENV === 'production'
+  );
+
+  const handleTokenExpirationChange = (value: string) => {
+    setTokenExpiration(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth-token-expiration', value);
+    }
+  };
+
+  const tokenOptions = [
+    { value: '1day', label: '1 Day' },
+    { value: '7days', label: '7 Days' },
+    { value: '30days', label: '30 Days' },
+    { value: 'unlimited', label: 'Unlimited' }
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      <form onSubmit={handlePasswordUpdate} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Current Password
+          </label>
+          <input
+            type="password"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            New Password
+          </label>
+          <input
+            type="password"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Confirm New Password
+          </label>
+          <input
+            type="password"
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+            required
+          />
+        </div>
+        
+        <Button
+          type="submit"
+          disabled={loading}
+          className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 py-3"
+        >
+          {loading ? "Updating..." : "Update Password"}
+        </Button>
+      </form>
+
+      {/* Session Management */}
+      <div className="border-t border-gray-200 dark:border-white/10 pt-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Session Management</h3>
+        
+        {!isCloudMode && (
+          <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10 mb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-gray-900 dark:text-white font-medium mb-2">Session Duration</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  Choose how long you stay signed in before being automatically logged out for security.
+                </p>
+                <select
+                  value={tokenExpiration}
+                  onChange={(e) => handleTokenExpirationChange(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+                >
+                  {tokenOptions.map((option) => (
+                    <option key={option.value} value={option.value} className="bg-white dark:bg-gray-800">
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
-          <Button variant="ghost" className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10">
-            Enable
-          </Button>
+        )}
+
+        {isCloudMode && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 backdrop-blur-sm rounded-xl p-6 border border-blue-200 dark:border-blue-800 mb-6">
+            <div className="flex items-center">
+              <i className="fas fa-info-circle text-blue-500 mr-3"></i>
+              <div>
+                <p className="text-blue-900 dark:text-blue-200 font-medium">Cloud Mode Security</p>
+                <p className="text-blue-700 dark:text-blue-300 text-sm">
+                  For security, sessions automatically expire after 30 days in cloud mode.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="border-t border-gray-200 dark:border-white/10 pt-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Two-Factor Authentication</h3>
+        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-900 dark:text-white font-medium">Authenticator App</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Use an authenticator app to generate codes</p>
+            </div>
+            <Button variant="ghost" className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10">
+              Enable
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 // Preferences Tab component
 const PreferencesTab = ({ 
@@ -528,6 +601,69 @@ const AccountTab = ({ setShowDeleteModal }: { setShowDeleteModal: (value: boolea
   </motion.div>
 );
 
+// Helper function to clear corrupted authentication data
+const clearAuthData = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('auth-token');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('firebase-token');
+    console.log('🧹 [Settings] Cleared corrupted authentication data');
+  }
+};
+
+// Helper function to get fresh authentication token
+const getFreshAuthToken = async (): Promise<string | null> => {
+  try {
+    console.log('🔄 [Settings] Getting fresh authentication token...');
+    
+    // Get Firebase auth instance
+    const { getFirebaseAuth } = await import('@/lib/firebase');
+    const auth = await getFirebaseAuth();
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+      console.warn('⚠️ [Settings] No Firebase user found');
+      return null;
+    }
+    
+    // Get fresh Firebase token
+    const firebaseToken = await currentUser.getIdToken(true); // Force refresh
+    console.log('✅ [Settings] Got fresh Firebase token');
+    
+    // Exchange for backend JWT
+    const response = await fetch('/api/auth/firebase-exchange', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ firebaseToken }),
+    });
+    
+    console.log('🔄 [Settings] Firebase token exchange response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [Settings] Token exchange failed:', response.status, errorText);
+      return null;
+    }
+    
+    const data = await response.json();
+    console.log('📄 [Settings] Token exchange response:', data);
+    
+    if (data.success && data.token) {
+      localStorage.setItem('auth-token', data.token);
+      console.log('✅ [Settings] Fresh backend JWT obtained and stored');
+      return data.token;
+    } else {
+      console.error('❌ [Settings] Token exchange successful but no token in response');
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ [Settings] Error getting fresh auth token:', error);
+    return null;
+  }
+};
+
 function SettingsPage() {
   const { user, refreshUserProfile } = useAuth(); // Use Firebase authentication and get refreshUserProfile
   const { theme } = useTheme(); // Get theme from theme provider
@@ -586,37 +722,76 @@ function SettingsPage() {
       try {
         console.log('Loading profile from database for user:', currentUser.id);
         
-        const { apiCall } = await import('@/lib/mockApi');
-        const response = await apiCall('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            method: 'GET_PROFILE_FROM_STORAGE',
-            userId: currentUser.id
-          }),
-        });
-        
-        const data = await response.json();
-        
-        if (data.user && !data.error) {
-          console.log('Profile loaded from database:', data.user);
-          setProfileData({
-            name: data.user.name || currentUser.name || '',
-            email: data.user.email || currentUser.email || '',
-            phone: data.user.phone || '',
-            bio: data.user.bio || '',
-            location: data.user.location || '',
-          });
+        if (isDemoMode) {
+          // For demo mode, load from localStorage
+          const storedUserData = localStorage.getItem('user-data');
+          if (storedUserData) {
+            const parsedData = JSON.parse(storedUserData);
+            setProfileData({
+              name: parsedData.name || currentUser.name || '',
+              email: parsedData.email || currentUser.email || '',
+              phone: parsedData.phone || '',
+              bio: parsedData.bio || '',
+              location: parsedData.location || '',
+            });
+          } else {
+            // Use current user data as fallback
+            setProfileData({
+              name: currentUser.name || '',
+              email: currentUser.email || '',
+              phone: '',
+              bio: '',
+              location: '',
+            });
+          }
         } else {
-          // No profile in database yet, use auth data as initial values
-          console.log('No profile in database, using auth data');
-          setProfileData({
-            name: currentUser.name || '',
-            email: currentUser.email || '',
-            phone: currentUser.phone || '',
-            bio: '',
-            location: '',
+          // Handle real user - use the new backend API endpoint
+          console.log('🔄 [Settings] Starting profile update...');
+          
+          // Clear any corrupted authentication data first
+          clearAuthData();
+          
+          // Get fresh authentication token
+          const backendToken = await getFreshAuthToken();
+          
+          if (!backendToken) {
+            throw new Error('Failed to obtain authentication token. Please sign out and sign in again.');
+          }
+
+          const response = await fetch('/api/auth/profile', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${backendToken}`,
+            },
           });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          
+          if (data.success && data.user) {
+            console.log('Profile loaded from database:', data.user);
+            setProfileData({
+              name: data.user.name || currentUser.name || '',
+              email: data.user.email || currentUser.email || '',
+              phone: data.user.phone || '',
+              bio: data.user.bio || '',
+              location: data.user.location || '',
+            });
+          } else {
+            // No profile in database yet, use auth data as initial values
+            console.log('No profile in database, using auth data');
+            setProfileData({
+              name: currentUser.name || '',
+              email: currentUser.email || '',
+              phone: '',
+              bio: '',
+              location: '',
+            });
+          }
         }
       } catch (error) {
         console.error('Failed to load profile from database:', error);
@@ -624,7 +799,7 @@ function SettingsPage() {
         setProfileData({
           name: currentUser.name || '',
           email: currentUser.email || '',
-          phone: currentUser.phone || '',
+          phone: '',
           bio: '',
           location: '',
         });
@@ -634,7 +809,7 @@ function SettingsPage() {
     };
 
     loadProfileFromDatabase();
-  }, [currentUser?.id]); // Only depend on user ID
+  }, [currentUser?.id, isDemoMode, user]);
 
   // Preferences state
   const [preferences, setPreferences] = useState<PreferencesType>({
@@ -700,32 +875,46 @@ function SettingsPage() {
         
         setSuccess('Profile updated successfully!');
         
-        // Force a complete refresh to ensure changes are visible everywhere
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
       } else {
-        // Handle real user - save to API and refresh auth context
-        const { apiCall } = await import('@/lib/mockApi');
-        const response = await apiCall('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            method: 'UPDATE_PROFILE',
-            userId: currentUser.id,
-            profileData: {
-              name: profileData.name,
-              email: profileData.email,
-              phone: profileData.phone,
-              lastUpdated: Date.now(),
-            }
+        // Handle real user - use the new backend API endpoint
+        console.log('🔄 [Settings] Starting profile update...');
+        
+        // Clear any corrupted authentication data first
+        clearAuthData();
+        
+        // Get fresh authentication token
+        const backendToken = await getFreshAuthToken();
+        
+        if (!backendToken) {
+          throw new Error('Failed to obtain authentication token. Please sign out and sign in again.');
+        }
+
+        const response = await fetch('/api/auth/profile', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${backendToken}`,
+          },
+          body: JSON.stringify({
+            name: profileData.name,
+            email: profileData.email,
+            phone: profileData.phone,
+            bio: profileData.bio,
+            location: profileData.location,
           }),
         });
 
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const data = await response.json();
         
-        if (data.error) {
-          throw new Error(data.error);
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to update profile');
         }
 
         console.log('✅ [Settings] Profile saved, refreshing...');
@@ -737,14 +926,9 @@ function SettingsPage() {
 
         setSuccess('Profile updated successfully!');
         
-        // Force a complete refresh to ensure changes are visible everywhere
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
       }
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('❌ [Settings] Profile update error:', error);
       setError(error instanceof Error ? error.message : 'Failed to update profile');
@@ -818,7 +1002,7 @@ function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#101828] text-gray-900 dark:text-white">
+    <div className="min-h-screen text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-4xl mx-auto">
         {/* Header */}
         <motion.div

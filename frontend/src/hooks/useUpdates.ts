@@ -112,8 +112,8 @@ export function useUpdates(): UseUpdatesReturn {
     githubAbortControllerRef.current = controller;
 
     try {
-      // Use the actual Profolio repository
-      const response = await fetch('https://api.github.com/repos/Obednal97/profolio/releases?per_page=10', {
+      // Increase limit to get more releases and ensure we capture the latest ones
+      const response = await fetch('https://api.github.com/repos/Obednal97/profolio/releases?per_page=30', {
         signal: controller.signal,
       });
       
@@ -127,30 +127,44 @@ export function useUpdates(): UseUpdatesReturn {
           published_at: string;
           html_url: string;
           prerelease: boolean;
+          draft: boolean;
         }>;
         
         if (controller.signal.aborted) return null;
         
-        // Filter out prereleases and map to our format
+        // Filter out prereleases and drafts, then sort by published date (newest first)
         const stableReleases = releases
-          .filter(release => !release.prerelease)
+          .filter(release => !release.prerelease && !release.draft)
+          .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
           .map((release, index) => ({
             version: release.tag_name.replace(/^v/, ''), // Remove 'v' prefix if present
             name: release.name || `Release ${release.tag_name}`,
             body: release.body || 'No release notes available.',
             publishedAt: release.published_at,
             downloadUrl: release.html_url,
-            isLatest: index === 0 // First release is latest
+            isLatest: index === 0 // First release after sorting is latest
           }));
           
+        // Debug log to help troubleshoot if still having issues
+        if (process.env.NODE_ENV === 'development') {
+          console.log('GitHub Releases fetched:', stableReleases.map(r => `v${r.version} (${r.publishedAt})`));
+        }
+          
         return stableReleases;
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('GitHub API response not ok:', response.status, response.statusText);
+        }
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         // Request was aborted, this is expected
         return null;
       }
-      console.log('GitHub API not available, using mock data for demo');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('GitHub API error:', error);
+        console.log('GitHub API not available, using mock data for demo');
+      }
     }
     return null;
   }, []);
@@ -189,7 +203,9 @@ export function useUpdates(): UseUpdatesReturn {
         // Request was aborted, this is expected
         return;
       }
-      console.log('Failed to fetch from GitHub, using mock data');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Failed to fetch from GitHub, using mock data');
+      }
     }
     
     // Fallback to backend API only for self-hosted installations with auth
@@ -236,12 +252,119 @@ export function useUpdates(): UseUpdatesReturn {
           // Request was aborted, this is expected
           return;
         }
-        console.log('Backend API failed, falling back to mock data');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Backend API failed, falling back to mock data');
+        }
       }
     }
     
     // Final fallback to mock data for development/demo
     const mockReleases = [
+      {
+        version: '1.7.1',
+        name: 'Profolio v1.7.1 - Enhanced UI & Mobile Optimisations',
+        body: `## 🚀 New Features
+- Mobile navigation bar for seamless app navigation
+- Enhanced authentication flow with Google OAuth priority
+- Responsive pricing page with feature comparison tables
+- FAQ sections with smooth animations
+- Demo mode consistency across all pages
+
+## ✨ Improvements  
+- Mobile-first responsive design across all pages
+- Optimised spacing and typography for mobile devices
+- Enhanced glass effects and visual polish
+- Improved footer layout and mobile navigation spacing
+- Better text wrapping and markdown support in release notes
+
+## 🐛 Bug Fixes
+- Fixed footer overlap issues on mobile devices
+- Resolved authentication page layout inconsistencies
+- Fixed apostrophe rendering in UI text
+- Corrected pricing card height alignment
+- Fixed release sorting and filtering issues`,
+        publishedAt: '2025-01-06T14:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.7.1',
+        isLatest: true
+      },
+      {
+        version: '1.7.0',
+        name: 'Profolio v1.7.0 - Major UI Overhaul',
+        body: `## 🚀 New Features
+- Complete UI redesign with enhanced visual hierarchy
+- Advanced pricing tiers with detailed feature comparison
+- Enhanced update management with cloud/self-hosted detection
+- Improved release notes with markdown formatting support
+- Better mobile experience across all pages
+
+## ✨ Improvements
+- Modernised colour scheme and typography
+- Enhanced glassmorphism effects throughout the app
+- Better responsive breakpoints for mobile devices
+- Improved accessibility with focus management
+- Optimised performance with better code splitting
+
+## 🐛 Bug Fixes
+- Fixed update page layout and navigation issues
+- Resolved release sorting and version detection
+- Fixed mobile viewport and scrolling issues
+- Corrected authentication state management`,
+        publishedAt: '2025-01-05T16:30:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.7.0',
+        isLatest: false
+      },
+      {
+        version: '1.6.0',
+        name: 'Profolio v1.6.0 - Enhanced Analytics & Notifications',
+        body: `## 🚀 New Features
+- Real-time notification system with badge indicators
+- Advanced portfolio performance analytics
+- Enhanced asset allocation visualisations
+- Automated rebalancing recommendations
+- Multi-currency support improvements
+
+## ✨ Improvements
+- Faster data synchronisation with improved caching
+- Enhanced error handling and user feedback
+- Better mobile responsiveness across all components
+- Optimised database queries for better performance
+- Improved security with enhanced authentication
+
+## 🐛 Bug Fixes
+- Fixed notification delivery reliability issues
+- Resolved portfolio calculation edge cases
+- Fixed timezone handling in transaction records
+- Corrected asset import validation logic`,
+        publishedAt: '2025-01-03T12:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.6.0',
+        isLatest: false
+      },
+      {
+        version: '1.5.0',
+        name: 'Profolio v1.5.0 - API Enhancements & Performance',
+        body: `## 🚀 New Features
+- Enhanced API key management with multiple providers
+- Improved market data synchronisation
+- Advanced portfolio history tracking
+- Enhanced security with rate limiting
+- Better error recovery mechanisms
+
+## ✨ Improvements
+- Significant performance improvements for large portfolios
+- Enhanced logging and monitoring capabilities
+- Better handling of API rate limits
+- Improved data validation and sanitisation
+- Enhanced user experience with loading states
+
+## 🐛 Bug Fixes
+- Fixed API synchronisation timeout issues
+- Resolved memory leaks in data fetching
+- Fixed chart rendering performance issues
+- Corrected currency conversion accuracy`,
+        publishedAt: '2025-01-01T10:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.5.0',
+        isLatest: false
+      },
       {
         version: '1.4.0',
         name: 'Profolio v1.4.0 - Enhanced Analytics',
@@ -265,9 +388,9 @@ export function useUpdates(): UseUpdatesReturn {
 - Fixed notification delivery reliability
 - Corrected asset import validation
 - Fixed responsive layout on tablets`,
-        publishedAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-        downloadUrl: 'https://github.com/Obednal97/profolio/releases/latest',
-        isLatest: true
+        publishedAt: '2024-12-20T16:00:00Z',
+        downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.4.0',
+        isLatest: false
       },
       {
         version: '1.3.0',
@@ -290,7 +413,7 @@ export function useUpdates(): UseUpdatesReturn {
 - Better rate limiting synchronization across services
 - Enhanced demo session management
 - Improved documentation organization`,
-        publishedAt: '2025-06-02T10:00:00Z',
+        publishedAt: '2024-12-02T10:00:00Z',
         downloadUrl: 'https://github.com/Obednal97/profolio/releases/tag/v1.3.0',
         isLatest: false
       },
@@ -382,33 +505,33 @@ export function useUpdates(): UseUpdatesReturn {
     ];
     
     // Get current version from environment or fallback
-    const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.3.0';
+    const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.7.1';
     
     const mockUpdateInfo: UpdateInfo = {
       currentVersion,
-      latestVersion: '1.4.0',
-      hasUpdate: currentVersion !== '1.4.0',
+      latestVersion: '1.7.1',
+      hasUpdate: currentVersion !== '1.7.1',
       releaseNotes: `## 🚀 New Features
-- Advanced portfolio analytics dashboard
-- Real-time market alerts and notifications
-- Enhanced asset allocation visualization
-- Automated rebalancing suggestions
-- Multi-timeframe performance analysis
+- Mobile navigation bar for seamless app navigation
+- Enhanced authentication flow with Google OAuth priority
+- Responsive pricing page with feature comparison tables
+- FAQ sections with smooth animations
+- Demo mode consistency across all pages
 
 ## ✨ Improvements  
-- Faster portfolio synchronization
-- Enhanced security measures
-- Better error handling and user feedback
-- Improved mobile responsiveness
-- Optimized database performance
+- Mobile-first responsive design across all pages
+- Optimised spacing and typography for mobile devices
+- Enhanced glass effects and visual polish
+- Improved footer layout and mobile navigation spacing
+- Better text wrapping and markdown support in release notes
 
 ## 🐛 Bug Fixes
-- Fixed portfolio calculation edge cases
-- Resolved timezone issues in transactions
-- Fixed notification delivery reliability
-- Corrected asset import validation
-- Fixed responsive layout on tablets`,
-      publishedAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+- Fixed footer overlap issues on mobile devices
+- Resolved authentication page layout inconsistencies
+- Fixed apostrophe rendering in UI text
+- Corrected pricing card height alignment
+- Fixed release sorting and filtering issues`,
+      publishedAt: '2025-01-06T14:00:00Z',
       downloadUrl: 'https://github.com/Obednal97/profolio/releases/latest',
       allReleases: mockReleases
     };
@@ -422,7 +545,9 @@ export function useUpdates(): UseUpdatesReturn {
   const startUpdate = useCallback(async (version?: string) => {
     // Prevent updates in demo mode
     if (isDemoMode()) {
-      console.log('Updates disabled in demo mode');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Updates disabled in demo mode');
+      }
       return;
     }
 

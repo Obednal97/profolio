@@ -164,7 +164,7 @@ export default function LandingPage() {
         />
       </div>
 
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden z-10 pt-20">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden z-10 pt-4 sm:pt-12 lg:pt-20">
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto text-center"
           initial="hidden"
@@ -172,7 +172,7 @@ export default function LandingPage() {
           variants={container}
         >
           <motion.div 
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-full glass-tile mb-8 shadow-xl"
+            className="inline-flex items-center gap-3 px-6 py-3 rounded-full glass-tile mb-4 sm:mb-6 lg:mb-8 shadow-xl"
             variants={fadeUp}
           >
             <div className="relative flex h-3 w-3">
@@ -185,7 +185,7 @@ export default function LandingPage() {
           </motion.div>
 
           <motion.h1 
-            className="text-6xl sm:text-7xl lg:text-8xl font-black text-gray-900 dark:text-white mb-8 tracking-tight leading-none"
+            className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8 tracking-tight leading-none"
             variants={fadeUp}
           >
             Your Wealth,
@@ -196,7 +196,7 @@ export default function LandingPage() {
           </motion.h1>
           
           <motion.p
-            className="text-xl sm:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-12 leading-relaxed font-medium"
+            className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-8 sm:mb-10 lg:mb-12 leading-relaxed font-medium"
             variants={fadeUp}
           >
             The modern financial operating system for tracking your entire portfolio. 
@@ -204,7 +204,7 @@ export default function LandingPage() {
             Assets, crypto, stocks, and properties — all in one beautiful interface.
           </motion.p>
 
-          <motion.div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16" variants={fadeUp}>
+          <motion.div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8 sm:mb-12 lg:mb-16" variants={fadeUp}>
             <Button asChild size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 border-0">
               <Link href="/auth/signUp">
                 <i className="fas fa-rocket mr-3" />

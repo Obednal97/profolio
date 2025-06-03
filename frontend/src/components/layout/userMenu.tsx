@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTheme } from "@/providers/theme-provider";
 import { useAuth } from "@/lib/unifiedAuth";
 import { useNotifications } from "@/hooks/useNotifications";
+import { getUserInitials, sanitizeText } from "@/lib/userUtils";
 
 interface UserMenuProps {
   user?: {
@@ -13,37 +14,28 @@ interface UserMenuProps {
   };
 }
 
-/**
- * Sanitize user input to prevent XSS attacks
- */
-const sanitizeText = (text: string | undefined): string => {
-  if (!text) return '';
-  return text.replace(/[<>]/g, '');
-};
-
-/**
- * Get safe initials from name
- */
-const getSafeInitials = (name: string | undefined): string => {
-  if (!name) return 'U';
-  return name
-    .split(' ')
-    .map(word => word.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-};
-
-export default function UserMenu({ user }: UserMenuProps) {
+export default function UserMenu({ user: propUser }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { signOut } = useAuth();
+  const { signOut, userProfile } = useAuth();
   const { unreadCount } = useNotifications();
 
-  // Sanitize user data
+  // Use auth context userProfile if available, fallback to prop user
+  const user = userProfile || propUser;
+
+  // Use centralized utilities for consistent user display
   const safeName = sanitizeText(user?.name);
   const safeEmail = sanitizeText(user?.email);
-  const safeInitials = getSafeInitials(user?.name);
+  
+  // Create UserData-compatible object for getUserInitials
+  const userData = user ? {
+    id: '', // Not needed for initials
+    email: user.email || null,
+    name: user.name || null,
+    displayName: user.name || null,
+  } : null;
+  
+  const safeInitials = getUserInitials(userData);
 
   const handleSignOut = async () => {
     try {
@@ -55,13 +47,6 @@ export default function UserMenu({ user }: UserMenuProps) {
       window.location.href = '/auth/signIn';
     }
   };
-
-  const profileMenuItems = [
-    { label: "Account Settings", path: "/app/settings", icon: "fa-cog", action: null },
-    { label: "System Updates", path: "/app/updates", icon: "fa-download", action: null },
-    { label: "Notifications", path: "/app/notifications", icon: "fa-bell", action: null },
-    { label: "Sign Out", path: null, icon: "fa-sign-out-alt", action: handleSignOut },
-  ];
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
@@ -75,12 +60,25 @@ export default function UserMenu({ user }: UserMenuProps) {
     return theme === "light" ? "Switch to dark mode" : "Switch to light mode";
   };
 
+  const profileMenuItems = [
+    { label: "Account Settings", path: "/app/settings", icon: "fa-cog", action: null },
+    { label: "System Updates", path: "/app/updates", icon: "fa-download", action: null },
+    { label: "Notifications", path: "/app/notifications", icon: "fa-bell", action: null },
+    { 
+      label: `Switch to ${theme === 'light' ? 'dark' : 'light'} mode`, 
+      path: null, 
+      icon: getThemeIcon(), 
+      action: toggleTheme 
+    },
+    { label: "Sign Out", path: null, icon: "fa-sign-out-alt", action: handleSignOut },
+  ];
+
   return (
     <div className="relative flex items-center gap-3">
-      {/* Theme Toggle with glass effect */}
+      {/* Theme Toggle with glass effect - hidden on mobile, moved to user menu */}
       <button
         onClick={toggleTheme}
-        className="p-2.5 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105"
+        className="hidden md:flex h-11 w-11 flex-shrink-0 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105 items-center justify-center"
         title={getThemeTooltip()}
         aria-label={getThemeTooltip()}
       >
@@ -93,11 +91,11 @@ export default function UserMenu({ user }: UserMenuProps) {
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-3 p-2 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105"
+              className="flex items-center gap-3 py-2.5 px-2 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105 h-11"
               aria-label="User menu"
             >
               {/* Avatar */}
-              <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold shadow-lg">
+              <div className="relative w-8 h-8 flex-shrink-0 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold shadow-lg">
                 {safeInitials}
                 {/* Notification badge */}
                 {unreadCount > 0 && (
@@ -109,12 +107,12 @@ export default function UserMenu({ user }: UserMenuProps) {
                 )}
               </div>
               
-              {/* User info (hidden on mobile) */}
-              <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px]">
+              {/* User info (hidden on mobile and small tablets) */}
+              <div className="hidden md:block text-left">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
                   {safeName || 'User'}
                 </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[120px]">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[150px]">
                   {safeEmail}
                 </p>
               </div>
@@ -137,7 +135,7 @@ export default function UserMenu({ user }: UserMenuProps) {
                   {/* User info header */}
                   <div className="px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold shadow-lg">
+                      <div className="w-10 h-10 flex-shrink-0 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold shadow-lg">
                         {safeInitials}
                       </div>
                       <div>
@@ -150,7 +148,7 @@ export default function UserMenu({ user }: UserMenuProps) {
                   {/* Menu items */}
                   <div className="py-1">
                     {profileMenuItems.map((item, index) => (
-                      <div key={index}>
+                      <div key={index} className={`${item.label.includes('mode') ? 'md:hidden' : ''}`}>
                         {item.path ? (
                           <Link
                             href={item.path}
@@ -183,19 +181,21 @@ export default function UserMenu({ user }: UserMenuProps) {
           </div>
         </>
       ) : (
-        /* Sign In/Up buttons with glass effect */
+        /* Sign in and sign up buttons for non-authenticated users */
         <div className="flex items-center gap-2">
           <Link
             href="/auth/signIn"
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium hover:bg-white/80 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200 shadow-lg hover:scale-105"
           >
-            Sign In
+            <i className="fas fa-sign-in-alt text-sm"></i>
+            <span className="hidden sm:inline">Sign In</span>
           </Link>
           <Link
             href="/auth/signUp"
-            className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all duration-200 hover:scale-105"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:scale-105"
           >
-            Sign Up
+            <i className="fas fa-user-plus text-sm"></i>
+            <span className="hidden sm:inline">Sign Up</span>
           </Link>
         </div>
       )}

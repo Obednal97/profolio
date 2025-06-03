@@ -132,13 +132,113 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
                   console.warn('Failed to get Firebase token:', tokenError);
                 }
                 
-                // Set user profile from Firebase data
-                setUserProfile({
-                  name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                  email: firebaseUser.email || '',
-                  phone: firebaseUser.phoneNumber || '',
-                  photoURL: firebaseUser.photoURL || '',
-                });
+                // FETCH profile from backend - this should be the authoritative source
+                try {
+                  console.log('🔄 [Auth] Fetching profile from backend during auth state change...');
+                  
+                  // Get fresh Firebase token for backend authentication
+                  const { getFirebaseAuth } = await import('./firebase');
+                  const auth = await getFirebaseAuth();
+                  const currentUser = auth.currentUser;
+                  
+                  if (!currentUser) {
+                    throw new Error('No current Firebase user');
+                  }
+                  
+                  const firebaseToken = await currentUser.getIdToken(true); // Force refresh
+                  
+                  // Exchange for backend JWT token
+                  const response = await fetch('/api/auth/firebase-exchange', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ firebaseToken }),
+                  });
+                  
+                  if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.token) {
+                      // Store the backend token
+                      localStorage.setItem('auth-token', data.token);
+                      setToken(data.token);
+                      
+                      // Fetch profile from backend
+                      const profileResponse = await fetch('/api/auth/profile', {
+                        method: 'GET',
+                        headers: {
+                          'Authorization': `Bearer ${data.token}`,
+                        },
+                      });
+                      
+                      if (profileResponse.ok) {
+                        const profileData = await profileResponse.json();
+                        
+                        if (profileData.success && profileData.user) {
+                          console.log('✅ [Auth] Backend profile found, using:', profileData.user.name);
+                          
+                          // Use backend profile as authoritative source
+                          setUserProfile({
+                            name: profileData.user.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                            email: profileData.user.email || firebaseUser.email || '',
+                            phone: profileData.user.phone || firebaseUser.phoneNumber || '',
+                            photoURL: profileData.user.photoURL || firebaseUser.photoURL || '',
+                          });
+                        } else {
+                          console.log('ℹ️ [Auth] No backend profile found, using Firebase data as fallback');
+                          
+                          // No backend profile yet, use Firebase data as fallback
+                          setUserProfile({
+                            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                            email: firebaseUser.email || '',
+                            phone: firebaseUser.phoneNumber || '',
+                            photoURL: firebaseUser.photoURL || '',
+                          });
+                        }
+                      } else {
+                        console.warn('⚠️ [Auth] Failed to fetch profile, using Firebase data');
+                        
+                        // Profile fetch failed, use Firebase data
+                        setUserProfile({
+                          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                          email: firebaseUser.email || '',
+                          phone: firebaseUser.phoneNumber || '',
+                          photoURL: firebaseUser.photoURL || '',
+                        });
+                      }
+                    } else {
+                      console.warn('⚠️ [Auth] Token exchange failed, using Firebase data');
+                      
+                      // Token exchange failed, use Firebase data
+                      setUserProfile({
+                        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                        email: firebaseUser.email || '',
+                        phone: firebaseUser.phoneNumber || '',
+                        photoURL: firebaseUser.photoURL || '',
+                      });
+                    }
+                  } else {
+                    console.warn('⚠️ [Auth] Token exchange request failed, using Firebase data');
+                    
+                    // Token exchange request failed, use Firebase data
+                    setUserProfile({
+                      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                      email: firebaseUser.email || '',
+                      phone: firebaseUser.phoneNumber || '',
+                      photoURL: firebaseUser.photoURL || '',
+                    });
+                  }
+                } catch (error) {
+                  console.error('❌ [Auth] Error fetching backend profile during auth state change:', error);
+                  
+                  // Error occurred, fallback to Firebase data
+                  setUserProfile({
+                    name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                    email: firebaseUser.email || '',
+                    phone: firebaseUser.phoneNumber || '',
+                    photoURL: firebaseUser.photoURL || '',
+                  });
+                }
               } else {
                 setUser(null);
                 setToken(null);
@@ -272,10 +372,91 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
   };
 
   const refreshUserProfile = async () => {
-    if (authMode === 'local') {
-      await localAuth.fetchUserProfile();
+    try {
+      if (authMode === 'local') {
+        await localAuth.fetchUserProfile();
+      } else if (authMode === 'firebase' && user) {
+        // For Firebase users, fetch the updated profile from the backend
+        console.log('🔄 [Auth] Refreshing Firebase user profile...');
+        
+        // Get Firebase token for backend authentication
+        const { getFirebaseAuth } = await import('./firebase');
+        const auth = await getFirebaseAuth();
+        const currentUser = auth.currentUser;
+        
+        if (!currentUser) {
+          console.warn('⚠️ [Auth] No Firebase user found during profile refresh');
+          return;
+        }
+        
+        // Get fresh Firebase token
+        const firebaseToken = await currentUser.getIdToken(true); // Force refresh
+        
+        // Exchange for backend JWT token
+        const response = await fetch('/api/auth/firebase-exchange', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ firebaseToken }),
+        });
+        
+        if (!response.ok) {
+          console.error('❌ [Auth] Token exchange failed during profile refresh');
+          return;
+        }
+        
+        const data = await response.json();
+        if (!data.success || !data.token) {
+          console.error('❌ [Auth] Invalid token exchange response');
+          return;
+        }
+        
+        // Fetch updated profile from backend
+        const profileResponse = await fetch('/api/auth/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${data.token}`,
+          },
+        });
+        
+        if (!profileResponse.ok) {
+          console.error('❌ [Auth] Failed to fetch profile:', profileResponse.status);
+          return;
+        }
+        
+        const profileData = await profileResponse.json();
+        
+        if (profileData.success && profileData.user) {
+          console.log('✅ [Auth] Profile refreshed successfully:', profileData.user.name);
+          
+          // Update userProfile state with fresh data from backend
+          setUserProfile({
+            name: profileData.user.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            email: profileData.user.email || currentUser.email || '',
+            phone: profileData.user.phone || currentUser.phoneNumber || '',
+            photoURL: profileData.user.photoURL || currentUser.photoURL || '',
+          });
+          
+          // Also update the auth token in localStorage for future requests
+          localStorage.setItem('auth-token', data.token);
+          setToken(data.token);
+        } else {
+          console.log('ℹ️ [Auth] No updated profile found in backend, using Firebase data');
+          
+          // Fallback to Firebase data if no backend profile exists
+          setUserProfile({
+            name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            email: currentUser.email || '',
+            phone: currentUser.phoneNumber || '',
+            photoURL: currentUser.photoURL || '',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ [Auth] Failed to refresh user profile:', error);
+      // Don't throw error to avoid breaking the UI
     }
-    // For Firebase, profile is automatically updated via auth state change
   };
 
   const value: UnifiedAuthContextType = {

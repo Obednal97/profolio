@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.8.0] - 2025-06-03
+
+### ✨ Features
+- **📝 Markdown Support in Release Notes**: Full markdown formatting support including bold, italic, links, inline code, and code blocks
+- **📱 Mobile-First Updates Page**: Complete responsive redesign with dropdown release selector and compact mobile layout
+- **🎯 Smart Release Detection**: Enhanced GitHub API integration with proper sorting and latest version detection
+
+### 🐛 Bug Fixes
+- **FIXED: Pricing Page Regressions**: Restored animated background orbs, fixed card height consistency, and glass effects
+- **FIXED: Apostrophe Rendering**: Resolved "What&apos;s" and similar HTML entity display issues throughout UI
+- **FIXED: Footer Padding Issues**: Eliminated excessive padding on logged-in pages that wasn't present on public pages
+- **FIXED: Release Sorting**: Latest version (1.7.1) now appears first in mobile dropdown instead of 1.4.0
+- **FIXED: Text Overflow**: Added proper text wrapping for URLs and long content in release notes
+
+### 🔧 Improvements
+#### UI/UX
+- **Desktop Theme Toggle**: Hidden theme toggle from user menu on desktop since standalone button exists
+- **Updates Page Structure**: Mobile-first with responsive breakpoints, transparent header with animated background
+- **Pricing Page Enhancement**: Restored "Most Popular" overlay banner and consistent card heights
+- **Text Wrapping**: Enhanced typography with proper word breaks and overflow handling
+
+#### Technical
+- **GitHub Release Fetching**: Increased API limit from 10 to 30 releases with better sorting and filtering
+- **Code Quality**: Cleaned up console.log statements to be development-mode only
+- **Background Consistency**: Fixed duplicate background orbs issue by using layout wrapper system
+- **Responsive Design**: Desktop sidebar layout preserved while optimizing mobile experience
+
+#### Performance
+- **Release Loading**: Improved release data fetching with better error handling and fallbacks
+- **Mobile Navigation**: Optimized mobile header with backdrop blur and transparent background
+
+### 📊 Summary
+- **Files Changed**: 8 files modified
+- **Features Added**: 3 new features (markdown support, mobile-first design, smart detection)
+- **Issues Resolved**: 5 critical UI/UX bugs
+- **Performance**: Enhanced GitHub API integration with 3x more releases fetched
+
 ## [v1.7.1] - 2025-06-02
 
 ### 🔧 Improvements

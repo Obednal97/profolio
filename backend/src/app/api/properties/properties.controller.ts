@@ -24,7 +24,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 
 @ApiTags('properties')
 @ApiBearerAuth()
-@Controller('api/properties')
+@Controller('properties')
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class PropertiesController {

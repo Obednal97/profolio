@@ -6,6 +6,7 @@ import Confetti from 'react-confetti';
 import NetWorthDisplay from '@/components/netWorthDisplay';
 import { MarketDataWidget } from '@/components/ui/marketData/marketDataWidget';
 import { useAuth } from '@/lib/unifiedAuth';
+import { createUserContext } from '@/lib/userUtils';
 import { 
   SkeletonCard, 
   SkeletonChart, 
@@ -137,41 +138,93 @@ export default function DashboardPage() {
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
   
-  // Use database user profile or demo user - same logic as LayoutWrapper
+  // Use centralized user context utility for consistent display
   const currentUser = useMemo(() => {
-    if (user) {
-      // Priority: database profile name > Firebase displayName > email username
-      const name = userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User';
-      return {
-        id: user.id,
-        name: name,
-        email: user.email || ''
-      };
-    } else if (isDemoMode) {
-      // Check for stored demo user data
-      const demoUser = {
-        id: 'demo-user-id',
-        name: 'Demo User',
-        email: 'demo@profolio.com'
-      };
-      
-      if (typeof window !== 'undefined') {
-        try {
-          const storedUserData = localStorage.getItem('user-data');
-          if (storedUserData) {
-            const parsedData = JSON.parse(storedUserData);
-            demoUser.name = parsedData.name || demoUser.name;
-            demoUser.email = parsedData.email || demoUser.email;
-          }
-        } catch (error) {
-          console.error('Error parsing demo user data:', error);
-        }
-      }
-      
-      return demoUser;
-    }
-    return null;
+    return createUserContext(user, userProfile, isDemoMode);
   }, [user?.id, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
+
+  // Dynamic greeting system
+  const greeting = useMemo(() => {
+    if (!currentUser?.name) return "Welcome to Profolio";
+    
+    const name = currentUser.name;
+    const isFirstVisit = typeof window !== 'undefined' && !localStorage.getItem('user-has-visited-dashboard');
+    
+    // First-time user greetings
+    if (isFirstVisit) {
+      const firstTimeGreetings = [
+        `Hey there ${name}, great to meet you! 👋`,
+        `Welcome to Profolio, ${name}! 🎉`,
+        `Hi ${name}! Excited to have you aboard! ✨`,
+        `Hello ${name}, let's build your wealth together! 💪`,
+        `Welcome ${name}! Your financial journey starts here 🚀`,
+        `Great to see you ${name}! Ready to take control? 📈`,
+      ];
+      return firstTimeGreetings[Math.floor(Math.random() * firstTimeGreetings.length)];
+    }
+    
+    // Returning user greetings - 20+ variations
+    const returningGreetings = [
+      `Welcome back, ${name}! 👋`,
+      `Hey ${name}! Ready to conquer today? 💪`,
+      `Good to see you again, ${name}! 🌟`,
+      `Hello ${name}! Let's check your progress 📊`,
+      `Hi there ${name}! Time to grow that wealth 📈`,
+      `${name}! Your portfolio awaits 💼`,
+      `Greetings ${name}! Another day, another opportunity 🎯`,
+      `Hey ${name}! Let's make some money moves 💰`,
+      `Welcome back ${name}! Fortune favours the prepared 🍀`,
+      `${name}! Ready to build your empire? 🏰`,
+      `Good day ${name}! Your financial future looks bright ☀️`,
+      `Hello ${name}! Time to check those gains 📊`,
+      `Hey there ${name}! Let's see what's happening 👀`,
+      `${name}! Another step towards financial freedom 🗽`,
+      `Welcome ${name}! Your wealth journey continues 🛤️`,
+      `Hi ${name}! Ready to make smart moves? 🧠`,
+      `Good to have you back, ${name}! 🤝`,
+      `${name}! Let's turn goals into reality 🎯`,
+      `Hey ${name}! Your future self will thank you 🙏`,
+      `Welcome back ${name}! Every day is a new opportunity 🌅`,
+      `Hello ${name}! Time to level up your game 🎮`,
+      `${name}! Ready to outsmart the market? 📈`,
+      `Hi there ${name}! Your dedication is inspiring 💎`,
+      `Welcome ${name}! Success is a journey, not a destination 🚀`,
+    ];
+    
+    return returningGreetings[Math.floor(Math.random() * returningGreetings.length)];
+  }, [currentUser?.name]);
+
+  // Dynamic subtitle
+  const subtitle = useMemo(() => {
+    const isFirstVisit = typeof window !== 'undefined' && !localStorage.getItem('user-has-visited-dashboard');
+    
+    if (isFirstVisit) {
+      const firstTimeSubtitles = [
+        "Let's set up your financial dashboard and start tracking your wealth",
+        "Welcome to your personal wealth command center",
+        "Time to take control of your financial future",
+        "Your journey to financial freedom starts here",
+        "Let's build something amazing together",
+        "Ready to transform how you manage money?",
+      ];
+      return firstTimeSubtitles[Math.floor(Math.random() * firstTimeSubtitles.length)];
+    }
+    
+    const returningSubtitles = [
+      "Here's your financial overview for today",
+      "Let's see how your portfolio is performing",
+      "Your wealth summary awaits",
+      "Time to check your financial progress",
+      "Here's what's happening with your investments",
+      "Your financial snapshot for today",
+      "Let's dive into your numbers",
+      "Ready to review your financial health?",
+      "Here's your latest portfolio update",
+      "Time to see how your money is working",
+    ];
+    
+    return returningSubtitles[Math.floor(Math.random() * returningSubtitles.length)];
+  }, [currentUser?.name]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -183,6 +236,11 @@ export default function DashboardPage() {
       try {
         setLoading(true);
         setError(null);
+        
+        // Mark that user has visited dashboard (for greeting system)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user-has-visited-dashboard', 'true');
+        }
         
         // Add artificial delay to show skeleton
         await new Promise(resolve => setTimeout(resolve, 800));
@@ -278,10 +336,10 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Welcome back, {currentUser?.name} 👋
+          {greeting}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Here&apos;s your financial overview for today
+          {subtitle}
         </p>
       </div>
 
