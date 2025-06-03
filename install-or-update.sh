@@ -899,7 +899,25 @@ run_configuration_wizard() {
     read -p "Select installation mode [1]: " install_mode
     install_mode=${install_mode:-1}
     
-    # NEW: Ask about optimization level for both quick and advanced install
+    if [ "$install_mode" = "1" ]; then
+        AUTO_INSTALL=true
+        # Quick install automatically uses safe optimization
+        OPTIMIZATION_LEVEL="safe"
+        echo ""
+        echo -e "${GREEN}📋 Quick Install Mode Selected${NC}"
+        echo -e "${CYAN}Final Settings:${NC}"
+        echo -e "  • Installation: Default configuration"
+        echo -e "  • Optimization: Safe (recommended)"
+        echo -e "  • SSH: Enabled with key-only authentication"
+        echo -e "  • Network: DHCP (automatic)"
+        echo ""
+        use_defaults
+        return
+    fi
+    
+    # ADVANCED MODE - Ask about optimization level
+    echo ""
+    echo -e "${BLUE}🔧 Advanced Mode Selected${NC}"
     echo ""
     echo -e "${CYAN}🔧 Optimization Level Choice:${NC}"
     echo -e "  Choose how aggressively to optimize the installation size:"
@@ -1300,50 +1318,17 @@ run_update_wizard() {
         
         echo -e "${CYAN}Environment Preservation:${NC} Yes (Firebase credentials preserved)"
         echo -e "${CYAN}Rollback Protection:${NC} Yes (automatic rollback on failure)"
+        echo -e "${CYAN}Optimization Level:${NC} Safe (recommended)"
         echo ""
         
-        # NEW: Ask about optimization level even in default mode
-        echo -e "${CYAN}🔧 Optimization Level Choice:${NC}"
-        echo -e "  1) ${GREEN}Safe Optimization${NC} (recommended - ~600-800MB, keeps all needed dependencies)"
-        echo -e "  2) ${YELLOW}Aggressive Optimization${NC} (⚠️  ~400-500MB, removes more dependencies - may break some features)"
-        echo ""
-        read -p "Select optimization level [1]: " opt_choice
-        opt_choice=${opt_choice:-1}
-        
-        if [ "$opt_choice" = "2" ]; then
-            OPTIMIZATION_LEVEL="aggressive"
-            echo ""
-            echo -e "${YELLOW}⚠️  AGGRESSIVE OPTIMIZATION WARNING${NC}"
-            echo -e "${RED}This will aggressively remove development dependencies and apply${NC}"
-            echo -e "${RED}Docker-style optimizations for maximum space savings.${NC}"
-            echo ""
-            echo -e "${CYAN}Potential risks:${NC}"
-            echo -e "  • May remove dependencies needed for some advanced features"
-            echo -e "  • Harder to debug issues if they occur"
-            echo -e "  • Some development tools may not work"
-            echo ""
-            echo -e "${GREEN}Benefits:${NC}"
-            echo -e "  • Significantly smaller disk usage (~400-500MB vs ~800MB)"
-            echo -e "  • Faster deployments and backups"
-            echo -e "  • More suitable for resource-constrained environments"
-            echo ""
-            read -p "Continue with aggressive optimization? (y/n) [n]: " aggressive_confirm
-            if [[ ! "$aggressive_confirm" =~ ^[Yy]$ ]]; then
-                OPTIMIZATION_LEVEL="safe"
-                echo -e "${GREEN}✅ Switched to safe optimization${NC}"
-            else
-                echo -e "${YELLOW}⚠️  Aggressive optimization confirmed${NC}"
-            fi
-        else
-            OPTIMIZATION_LEVEL="safe"
-        fi
+        # Default mode automatically uses safe optimization
+        OPTIMIZATION_LEVEL="safe"
         
         read -p "Proceed with default settings? (y/n) [y]: " default_confirm
         if [[ ! "$default_confirm" =~ ^[Yy]?$ ]]; then
             info "Update cancelled by user"
             exit 0
         fi
-        
     else
         # ADVANCED MODE - Collect all preferences
         echo -e "${BLUE}🔧 Advanced Mode Selected${NC}"
