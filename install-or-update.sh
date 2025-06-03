@@ -1463,7 +1463,7 @@ detect_installation_state() {
     fi
 }
 
-# Build application with dynamic progress
+# Build application with production optimizations and space efficiency
 build_application() {
     # Clean up any existing build artifacts with permission issues
     info "Cleaning build directories..."
@@ -1473,15 +1473,79 @@ build_application() {
     chown -R profolio:profolio /opt/profolio
     
     local steps=(
-        "Installing backend dependencies" "cd /opt/profolio/backend && sudo -u profolio npm install"
+        "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio npm install"
         "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio npx prisma generate"
         "Running database migrations" "cd /opt/profolio/backend && sudo -u profolio npx prisma migrate deploy"
         "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio npx nest build"
-        "Installing frontend dependencies" "cd /opt/profolio/frontend && sudo -u profolio npm install"
+        "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio npm install"
         "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio npm run build"
+        "Optimizing production dependencies" "optimize_production_dependencies"
+        "Cleaning build artifacts and cache" "cleanup_build_artifacts"
     )
     
-    execute_steps "Building Profolio Application" "${steps[@]}"
+    execute_steps "Building Profolio Application (Production Optimized)" "${steps[@]}"
+}
+
+# Optimize dependencies for production deployment
+optimize_production_dependencies() {
+    info "Optimizing for production deployment..."
+    
+    # Backend: Clean install with production-only dependencies
+    info "  → Backend: Installing production-only dependencies..."
+    cd /opt/profolio/backend
+    
+    # Remove node_modules and reinstall production only
+    sudo -u profolio rm -rf node_modules
+    sudo -u profolio npm ci --production --silent
+    
+    # Frontend: Clean install with production-only dependencies  
+    info "  → Frontend: Installing production-only dependencies..."
+    cd /opt/profolio/frontend
+    
+    # Remove node_modules and reinstall production only
+    sudo -u profolio rm -rf node_modules
+    sudo -u profolio npm ci --production --silent
+    
+    success "Production dependencies optimized"
+}
+
+# Clean up build artifacts and unnecessary cache
+cleanup_build_artifacts() {
+    info "Cleaning up build artifacts and cache..."
+    
+    cd /opt/profolio
+    
+    # Frontend cleanup - remove Next.js cache and unnecessary build files
+    info "  → Cleaning frontend build artifacts..."
+    sudo -u profolio rm -rf frontend/.next/cache 2>/dev/null || true
+    sudo -u profolio rm -rf frontend/.next/trace 2>/dev/null || true
+    sudo -u profolio rm -rf frontend/.next/server/vendor-chunks 2>/dev/null || true
+    sudo -u profolio rm -rf frontend/.next/static/chunks/*.map 2>/dev/null || true
+    
+    # Remove TypeScript build info files
+    sudo -u profolio find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
+    
+    # Backend cleanup - remove unnecessary files
+    info "  → Cleaning backend build artifacts..."
+    sudo -u profolio rm -rf backend/node_modules/.cache 2>/dev/null || true
+    sudo -u profolio rm -rf backend/dist/*.map 2>/dev/null || true
+    
+    # Remove package manager cache
+    info "  → Cleaning package manager cache..."
+    sudo -u profolio npm cache clean --force 2>/dev/null || true
+    
+    # Remove any remaining dev-only files
+    info "  → Removing development files..."
+    sudo -u profolio find . -name "*.test.js" -delete 2>/dev/null || true
+    sudo -u profolio find . -name "*.spec.js" -delete 2>/dev/null || true
+    sudo -u profolio find . -name "*.test.ts" -delete 2>/dev/null || true
+    sudo -u profolio find . -name "*.spec.ts" -delete 2>/dev/null || true
+    
+    # Calculate space saved
+    local final_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
+    info "  → Final application size: $final_size"
+    
+    success "Build artifacts cleaned up successfully"
 }
 
 # Setup environment configuration with proper credential preservation and database sync
