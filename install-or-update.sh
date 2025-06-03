@@ -1525,90 +1525,62 @@ cleanup_build_artifacts() {
     success "Build artifacts cleaned up successfully"
 }
 
-# Optimize dependencies for production deployment (SMART SELECTIVE VERSION)
-# This runs AFTER build is complete and only removes truly unnecessary dev dependencies
+# Optimize dependencies for production deployment (PRECISE SELECTIVE VERSION)
+# This runs AFTER build is complete and only removes packages listed in devDependencies
 optimize_production_deployment() {
-    info "🚀 Optimizing for production deployment (smart selective removal)..."
+    info "🚀 Optimizing for production deployment (precise selective removal)..."
     
-    # Backend: Remove specific dev-only dependencies while keeping runtime essentials
-    info "  → Backend: Removing development-only dependencies..."
+    # Backend: Remove only packages that are in devDependencies
+    info "  → Backend: Removing packages listed in devDependencies..."
     cd /opt/profolio/backend
     
-    # Define dev dependencies that are safe to remove (testing, linting, building tools)
-    local backend_dev_to_remove=(
-        "@types/*"
-        "@typescript-eslint/*" 
-        "eslint*"
-        "prettier*"
-        "jest*"
-        "@jest/*"
-        "supertest*"
-        "ts-jest*"
-        "ts-node*"
-        "@nestjs/testing*"
-        "@nestjs/cli*"
-        "typescript*"
-        "source-map-support*"
-        "tsconfig-paths*"
-        "webpack*"
-        "nodemon*"
-        "concurrently*"
-    )
+    # Extract devDependencies from package.json and remove them
+    if [ -f "package.json" ]; then
+        # Get list of devDependencies (excluding ones needed for runtime)
+        local backend_dev_packages=$(node -e "
+            const pkg = require('./package.json');
+            const devDeps = pkg.devDependencies || {};
+            // Keep essential packages even if in devDependencies
+            const keep = ['prisma']; // Keep prisma for potential runtime needs
+            const toRemove = Object.keys(devDeps).filter(dep => !keep.includes(dep));
+            console.log(toRemove.join(' '));
+        " 2>/dev/null || echo "")
+        
+        if [ -n "$backend_dev_packages" ]; then
+            for package in $backend_dev_packages; do
+                sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+            done
+            success "  ✅ Backend: Removed devDependencies: $backend_dev_packages"
+        else
+            success "  ✅ Backend: No devDependencies to remove"
+        fi
+    fi
     
-    # Remove specific dev packages that are not needed for runtime
-    for package in "${backend_dev_to_remove[@]}"; do
-        sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
-    done
-    
-    # Keep essential packages like dotenv, prisma, etc. that are needed for runtime
-    success "  ✅ Backend: Removed testing and build tools, kept runtime essentials"
-    
-    # Frontend: Remove specific dev-only dependencies while keeping Next.js essentials  
-    info "  → Frontend: Removing development-only dependencies..."
+    # Frontend: Remove only packages that are in devDependencies  
+    info "  → Frontend: Removing packages listed in devDependencies..."
     cd /opt/profolio/frontend
     
-    # Define frontend dev dependencies that are safe to remove
-    local frontend_dev_to_remove=(
-        "@types/*"
-        "@typescript-eslint/*"
-        "eslint*"
-        "prettier*"
-        "jest*"
-        "@jest/*"
-        "testing-library*"
-        "@testing-library/*"
-        "cypress*"
-        "playwright*"
-        "typescript*"
-        "webpack*"
-        "babel*"
-        "@babel/*"
-        "postcss*"
-        "autoprefixer*"
-        "tailwindcss*"
-        "@tailwindcss/*"
-        "sass*"
-        "less*"
-        "stylus*"
-        "storybook*"
-        "@storybook/*"
-        "chromatic*"
-        "husky*"
-        "lint-staged*"
-        "commitizen*"
-        "@commitlint/*"
-        "nodemon*"
-        "concurrently*"
-        "cross-env*"
-    )
-    
-    # Remove specific dev packages that are not needed for runtime
-    for package in "${frontend_dev_to_remove[@]}"; do
-        sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
-    done
-    
-    # Keep Next.js, React, and other runtime essentials
-    success "  ✅ Frontend: Removed dev tools, kept Next.js runtime essentials"
+    # Extract devDependencies from package.json and remove them
+    if [ -f "package.json" ]; then
+        # Get list of devDependencies (excluding ones needed for runtime)
+        local frontend_dev_packages=$(node -e "
+            const pkg = require('./package.json');
+            const devDeps = pkg.devDependencies || {};
+            // Keep essential packages even if in devDependencies (none needed for frontend)
+            const keep = [];
+            const toRemove = Object.keys(devDeps).filter(dep => !keep.includes(dep));
+            console.log(toRemove.join(' '));
+        " 2>/dev/null || echo "")
+        
+        if [ -n "$frontend_dev_packages" ]; then
+            for package in $frontend_dev_packages; do
+                sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+            done
+            success "  ✅ Frontend: Removed devDependencies: $frontend_dev_packages"
+        else
+            success "  ✅ Frontend: No devDependencies to remove"
+        fi
+    fi
     
     # Remove unnecessary cache and temp files
     info "  → Cleaning caches and temporary files..."
@@ -1620,7 +1592,7 @@ optimize_production_deployment() {
     local final_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
     info "  → Final optimized size: $final_size"
     
-    success "✅ Smart production optimization completed - kept runtime essentials, removed dev tools"
+    success "✅ Precise production optimization completed - only removed true devDependencies"
 }
 
 # Update the installer script itself to latest version
