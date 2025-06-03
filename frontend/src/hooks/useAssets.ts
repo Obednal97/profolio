@@ -18,7 +18,7 @@ export function useAssets(type?: string) {
     queryKey: ['assets', type],
     queryFn: () => apiClient.get<Asset[]>('/api/assets', type ? { type } : undefined),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime)
   });
 }
 

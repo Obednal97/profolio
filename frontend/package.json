@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "private": true,
   "packageManager": "pnpm@9.14.4",
   "scripts": {
@@ -14,6 +14,7 @@
     "@mdx-js/react": "^3.1.0",
     "@next/mdx": "^15.3.3",
     "@radix-ui/react-slot": "^1.2.0",
+    "@tanstack/react-query": "^5.80.2",
     "@types/decimal.js": "^0.0.32",
     "@types/jsonwebtoken": "^9.0.9",
     "class-variance-authority": "^0.7.1",
@@ -25,6 +26,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.507.0",
     "next": "^15.2.4",
+    "next-auth": "^4.24.11",
     "pdfjs-dist": "^5.2.133",
     "react": "^18.3.1",
     "react-confetti": "^6.4.0",

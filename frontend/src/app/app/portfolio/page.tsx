@@ -13,8 +13,7 @@ import {
   SkeletonStat,
   SkeletonButton
 } from '@/components/ui/skeleton';
-import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
+import { AnimatePresence } from 'framer-motion';
 
 // Asset type configuration
 const assetTypeConfig = {
@@ -104,7 +103,10 @@ export default function PortfolioPage() {
   const fetchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Check if user is in demo mode
-  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
+  const isDemoMode = useMemo(() => 
+    typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true',
+    []
+  );
   
   // Use Firebase user data or demo user data - memoized
   const currentUser = useMemo(() => {
@@ -122,7 +124,7 @@ export default function PortfolioPage() {
       };
     }
     return null;
-  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+  }, [user, isDemoMode]);
 
   // Cleanup function for abort controller
   const cleanup = useCallback(() => {
@@ -146,9 +148,6 @@ export default function PortfolioPage() {
       setLoading(true);
       setError(null);
       
-      // Add artificial delay to show skeleton
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
       const { apiCall } = await import('@/lib/mockApi');
       const response = await apiCall('/api/assets', {
         method: 'POST',
@@ -170,8 +169,7 @@ export default function PortfolioPage() {
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        // Request was aborted, this is expected
-        return;
+        return; // Expected cancellation
       }
       console.error('Error fetching assets:', err);
       if (!controller.signal.aborted) {
@@ -240,12 +238,6 @@ export default function PortfolioPage() {
       }
     });
   }, [assets, filter, sortBy]);
-
-  // Memoized asset types for filter buttons
-  const assetTypes = useMemo(() => {
-    const types = new Set(assets.map(asset => asset.type).filter(Boolean));
-    return Array.from(types);
-  }, [assets]);
 
   const handleEdit = useCallback((asset: Asset) => {
     setSelectedAsset(asset);
@@ -435,6 +427,8 @@ export default function PortfolioPage() {
               <AssetCard
                 key={asset.id}
                 asset={asset}
+                config={assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other}
+                getCryptoIcon={getCryptoIcon}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />

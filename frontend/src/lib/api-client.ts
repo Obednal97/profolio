@@ -1,11 +1,13 @@
-import { getSession } from 'next-auth/react';
-
 export interface ApiError {
   statusCode: number;
   message: string;
   error: string;
   timestamp: string;
   path: string;
+}
+
+interface RequestParams {
+  [key: string]: string | number | boolean;
 }
 
 export class ApiClient {
@@ -18,13 +20,21 @@ export class ApiClient {
   }
 
   private async getAuthHeaders(): Promise<HeadersInit> {
-    const session = await getSession();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
 
-    if (session?.accessToken) {
-      headers['Authorization'] = `Bearer ${session.accessToken}`;
+    // Get auth token from various sources (localStorage, sessionStorage, etc.)
+    try {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('auth-token') || sessionStorage.getItem('auth-token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+    } catch (error) {
+      // Silently handle storage access errors
+      console.warn('Failed to access auth token from storage:', error);
     }
 
     return headers;
@@ -65,23 +75,26 @@ export class ApiClient {
     }
   }
 
-  private shouldRetry(error: any): boolean {
+  private shouldRetry(error: unknown): boolean {
     // Retry on network errors or 5xx server errors
-    if (!error.statusCode) return true;
-    return error.statusCode >= 500 && error.statusCode < 600;
+    if (error instanceof ApiClientError) {
+      return error.statusCode >= 500 && error.statusCode < 600;
+    }
+    // Retry on network errors (no statusCode)
+    return true;
   }
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  async get<T>(endpoint: string, params?: RequestParams): Promise<T> {
     const headers = await this.getAuthHeaders();
     const url = new URL(`${this.baseURL}${endpoint}`);
     
     if (params) {
-      Object.keys(params).forEach(key => 
-        url.searchParams.append(key, params[key])
+      Object.entries(params).forEach(([key, value]) => 
+        url.searchParams.append(key, String(value))
       );
     }
 
@@ -91,7 +104,7 @@ export class ApiClient {
     });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     const headers = await this.getAuthHeaders();
     
     return this.fetchWithRetry<T>(`${this.baseURL}${endpoint}`, {
@@ -101,7 +114,7 @@ export class ApiClient {
     });
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     const headers = await this.getAuthHeaders();
     
     return this.fetchWithRetry<T>(`${this.baseURL}${endpoint}`, {
@@ -111,7 +124,7 @@ export class ApiClient {
     });
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     const headers = await this.getAuthHeaders();
     
     return this.fetchWithRetry<T>(`${this.baseURL}${endpoint}`, {

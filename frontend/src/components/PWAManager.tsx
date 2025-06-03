@@ -43,6 +43,10 @@ const PWAManager = memo(() => {
 
   // Service worker registration with proper error handling
   const registerServiceWorker = useCallback(async () => {
+    // TEMPORARILY DISABLED FOR DEBUGGING MOBILE WHITE SCREEN
+    console.log('🚫 Service Worker registration temporarily disabled for debugging');
+    return;
+    
     if (!('serviceWorker' in navigator)) {
       console.warn('⚠️ Service Worker not supported in this browser');
       return;

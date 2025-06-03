@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.8.4] - 2025-06-03
+
+### 🐛 Bug Fixes
+- **FIXED: Mobile White Screen Issue**: Resolved static JavaScript chunk 404 errors preventing app loading on mobile
+- **FIXED: Missing Dependencies**: Added @tanstack/react-query and next-auth packages for proper API integration
+- **FIXED: TypeScript Compilation**: Resolved component prop mismatches and interface definitions
+
+### 🔧 Improvements
+#### Code Quality
+- **Enhanced API Client**: Removed any types, improved error handling, added secure auth token management
+- **Optimized React Hooks**: Fixed dependency arrays and memoization patterns for better performance
+- **Clean Debugging Code**: Removed debugging delays and console statements for production readiness
+- **TypeScript Standards**: Strict type definitions with proper interface implementations
+
+#### Security
+- **Secure Token Handling**: Enhanced authentication with proper localStorage access and error handling
+- **Input Validation**: Improved API client with typed request parameters and safe error responses
+- **Clean Error Messages**: Sanitized error handling without sensitive data exposure
+
+#### Performance
+- **AbortController Patterns**: Proper request cancellation and cleanup to prevent memory leaks
+- **Memoization Enhancements**: Optimized component re-renders with proper useCallback and useMemo usage
+- **Bundle Optimization**: Removed unused imports and cleaned up dependencies
+
+### 📊 Summary
+- **Files Changed**: 6 files modified
+- **Issues Resolved**: 3 critical mobile compatibility bugs
+- **Code Quality**: Zero TypeScript compilation errors
+- **Performance**: Enhanced React performance patterns applied
+
 ## [v1.8.3] - 2025-06-03
 
 ### 🎨 UI/UX Improvements
