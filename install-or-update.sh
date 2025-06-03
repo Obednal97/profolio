@@ -143,6 +143,18 @@ success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
+# Track service downtime start
+start_service_downtime() {
+    SERVICE_DOWNTIME_START=$(date +%s)
+}
+
+# Track service downtime end
+end_service_downtime() {
+    if [ -n "$SERVICE_DOWNTIME_START" ]; then
+        SERVICE_DOWNTIME_END=$(date +%s)
+    fi
+}
+
 # Rollback and version control functions
 # =====================================
 
@@ -473,6 +485,21 @@ GENERATE_SSH_KEY=""
 # Global variable to track operation type and success
 OPERATION_TYPE="install"
 OPERATION_SUCCESS=false
+
+# Statistics tracking variables
+OPERATION_START_TIME=""
+OPERATION_END_TIME=""
+SERVICE_DOWNTIME_START=""
+SERVICE_DOWNTIME_END=""
+PREVIOUS_VERSION=""
+NEW_VERSION=""
+FILES_CHANGED_COUNT=""
+DISK_SPACE_BEFORE=""
+DISK_SPACE_AFTER=""
+MEMORY_USAGE_PEAK=""
+DATABASE_MIGRATIONS_COUNT=""
+BACKUP_SIZE=""
+DOWNLOAD_SIZE=""
 
 # UX Flow Variables (set by wizard)
 USER_ACTION_CHOICE=""
@@ -1769,6 +1796,46 @@ show_completion_status() {
     local operation_name="$1"
     local operation_success="$2"
     
+    # Finalize statistics tracking
+    OPERATION_END_TIME=$(date +%s)
+    DISK_SPACE_AFTER=$(df /opt 2>/dev/null | tail -1 | awk '{print $3}' || echo "0")
+    
+    # Get new version
+    if [ -f "/opt/profolio/package.json" ]; then
+        NEW_VERSION=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+    else
+        NEW_VERSION="unknown"
+    fi
+    
+    # Count changed files
+    if [ -d "/opt/profolio/.git" ]; then
+        cd /opt/profolio
+        FILES_CHANGED_COUNT=$(git diff --name-only HEAD~1 2>/dev/null | wc -l || echo "0")
+        if [ "$FILES_CHANGED_COUNT" = "0" ]; then
+            FILES_CHANGED_COUNT=$(find . -type f -not -path "./.git/*" -not -path "./node_modules/*" | wc -l || echo "0")
+        fi
+    else
+        if [ -d "/opt/profolio" ]; then
+            FILES_CHANGED_COUNT=$(find /opt/profolio -type f -not -path "/opt/profolio/.git/*" -not -path "/opt/profolio/node_modules/*" | wc -l || echo "0")
+        else
+            FILES_CHANGED_COUNT="0"
+        fi
+    fi
+    
+    # Get backup size
+    if [ -n "$ROLLBACK_BACKUP_DIR" ] && [ -d "$ROLLBACK_BACKUP_DIR" ]; then
+        BACKUP_SIZE=$(du -sh "$ROLLBACK_BACKUP_DIR" 2>/dev/null | cut -f1 || echo "unknown")
+    else
+        BACKUP_SIZE="none"
+    fi
+    
+    # Calculate download size
+    if [ -d "/opt/profolio" ]; then
+        DOWNLOAD_SIZE=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
+    else
+        DOWNLOAD_SIZE="unknown"
+    fi
+    
     echo ""
     if [ "$operation_success" = true ]; then
         echo -e "${GREEN}"
@@ -1792,6 +1859,10 @@ show_completion_status() {
         
         echo "╚══════════════════════════════════════════════════════════════╝"
         echo -e "${NC}"
+        
+        # Show comprehensive statistics
+        show_operation_statistics "$operation_name" "$operation_success"
+        
         show_access_info
     else
         echo -e "${RED}"
@@ -1815,6 +1886,10 @@ show_completion_status() {
         
         echo "╚══════════════════════════════════════════════════════════════╝"
         echo -e "${NC}"
+        
+        # Show statistics even for failed operations
+        show_operation_statistics "$operation_name" "$operation_success"
+        
         error "Operation failed. Check the logs above for details."
         echo ""
         echo -e "${CYAN}Troubleshooting commands:${NC}"
@@ -1824,8 +1899,132 @@ show_completion_status() {
     fi
 }
 
+# Show comprehensive statistics summary
+show_operation_statistics() {
+    local operation_name="$1"
+    local operation_success="$2"
+    
+    # Calculate operation duration
+    local duration=""
+    if [ -n "$OPERATION_START_TIME" ] && [ -n "$OPERATION_END_TIME" ]; then
+        local total_time=$((OPERATION_END_TIME - OPERATION_START_TIME))
+        local hours=$((total_time / 3600))
+        local minutes=$(((total_time % 3600) / 60))
+        local seconds=$((total_time % 60))
+        
+        if [ $hours -gt 0 ]; then
+            duration="${hours}h ${minutes}m ${seconds}s"
+        elif [ $minutes -gt 0 ]; then
+            duration="${minutes}m ${seconds}s"
+        else
+            duration="${seconds}s"
+        fi
+    else
+        duration="unknown"
+    fi
+    
+    # Calculate service downtime
+    local downtime=""
+    if [ -n "$SERVICE_DOWNTIME_START" ] && [ -n "$SERVICE_DOWNTIME_END" ]; then
+        local downtime_seconds=$((SERVICE_DOWNTIME_END - SERVICE_DOWNTIME_START))
+        local d_hours=$((downtime_seconds / 3600))
+        local d_minutes=$(((downtime_seconds % 3600) / 60))
+        local d_secs=$((downtime_seconds % 60))
+        
+        if [ $d_hours -gt 0 ]; then
+            downtime="${d_hours}h ${d_minutes}m ${d_secs}s"
+        elif [ $d_minutes -gt 0 ]; then
+            downtime="${d_minutes}m ${d_secs}s"
+        else
+            downtime="${d_secs}s"
+        fi
+    else
+        downtime="none"
+    fi
+    
+    # Calculate disk space change
+    local space_change="unknown"
+    if [ "$DISK_SPACE_BEFORE" != "0" ] && [ "$DISK_SPACE_AFTER" != "0" ]; then
+        local diff=$((DISK_SPACE_AFTER - DISK_SPACE_BEFORE))
+        if [ $diff -gt 0 ]; then
+            space_change="+$(echo $diff | awk '{printf "%.1f", $1/1024}')MB"
+        elif [ $diff -lt 0 ]; then
+            space_change="$(echo $diff | awk '{printf "%.1f", $1/1024}')MB"
+        else
+            space_change="no change"
+        fi
+    fi
+    
+    echo ""
+    echo -e "${CYAN}📊 Operation Statistics${NC}"
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    
+    # Time Statistics
+    echo -e "${CYAN}║${NC} ${WHITE}⏱️  Timing Statistics${NC}"
+    printf "${CYAN}║${NC}   ${GREEN}Total Runtime:${NC} %-35s ${CYAN}║${NC}\n" "$duration"
+    if [ "$downtime" != "none" ]; then
+        printf "${CYAN}║${NC}   ${YELLOW}Service Downtime:${NC} %-30s ${CYAN}║${NC}\n" "$downtime"
+    fi
+    echo -e "${CYAN}║${NC}"
+    
+    # Version Information
+    echo -e "${CYAN}║${NC} ${WHITE}📦 Version Information${NC}"
+    if [ "$operation_name" = "INSTALLATION" ]; then
+        printf "${CYAN}║${NC}   ${GREEN}Installed Version:${NC} %-29s ${CYAN}║${NC}\n" "$NEW_VERSION"
+    else
+        printf "${CYAN}║${NC}   ${BLUE}Previous Version:${NC} %-30s ${CYAN}║${NC}\n" "$PREVIOUS_VERSION"
+        printf "${CYAN}║${NC}   ${GREEN}Updated Version:${NC} %-31s ${CYAN}║${NC}\n" "$NEW_VERSION"
+    fi
+    echo -e "${CYAN}║${NC}"
+    
+    # File and Data Statistics  
+    echo -e "${CYAN}║${NC} ${WHITE}📁 Data Statistics${NC}"
+    printf "${CYAN}║${NC}   ${GREEN}Files Processed:${NC} %-31s ${CYAN}║${NC}\n" "$FILES_CHANGED_COUNT"
+    printf "${CYAN}║${NC}   ${BLUE}Download Size:${NC} %-33s ${CYAN}║${NC}\n" "$DOWNLOAD_SIZE"
+    if [ "$BACKUP_SIZE" != "none" ]; then
+        printf "${CYAN}║${NC}   ${YELLOW}Backup Created:${NC} %-32s ${CYAN}║${NC}\n" "$BACKUP_SIZE"
+    fi
+    printf "${CYAN}║${NC}   ${PURPLE}Disk Space Change:${NC} %-27s ${CYAN}║${NC}\n" "$space_change"
+    echo -e "${CYAN}║${NC}"
+    
+    # System Resource Usage
+    echo -e "${CYAN}║${NC} ${WHITE}💾 System Resources${NC}"
+    printf "${CYAN}║${NC}   ${GREEN}Peak Memory Usage:${NC} %-28s ${CYAN}║${NC}\n" "${MEMORY_USAGE_PEAK}%"
+    
+    # Current system status
+    local current_disk=$(df -h /opt 2>/dev/null | tail -1 | awk '{print $4}' || echo "unknown")
+    printf "${CYAN}║${NC}   ${BLUE}Available Disk Space:${NC} %-25s ${CYAN}║${NC}\n" "$current_disk"
+    echo -e "${CYAN}║${NC}"
+    
+    # Operation Summary
+    echo -e "${CYAN}║${NC} ${WHITE}✅ Operation Summary${NC}"
+    if [ "$operation_success" = true ]; then
+        printf "${CYAN}║${NC}   ${GREEN}Status:${NC} %-40s ${CYAN}║${NC}\n" "✅ Completed Successfully"
+        printf "${CYAN}║${NC}   ${GREEN}Services:${NC} %-38s ${CYAN}║${NC}\n" "✅ Running"
+    else
+        printf "${CYAN}║${NC}   ${RED}Status:${NC} %-40s ${CYAN}║${NC}\n" "❌ Failed"
+        printf "${CYAN}║${NC}   ${YELLOW}Services:${NC} %-38s ${CYAN}║${NC}\n" "⚠️  Check Required"
+    fi
+    
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+}
+
 # Main execution logic with improved terminology
 main() {
+    # Initialize operation tracking
+    OPERATION_START_TIME=$(date +%s)
+    DISK_SPACE_BEFORE=$(df /opt 2>/dev/null | tail -1 | awk '{print $3}' || echo "0")
+    
+    # Get previous version if it exists
+    if [ -f "/opt/profolio/package.json" ]; then
+        PREVIOUS_VERSION=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+    else
+        PREVIOUS_VERSION="none"
+    fi
+    
+    # Initialize memory tracking
+    MEMORY_USAGE_PEAK=$(free | grep '^Mem' | awk '{printf "%.1f", $3/$2 * 100}' 2>/dev/null || echo "0")
+    
     show_banner
     check_root
     
@@ -2019,6 +2218,7 @@ update_installation() {
     
     # Stop services properly
     info "Stopping services for update..."
+    start_service_downtime
     systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
     systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
     success "Services stopped"
@@ -2140,6 +2340,7 @@ update_installation() {
     info "Starting frontend service..."
     if systemctl start profolio-frontend; then
         success "Frontend service started"
+        end_service_downtime
         sleep 2  # Give frontend time to start
     else
         error "Failed to start frontend service"
@@ -2186,6 +2387,7 @@ repair_installation() {
     
     # Stop any running services first
     info "Stopping any running services..."
+    start_service_downtime
     systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
     systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
     
@@ -2231,6 +2433,7 @@ repair_installation() {
     info "Starting frontend service..."
     if systemctl start profolio-frontend; then
         success "Frontend service started"
+        end_service_downtime
         sleep 2  # Give frontend time to start
     else
         error "Failed to start frontend service"
@@ -2534,6 +2737,7 @@ fresh_install() {
     info "Starting frontend service..."
     if systemctl start profolio-frontend; then
         success "Frontend service started"
+        end_service_downtime
         sleep 2  # Give frontend time to start
     else
         error "Failed to start frontend service"
