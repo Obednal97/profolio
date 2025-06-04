@@ -58,7 +58,7 @@ export async function GET(
     const backendUrl = `${apiBaseUrl}/market-data/cached-price/${encodeURIComponent(symbol)}`;
     
     // Use demo token for demo users, real token for real users
-    const authToken = user.isDemo ? 'demo-token' : 
+    const authToken = user.isDemo ? 'demo-token-secure-123' : 
                      request.headers.get('authorization')?.slice(7) || 
                      request.cookies.get('auth-token')?.value;
     

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { getAuthConfig, AuthConfig } from './authConfig';
 import { LocalUser, localAuth } from './localAuth';
 
@@ -49,6 +49,15 @@ interface UnifiedAuthContextType {
 
 const UnifiedAuthContext = createContext<UnifiedAuthContextType | null>(null);
 
+// Global token cache to prevent excessive Firebase exchanges
+const globalTokenCache = {
+  firebaseToken: null as string | null,
+  backendToken: null as string | null,
+  expires: 0,
+  profileCache: null as UserProfile | null,
+  profileExpires: 0
+};
+
 // Convert LocalUser to UnifiedUser
 function localUserToUnified(localUser: LocalUser): UnifiedUser {
   return {
@@ -76,7 +85,13 @@ function firebaseUserToUnified(firebaseUser: FirebaseUser): UnifiedUser {
 // Secure token management for httpOnly cookies
 function getSecureToken(): string | null {
   if (typeof window !== 'undefined' && window.isSecureContext) {
-    // Read from httpOnly cookie set by server
+    // Check local storage first (faster than parsing cookies)
+    const storedToken = localStorage.getItem('auth-token');
+    if (storedToken) {
+      return storedToken;
+    }
+    
+    // Fallback to cookie parsing
     const cookieValue = document.cookie
       .split('; ')
       .find(row => row.startsWith('auth-token='))
@@ -87,9 +102,10 @@ function getSecureToken(): string | null {
 }
 
 function setSecureToken(token: string): void {
-  // Note: httpOnly cookies must be set by the server
-  // This is a client-side fallback for development
   if (typeof window !== 'undefined') {
+    // Store in localStorage for fast access
+    localStorage.setItem('auth-token', token);
+    
     if (process.env.NODE_ENV === 'development') {
       // Development: Use secure cookie attributes
       document.cookie = `auth-token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=86400`;
@@ -102,6 +118,9 @@ function setSecureToken(token: string): void {
 
 function clearSecureToken(): void {
   if (typeof window !== 'undefined') {
+    // Clear localStorage
+    localStorage.removeItem('auth-token');
+    
     // Clear the cookie by setting expired date
     document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
   }
@@ -114,15 +133,181 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
   const [token, setToken] = useState<string | null>(null);
   const [config, setConfig] = useState<AuthConfig | null>(null);
   const [authMode, setAuthMode] = useState<AuthConfig['mode']>('local');
+  
+  // Use refs for cancellation and mounted state
+  const mountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const profileFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Track component lifecycle
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (profileFetchTimeoutRef.current) {
+        clearTimeout(profileFetchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Optimized Firebase token exchange with caching
+  const getBackendTokenFromFirebase = useCallback(async (): Promise<string | null> => {
+    try {
+      const now = Date.now();
+      
+      // Check cache first (valid for 5 minutes)
+      if (globalTokenCache.backendToken && globalTokenCache.expires > now) {
+        return globalTokenCache.backendToken;
+      }
+
+      // Cancel any existing request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
+      // Get Firebase token (use cached version unless expired)
+      const { getFirebaseAuth } = await import('./firebase');
+      const auth = await getFirebaseAuth();
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        throw new Error('No current Firebase user');
+      }
+
+      // Only force refresh if we don't have a cached token
+      const forceRefresh = !globalTokenCache.firebaseToken;
+      const firebaseToken = await currentUser.getIdToken(forceRefresh);
+      
+      // Cache the Firebase token
+      globalTokenCache.firebaseToken = firebaseToken;
+      
+      // Exchange for backend JWT token
+      const response = await fetch('/api/auth/firebase-exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firebaseToken }),
+        signal: abortControllerRef.current.signal
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Token exchange failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.success && data.token) {
+        // Cache the backend token for 5 minutes
+        globalTokenCache.backendToken = data.token;
+        globalTokenCache.expires = now + 300000; // 5 minutes
+        
+        // Store securely
+        setSecureToken(data.token);
+        
+        return data.token;
+      }
+      
+      throw new Error('Invalid token exchange response');
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Firebase token exchange failed:', error);
+      }
+      return null;
+    }
+  }, []);
+
+  // Optimized profile fetching with caching and debouncing
+  const fetchUserProfileOptimized = useCallback(async (firebaseUser: FirebaseUser, backendToken: string) => {
+    try {
+      const now = Date.now();
+      
+      // Check profile cache first (valid for 2 minutes)
+      if (globalTokenCache.profileCache && globalTokenCache.profileExpires > now) {
+        if (mountedRef.current) {
+          setUserProfile(globalTokenCache.profileCache);
+        }
+        return;
+      }
+
+      // Debounce profile fetches (wait 500ms before fetching)
+      if (profileFetchTimeoutRef.current) {
+        clearTimeout(profileFetchTimeoutRef.current);
+      }
+
+      profileFetchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const profileResponse = await fetch('/api/auth/profile', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${backendToken}` },
+            signal: abortControllerRef.current?.signal
+          });
+          
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            
+            if (profileData.success && profileData.user) {
+              const newProfile: UserProfile = {
+                name: profileData.user.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                email: profileData.user.email || firebaseUser.email || '',
+                phone: profileData.user.phone || firebaseUser.phoneNumber || '',
+                photoURL: profileData.user.photoURL || firebaseUser.photoURL || '',
+              };
+              
+              // Cache the profile for 2 minutes
+              globalTokenCache.profileCache = newProfile;
+              globalTokenCache.profileExpires = Date.now() + 120000; // 2 minutes
+              
+              if (mountedRef.current) {
+                setUserProfile(newProfile);
+              }
+              return;
+            }
+          }
+          
+          // Fallback to Firebase data if backend fetch fails
+          const fallbackProfile: UserProfile = {
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            email: firebaseUser.email || '',
+            phone: firebaseUser.phoneNumber || '',
+            photoURL: firebaseUser.photoURL || '',
+          };
+          
+          if (mountedRef.current) {
+            setUserProfile(fallbackProfile);
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name !== 'AbortError') {
+            console.warn('Profile fetch failed, using Firebase data:', error);
+            
+            const fallbackProfile: UserProfile = {
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+              email: firebaseUser.email || '',
+              phone: firebaseUser.phoneNumber || '',
+              photoURL: firebaseUser.photoURL || '',
+            };
+            
+            if (mountedRef.current) {
+              setUserProfile(fallbackProfile);
+            }
+          }
+        }
+      }, 500); // 500ms debounce
+    } catch (error) {
+      console.error('Profile fetch setup failed:', error);
+    }
+  }, []);
 
   // Initialize authentication system
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
-    // Initialize token from secure cookie
+    // Initialize token from secure storage
     const initialToken = getSecureToken();
     if (initialToken) {
       setToken(initialToken);
+      globalTokenCache.backendToken = initialToken;
+      globalTokenCache.expires = Date.now() + 300000; // Assume valid for 5 minutes
     }
 
     const initializeAuth = async () => {
@@ -164,7 +349,7 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
                 const unifiedUser = firebaseUserToUnified(firebaseUser);
                 setUser(unifiedUser);
                 
-                // Get Firebase token
+                // Get Firebase token (use cached version for performance)
                 try {
                   const userToken = await getUserToken();
                   setToken(userToken);
@@ -172,117 +357,38 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
                   console.warn('Failed to get Firebase token:', tokenError);
                 }
                 
-                // FETCH profile from backend - this should be the authoritative source
-                try {
-                  console.log('🔄 [Auth] Fetching profile from backend during auth state change...');
+                // OPTIMIZED: Get backend token with caching
+                const backendToken = await getBackendTokenFromFirebase();
+                
+                if (backendToken) {
+                  setToken(backendToken);
                   
-                  // Get fresh Firebase token for backend authentication
-                  const { getFirebaseAuth } = await import('./firebase');
-                  const auth = await getFirebaseAuth();
-                  const currentUser = auth.currentUser;
-                  
-                  if (!currentUser) {
-                    throw new Error('No current Firebase user');
-                  }
-                  
-                  const firebaseToken = await currentUser.getIdToken(true); // Force refresh
-                  
-                  // Exchange for backend JWT token
-                  const response = await fetch('/api/auth/firebase-exchange', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ firebaseToken }),
-                  });
-                  
-                  if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.token) {
-                      // Store the backend token securely
-                      setSecureToken(data.token);
-                      setToken(data.token);
-                      
-                      // Fetch profile from backend
-                      const profileResponse = await fetch('/api/auth/profile', {
-                        method: 'GET',
-                        headers: {
-                          'Authorization': `Bearer ${data.token}`,
-                        },
-                      });
-                      
-                      if (profileResponse.ok) {
-                        const profileData = await profileResponse.json();
-                        
-                        if (profileData.success && profileData.user) {
-                          console.log('✅ [Auth] Backend profile found, using:', profileData.user.name);
-                          
-                          // Use backend profile as authoritative source
-                          setUserProfile({
-                            name: profileData.user.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                            email: profileData.user.email || firebaseUser.email || '',
-                            phone: profileData.user.phone || firebaseUser.phoneNumber || '',
-                            photoURL: profileData.user.photoURL || firebaseUser.photoURL || '',
-                          });
-                        } else {
-                          console.log('ℹ️ [Auth] No backend profile found, using Firebase data as fallback');
-                          
-                          // No backend profile yet, use Firebase data as fallback
-                          setUserProfile({
-                            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                            email: firebaseUser.email || '',
-                            phone: firebaseUser.phoneNumber || '',
-                            photoURL: firebaseUser.photoURL || '',
-                          });
-                        }
-                      } else {
-                        console.warn('⚠️ [Auth] Failed to fetch profile, using Firebase data');
-                        
-                        // Profile fetch failed, use Firebase data
-                        setUserProfile({
-                          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                          email: firebaseUser.email || '',
-                          phone: firebaseUser.phoneNumber || '',
-                          photoURL: firebaseUser.photoURL || '',
-                        });
-                      }
-                    } else {
-                      console.warn('⚠️ [Auth] Token exchange failed, using Firebase data');
-                      
-                      // Token exchange failed, use Firebase data
-                      setUserProfile({
-                        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                        email: firebaseUser.email || '',
-                        phone: firebaseUser.phoneNumber || '',
-                        photoURL: firebaseUser.photoURL || '',
-                      });
-                    }
-                  } else {
-                    console.warn('⚠️ [Auth] Token exchange request failed, using Firebase data');
-                    
-                    // Token exchange request failed, use Firebase data
-                    setUserProfile({
-                      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                      email: firebaseUser.email || '',
-                      phone: firebaseUser.phoneNumber || '',
-                      photoURL: firebaseUser.photoURL || '',
-                    });
-                  }
-                } catch (error) {
-                  console.error('❌ [Auth] Error fetching backend profile during auth state change:', error);
-                  
-                  // Error occurred, fallback to Firebase data
-                  setUserProfile({
+                  // OPTIMIZED: Fetch profile with caching and debouncing
+                  await fetchUserProfileOptimized(firebaseUser, backendToken);
+                } else {
+                  // Token exchange failed, use Firebase data as fallback
+                  const fallbackProfile: UserProfile = {
                     name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
                     email: firebaseUser.email || '',
                     phone: firebaseUser.phoneNumber || '',
                     photoURL: firebaseUser.photoURL || '',
-                  });
+                  };
+                  
+                  if (mountedRef.current) {
+                    setUserProfile(fallbackProfile);
+                  }
                 }
               } else {
                 setUser(null);
                 setToken(null);
                 setUserProfile(null);
+                
+                // Clear caches on sign out
+                globalTokenCache.firebaseToken = null;
+                globalTokenCache.backendToken = null;
+                globalTokenCache.expires = 0;
+                globalTokenCache.profileCache = null;
+                globalTokenCache.profileExpires = 0;
               }
               setLoading(false);
             });
@@ -323,7 +429,8 @@ export function UnifiedAuthProvider({ children }: { children: React.ReactNode })
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchUserProfileOptimized]); // getBackendTokenFromFirebase intentionally excluded - stable with no params
 
   // Authentication methods
   const signIn = async (email: string, password: string) => {

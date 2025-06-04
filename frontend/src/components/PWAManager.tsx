@@ -48,6 +48,12 @@ const PWAManager = memo(() => {
       return;
     }
 
+    // Skip service worker registration in development to prevent cache conflicts
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 PWA: Skipping service worker registration in development mode');
+      return;
+    }
+
     try {
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',

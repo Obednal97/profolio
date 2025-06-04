@@ -44,6 +44,17 @@ export interface UseNotificationsReturn {
   refreshUnreadCount: () => Promise<void>;
 }
 
+// Global cache to prevent multiple hooks from making duplicate requests
+const globalUnreadCountCache = {
+  count: 0,
+  lastFetch: 0,
+  inProgress: false
+};
+
+// Global interval management to prevent multiple intervals
+let globalInterval: NodeJS.Timeout | null = null;
+let activeHooks = 0;
+
 export function useNotifications(): UseNotificationsReturn {
   const { token, loading: authLoading } = useUnifiedAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -53,23 +64,57 @@ export function useNotifications(): UseNotificationsReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Use ref to avoid recreating the interval when notifications change
+  // Use ref to avoid recreating functions and track mounted state
   const notificationsRef = useRef<Notification[]>([]);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Update ref when notifications change
   useEffect(() => {
     notificationsRef.current = notifications;
   }, [notifications]);
 
+  // Track component lifecycle for global interval management
+  useEffect(() => {
+    activeHooks++;
+    return () => {
+      activeHooks--;
+      mountedRef.current = false;
+      
+      // Cancel any in-progress requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Clear global interval if this is the last hook
+      if (activeHooks === 0 && globalInterval) {
+        clearInterval(globalInterval);
+        globalInterval = null;
+      }
+    };
+  }, []);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  // Get backend token with Firebase exchange if needed
+  // Stable token cache to prevent Firebase calls on every request
+  const tokenCacheRef = useRef<{ token: string | null; expires: number }>({
+    token: null,
+    expires: 0
+  });
+
+  // Get backend token with caching to prevent excessive Firebase calls
   const getBackendToken = useCallback(async (): Promise<string | null> => {
     try {
+      // Check cache first (valid for 5 minutes)
+      const now = Date.now();
+      if (tokenCacheRef.current.token && tokenCacheRef.current.expires > now) {
+        return tokenCacheRef.current.token;
+      }
+
       // Try stored token first
       const backendToken = localStorage.getItem('auth-token');
       if (backendToken) {
+        tokenCacheRef.current = { token: backendToken, expires: now + 300000 }; // 5 min cache
         return backendToken;
       }
 
@@ -79,6 +124,7 @@ export function useNotifications(): UseNotificationsReturn {
       const currentUser = auth.currentUser;
       
       if (!currentUser) {
+        tokenCacheRef.current = { token: null, expires: now + 60000 }; // 1 min cache for null
         return null;
       }
 
@@ -86,28 +132,31 @@ export function useNotifications(): UseNotificationsReturn {
       
       const response = await fetch('/api/auth/firebase-exchange', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ firebaseToken }),
+        signal: abortControllerRef.current?.signal
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.token) {
           localStorage.setItem('auth-token', data.token);
+          tokenCacheRef.current = { token: data.token, expires: now + 300000 }; // 5 min cache
           return data.token;
         }
       }
 
+      tokenCacheRef.current = { token: null, expires: now + 60000 }; // 1 min cache for null
       return null;
     } catch (error) {
-      console.error('Failed to get backend token:', error);
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Failed to get backend token:', error);
+      }
       return null;
     }
   }, []);
 
-  // API headers with auth - memoized to prevent recreation
+  // Stable API headers function
   const getHeaders = useCallback(async () => {
     const backendToken = await getBackendToken();
     return {
@@ -116,10 +165,16 @@ export function useNotifications(): UseNotificationsReturn {
     };
   }, [getBackendToken]);
 
-  // Fetch notifications
+  // Fetch notifications with request cancellation
   const fetchNotifications = useCallback(async (filters: NotificationFilters = {}) => {
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     if (!token) {
-      // Demo mode - show example notifications
+      // Demo mode - show example notifications (reduced set for performance)
       const demoNotifications: Notification[] = [
         {
           id: 'demo-signup-cta',
@@ -129,7 +184,7 @@ export function useNotifications(): UseNotificationsReturn {
           data: { action: 'signup_cta' },
           isRead: false,
           priority: 'HIGH',
-          createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
+          createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
           updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
         },
         {
@@ -140,99 +195,29 @@ export function useNotifications(): UseNotificationsReturn {
           data: {},
           isRead: false,
           priority: 'NORMAL',
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
           updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
-        },
-        {
-          id: 'demo-portfolio-sync',
-          type: 'ASSET_SYNC',
-          title: 'Portfolio Sync Complete',
-          message: 'Your demo portfolio has been synchronized with the latest market data. 15 assets updated successfully.',
-          data: { assetsUpdated: 15, portfolioValue: '$245,678.90' },
-          isRead: true,
-          readAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-          priority: 'NORMAL',
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
-          updatedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-        },
-        {
-          id: 'demo-market-alert',
-          type: 'MARKET_ALERT',
-          title: 'Market Alert: AAPL',
-          message: 'Apple Inc. (AAPL) has increased by 5.2% today, reaching $185.50. Consider reviewing your position.',
-          data: { symbol: 'AAPL', change: '+5.2%', price: '$185.50' },
-          isRead: true,
-          readAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-          priority: 'NORMAL',
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), // 6 hours ago
-          updatedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-        },
-        {
-          id: 'demo-expense-reminder',
-          type: 'EXPENSE_REMINDER',
-          title: 'Monthly Expense Report Ready',
-          message: 'Your monthly expense report for November 2024 is ready for review. Total expenses: $3,247.50',
-          data: { month: 'November 2024', totalExpenses: '$3,247.50' },
-          isRead: false,
-          priority: 'LOW',
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 24 hours ago
-          updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
-        },
-        {
-          id: 'demo-api-key',
-          type: 'API_KEY_EXPIRY',
-          title: 'Demo Data Integration Active',
-          message: 'Demo data sources are providing simulated market information. Sign up to connect real financial data providers.',
-          data: { daysUntilExpiry: 'N/A - Demo Mode' },
-          isRead: true,
-          readAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-          priority: 'LOW',
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 48 hours ago
-          updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString()
         }
       ];
 
-      // Apply filters
+      // Apply filters efficiently
       let filteredNotifications = demoNotifications;
-      
       if (filters.isRead !== undefined) {
         filteredNotifications = filteredNotifications.filter(n => n.isRead === filters.isRead);
       }
-      
-      if (filters.type) {
-        filteredNotifications = filteredNotifications.filter(n => n.type === filters.type);
-      }
-      
-      if (filters.priority) {
-        filteredNotifications = filteredNotifications.filter(n => n.priority === filters.priority);
-      }
 
-      // Apply pagination
-      const offset = filters.offset || 0;
-      const limit = filters.limit || 50;
-      const paginatedNotifications = filteredNotifications.slice(offset, offset + limit);
-      
       const unreadCount = demoNotifications.filter(n => !n.isRead).length;
-      const totalCount = filteredNotifications.length;
-      const hasMore = offset + limit < totalCount;
-
-      // Simulate loading delay
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // If this is a paginated request (offset > 0), append to existing notifications
-      if (filters.offset && filters.offset > 0) {
-        setNotifications(prev => [...prev, ...paginatedNotifications]);
-      } else {
-        setNotifications(paginatedNotifications);
+      if (mountedRef.current) {
+        setNotifications(filteredNotifications);
+        setUnreadCount(unreadCount);
+        setTotalCount(filteredNotifications.length);
+        setHasMore(false);
       }
-      
-      setUnreadCount(unreadCount);
-      setTotalCount(totalCount);
-      setHasMore(hasMore);
-      setIsLoading(false);
       return;
     }
+
+    if (!mountedRef.current) return;
 
     setIsLoading(true);
     setError(null);
@@ -246,16 +231,20 @@ export function useNotifications(): UseNotificationsReturn {
       if (filters.offset) queryParams.set('offset', filters.offset.toString());
 
       const response = await fetch(`${API_BASE}/api/notifications?${queryParams}`, {
-        headers: await getHeaders()
+        headers: await getHeaders(),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          // Don't show 401 errors to user, just clear data
-          setNotifications([]);
-          setUnreadCount(0);
-          setTotalCount(0);
-          setHasMore(false);
+          // Auth error - clear cache and data
+          tokenCacheRef.current = { token: null, expires: 0 };
+          if (mountedRef.current) {
+            setNotifications([]);
+            setUnreadCount(0);
+            setTotalCount(0);
+            setHasMore(false);
+          }
           return;
         }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -263,132 +252,208 @@ export function useNotifications(): UseNotificationsReturn {
 
       const data: NotificationsResponse = await response.json();
       
-      // If this is a paginated request (offset > 0), append to existing notifications
-      if (filters.offset && filters.offset > 0) {
-        setNotifications(prev => [...prev, ...data.notifications]);
-      } else {
-        setNotifications(data.notifications);
+      if (mountedRef.current) {
+        if (filters.offset && filters.offset > 0) {
+          setNotifications(prev => [...prev, ...data.notifications]);
+        } else {
+          setNotifications(data.notifications);
+        }
+        setUnreadCount(data.unreadCount);
+        setTotalCount(data.totalCount);
+        setHasMore(data.hasMore);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return; // Request was cancelled, ignore
       }
       
-      setUnreadCount(data.unreadCount);
-      setTotalCount(data.totalCount);
-      setHasMore(data.hasMore);
-    } catch (err) {
       console.error('Failed to fetch notifications:', err);
-      // Only set user-facing error for non-auth issues
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      if (!errorMessage.includes('401')) {
-        setError('Unable to load notifications. Please try again later.');
+      if (mountedRef.current) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        if (!errorMessage.includes('401')) {
+          setError('Unable to load notifications. Please try again later.');
+        }
       }
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [token, API_BASE, getHeaders]);
+
+  // Optimized unread count refresh with global deduplication
+  const refreshUnreadCount = useCallback(async () => {
+    if (!token || !mountedRef.current) {
+      // Demo mode - calculate from current notifications
+      const currentUnreadCount = notificationsRef.current.filter(n => !n.isRead).length;
+      if (mountedRef.current) {
+        setUnreadCount(currentUnreadCount);
+      }
+      return;
+    }
+
+    const now = Date.now();
+    
+    // Use global cache to prevent duplicate requests (cache for 60 seconds)
+    if (globalUnreadCountCache.lastFetch > now - 60000) {
+      if (mountedRef.current) {
+        setUnreadCount(globalUnreadCountCache.count);
+      }
+      return;
+    }
+
+    // Prevent concurrent requests
+    if (globalUnreadCountCache.inProgress) {
+      return;
+    }
+
+    globalUnreadCountCache.inProgress = true;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/notifications/unread-count`, {
+        headers: await getHeaders(),
+        signal: abortControllerRef.current?.signal
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        globalUnreadCountCache.count = data.count;
+        globalUnreadCountCache.lastFetch = now;
+        
+        if (mountedRef.current) {
+          setUnreadCount(data.count);
+        }
+      } else if (response.status === 401) {
+        // Auth error - clear cache
+        tokenCacheRef.current = { token: null, expires: 0 };
+        globalUnreadCountCache.count = 0;
+        if (mountedRef.current) {
+          setUnreadCount(0);
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Failed to refresh unread count:', err);
+      }
+    } finally {
+      globalUnreadCountCache.inProgress = false;
     }
   }, [token, API_BASE, getHeaders]);
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!token) {
-      // Demo mode - handle signup CTA
+      // Demo mode
       if (notificationId === 'demo-signup-cta') {
-        // Clear any stored demo data and redirect to signup
         localStorage.removeItem('demo_session');
         window.location.href = '/auth/signIn';
         return;
       }
       
-      // For other demo notifications, just update local state
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
-            ? { ...notif, isRead: true, readAt: new Date().toISOString() }
-            : notif
-        )
-      );
-      
-      // Update unread count
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      if (mountedRef.current) {
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId 
+              ? { ...notif, isRead: true, readAt: new Date().toISOString() }
+              : notif
+          )
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
       return;
     }
 
     try {
       const response = await fetch(`${API_BASE}/api/notifications/${notificationId}/read`, {
         method: 'PUT',
-        headers: await getHeaders()
+        headers: await getHeaders(),
+        signal: abortControllerRef.current?.signal
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
-            ? { ...notif, isRead: true, readAt: new Date().toISOString() }
-            : notif
-        )
-      );
-      
-      // Update unread count
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      if (mountedRef.current) {
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId 
+              ? { ...notif, isRead: true, readAt: new Date().toISOString() }
+              : notif
+          )
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        
+        // Update global cache
+        globalUnreadCountCache.count = Math.max(0, globalUnreadCountCache.count - 1);
+      }
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
-      throw err;
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Failed to mark notification as read:', err);
+        throw err;
+      }
     }
   }, [token, API_BASE, getHeaders]);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
     if (!token) {
-      // Demo mode - update local state
-      setNotifications(prev => 
-        prev.map(notif => ({ 
-          ...notif, 
-          isRead: true, 
-          readAt: new Date().toISOString() 
-        }))
-      );
-      setUnreadCount(0);
+      if (mountedRef.current) {
+        setNotifications(prev => 
+          prev.map(notif => ({ 
+            ...notif, 
+            isRead: true, 
+            readAt: new Date().toISOString() 
+          }))
+        );
+        setUnreadCount(0);
+      }
       return;
     }
 
     try {
       const response = await fetch(`${API_BASE}/api/notifications/mark-all-read`, {
         method: 'PUT',
-        headers: await getHeaders()
+        headers: await getHeaders(),
+        signal: abortControllerRef.current?.signal
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notif => ({ 
-          ...notif, 
-          isRead: true, 
-          readAt: new Date().toISOString() 
-        }))
-      );
-      
-      setUnreadCount(0);
+      if (mountedRef.current) {
+        setNotifications(prev => 
+          prev.map(notif => ({ 
+            ...notif, 
+            isRead: true, 
+            readAt: new Date().toISOString() 
+          }))
+        );
+        setUnreadCount(0);
+        
+        // Update global cache
+        globalUnreadCountCache.count = 0;
+      }
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
-      throw err;
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Failed to mark all notifications as read:', err);
+        throw err;
+      }
     }
   }, [token, API_BASE, getHeaders]);
 
   // Delete notification
   const deleteNotification = useCallback(async (notificationId: string) => {
     if (!token) {
-      // Demo mode - update local state
       const deletedNotification = notificationsRef.current.find(n => n.id === notificationId);
-      setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-      setTotalCount(prev => prev - 1);
-      
-      // Update unread count if the deleted notification was unread
-      if (deletedNotification && !deletedNotification.isRead) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
+      if (mountedRef.current) {
+        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+        setTotalCount(prev => prev - 1);
+        
+        if (deletedNotification && !deletedNotification.isRead) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
       }
       return;
     }
@@ -396,115 +461,114 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       const response = await fetch(`${API_BASE}/api/notifications/${notificationId}`, {
         method: 'DELETE',
-        headers: await getHeaders()
+        headers: await getHeaders(),
+        signal: abortControllerRef.current?.signal
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update local state
       const deletedNotification = notificationsRef.current.find(n => n.id === notificationId);
-      setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-      setTotalCount(prev => prev - 1);
-      
-      // Update unread count if the deleted notification was unread
-      if (deletedNotification && !deletedNotification.isRead) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
+      if (mountedRef.current) {
+        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+        setTotalCount(prev => prev - 1);
+        
+        if (deletedNotification && !deletedNotification.isRead) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+          globalUnreadCountCache.count = Math.max(0, globalUnreadCountCache.count - 1);
+        }
       }
     } catch (err) {
-      console.error('Failed to delete notification:', err);
-      throw err;
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Failed to delete notification:', err);
+        throw err;
+      }
     }
   }, [token, API_BASE, getHeaders]);
 
   // Delete all read notifications
   const deleteAllRead = useCallback(async () => {
     if (!token) {
-      // Demo mode - update local state
-      setNotifications(prev => prev.filter(notif => !notif.isRead));
-      setTotalCount(() => unreadCount); // Total count becomes unread count
+      if (mountedRef.current) {
+        setNotifications(prev => prev.filter(notif => !notif.isRead));
+        setTotalCount(() => unreadCount);
+      }
       return;
     }
 
     try {
       const response = await fetch(`${API_BASE}/api/notifications/read`, {
         method: 'DELETE',
-        headers: await getHeaders()
+        headers: await getHeaders(),
+        signal: abortControllerRef.current?.signal
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update local state - remove all read notifications
-      setNotifications(prev => prev.filter(notif => !notif.isRead));
-      setTotalCount(() => unreadCount); // Total count becomes unread count
+      if (mountedRef.current) {
+        setNotifications(prev => prev.filter(notif => !notif.isRead));
+        setTotalCount(() => unreadCount);
+      }
     } catch (err) {
-      console.error('Failed to delete read notifications:', err);
-      throw err;
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Failed to delete read notifications:', err);
+        throw err;
+      }
     }
   }, [token, API_BASE, getHeaders, unreadCount]);
 
-  // Refresh unread count only - stable function that doesn't depend on notifications
-  const refreshUnreadCount = useCallback(async () => {
-    if (!token) {
-      // Demo mode - calculate from current notifications using ref
-      const currentUnreadCount = notificationsRef.current.filter(n => !n.isRead).length;
-      setUnreadCount(currentUnreadCount);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE}/api/notifications/unread-count`, {
-        headers: await getHeaders()
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.count);
-      } else if (response.status === 401) {
-        // Auth error, silently reset count
-        setUnreadCount(0);
-      }
-    } catch (err) {
-      console.error('Failed to refresh unread count:', err);
-      // Don't show error to user for count refresh failures
-    }
-  }, [token, API_BASE, getHeaders]);
-
-  // Auto-refresh unread count every 30 seconds - MEMORY LEAK FIX
+  // PERFORMANCE FIX: Auto-refresh every 10 MINUTES instead of 30 seconds
   useEffect(() => {
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    if (!token) {
-      // Demo mode - calculate unread count from current notifications
-      const currentUnreadCount = notifications.filter(n => !n.isRead).length;
-      setUnreadCount(currentUnreadCount);
+    if (!token || authLoading) {
       return;
     }
 
-    // Initial load
+    // Initial refresh
     refreshUnreadCount();
 
-    // Set up interval for periodic refresh - store in ref for cleanup
-    intervalRef.current = setInterval(refreshUnreadCount, 30000); // 30 seconds
+    // Only create global interval if none exists
+    if (!globalInterval) {
+      globalInterval = setInterval(() => {
+        // Only refresh if there are active hooks
+        if (activeHooks > 0) {
+          // Refresh using a simple fetch without the hook's dependencies
+          const quickRefresh = async () => {
+            try {
+              const response = await fetch(`${API_BASE}/api/notifications/unread-count`, {
+                headers: { 
+                  'Content-Type': 'application/json',
+                  ...(localStorage.getItem('auth-token') && { 
+                    'Authorization': `Bearer ${localStorage.getItem('auth-token')}` 
+                  })
+                }
+              });
+              
+              if (response.ok) {
+                const data = await response.json();
+                globalUnreadCountCache.count = data.count;
+                globalUnreadCountCache.lastFetch = Date.now();
+              }
+            } catch (err) {
+              console.error('Background unread count refresh failed:', err);
+            }
+          };
+          
+          quickRefresh();
+        }
+      }, 600000); // 10 MINUTES instead of 30 seconds!!!
+    }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      // Don't clear global interval here - let the lifecycle effect handle it
     };
-  }, [token, refreshUnreadCount]); // Stable dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, authLoading, API_BASE]); // refreshUnreadCount intentionally excluded for performance
 
-  // Initial load effect - load notifications on mount
+  // Initial load effect - simplified and stable
   useEffect(() => {
-    // Don't load notifications while auth is still loading
     if (authLoading) {
       return;
     }
@@ -518,18 +582,7 @@ export function useNotifications(): UseNotificationsReturn {
     };
     
     loadInitialNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, authLoading]); // Wait for both token and loading state
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, []);
+  }, [token, authLoading, fetchNotifications]);
 
   return {
     notifications,

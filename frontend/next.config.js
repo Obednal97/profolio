@@ -30,6 +30,21 @@ const nextConfig = {
   reactStrictMode: true,
   trailingSlash: false,
   
+  // Development configuration to prevent PWA cache conflicts
+  ...(process.env.NODE_ENV === 'development' && {
+    // Allow cross-origin development access
+    allowedDevOrigins: ['192.168.1.69:3000'],
+    
+    // Disable caching in development to prevent webpack chunk conflicts
+    generateEtags: false,
+    
+    // Force fresh compilation
+    onDemandEntries: {
+      maxInactiveAge: 25 * 1000,
+      pagesBufferLength: 2,
+    },
+  }),
+  
   // Redirects
   async redirects() {
     return [

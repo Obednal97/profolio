@@ -52,10 +52,34 @@ Before making any commit, complete this checklist:
 - [ ] Large files moved to appropriate storage (not in git)
 - [ ] README files updated if folder structure changed
 
+### ⚠️ **Critical: Git File Management** *(DO NOT IGNORE THESE)*
+
+**Files that MUST be tracked in git:**
+- ✅ `scripts/prepare-release.mjs` - Release automation (other developers need it)
+- ✅ `frontend/scripts/update-sw-version.mjs` - PWA version sync (part of build process)
+- ✅ `frontend/public/sw.js` - Service worker (modified during builds)
+- ✅ All build scripts and configuration files
+- ✅ Process documentation and guides
+
+**Files that should be ignored (.gitignore):**
+- ❌ `node_modules/` directories
+- ❌ `.next/` build output  
+- ❌ `dist/` build output
+- ❌ `.env*` environment files
+- ❌ Package lock files (`package-lock.json`, `pnpm-lock.yaml` - optional)
+- ❌ IDE-specific files (`.vscode/`, `.idea/`)
+- ❌ OS-specific files (`.DS_Store`, `Thumbs.db`)
+
+**Why scripts must be tracked:**
+- Other developers need them for releases
+- CI/CD systems depend on them
+- Ensures consistent release process across team
+- Part of the build and deployment infrastructure
+
 ### 3. **Version Updates** (for releases only)
-- [ ] Update version in `/package.json`
-- [ ] Update version in `/backend/package.json`
-- [ ] Update version in `/frontend/package.json`
+- [ ] **NEW: Use Automated Script**: Run `npm run prepare-release 1.3.0` for comprehensive version management
+- [ ] **Automated Updates Include**: All package.json files, service worker version, release notes template creation
+- [ ] **Manual Alternative**: Update version in `/package.json`, `/backend/package.json`, `/frontend/package.json`
 - [ ] All three versions match
 
 ### 4. **Documentation Updates**
@@ -105,6 +129,22 @@ git commit -m "type: brief description - details about what was changed - additi
 - `chore`: Maintenance tasks
 - `build`: Build system changes
 - `ci`: CI/CD changes
+
+### ⚠️ **PWA Service Worker Management** *(IMPORTANT)*
+
+The PWA service worker version is **automatically updated** during the build process:
+- **Automated Update**: Service worker version matches `package.json` version automatically
+- **No Manual Action Required**: The `prebuild` script handles this transparently
+- **Cache Invalidation**: New versions force clear all user caches automatically
+- **Production Cache Fix**: Users get fresh webpack chunks without manual cache clearing
+
+**Build Process Includes:**
+1. Version update in `package.json` files
+2. **Automatic SW version sync** (via `npm run prebuild`)
+3. Frontend/backend builds
+4. Commit and push
+
+**Look for**: `📦 Updating service worker to version X.X.X` in build output to confirm automatic update.
 
 #### Examples:
 ```bash
@@ -224,6 +264,24 @@ git push origin main
 
 ### Release Commit Process
 ```bash
+# 1. Set version and run automated preparation
+NEW_VERSION="1.3.0"
+npm run prepare-release $NEW_VERSION
+
+# 2. Complete CHANGELOG.md and release notes (as guided by script output)
+
+# 3. Review and commit
+git status
+git diff
+git add -A
+git commit -m "feat: v${NEW_VERSION} - brief description of major changes"
+
+# 4. Push
+git push origin main
+```
+
+### Release Commit Process (Manual Alternative)
+```bash
 # 1. Set version
 NEW_VERSION="1.3.0"
 
@@ -287,3 +345,29 @@ docs/
 ---
 
 **Remember**: Every commit represents the project's quality. Take time to ensure each commit maintains our high standards and follows our established patterns. 
+
+### ⚡ **Release Preparation Script** *(NEW - RECOMMENDED)*
+
+Use the comprehensive release preparation script for all releases:
+
+```bash
+# Example for version 1.9.1
+npm run prepare-release 1.9.1
+
+# What it automates:
+# ✅ Updates all package.json files
+# ✅ Updates service worker version (forces cache invalidation)
+# ✅ Validates date chronology  
+# ✅ Tests frontend and backend builds
+# ✅ Creates release notes directory structure
+# ✅ Generates release notes template with current date
+```
+
+**Benefits:**
+- **Prevents common mistakes** (forgotten version updates, wrong dates)
+- **Ensures consistency** across all files and systems
+- **Validates release readiness** before committing
+- **Saves time** by automating repetitive tasks
+- **Maintains PWA cache integrity** with automatic service worker versioning
+
+**Script Location:** `scripts/prepare-release.mjs` - **DO NOT IGNORE FROM GIT** ⚠️ 

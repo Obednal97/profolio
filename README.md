@@ -64,7 +64,7 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-
 
 ```bash
 # Install specific version
-sudo ./install-or-update.sh --version v1.4.1
+sudo ./install-or-update.sh --version v1.9.1
 
 # Unattended installation for automation
 sudo ./install-or-update.sh --auto
@@ -231,7 +231,7 @@ sudo systemctl enable profolio-backend profolio-frontend
 sudo ./install-or-update.sh
 
 # Update to specific version
-sudo ./install-or-update.sh --version v1.4.1
+sudo ./install-or-update.sh --version v1.9.1
 
 # Check for updates
 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep tag_name

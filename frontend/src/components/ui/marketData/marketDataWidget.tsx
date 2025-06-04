@@ -24,13 +24,17 @@ interface Asset {
 }
 
 export function MarketDataWidget() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [marketData, setMarketData] = useState<MarketData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Use ref to track abort controller for cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Global cache to prevent duplicate requests
+  const cacheRef = useRef(new Map<string, { data: { price: number; change: number; changePercent: number }; expires: number }>());
+  const CACHE_DURATION = 60000; // 1 minute cache
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
@@ -111,39 +115,54 @@ export function MarketDataWidget() {
 
   const fetchLivePrice = async (symbol: string): Promise<{ price: number; change: number; changePercent: number } | null> => {
     try {
+      // Check cache first
+      const cached = cacheRef.current.get(symbol);
+      if (cached && cached.expires > Date.now()) {
+        return cached.data;
+      }
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
-      // Add demo mode header if in demo mode
-      if (isDemoMode) {
-        headers['x-demo-mode'] = 'true';
+      // Add authorization header for authenticated requests
+      if (token && !isDemoMode) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (isDemoMode) {
+        // Use the correct demo token for demo mode
+        headers['Authorization'] = 'Bearer demo-token-secure-123';
       }
       
-      // Use the backend's cached symbol data for both demo and real users
-      const response = await fetch(
-        `/api/market-data/cached-price/${encodeURIComponent(symbol)}`,
-        { headers }
-      );
+      // Call backend directly for better performance and reliability
+      const backendUrl = process.env.NODE_ENV === 'production'
+        ? `${process.env.NEXT_PUBLIC_API_URL || window.location.origin}/api/market-data/cached-price/${encodeURIComponent(symbol)}`
+        : `http://localhost:3001/api/market-data/cached-price/${encodeURIComponent(symbol)}`;
+      
+      const response = await fetch(backendUrl, { 
+        headers,
+        signal: abortControllerRef.current?.signal
+      });
       
       if (response.ok) {
         const data = await response.json();
         if (data.price) {
-          // Calculate realistic change based on historical patterns
-          const seed = symbol.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-          const baseChange = (Math.sin(seed + Date.now() / 3600000) * 0.03); // ±3% variation
-          const mockChange = data.price * baseChange;
-          const changePercent = baseChange * 100;
-          
-          return {
+          const result = {
             price: data.price,
-            change: parseFloat(mockChange.toFixed(2)),
-            changePercent: parseFloat(changePercent.toFixed(2))
+            change: data.change || 0,
+            changePercent: data.changePercent || 0
           };
+
+          // Cache the result
+          cacheRef.current.set(symbol, {
+            data: result,
+            expires: Date.now() + CACHE_DURATION
+          });
+          
+          return result;
         }
       }
       
-      // Fallback to mock data if API unavailable (both demo and real users)
+      // Fallback to mock data if API unavailable
       return generateRealisticMockData(symbol);
       
     } catch (error) {
@@ -175,45 +194,54 @@ export function MarketDataWidget() {
 
         // Fetch user's assets for both demo and real users (demo users get temporary data)
         const { apiCall } = await import('@/lib/mockApi');
-        const response = await apiCall('/api/assets', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'read', userId: currentUser.id }),
-          signal: controller.signal,
-        });
-
-        if (controller.signal.aborted) return;
         
-        const assetsData = await response.json();
-        const userAssets: Asset[] = assetsData.assets || [];
-
-        // Filter assets with symbols and sort by value
-        const assetsWithSymbols = userAssets
-          .filter(asset => asset.symbol && ['stock', 'crypto'].includes(asset.type))
-          .sort((a, b) => (b.current_value || 0) - (a.current_value || 0))
-          .slice(0, 3);
-
-        if (assetsWithSymbols.length > 0) {
-          // Use user's top assets
-          symbolsToFetch = assetsWithSymbols.map(asset => ({
-            symbol: asset.symbol!,
-            name: asset.name,
-            isUserAsset: true,
-            userValue: asset.current_value
-          }));
-          
-          // Fill remaining slots with default symbols if needed
-          const remainingSlots = 3 - symbolsToFetch.length;
-          if (remainingSlots > 0) {
-            const defaultToAdd = defaultSymbols
-              .filter(def => !symbolsToFetch.some(s => s.symbol === def.symbol))
-              .slice(0, remainingSlots)
-              .map(def => ({ ...def, isUserAsset: false }));
-            symbolsToFetch.push(...defaultToAdd);
-          }
-        } else {
-          // Use default index funds for new users (both demo and real)
+        // Skip asset fetching for demo mode to improve performance
+        if (isDemoMode) {
           symbolsToFetch = defaultSymbols.map(def => ({ ...def, isUserAsset: false }));
+        } else {
+          const response = await apiCall('/api/assets', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` })
+            },
+            body: JSON.stringify({ method: 'read', userId: currentUser.id }),
+            signal: controller.signal,
+          });
+
+          if (controller.signal.aborted) return;
+          
+          const assetsData = await response.json();
+          const userAssets: Asset[] = assetsData.assets || [];
+
+          // Filter assets with symbols and sort by value
+          const assetsWithSymbols = userAssets
+            .filter(asset => asset.symbol && ['stock', 'crypto'].includes(asset.type))
+            .sort((a, b) => (b.current_value || 0) - (a.current_value || 0))
+            .slice(0, 3);
+
+          if (assetsWithSymbols.length > 0) {
+            // Use user's top assets
+            symbolsToFetch = assetsWithSymbols.map(asset => ({
+              symbol: asset.symbol!,
+              name: asset.name,
+              isUserAsset: true,
+              userValue: asset.current_value
+            }));
+            
+            // Fill remaining slots with default symbols if needed
+            const remainingSlots = 3 - symbolsToFetch.length;
+            if (remainingSlots > 0) {
+              const defaultToAdd = defaultSymbols
+                .filter(def => !symbolsToFetch.some(s => s.symbol === def.symbol))
+                .slice(0, remainingSlots)
+                .map(def => ({ ...def, isUserAsset: false }));
+              symbolsToFetch.push(...defaultToAdd);
+            }
+          } else {
+            // Use default index funds for new users
+            symbolsToFetch = defaultSymbols.map(def => ({ ...def, isUserAsset: false }));
+          }
         }
 
         if (isDemoMode) {

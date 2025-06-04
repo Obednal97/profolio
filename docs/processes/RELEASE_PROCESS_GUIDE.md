@@ -11,6 +11,8 @@ This guide ensures consistent, well-documented releases with proper version mana
 - [ ] Backend builds without errors (`cd backend && npm run build`)
 - [ ] No outstanding security vulnerabilities
 - [ ] All new API routes tested and working
+- [ ] **PWA Service Worker**: Automatic version update verified (check console output for "📦 Updating service worker to version X.X.X")
+- [ ] **Cache Invalidation**: New version will force clear all user caches automatically (no manual user action required)
 
 ### 2. **Documentation Readiness**
 - [ ] CHANGELOG.md updated with all changes
@@ -25,6 +27,7 @@ This guide ensures consistent, well-documented releases with proper version mana
 - [ ] Demo mode tested (if applicable)
 - [ ] Cross-deployment compatibility verified (cloud/self-hosted)
 - [ ] No console errors in production build
+- [ ] **PWA Testing**: Service worker registration working in production mode (development mode skips SW registration to prevent cache conflicts)
 
 ## 🚀 Release Process Steps
 
@@ -57,12 +60,29 @@ echo "⚠️  NEW DATE MUST BE AFTER THE ABOVE DATE"
 
 ### Step 1: Version Update
 
+**NEW: Use Automated Release Preparation Script**
+
 ```bash
 # Set new version (example: 1.3.0)
 NEW_VERSION="1.3.0"
-RELEASE_DATE=$(date +%Y-%m-%d)
 
-# Update all package.json files at once
+# Run comprehensive release preparation script
+npm run prepare-release $NEW_VERSION
+# OR
+node scripts/prepare-release.mjs $NEW_VERSION
+```
+
+**What this script automates:**
+- ✅ **Version updates** in all package.json files (root, backend, frontend)
+- ✅ **Service worker version sync** (forces cache invalidation for all users)
+- ✅ **Date chronology validation** (ensures new release date is after previous)
+- ✅ **Build validation** (tests both frontend and backend builds)
+- ✅ **Release notes structure** creation with proper directory organization
+- ✅ **Release notes template** with current date and all required sections
+
+**Manual Alternative (if needed):**
+```bash
+# Update all package.json files at once (the old way)
 sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json backend/package.json frontend/package.json
 
 # Verify updates
@@ -98,7 +118,31 @@ Add new section at the top of the changelog using our standard format:
 - **🔒 Cross-Deployment Support**: Notification system works consistently across cloud and self-hosted modes
 ```
 
-### Step 3: Create Release Notes
+### Step 3: Complete Release Notes
+
+The release preparation script automatically creates the release notes template. Now complete it:
+
+```bash
+# The script creates: docs/releases/v1/v1.3/RELEASE_NOTES_v1.3.0.md
+# Location shown in script output
+
+# Edit the created template file to add:
+# - Release highlights (3-4 key improvements)
+# - New features with clear benefits
+# - Critical bug fixes with technical details
+# - UI/UX improvements
+# - Technical improvements
+# - Security & compatibility updates
+```
+
+**Release Notes Requirements:**
+- ✅ **NO LINKS**: Remove all GitHub links, documentation links, or external references
+- ✅ **NO SIGN-OFFS**: Remove "enjoy" messages or similar endings  
+- ✅ **Clean Markdown**: Use simple formatting compatible with updates page parser
+- ✅ **Content Focus**: Include only information users need to know about the release
+- ✅ **Parser Compatibility**: Test that content displays correctly in updates page
+
+**Original Step 3 (Manual Creation - Now Automated):**
 
 Create detailed release notes in the proper directory structure:
 
@@ -127,7 +171,7 @@ Use our comprehensive release notes template with sections for:
 - 📦 Installation & Updates
 - 🙏 Acknowledgments
 - 📊 Release Statistics
-- 🔗 Related Resources
+- �� Related Resources
 
 ### Step 4: Update Feature Documentation (if applicable)
 
