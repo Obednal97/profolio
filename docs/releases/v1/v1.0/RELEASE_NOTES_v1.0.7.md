@@ -54,8 +54,8 @@ The `/docs` folder has been completely restructured for better organization:
 │   ├── COMMIT_AND_PUSH_GUIDE.md
 │   └── RELEASE_PROCESS_GUIDE.md
 ├── installer/          # Installation documentation
-│   ├── INSTALLER_V2_FEATURES.md
-│   └── QUICK_START_V2.md
+│   ├── setup/advanced-features.md
+│   └── setup/quick-start.md
 ├── features/           # Feature guides
 │   ├── automatic-rollback.md
 │   ├── version-management.md
@@ -86,8 +86,8 @@ The `/docs` folder has been completely restructured for better organization:
 - `/docs/releases/RELEASE_NOTES_v1.0.6.md` - Version sync release
 
 ### Moved Documentation
-- `INSTALLER_V2_FEATURES.md` → `/docs/installer/`
-- `QUICK_START_V2.md` → `/docs/installer/`
+- `setup/advanced-features.md` → `/docs/installer/`
+- `setup/quick-start.md` → `/docs/installer/`
 
 ### Updated Documentation
 - `/docs/README.md` - Complete restructure with new navigation

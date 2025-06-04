@@ -1,4 +1,4 @@
-# ��️ Security Policy
+# 🛡️ Security Policy
 
 **Enterprise-grade security for self-hosted portfolio management**
 
@@ -12,12 +12,12 @@ Security updates are actively maintained for the following versions:
 
 | Version | Support Status | Security Updates | End of Life |
 |---------|---------------|------------------|-------------|
-| v1.4.x  | ✅ **Full Support** | ✅ Active | TBD |
-| v1.3.x  | ✅ **Security Only** | ✅ Critical fixes | 2025-09-01 |
-| v1.2.x  | ⚠️ **Legacy** | ❌ Limited | 2025-06-01 |
-| < v1.2  | ❌ **Unsupported** | ❌ None | End of Life |
+| v1.9.x  | ✅ **Full Support** | ✅ Active | TBD |
+| v1.8.x  | ✅ **Security Only** | ✅ Critical fixes | 2026-06-01 |
+| v1.7.x  | ⚠️ **Legacy** | ❌ Limited | 2026-03-01 |
+| < v1.7  | ❌ **Unsupported** | ❌ None | End of Life |
 
-**Recommendation**: Always use the latest stable version for optimal security.
+**Recommendation**: Always use the latest stable version for optimal security and access to environment preservation features.
 
 ---
 
@@ -152,6 +152,31 @@ Security updates are actively maintained for the following versions:
 
 ---
 
+## 🚀 **Enhanced Security Features**
+
+### **🔒 Environment Preservation**
+Our advanced environment preservation system protects critical configuration during updates:
+- **Firebase Credentials Protection**: Authentication configurations automatically preserved
+- **API Key Safety**: External service keys maintained across updates
+- **Configuration Integrity**: User settings preserved while system updates
+- **Zero-Downtime Updates**: Authentication continues functioning during updates
+
+### **🛡️ Automatic Rollback Protection**
+Built-in safety mechanisms prevent security degradation:
+- **Failed Update Detection**: Automatic rollback on installation failures
+- **Configuration Validation**: Verify security settings before deployment
+- **Service Verification**: Ensure all security services running after updates
+- **Recovery Mechanisms**: Multiple fallback options for failed updates
+
+### **📦 Package Manager Security (pnpm)**
+Enhanced security through modern package management:
+- **Strict Dependency Resolution**: Phantom dependency prevention
+- **Content Verification**: Package integrity verification using checksums
+- **Faster Security Updates**: Improved dependency resolution and caching
+- **Reduced Attack Surface**: Smaller dependency trees and better isolation
+
+---
+
 ## 🔍 **Security Best Practices**
 
 ### **🏠 Self-Hosted Deployment**
@@ -164,20 +189,22 @@ Security updates are actively maintained for the following versions:
 - [ ] **Database Security**: Strong passwords, network restrictions
 - [ ] **Backup Strategy**: Encrypted backups with offsite storage
 - [ ] **Monitoring Setup**: Log monitoring and alerting configured
+- [ ] **pnpm Installation**: Modern package manager for enhanced security
 
 #### **Ongoing Maintenance**
-- **Regular Updates**: Apply security updates within 48 hours
+- **Regular Updates**: Apply security updates within 48 hours using our installer
 - **Password Rotation**: Change default passwords immediately
-- **Certificate Management**: Monitor certificate expiration
+- **Certificate Management**: Monitor certificate expiration with auto-renewal
 - **Backup Testing**: Regular backup restoration testing
-- **Security Scanning**: Periodic vulnerability scans
+- **Security Scanning**: Periodic vulnerability scans with `pnpm audit`
 - **Access Review**: Regular user access audits
+- **Environment Protection**: Use installer's environment preservation features
 
 ### **🌐 Network Security**
 
 #### **Firewall Configuration**
 ```bash
-# Example UFW configuration
+# Example UFW configuration for Profolio
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow ssh
@@ -193,6 +220,9 @@ sudo ufw enable
 sudo apt install certbot nginx
 sudo certbot --nginx -d your-domain.com
 sudo systemctl enable certbot.timer
+
+# Verify TLS configuration
+curl -I https://your-domain.com | grep -i strict
 ```
 
 ### **💾 Data Protection**
@@ -223,6 +253,7 @@ As a self-hosted solution, security responsibility is shared:
 - Operating system updates
 - SSL certificate management
 - Backup and disaster recovery
+- Package manager security (using pnpm)
 
 **Profolio Responsibilities:**
 - Application security features
@@ -230,12 +261,22 @@ As a self-hosted solution, security responsibility is shared:
 - Vulnerability fixes and patches
 - Security documentation and guidance
 - Security feature development
+- Environment preservation during updates
 
 ### **🔄 Update Security**
+Our enhanced update system provides multiple security layers:
 - **Automatic Rollback**: Failed updates automatically rolled back
 - **Environment Preservation**: Credentials protected during updates
 - **Zero Downtime**: Updates designed for minimal service interruption
 - **Version Control**: Ability to roll back to any previous version
+- **Configuration Validation**: Security settings verified after updates
+
+### **📦 Package Manager Security**
+Migration to pnpm provides enhanced security:
+- **Phantom Dependency Prevention**: Strict dependency resolution
+- **Package Integrity**: Content verification and checksums
+- **Reduced Attack Surface**: Smaller dependency trees
+- **Faster Security Patches**: Improved update mechanisms
 
 ---
 
@@ -255,6 +296,10 @@ SESSION_TIMEOUT="3600"  # Session timeout in seconds
 MAX_LOGIN_ATTEMPTS="5"  # Failed login limit
 RATE_LIMIT_WINDOW="900" # Rate limit window (15 minutes)
 RATE_LIMIT_MAX="100"    # Max requests per window
+
+# Development vs Production
+NODE_ENV="production"   # Ensures production security settings
+NEXT_PUBLIC_AUTH_MODE="local"  # Authentication mode
 ```
 
 ### **📋 Production Security Checklist**
@@ -268,6 +313,8 @@ RATE_LIMIT_MAX="100"    # Max requests per window
 - [ ] Enable security logging
 - [ ] Configure backup encryption
 - [ ] Test disaster recovery procedures
+- [ ] Install pnpm for enhanced package security
+- [ ] Verify environment preservation settings
 
 #### **Post-Deployment**
 - [ ] Verify all services are running securely
@@ -276,8 +323,9 @@ RATE_LIMIT_MAX="100"    # Max requests per window
 - [ ] Confirm firewall rules are active
 - [ ] Test backup and recovery procedures
 - [ ] Verify monitoring and alerting
-- [ ] Conduct security scan
+- [ ] Conduct security scan with `pnpm audit`
 - [ ] Document security procedures
+- [ ] Test update and rollback mechanisms
 
 ---
 
@@ -286,7 +334,7 @@ RATE_LIMIT_MAX="100"    # Max requests per window
 ### **🧪 Regular Security Assessments**
 
 #### **Automated Testing**
-- **Dependency Scanning**: Regular vulnerability scans of all dependencies
+- **Dependency Scanning**: Regular vulnerability scans with `pnpm audit`
 - **Static Analysis**: Code security analysis with every release
 - **Dynamic Testing**: Runtime security testing in staging environments
 - **Penetration Testing**: Annual third-party security assessments
@@ -305,6 +353,25 @@ RATE_LIMIT_MAX="100"    # Max requests per window
 
 ---
 
+## 🛡️ **Security Development Lifecycle**
+
+### **🔧 Secure Development Practices**
+Our development process includes security at every stage:
+- **Threat Modelling**: Security analysis during feature design
+- **Secure Coding Standards**: Following OWASP guidelines
+- **Code Quality Checklist**: Comprehensive security review process
+- **Dependency Management**: Regular security updates with pnpm
+- **Automated Testing**: Security tests in CI/CD pipeline
+
+### **📊 Security Metrics**
+We track security performance through:
+- **Vulnerability Response Time**: Average time to patch critical issues
+- **Code Coverage**: Security test coverage across codebase
+- **Dependency Health**: Percentage of dependencies without known vulnerabilities
+- **Update Success Rate**: Successful deployments without security degradation
+
+---
+
 ## 📞 **Security Contact & Support**
 
 ### **🚨 Emergency Security Contact**
@@ -313,14 +380,14 @@ RATE_LIMIT_MAX="100"    # Max requests per window
 - **Response Time**: < 4 hours for critical vulnerabilities
 
 ### **💬 General Security Questions**
-- **GitHub Discussions**: Security best practices and questions
-- **Community Forum**: Implementation guidance and peer support
-- **Documentation**: Comprehensive security guides and tutorials
+- **[GitHub Discussions](https://github.com/Obednal97/profolio/discussions)**: Security best practices and questions
+- **[Setup Documentation](docs/setup/)**: Installation security guides
+- **[Security Checklist](docs/processes/CODE_QUALITY_CHECKLIST.md)**: Development security standards
 
 ### **🏢 Enterprise Security Support**
 For organizations requiring enhanced security support:
 - **Security Consulting**: Custom security assessments and recommendations
-- **Compliance Assistance**: Help meeting regulatory requirements
+- **Compliance Assistance**: Help meeting regulatory requirements (GDPR, SOC 2)
 - **Priority Support**: Dedicated security support channel
 - **Custom Development**: Security feature development for specific needs
 
@@ -348,6 +415,12 @@ We recognize security researchers who help improve Profolio's security:
 - **NIST Framework**: Cybersecurity framework alignment
 - **PCI DSS**: Payment card industry security standards (where applicable)
 
+### **🔍 Audit Support**
+- **Comprehensive Logging**: All security events logged for audit trails
+- **Documentation**: Complete security documentation package
+- **Compliance Reports**: Automated reporting for regulatory requirements
+- **Third-Party Audits**: Support for external security assessments
+
 ---
 
-**Security is our top priority. By choosing Profolio, you're choosing a platform built with security at its core, giving you the confidence to manage your financial data with complete peace of mind.** 🛡️ 
+**Security is our top priority. By choosing Profolio, you're choosing a platform built with security at its core, enhanced with modern package management and environment preservation features, giving you the confidence to manage your financial data with complete peace of mind.** 🛡️ 

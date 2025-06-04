@@ -5,14 +5,16 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 First, run the development server:
 
 ```bash
+pnpm dev
+# or
 npm run dev
 # or
 yarn dev
 # or
-pnpm dev
-# or
 bun dev
 ```
+
+**Note**: This project is configured to use **pnpm** as the preferred package manager for better performance and dependency management.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 

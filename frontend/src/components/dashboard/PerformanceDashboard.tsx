@@ -149,18 +149,6 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
     { value: 'max', label: 'All' },
   ], []);
 
-  const allocationData = useMemo(() => {
-    if (!metrics?.assetsByType) return [];
-    
-    return Object.entries(metrics.assetsByType).map(([type, data]) => ({
-      name: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase(),
-      value: data.value,
-      percentage: data.allocation,
-      count: data.count,
-      color: getTypeColor(type),
-    }));
-  }, [metrics]);
-
   // Memoized color function to prevent recreation
   const getTypeColor = useCallback((type: string): string => {
     const colors: Record<string, string> = {
@@ -173,6 +161,18 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
     };
     return colors[type] || '#6B7280';
   }, []);
+
+  const allocationData = useMemo(() => {
+    if (!metrics?.assetsByType) return [];
+    
+    return Object.entries(metrics.assetsByType).map(([type, data]) => ({
+      name: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase(),
+      value: data.value,
+      percentage: data.allocation,
+      count: data.count,
+      color: getTypeColor(type),
+    }));
+  }, [metrics, getTypeColor]);
 
   // Memoized top performers calculation
   const topPerformers = useMemo(() => {

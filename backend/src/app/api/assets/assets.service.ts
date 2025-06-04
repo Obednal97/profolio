@@ -240,7 +240,7 @@ export class AssetsService {
           gainLossPercent: assetGainLoss.percentage
         };
       })
-      .sort((a, b) => b.gainLossPercent - a.gainLossPercent)
+      .sort((a: any, b: any) => b.gainLossPercent - a.gainLossPercent)
       .slice(0, 5);
 
     return {

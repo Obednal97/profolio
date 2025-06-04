@@ -1,15 +1,14 @@
-const CACHE_NAME = 'profolio-v2';
+const CACHE_NAME = 'profolio-v5';
 const STATIC_CACHE_NAME = `${CACHE_NAME}-static`;
 const DYNAMIC_CACHE_NAME = `${CACHE_NAME}-dynamic`;
 
 // Static resources to cache immediately
 const STATIC_ASSETS = [
   '/',
-  '/app/dashboard',
-  '/app/assetManager',
-  '/app/expenseManager',
-  '/app/propertyManager',
-  '/app/settings',
+  '/about',
+  '/pricing',
+  '/how-it-works',
+  '/offline',  // 🚀 OFFLINE UX: Cache custom offline page
   '/manifest.json',
   // All PNG icons for offline availability
   '/icons/icon-72x72.png',
@@ -22,10 +21,11 @@ const STATIC_ASSETS = [
   '/icons/icon-512x512.png'
 ];
 
-// Resources that should not be cached
+// Resources that should not be cached (including authenticated app routes)
 const CACHE_BLACKLIST = [
-  '/api/auth/',
-  '/api/setup/',
+  '/api/',
+  '/app/',
+  '/auth/',
   'chrome-extension://',
   'extension://',
 ];
@@ -84,14 +84,20 @@ function isCacheFresh(response) {
 }
 
 /**
- * Add timestamp to response for cache freshness tracking
- * @param {Response} response - Response to timestamp
- * @returns {Response} - Response with timestamp header
+ * Create a new response with timestamp metadata (without modifying headers)
+ * @param {Response} response - Response to add timestamp to
+ * @returns {Response} - New response with timestamp in custom header
  */
 function addTimestamp(response) {
-  const responseWithTimestamp = response.clone();
-  responseWithTimestamp.headers.set('sw-cache-timestamp', Date.now().toString());
-  return responseWithTimestamp;
+  // Create new response with same body but new headers
+  const headers = new Headers(response.headers);
+  headers.set('sw-cache-timestamp', Date.now().toString());
+  
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: headers
+  });
 }
 
 // Install event - cache static resources
@@ -111,7 +117,7 @@ self.addEventListener('install', (event) => {
         .then(cacheNames => {
           const oldCaches = cacheNames.filter(name => 
             name.startsWith('profolio-') && 
-            !name.includes('v2')
+            !name.includes('v5')
           );
           
           return Promise.all(
@@ -148,15 +154,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Skip if blacklisted
+  // Skip if blacklisted (including all /app/ routes for auth safety)
   if (!shouldCache(url)) {
+    // Only log API/auth skips, not every request
+    if (url.includes('/api/') || url.includes('/app/') || url.includes('/auth/')) {
+      console.log('🚫 Skipping cache for protected route:', url.split('?')[0]);
+    }
     return;
+  }
+  
+  // Only intercept specific routes we want to cache
+  // Let Next.js static assets, chunks, and other resources pass through normally
+  const shouldIntercept = 
+    STATIC_ASSETS.some(asset => url.includes(asset)) || // Static assets we explicitly cache
+    url.includes('/icons/') ||                          // PWA icons
+    url.includes('manifest.json') ||                    // PWA manifest
+    (request.mode === 'navigate' && !url.includes('/app/') && !url.includes('/auth/')); // Public page navigation
+  
+  if (!shouldIntercept) {
+    return; // Let the request go through normally
   }
   
   event.respondWith(
     handleFetchRequest(request)
       .catch(error => {
-        console.error('❌ Fetch failed:', url, error);
+        console.error('❌ Fetch failed:', url.split('?')[0], error);
         return handleFallback(request);
       })
   );
@@ -174,7 +196,6 @@ async function handleFetchRequest(request) {
   if (STATIC_ASSETS.some(asset => url.includes(asset))) {
     const staticResponse = await caches.match(request, { cacheName: STATIC_CACHE_NAME });
     if (staticResponse) {
-      console.log('📂 Serving static asset from cache:', url);
       return staticResponse;
     }
   }
@@ -184,7 +205,6 @@ async function handleFetchRequest(request) {
   const cachedResponse = await dynamicCache.match(request);
   
   if (cachedResponse && isCacheFresh(cachedResponse)) {
-    console.log('📂 Serving fresh cached response:', url);
     return cachedResponse;
   }
   
@@ -192,25 +212,31 @@ async function handleFetchRequest(request) {
   try {
     const networkResponse = await fetch(request);
     
-    // Only cache successful responses
+    // Only cache successful responses for static content
     if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-      // Clone response for caching (can only be consumed once)
-      const responseToCache = addTimestamp(networkResponse.clone());
-      
-      // Cache the response asynchronously
-      dynamicCache.put(request, responseToCache)
-        .then(() => limitCacheSize(DYNAMIC_CACHE_NAME, MAX_DYNAMIC_CACHE_SIZE))
-        .catch(error => console.warn('⚠️ Failed to cache response:', error));
-      
-      console.log('🌐 Serving fresh network response:', url);
+      // Only cache if it's truly static content (not app routes)
+      if (shouldCache(url)) {
+        try {
+          // Clone response for caching (can only be consumed once)
+          const responseToCache = addTimestamp(networkResponse.clone());
+          
+          // Cache the response asynchronously
+          dynamicCache.put(request, responseToCache)
+            .then(() => limitCacheSize(DYNAMIC_CACHE_NAME, MAX_DYNAMIC_CACHE_SIZE))
+            .catch(error => console.warn('⚠️ Failed to cache response:', error));
+          
+        } catch (cacheError) {
+          console.warn('⚠️ Failed to add timestamp to response, serving without caching:', cacheError);
+        }
+      }
     }
     
     return networkResponse;
     
   } catch (networkError) {
-    // Network failed, try to serve stale cache
-    if (cachedResponse) {
-      console.log('📂 Serving stale cached response (network failed):', url);
+    // Network failed, try to serve stale cache only for non-auth content
+    if (cachedResponse && !url.includes('/app/') && !url.includes('/auth/')) {
+      console.log('📂 Serving stale cached response (network failed):', url.split('?')[0]);
       return cachedResponse;
     }
     
@@ -224,15 +250,33 @@ async function handleFetchRequest(request) {
  * @returns {Response} - Fallback response
  */
 async function handleFallback(request) {
-  // For navigation requests, try to serve the main app shell
+  const url = request.url;
+  
+  // For app routes, don't serve fallback - let them fail properly
+  if (url.includes('/app/') || url.includes('/auth/')) {
+    return new Response('Network Error', {
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
+  }
+  
+  // 🚀 OFFLINE UX: For navigation requests, serve our custom offline page
   if (request.mode === 'navigate') {
+    // Try to serve our custom offline page first
+    const offlinePage = await caches.match('/offline', { cacheName: STATIC_CACHE_NAME });
+    if (offlinePage) {
+      console.log('📱 Serving custom offline page');
+      return offlinePage;
+    }
+    
+    // Fallback to app shell if offline page not available
     const appShell = await caches.match('/', { cacheName: STATIC_CACHE_NAME });
     if (appShell) {
       console.log('📂 Serving app shell as fallback');
       return appShell;
     }
     
-    // Last resort offline page
+    // Last resort: Basic offline HTML (should rarely happen)
     return new Response(
       `<!DOCTYPE html>
       <html>
@@ -241,19 +285,52 @@ async function handleFallback(request) {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
-            body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }
-            .offline { color: #666; }
+            body { 
+              font-family: system-ui, sans-serif; 
+              text-align: center; 
+              padding: 2rem; 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              min-height: 100vh;
+              margin: 0;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+            }
+            .container { 
+              background: rgba(255,255,255,0.1); 
+              padding: 2rem; 
+              border-radius: 1rem; 
+              backdrop-filter: blur(10px);
+            }
+            button {
+              background: #667eea;
+              color: white;
+              border: none;
+              padding: 1rem 2rem;
+              border-radius: 0.5rem;
+              cursor: pointer;
+              font-size: 1rem;
+              margin-top: 1rem;
+            }
+            button:hover { background: #5a6fd8; }
           </style>
         </head>
         <body>
-          <h1>Profolio</h1>
-          <p class="offline">App is currently offline. Please check your connection and try again.</p>
-          <button onclick="window.location.reload()">Retry</button>
+          <div class="container">
+            <h1>📱 Profolio</h1>
+            <p>You're currently offline, but your portfolio data is safely cached.</p>
+            <p>Check your connection and try again.</p>
+            <button onclick="window.location.reload()">
+              🔄 Retry Connection
+            </button>
+          </div>
         </body>
       </html>`,
       {
         status: 503,
-        statusText: 'Service Unavailable',
+        statusText: 'Service Unavailable', 
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
       }
     );
@@ -311,6 +388,25 @@ self.addEventListener('message', (event) => {
   
   if (data && data.type === 'GET_VERSION') {
     event.ports[0].postMessage({ version: CACHE_NAME });
+  }
+  
+  if (data && data.type === 'CLEAR_AUTH_CACHE') {
+    console.log('📨 Clearing auth-related cache entries');
+    // Clear any auth-related cache entries
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          return caches.open(cacheName).then(cache => {
+            return cache.keys().then(keys => {
+              return Promise.all(
+                keys.filter(key => key.url.includes('/app/') || key.url.includes('/auth/'))
+                   .map(key => cache.delete(key))
+              );
+            });
+          });
+        })
+      );
+    });
   }
 });
 

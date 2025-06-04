@@ -438,7 +438,7 @@ export function AssetModal({ asset: initialData, onSave, onClose }: AssetModalPr
     }, 1000); // 1 second debounce
 
     return cleanup;
-  }, [formData.symbol, formData.type, formData.quantity, fetchSymbolData]);
+  }, [formData.symbol, formData.type, formData.quantity, fetchSymbolData, cleanup]);
 
   // Cleanup on unmount
   useEffect(() => {

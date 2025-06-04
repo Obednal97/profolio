@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/unifiedAuth';
 import { useAuth as useAuthHook } from '@/hooks/useAuth';
 import { AuthLayout } from "@/components/layout/authLayout";
@@ -10,7 +9,6 @@ import { motion } from 'framer-motion';
 import ProfolioLogo from '@/components/ui/logo/ProfolioLogo';
 
 function SignInPage() {
-  const router = useRouter();
   const { user, loading: authLoading, signIn, signInWithGoogleProvider, authMode, config } = useAuth();
   const { signInWithDemo } = useAuthHook();
 
@@ -49,7 +47,8 @@ function SignInPage() {
 
     try {
       await signIn(formData.email, formData.password);
-      router.push('/app/dashboard');
+      // Redirect with signing in indicator
+      window.location.href = '/app/dashboard?auth-action=signing-in';
     } catch (err: unknown) {
       console.error('Sign in error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Invalid email or password';
@@ -71,14 +70,14 @@ function SignInPage() {
       const result = await signInWithGoogleProvider();
       console.log('Google sign-in successful:', result);
       
-      // Primary redirect attempt
-      window.location.href = '/app/dashboard';
+      // Primary redirect attempt with signing in indicator
+      window.location.href = '/app/dashboard?auth-action=signing-in';
       
       // Fallback redirect in case the primary one doesn't work
       setTimeout(() => {
         if (window.location.pathname === '/auth/signIn') {
           console.log('Fallback redirect triggered');
-          window.location.replace('/app/dashboard');
+          window.location.replace('/app/dashboard?auth-action=signing-in');
         }
       }, 1000);
       
@@ -96,7 +95,7 @@ function SignInPage() {
 
     try {
       await signInWithDemo({
-        callbackUrl: "/app/dashboard",
+        callbackUrl: "/app/dashboard?auth-action=signing-in",
         redirect: true,
       });
     } catch (err) {

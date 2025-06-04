@@ -71,7 +71,7 @@ function ExpenseManager() {
       };
     }
     return null;
-  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+  }, [user, isDemoMode]);
 
   // Cleanup function for all abort controllers
   const cleanup = useCallback(() => {

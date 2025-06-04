@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-var-requires */
+ 
 
 const { spawn } = require('child_process');
 const { join } = require('path');
@@ -35,7 +35,7 @@ console.log(`   • Desktop: https://localhost:3000`);
 console.log(`   • Mobile:  https://YOUR_IP:3000`);
 
 // Start Next.js with HTTPS environment
-const nextProcess = spawn('npx', ['next', 'dev'], {
+const nextProcess = spawn('pnpm', ['run', 'dev'], {
   stdio: 'inherit',
   env
 });

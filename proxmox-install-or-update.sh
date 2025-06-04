@@ -4,91 +4,144 @@
 # Professional Proxmox LXC deployment wizard with rollback and version control
 # Optimized for Proxmox VE Container deployment with enterprise-grade reliability
 
-# Note: Removed 'set -e' to prevent premature exit on minor errors
-# Critical errors will be handled explicitly
+set -o pipefail  # Exit on pipe failures but allow controlled error handling
 
-# Colors for output - simplified for better compatibility
+# Colors for output
 if [[ -t 1 ]]; then
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[1;33m'
-    BLUE='\033[0;34m'
-    PURPLE='\033[0;35m'
-    CYAN='\033[0;36m'
-    WHITE='\033[1;37m'
-    NC='\033[0m' # No Color
+    readonly RED='\033[0;31m'
+    readonly GREEN='\033[0;32m'
+    readonly YELLOW='\033[1;33m'
+    readonly BLUE='\033[0;34m'
+    readonly PURPLE='\033[0;35m'
+    readonly CYAN='\033[0;36m'
+    readonly WHITE='\033[1;37m'
+    readonly NC='\033[0m'
 else
-    RED=''
-    GREEN=''
-    YELLOW=''
-    BLUE=''
-    PURPLE=''
-    CYAN=''
-    WHITE=''
-    NC=''
+    readonly RED=''
+    readonly GREEN=''
+    readonly YELLOW=''
+    readonly BLUE=''
+    readonly PURPLE=''
+    readonly CYAN=''
+    readonly WHITE=''
+    readonly NC=''
 fi
 
-# Rollback and version control variables
+# Global configuration variables
 ROLLBACK_ENABLED=true
 ROLLBACK_COMMIT=""
 ROLLBACK_BACKUP_DIR=""
 TARGET_VERSION=""
 FORCE_VERSION=false
+OPERATION_TYPE="install"
+OPERATION_SUCCESS=false
+OPTIMIZATION_LEVEL="safe"
 
-# Simple progress spinner - using basic ASCII characters for compatibility
-SPINNER_CHARS="/-\|"
-SPINNER_PID=""
+# Statistics tracking
+OPERATION_START_TIME=""
+OPERATION_END_TIME=""
+SERVICE_DOWNTIME_START=""
+SERVICE_DOWNTIME_END=""
+PREVIOUS_VERSION=""
+NEW_VERSION=""
+FILES_CHANGED_COUNT=""
+DISK_SPACE_BEFORE=""
+DISK_SPACE_AFTER=""
+MEMORY_USAGE_PEAK=""
+DATABASE_MIGRATIONS_COUNT=""
+BACKUP_SIZE=""
+DOWNLOAD_SIZE=""
+APP_SIZE=""
 
-# Simple spinner function that actually works
-show_spinner() {
-    local message="$1"
-    local pid="$2"
-    local spin='-\|/'
-    local i=0
-    
-    echo -n "$message "
-    while kill -0 $pid 2>/dev/null; do
-        i=$(((i+1) % 4))
-        printf "\r$message ${spin:$i:1}"
-        sleep 0.1
-    done
-    printf "\r$message ✓\n"
-}
+# Container configuration
+DEFAULT_CONTAINER_NAME="Profolio"
+DEFAULT_CPU_CORES="2"
+DEFAULT_MEMORY="2048"
+DEFAULT_STORAGE="20"
+DEFAULT_NETWORK_MODE="dhcp"
+DEFAULT_DB_PASSWORD=""
 
-# Enhanced progress function with simple, working progress indication
+CONTAINER_NAME=""
+CPU_CORES=""
+MEMORY_MB=""
+STORAGE_GB=""
+NETWORK_MODE=""
+STATIC_IP=""
+GATEWAY=""
+SUBNET_MASK=""
+DNS_SERVERS=""
+DNS_DOMAIN=""
+IPV6_ENABLED=""
+SSH_ENABLED=""
+SSH_PORT=""
+SSH_ROOT_LOGIN=""
+SSH_PASSWORD_AUTH=""
+SSH_KEY_ONLY=""
+DB_PASSWORD=""
+AUTO_INSTALL=false
+GENERATE_SSH_KEY=""
+
+# UX Flow Variables
+USER_ACTION_CHOICE=""
+SKIP_ENV_PRESERVATION=false
+
+# Proxmox LXC container configuration
+PROXMOX_VMID=""
+PROXMOX_TEMPLATE="ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+PROXMOX_STORAGE="local-lvm"
+PROXMOX_MEMORY="4096"
+PROXMOX_SWAP="512"
+PROXMOX_DISK="20"
+PROXMOX_CORES="2"
+PROXMOX_NETWORK_BRIDGE="vmbr0"
+PROXMOX_NETWORK_MODE="dhcp"
+PROXMOX_PASSWORD=""
+CONTAINER_NAME="profolio"
+
+# Temporary file for progress logging (with cleanup)
+readonly PROGRESS_LOG="/tmp/profolio_progress_$$.log"
+trap 'rm -f "$PROGRESS_LOG"' EXIT
+
+# Safe command execution with progress indication
 show_progress() {
     local step=$1
     local total=$2
     local message=$3
     local command="$4"
     
-    printf "${BLUE}[$step/$total]${NC} $message"
+    # Input validation
+    if [[ ! "$step" =~ ^[0-9]+$ ]] || [[ ! "$total" =~ ^[0-9]+$ ]]; then
+        error "Invalid step/total parameters: $step/$total"
+        return 1
+    fi
+    
+    printf "${BLUE}[$step/$total]${NC} %s" "$message"
     
     if [[ -n "$command" ]]; then
-        # Run command in background and show spinner
-        eval "$command" > /tmp/profolio_progress.log 2>&1 &
+        # SECURITY FIX: Replace eval with safer bash execution
+        bash -c "$command" > "$PROGRESS_LOG" 2>&1 &
         local cmd_pid=$!
         
-        # Simple ASCII spinner
         local spin='-\|/'
         local i=0
-        while kill -0 $cmd_pid 2>/dev/null; do
+        while kill -0 "$cmd_pid" 2>/dev/null; do
             i=$(((i+1) % 4))
-            printf "\r${BLUE}[$step/$total]${NC} $message ${spin:$i:1}"
+            printf "\r${BLUE}[%s/%s]${NC} %s %c" "$step" "$total" "$message" "${spin:$i:1}"
             sleep 0.1
         done
         
-        # Check if command succeeded
-        wait $cmd_pid
+        wait "$cmd_pid"
         local exit_code=$?
         
         if [[ $exit_code -eq 0 ]]; then
-            printf "\r${BLUE}[$step/$total]${NC} $message ${GREEN}✓${NC}\n"
+            printf "\r${BLUE}[%s/%s]${NC} %s ${GREEN}✓${NC}\n" "$step" "$total" "$message"
             return 0
         else
-            printf "\r${BLUE}[$step/$total]${NC} $message ${RED}✗${NC}\n"
+            printf "\r${BLUE}[%s/%s]${NC} %s ${RED}✗${NC}\n" "$step" "$total" "$message"
             echo "${RED}Error details:${NC}"
-            cat /tmp/profolio_progress.log
+            if [[ -r "$PROGRESS_LOG" ]]; then
+                cat "$PROGRESS_LOG"
+            fi
             return 1
         fi
     else
@@ -97,11 +150,22 @@ show_progress() {
     fi
 }
 
-# Multi-step execution with clean progress display
+# Multi-step execution with validation
 execute_steps() {
     local main_message="$1"
     shift
     local steps=("$@")
+    
+    # Input validation
+    if [[ -z "$main_message" ]]; then
+        error "Main message cannot be empty"
+        return 1
+    fi
+    
+    if [[ ${#steps[@]} -eq 0 ]] || [[ $((${#steps[@]} % 2)) -ne 0 ]]; then
+        error "Steps array must contain pairs of description and command"
+        return 1
+    fi
     
     echo -e "${CYAN}🚀 $main_message${NC}"
     
@@ -124,52 +188,47 @@ execute_steps() {
     return 0
 }
 
-# Simple info messages
+# Logging functions with consistent format
 info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}[INFO]${NC} $1" >&2
 }
 
-# Simple warning messages  
 warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
-# Simple error messages
 error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
-# Simple success messages
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
-# Track service downtime start
+# Service downtime tracking
 start_service_downtime() {
     SERVICE_DOWNTIME_START=$(date +%s)
 }
 
-# Track service downtime end
 end_service_downtime() {
-    if [ -n "$SERVICE_DOWNTIME_START" ]; then
+    if [[ -n "$SERVICE_DOWNTIME_START" ]]; then
         SERVICE_DOWNTIME_END=$(date +%s)
     fi
 }
 
-# Rollback and version control functions
-# =====================================
-
-# Validate version format (supports v1.0.0, 1.0.0, main, latest)
+# Enhanced input validation
 validate_version() {
     local version="$1"
     
-    # Allow special keywords
+    if [[ -z "$version" ]]; then
+        return 1
+    fi
+    
     case "$version" in
         "main"|"latest"|"")
             return 0
             ;;
         *)
-            # Check if it's a valid version tag format
             if [[ "$version" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                 return 0
             else
@@ -179,24 +238,56 @@ validate_version() {
     esac
 }
 
-# Get available versions from GitHub
+validate_ip() {
+    local ip=$1
+    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        local IFS='.'
+        local -a octets=($ip)
+        for octet in "${octets[@]}"; do
+            if [[ $octet -gt 255 ]]; then
+                return 1
+            fi
+        done
+        return 0
+    fi
+    return 1
+}
+
+validate_number() {
+    local num=$1
+    local min=${2:-0}
+    local max=${3:-999999}
+    
+    if [[ ! "$num" =~ ^[0-9]+$ ]]; then
+        return 1
+    fi
+    
+    if [[ "$num" -ge "$min" ]] && [[ "$num" -le "$max" ]]; then
+        return 0
+    fi
+    return 1
+}
+
+# Get available versions with improved error handling
 get_available_versions() {
     info "Fetching available versions..."
     
-    # Get all release tags from GitHub API
-    local versions=$(curl -s --connect-timeout 10 --max-time 30 \
-        "https://api.github.com/repos/Obednal97/profolio/releases" | \
+    local versions
+    versions=$(curl -s --connect-timeout 10 --max-time 30 \
+        "https://api.github.com/repos/Obednal97/profolio/releases" 2>/dev/null | \
         grep '"tag_name"' | \
         cut -d'"' -f4 | \
-        sort -V -r 2>/dev/null || echo "")
+        sort -V -r 2>/dev/null)
     
-    if [ -n "$versions" ]; then
+    if [[ -n "$versions" ]]; then
         echo -e "${CYAN}📋 Available versions:${NC}"
-        echo "$versions" | head -10 | while read -r version; do
+        echo "$versions" | head -10 | while IFS= read -r version; do
             echo "   • $version"
         done
-        if [ $(echo "$versions" | wc -l) -gt 10 ]; then
-            echo "   ... and $(($(echo "$versions" | wc -l) - 10)) more"
+        local total_count
+        total_count=$(echo "$versions" | wc -l)
+        if [[ $total_count -gt 10 ]]; then
+            echo "   ... and $((total_count - 10)) more"
         fi
         echo "   • main (latest development)"
         echo ""
@@ -204,44 +295,41 @@ get_available_versions() {
     else
         warn "Could not fetch version list from GitHub"
         echo -e "${CYAN}📋 Common versions:${NC}"
-        echo "   • v1.0.3 (latest stable)"
-        echo "   • v1.0.2"
-        echo "   • v1.0.1"
+        echo "   • v1.9.1 (latest stable)"
+        echo "   • v1.9.0"
+        echo "   • v1.8.0"
         echo "   • main (latest development)"
         echo ""
         return 1
     fi
 }
 
-# Check if version exists
+# Check if version exists with robust validation
 version_exists() {
     local version="$1"
     
-    # Critical: Input validation for production reliability
     if [[ -z "$version" ]]; then
-        return 1  # Fail silently for empty input
+        return 1
     fi
     
-    # Special cases
     case "$version" in
         "main"|"latest"|"")
             return 0
             ;;
     esac
     
-    # Normalize version (add 'v' prefix if not present)
+    # Normalize version
     if [[ ! "$version" =~ ^v ]]; then
         version="v$version"
     fi
     
-    # Check if tag exists on GitHub (suppress errors for clean output)
-    local status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 30 \
+    local status_code
+    status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 30 \
         "https://api.github.com/repos/Obednal97/profolio/releases/tags/$version" 2>/dev/null)
     
-    if [ "$status_code" = "200" ]; then
+    if [[ "$status_code" == "200" ]]; then
         return 0
     else
-        # Fallback: check if it exists as a git tag (suppress errors)
         if git ls-remote --tags origin 2>/dev/null | grep -q "refs/tags/$version$"; then
             return 0
         else
@@ -250,46 +338,47 @@ version_exists() {
     fi
 }
 
-# Create rollback point
+# Create rollback point with proper error handling
 create_rollback_point() {
-    if [ "$ROLLBACK_ENABLED" = false ]; then
+    if [[ "$ROLLBACK_ENABLED" == false ]]; then
         return 0
     fi
     
     info "Creating rollback point..."
     
-    # Get current git commit
-    if [ -d "/opt/profolio/.git" ]; then
-        cd /opt/profolio
-        ROLLBACK_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+    if [[ -d "/opt/profolio/.git" ]]; then
+        if ! cd /opt/profolio; then
+            warn "Could not access profolio directory"
+            return 1
+        fi
         
-        if [ -n "$ROLLBACK_COMMIT" ]; then
+        ROLLBACK_COMMIT=$(git rev-parse HEAD 2>/dev/null)
+        
+        if [[ -n "$ROLLBACK_COMMIT" ]]; then
             success "Rollback point created: ${ROLLBACK_COMMIT:0:8}"
         else
             warn "Could not determine current git commit"
         fi
     fi
     
-    # Create backup directory
-    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
     ROLLBACK_BACKUP_DIR="/opt/profolio-rollback-$timestamp"
     
-    if [ -d "/opt/profolio" ]; then
+    if [[ -d "/opt/profolio" ]]; then
         info "Creating rollback backup..."
-        cp -r /opt/profolio "$ROLLBACK_BACKUP_DIR" 2>/dev/null || {
+        if cp -r /opt/profolio "$ROLLBACK_BACKUP_DIR" 2>/dev/null; then
+            success "Rollback backup created: $ROLLBACK_BACKUP_DIR"
+        else
             warn "Failed to create rollback backup"
             ROLLBACK_BACKUP_DIR=""
-        }
-        
-        if [ -n "$ROLLBACK_BACKUP_DIR" ]; then
-            success "Rollback backup created: $ROLLBACK_BACKUP_DIR"
         fi
     fi
 }
 
-# Execute rollback
+# Execute rollback with comprehensive error handling
 execute_rollback() {
-    if [ "$ROLLBACK_ENABLED" = false ]; then
+    if [[ "$ROLLBACK_ENABLED" == false ]]; then
         error "Rollback is disabled"
         return 1
     fi
@@ -297,19 +386,15 @@ execute_rollback() {
     warn "🔄 EXECUTING AUTOMATIC ROLLBACK..."
     echo ""
     
-    # Stop services
     info "Stopping services..."
     systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
     systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
     
     local rollback_success=false
     
-    # Try git rollback first
-    if [ -n "$ROLLBACK_COMMIT" ] && [ -d "/opt/profolio/.git" ]; then
+    if [[ -n "$ROLLBACK_COMMIT" ]] && [[ -d "/opt/profolio/.git" ]]; then
         info "Rolling back to git commit: ${ROLLBACK_COMMIT:0:8}"
-        cd /opt/profolio
-        
-        if sudo -u profolio git reset --hard "$ROLLBACK_COMMIT"; then
+        if cd /opt/profolio && sudo -u profolio git reset --hard "$ROLLBACK_COMMIT"; then
             success "Git rollback successful"
             rollback_success=true
         else
@@ -317,11 +402,10 @@ execute_rollback() {
         fi
     fi
     
-    # Fallback to backup restoration
-    if [ "$rollback_success" = false ] && [ -n "$ROLLBACK_BACKUP_DIR" ] && [ -d "$ROLLBACK_BACKUP_DIR" ]; then
+    if [[ "$rollback_success" == false ]] && [[ -n "$ROLLBACK_BACKUP_DIR" ]] && [[ -d "$ROLLBACK_BACKUP_DIR" ]]; then
         info "Restoring from backup: $ROLLBACK_BACKUP_DIR"
         
-        if [ -d "/opt/profolio" ]; then
+        if [[ -d "/opt/profolio" ]]; then
             rm -rf /opt/profolio.failed
             mv /opt/profolio /opt/profolio.failed
         fi
@@ -332,37 +416,31 @@ execute_rollback() {
             rollback_success=true
         else
             error "Backup restoration failed"
-            
-            # Try to restore the failed directory
-            if [ -d "/opt/profolio.failed" ]; then
+            if [[ -d "/opt/profolio.failed" ]]; then
                 mv /opt/profolio.failed /opt/profolio
                 warn "Restored to failed state"
             fi
         fi
     fi
     
-    if [ "$rollback_success" = true ]; then
-        # Rebuild with previous version
+    if [[ "$rollback_success" == true ]]; then
         info "Rebuilding previous version..."
-        cd /opt/profolio
-        setup_environment true  # Pass true to indicate rollback mode (prevents re-prompting)
+        cd /opt/profolio || return 1
+        setup_environment true
         
         if build_application; then
-            # Restart services
             info "Restarting services with previous version..."
             systemctl start profolio-backend
             sleep 3
             systemctl start profolio-frontend
             sleep 2
             
-            # Quick verification
             if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
                 success "🎉 ROLLBACK COMPLETED SUCCESSFULLY"
                 echo ""
                 echo -e "${GREEN}✅ Services restored to previous working version${NC}"
                 echo -e "${YELLOW}⚠️  Please check logs and investigate the update failure${NC}"
                 
-                # Clean up rollback files
                 cleanup_rollback_files
                 return 0
             else
@@ -383,65 +461,62 @@ execute_rollback() {
     return 1
 }
 
-# Clean up rollback files
+# Clean up rollback files with proper validation
 cleanup_rollback_files() {
-    if [ -n "$ROLLBACK_BACKUP_DIR" ] && [ -d "$ROLLBACK_BACKUP_DIR" ]; then
+    if [[ -n "$ROLLBACK_BACKUP_DIR" ]] && [[ -d "$ROLLBACK_BACKUP_DIR" ]]; then
         info "Cleaning up rollback backup..."
         rm -rf "$ROLLBACK_BACKUP_DIR"
         success "Rollback backup cleaned up"
     fi
     
-    # Keep only 2 most recent rollback backups
-    local rollback_count=$(ls -1 /opt/ | grep "^profolio-rollback-" | wc -l)
-    if [ "$rollback_count" -gt 2 ]; then
+    local rollback_count
+    rollback_count=$(find /opt -maxdepth 1 -name "profolio-rollback-*" -type d | wc -l)
+    if [[ $rollback_count -gt 2 ]]; then
         local backups_to_remove=$((rollback_count - 2))
-        ls -1t /opt/ | grep "^profolio-rollback-" | tail -n "$backups_to_remove" | while read -r old_backup; do
-            rm -rf "/opt/$old_backup"
-            info "Removed old rollback backup: $old_backup"
-        done
+        find /opt -maxdepth 1 -name "profolio-rollback-*" -type d -printf '%T+ %p\n' | \
+            sort | head -n "$backups_to_remove" | cut -d' ' -f2- | \
+            while IFS= read -r old_backup; do
+                rm -rf "$old_backup"
+                info "Removed old rollback backup: $(basename "$old_backup")"
+            done
     fi
 }
 
-# Checkout specific version
+# Checkout specific version with enhanced validation
 checkout_version() {
     local version="$1"
     
-    if [ -z "$version" ] || [ "$version" = "main" ] || [ "$version" = "latest" ]; then
+    if [[ -z "$version" ]] || [[ "$version" == "main" ]] || [[ "$version" == "latest" ]]; then
         info "Using latest development version (main branch)"
         version="main"
     else
-        # Normalize version (add 'v' prefix if not present)
         if [[ ! "$version" =~ ^v ]]; then
             version="v$version"
         fi
-        
         info "Switching to version: $version"
     fi
     
-    cd /opt/profolio
+    if ! cd /opt/profolio; then
+        error "Could not access profolio directory"
+        return 1
+    fi
     
-    # Fetch latest refs
     if ! sudo -u profolio git fetch origin; then
         error "Failed to fetch latest updates from repository"
         return 1
     fi
     
-    # Checkout the specified version
-    if [ "$version" = "main" ]; then
-        # Fetch latest changes first
+    if [[ "$version" == "main" ]]; then
         if ! sudo -u profolio git fetch origin main; then
             error "Failed to fetch latest main branch"
             return 1
         fi
         
-        # Checkout main and reset to match remote exactly
         if sudo -u profolio git checkout main && sudo -u profolio git reset --hard origin/main; then
-            # Optimize installation size by removing non-essential directories (version checkout)
             info "Optimizing installation size..."
-            rm -rf docs/ .github/ www/ policies/ scripts/ .cursor/ || true
-            rm -f CONTRIBUTING.md SECURITY.md README.md .DS_Store || true
-            success "Installation optimized (removed documentation and development files)"
-            
+            rm -rf docs/ .github/ www/ policies/ scripts/ .cursor/ 2>/dev/null || true
+            rm -f CONTRIBUTING.md SECURITY.md README.md .DS_Store 2>/dev/null || true
+            success "Installation optimized"
             success "Switched to main branch (latest development)"
             return 0
         else
@@ -533,33 +608,33 @@ CONTAINER_NAME="profolio"
 
 # Detect if we're running on Proxmox host
 detect_proxmox_host() {
-    if [ -f "/etc/pve/local/pve-ssl.pem" ] && command -v pct >/dev/null 2>&1; then
-        return 0  # Running on Proxmox host
+    if [[ -f "/etc/pve/local/pve-ssl.pem" ]] && command -v pct >/dev/null 2>&1; then
+        return 0
     else
-        return 1  # Not on Proxmox host
+        return 1
     fi
 }
 
 # Check if we're inside an LXC container
 detect_lxc_container() {
-    if [ -f "/.dockerenv" ]; then
-        return 1  # Docker container, not LXC
-    elif [ -f "/proc/1/environ" ] && grep -q "container=lxc" /proc/1/environ 2>/dev/null; then
-        return 0  # Inside LXC container
-    elif [ -d "/proc/vz" ] && [ ! -d "/proc/bc" ]; then
-        return 0  # OpenVZ/LXC container
+    if [[ -f "/.dockerenv" ]]; then
+        return 1
+    elif [[ -f "/proc/1/environ" ]] && grep -q "container=lxc" /proc/1/environ 2>/dev/null; then
+        return 0
+    elif [[ -d "/proc/vz" ]] && [[ ! -d "/proc/bc" ]]; then
+        return 0
     else
-        return 1  # Not in container
+        return 1
     fi
 }
 
 # Get next available VMID
 get_next_vmid() {
     local vmid=100
-    while pct status $vmid >/dev/null 2>&1 || qm status $vmid >/dev/null 2>&1; do
+    while pct status "$vmid" >/dev/null 2>&1 || qm status "$vmid" >/dev/null 2>&1; do
         vmid=$((vmid + 1))
     done
-    echo $vmid
+    echo "$vmid"
 }
 
 # Proxmox container creation wizard
@@ -572,8 +647,8 @@ proxmox_container_wizard() {
     echo -e "${NC}"
     echo ""
     
-    # Get next available VMID
-    local suggested_vmid=$(get_next_vmid)
+    local suggested_vmid
+    suggested_vmid=$(get_next_vmid)
     echo -e "${CYAN}📋 Container Configuration:${NC}"
     
     read -p "Container ID [$suggested_vmid]: " input_vmid
@@ -582,7 +657,6 @@ proxmox_container_wizard() {
     read -p "Container Name [$CONTAINER_NAME]: " input_name
     CONTAINER_NAME=${input_name:-$CONTAINER_NAME}
     
-    # Storage selection
     echo ""
     echo -e "${CYAN}💾 Available Storage:${NC}"
     pvesm status | grep -E "^[[:space:]]*[^[:space:]]+[[:space:]]+[^[:space:]]+[[:space:]]+active" | awk '{print "   • " $1 " (" $2 ")"}'
@@ -590,7 +664,6 @@ proxmox_container_wizard() {
     read -p "Storage [$PROXMOX_STORAGE]: " input_storage
     PROXMOX_STORAGE=${input_storage:-$PROXMOX_STORAGE}
     
-    # Hardware configuration
     echo ""
     echo -e "${CYAN}⚙️ Hardware Configuration:${NC}"
     echo -e "${YELLOW}Recommended specs for Profolio:${NC}"
@@ -608,7 +681,6 @@ proxmox_container_wizard() {
     read -p "Disk Size in GB [$PROXMOX_DISK]: " input_disk
     PROXMOX_DISK=${input_disk:-$PROXMOX_DISK}
     
-    # Network configuration
     echo ""
     echo -e "${CYAN}🌐 Network Configuration:${NC}"
     echo -e "${YELLOW}Available bridges:${NC}"
@@ -624,7 +696,7 @@ proxmox_container_wizard() {
     echo ""
     read -p "Select network mode [1]: " network_choice
     
-    if [ "$network_choice" = "2" ]; then
+    if [[ "$network_choice" == "2" ]]; then
         read -p "Static IP (e.g., 192.168.1.100/24): " static_ip
         read -p "Gateway (e.g., 192.168.1.1): " gateway
         PROXMOX_NETWORK_MODE="ip=$static_ip,gw=$gateway"
@@ -632,7 +704,6 @@ proxmox_container_wizard() {
         PROXMOX_NETWORK_MODE="dhcp"
     fi
     
-    # Security
     echo ""
     echo -e "${CYAN}🔐 Security Configuration:${NC}"
     echo -e "${YELLOW}Set root password for container:${NC}"
@@ -641,7 +712,7 @@ proxmox_container_wizard() {
         echo ""
         read -s -p "Confirm password: " password2
         echo ""
-        if [ "$password1" = "$password2" ]; then
+        if [[ "$password1" == "$password2" ]]; then
             PROXMOX_PASSWORD="$password1"
             break
         else
@@ -649,12 +720,10 @@ proxmox_container_wizard() {
         fi
     done
     
-    # Template selection
     echo ""
     echo -e "${CYAN}📦 OS Template:${NC}"
     echo -e "${GREEN}Using:${NC} Ubuntu 24.04 LTS (recommended for Profolio)"
     
-    # Summary
     echo ""
     echo -e "${WHITE}📋 CONTAINER SUMMARY${NC}"
     echo -e "${CYAN}════════════════════════════════════════${NC}"
@@ -680,15 +749,13 @@ proxmox_container_wizard() {
 create_proxmox_container() {
     echo -e "${BLUE}🏗️  Creating Proxmox LXC container...${NC}"
     
-    # Check if template exists
     local template_path="/var/lib/vz/template/cache/$PROXMOX_TEMPLATE"
-    if [ ! -f "$template_path" ]; then
+    if [[ ! -f "$template_path" ]]; then
         echo -e "${YELLOW}📥 Downloading Ubuntu 24.04 template...${NC}"
         pveam update
-        pveam download local $PROXMOX_TEMPLATE
+        pveam download local "$PROXMOX_TEMPLATE"
     fi
     
-    # Create container
     local create_cmd="pct create $PROXMOX_VMID $template_path"
     create_cmd="$create_cmd --hostname $CONTAINER_NAME"
     create_cmd="$create_cmd --memory $PROXMOX_MEMORY"
@@ -704,33 +771,30 @@ create_proxmox_container() {
     info "Creating container with command:"
     info "$create_cmd"
     
-    if eval "$create_cmd"; then
+    if bash -c "$create_cmd"; then
         success "Container $PROXMOX_VMID created successfully"
     else
         error "Failed to create container"
         exit 1
     fi
     
-    # Set root password
     echo -e "${BLUE}🔐 Setting container password...${NC}"
-    echo "root:$PROXMOX_PASSWORD" | pct exec $PROXMOX_VMID -- chpasswd
+    echo "root:$PROXMOX_PASSWORD" | pct exec "$PROXMOX_VMID" -- chpasswd
     
-    # Start container
     echo -e "${BLUE}▶️  Starting container...${NC}"
-    if pct start $PROXMOX_VMID; then
+    if pct start "$PROXMOX_VMID"; then
         success "Container started successfully"
     else
         error "Failed to start container"
         exit 1
     fi
     
-    # Wait for container to be ready
     echo -e "${BLUE}⏳ Waiting for container to be ready...${NC}"
     local max_attempts=30
     local attempt=1
     
-    while [ $attempt -le $max_attempts ]; do
-        if pct exec $PROXMOX_VMID -- test -f /bin/bash; then
+    while [[ $attempt -le $max_attempts ]]; do
+        if pct exec "$PROXMOX_VMID" -- test -f /bin/bash; then
             success "Container is ready"
             break
         fi
@@ -738,25 +802,24 @@ create_proxmox_container() {
         ((attempt++))
     done
     
-    if [ $attempt -gt $max_attempts ]; then
+    if [[ $attempt -gt $max_attempts ]]; then
         error "Container failed to become ready"
         exit 1
     fi
     
-    # Get container IP
     echo -e "${BLUE}🌐 Getting container IP address...${NC}"
-    sleep 5  # Give network time to configure
+    sleep 5
     
     local container_ip=""
     for i in {1..10}; do
-        container_ip=$(pct exec $PROXMOX_VMID -- hostname -I | awk '{print $1}')
-        if [ -n "$container_ip" ] && [ "$container_ip" != "127.0.0.1" ]; then
+        container_ip=$(pct exec "$PROXMOX_VMID" -- hostname -I | awk '{print $1}')
+        if [[ -n "$container_ip" ]] && [[ "$container_ip" != "127.0.0.1" ]]; then
             break
         fi
         sleep 2
     done
     
-    if [ -n "$container_ip" ]; then
+    if [[ -n "$container_ip" ]]; then
         success "Container IP: $container_ip"
         echo ""
         echo -e "${GREEN}✅ Container created successfully!${NC}"
@@ -767,16 +830,14 @@ create_proxmox_container() {
         echo -e "   ${WHITE}Access:${NC} pct enter $PROXMOX_VMID"
         echo ""
         
-        # Offer to continue with Profolio installation
         echo -e "${CYAN}🚀 Ready to install Profolio!${NC}"
         read -p "Continue with Profolio installation in this container? (y/n) [y]: " install_confirm
         if [[ "$install_confirm" =~ ^[Yy]?$ ]]; then
             echo -e "${BLUE}📦 Entering container to install Profolio...${NC}"
             echo ""
             
-            # Download and execute installer in container
-            pct exec $PROXMOX_VMID -- bash -c "
-                apt update && apt install -y curl wget
+            pct exec "$PROXMOX_VMID" -- bash -c "
+                apt update && apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4
                 curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | bash
             "
         else
@@ -1005,7 +1066,7 @@ run_configuration_wizard() {
     use_defaults
 }
 
-# SSH Access Configuration (simplified for now)
+# SSH Access Configuration
 configure_ssh_access() {
     echo -e "${YELLOW}ℹ️  SSH configuration will use defaults for now${NC}"
     SSH_ENABLED="yes"
@@ -1016,7 +1077,7 @@ configure_ssh_access() {
     GENERATE_SSH_KEY="yes"
 }
 
-# Static network configuration (simplified)
+# Static network configuration
 configure_static_network() {
     echo -e "${YELLOW}ℹ️  Static network configuration not implemented yet. Using DHCP.${NC}"
     NETWORK_MODE="dhcp"
@@ -1054,26 +1115,22 @@ configure_ssh_keys() {
 configure_ssh_server() {
     echo -e "${BLUE}🔐 Configuring SSH server...${NC}"
     
-    # Backup original sshd_config
-    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup.$(date +%Y%m%d_%H%M%S)
+    local backup_file="/etc/ssh/sshd_config.backup.$(date +%Y%m%d_%H%M%S)"
+    cp /etc/ssh/sshd_config "$backup_file"
     
-    # Configure SSH daemon
-    cat > /etc/ssh/sshd_config << EOF
+    cat > /etc/ssh/sshd_config << 'EOF'
 # Profolio SSH Configuration
-# Generated by install-or-update.sh
-
-# Network
-Port $SSH_PORT
+Port 22
 AddressFamily any
 ListenAddress 0.0.0.0
 
 # Authentication
-PermitRootLogin $SSH_ROOT_LOGIN
+PermitRootLogin no
 MaxAuthTries 3
 MaxSessions 10
 
 # Password Authentication
-PasswordAuthentication $SSH_PASSWORD_AUTH
+PasswordAuthentication no
 PermitEmptyPasswords no
 
 # Public Key Authentication
@@ -1118,29 +1175,22 @@ DebianBanner no
 Subsystem sftp /usr/lib/openssh/sftp-server
 EOF
 
-    # Set proper permissions
     chmod 644 /etc/ssh/sshd_config
     
-    # Configure profolio user for SSH access
-    # Add profolio to sudo group if not root login
-    if [ "$SSH_ROOT_LOGIN" = "no" ]; then
+    if [[ "$SSH_ROOT_LOGIN" == "no" ]]; then
         usermod -aG sudo profolio
         echo -e "${GREEN}✅ Added profolio user to sudo group${NC}"
     fi
     
-    # Generate SSH keys for profolio user if requested
-    if [ "$GENERATE_SSH_KEY" = "yes" ]; then
+    if [[ "$GENERATE_SSH_KEY" == "yes" ]]; then
         echo -e "${BLUE}🔑 Generating SSH key pair for profolio user...${NC}"
         
-        # Create .ssh directory
         sudo -u profolio mkdir -p /home/profolio/.ssh
         chmod 700 /home/profolio/.ssh
         chown profolio:profolio /home/profolio/.ssh
         
-        # Generate SSH key pair
         sudo -u profolio ssh-keygen -t rsa -b 4096 -f /home/profolio/.ssh/id_rsa -N "" -C "profolio@$(hostname)"
         
-        # Set up authorized_keys with the new public key
         sudo -u profolio cp /home/profolio/.ssh/id_rsa.pub /home/profolio/.ssh/authorized_keys
         chmod 600 /home/profolio/.ssh/authorized_keys
         chown profolio:profolio /home/profolio/.ssh/authorized_keys
@@ -1571,36 +1621,41 @@ manage_backups() {
     local backup_type=$1
     local backup_dir="/opt/profolio-backups"
     
+    if [[ -z "$backup_type" ]]; then
+        error "Backup type must be specified"
+        return 1
+    fi
+    
     mkdir -p "$backup_dir"
     
-    # Create new backup
-    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
     local new_backup_dir="$backup_dir/${backup_type}_${timestamp}"
     mkdir -p "$new_backup_dir"
     
     info "Creating backup..."
     
-    # Backup database
     if sudo -u postgres pg_dump profolio > "$new_backup_dir/database.sql" 2>/dev/null; then
         success "Database backup created"
     else
         warn "Database backup failed (may not exist yet)"
     fi
     
-    # Backup application
-    if [ -d "/opt/profolio" ]; then
+    if [[ -d "/opt/profolio" ]]; then
         cp -r /opt/profolio "$new_backup_dir/application"
         success "Application backup created"
     fi
     
-    # Cleanup old backups (keep only 3 most recent)
-    local backup_count=$(ls -1 "$backup_dir" | grep "^${backup_type}_" | wc -l)
-    if [ "$backup_count" -gt 3 ]; then
+    local backup_count
+    backup_count=$(find "$backup_dir" -maxdepth 1 -name "${backup_type}_*" -type d | wc -l)
+    if [[ $backup_count -gt 3 ]]; then
         local backups_to_remove=$((backup_count - 3))
-        ls -1 "$backup_dir" | grep "^${backup_type}_" | head -n "$backups_to_remove" | while read -r old_backup; do
-            rm -rf "$backup_dir/$old_backup"
-            info "Removed old backup: $old_backup"
-        done
+        find "$backup_dir" -maxdepth 1 -name "${backup_type}_*" -type d -printf '%T+ %p\n' | \
+            sort | head -n "$backups_to_remove" | cut -d' ' -f2- | \
+            while IFS= read -r old_backup; do
+                rm -rf "$old_backup"
+                info "Removed old backup: $(basename "$old_backup")"
+            done
     fi
     
     success "Backup created: $new_backup_dir"
@@ -1610,40 +1665,38 @@ manage_backups() {
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         echo -e "${RED}❌ This script must be run as root${NC}"
-        echo "Usage: sudo ./install-or-update.sh"
+        echo "Usage: sudo ./proxmox-install-or-update.sh"
         exit 1
     fi
 }
 
 # Detect installation state
 detect_installation_state() {
-    if [ -d "/opt/profolio" ] && [ -f "/etc/systemd/system/profolio-backend.service" ]; then
+    if [[ -d "/opt/profolio" ]] && [[ -f "/etc/systemd/system/profolio-backend.service" ]]; then
         if systemctl is-active --quiet profolio-backend 2>/dev/null; then
-            return 2  # Running installation
+            return 2
         else
-            return 1  # Installed but not running
+            return 1
         fi
     else
-        return 0  # Fresh system
+        return 0
     fi
 }
 
-# Build application with production optimizations and space efficiency
+# Build application with production optimizations
 build_application() {
-    # Clean up any existing build artifacts with permission issues
     info "Cleaning build directories..."
     rm -rf /opt/profolio/frontend/.next /opt/profolio/backend/dist 2>/dev/null || true
     
-    # Ensure proper ownership of the entire project
     chown -R profolio:profolio /opt/profolio
     
     local steps=(
-        "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio npm install"
-        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio npx prisma generate"
-        "Running database migrations" "cd /opt/profolio/backend && sudo -u profolio npx prisma migrate deploy"
-        "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio npx nest build"
-        "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio npm install"
-        "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio npm run build"
+        "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio pnpm install"
+        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma generate"
+        "Running database migrations" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma migrate deploy"
+        "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio pnpm run build"
+        "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio pnpm install"
+        "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio pnpm run build"
         "Optimizing for production deployment" "optimize_production_deployment"
         "Cleaning build artifacts and cache" "cleanup_build_artifacts"
     )
@@ -1655,47 +1708,45 @@ build_application() {
 cleanup_build_artifacts() {
     info "Cleaning up build artifacts and cache..."
     
-    cd /opt/profolio
+    if ! cd /opt/profolio; then
+        error "Could not access profolio directory"
+        return 1
+    fi
     
-    # Frontend cleanup - remove Next.js cache and unnecessary build files
     info "  → Cleaning frontend build artifacts..."
     sudo -u profolio rm -rf frontend/.next/cache 2>/dev/null || true
     sudo -u profolio rm -rf frontend/.next/trace 2>/dev/null || true
     sudo -u profolio rm -rf frontend/.next/server/vendor-chunks 2>/dev/null || true
     sudo -u profolio rm -rf frontend/.next/static/chunks/*.map 2>/dev/null || true
     
-    # Remove TypeScript build info files
     sudo -u profolio find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
     
-    # Backend cleanup - remove unnecessary files
     info "  → Cleaning backend build artifacts..."
     sudo -u profolio rm -rf backend/node_modules/.cache 2>/dev/null || true
     sudo -u profolio rm -rf backend/dist/*.map 2>/dev/null || true
     
-    # Remove package manager cache
     info "  → Cleaning package manager cache..."
-    sudo -u profolio npm cache clean --force 2>/dev/null || true
+    sudo -u profolio pnpm store prune 2>/dev/null || true
     
-    # Remove any remaining dev-only files
     info "  → Removing development files..."
     sudo -u profolio find . -name "*.test.js" -delete 2>/dev/null || true
     sudo -u profolio find . -name "*.spec.js" -delete 2>/dev/null || true
     sudo -u profolio find . -name "*.test.ts" -delete 2>/dev/null || true
     sudo -u profolio find . -name "*.spec.ts" -delete 2>/dev/null || true
     
-    # Calculate space saved
-    local final_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
+    local final_size
+    final_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
     info "  → Final application size: $final_size"
     
     success "Build artifacts cleaned up successfully"
 }
 
-# Production optimization dispatcher - chooses safe or aggressive based on user preference
+# Production optimization dispatcher
 optimize_production_deployment() {
     info "🚀 Starting production optimization..."
     info "   Selected level: ${OPTIMIZATION_LEVEL^^}"
     
-    if [ "${OPTIMIZATION_LEVEL:-safe}" = "aggressive" ]; then
+    if [[ "${OPTIMIZATION_LEVEL:-safe}" == "aggressive" ]]; then
         warn "⚠️  Applying AGGRESSIVE optimization (maximum space reduction)"
         optimize_production_aggressive
     else
@@ -1704,29 +1755,29 @@ optimize_production_deployment() {
     fi
 }
 
-# Safe production optimization - only removes actual devDependencies from package.json
+# Safe production optimization
 optimize_production_safe() {
     info "🛡️  SAFE production optimization (precise selective removal)..."
     
-    # Backend: Remove only packages that are in devDependencies
     info "  → Backend: Removing packages listed in devDependencies..."
-    cd /opt/profolio/backend
+    if ! cd /opt/profolio/backend; then
+        error "Could not access backend directory"
+        return 1
+    fi
     
-    # Extract devDependencies from package.json and remove them
-    if [ -f "package.json" ]; then
-        # Get list of devDependencies (excluding ones needed for runtime)
-        local backend_dev_packages=$(node -e "
+    if [[ -f "package.json" ]]; then
+        local backend_dev_packages
+        backend_dev_packages=$(node -e "
             const pkg = require('./package.json');
             const devDeps = pkg.devDependencies || {};
-            // Keep essential packages even if in devDependencies
-            const keep = ['prisma']; // Keep prisma for potential runtime needs
+            const keep = ['prisma'];
             const toRemove = Object.keys(devDeps).filter(dep => !keep.includes(dep));
             console.log(toRemove.join(' '));
         " 2>/dev/null || echo "")
         
-        if [ -n "$backend_dev_packages" ]; then
+        if [[ -n "$backend_dev_packages" ]]; then
             for package in $backend_dev_packages; do
-                sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+                sudo -u profolio pnpm remove "$package" --silent 2>/dev/null || true
             done
             success "  ✅ Backend: Removed devDependencies: $backend_dev_packages"
         else
@@ -1734,25 +1785,25 @@ optimize_production_safe() {
         fi
     fi
     
-    # Frontend: Remove only packages that are in devDependencies  
     info "  → Frontend: Removing packages listed in devDependencies..."
-    cd /opt/profolio/frontend
+    if ! cd /opt/profolio/frontend; then
+        error "Could not access frontend directory"
+        return 1
+    fi
     
-    # Extract devDependencies from package.json and remove them
-    if [ -f "package.json" ]; then
-        # Get list of devDependencies (excluding ones needed for runtime)
-        local frontend_dev_packages=$(node -e "
+    if [[ -f "package.json" ]]; then
+        local frontend_dev_packages
+        frontend_dev_packages=$(node -e "
             const pkg = require('./package.json');
             const devDeps = pkg.devDependencies || {};
-            // Keep essential packages even if in devDependencies (none needed for frontend)
             const keep = [];
             const toRemove = Object.keys(devDeps).filter(dep => !keep.includes(dep));
             console.log(toRemove.join(' '));
         " 2>/dev/null || echo "")
         
-        if [ -n "$frontend_dev_packages" ]; then
+        if [[ -n "$frontend_dev_packages" ]]; then
             for package in $frontend_dev_packages; do
-                sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+                sudo -u profolio pnpm remove "$package" --silent 2>/dev/null || true
             done
             success "  ✅ Frontend: Removed devDependencies: $frontend_dev_packages"
         else
@@ -1760,17 +1811,21 @@ optimize_production_safe() {
         fi
     fi
     
-    # Basic cleanup only
     info "  → Basic cleanup (caches and temporary files)..."
     sudo -u profolio rm -rf frontend/.next/cache backend/node_modules/.cache 2>/dev/null || true
     sudo -u profolio rm -rf frontend/node_modules/.cache backend/.npm 2>/dev/null || true
-    sudo -u profolio npm cache clean --force 2>/dev/null || true
+    sudo -u profolio pnpm store prune 2>/dev/null || true
     
-    # Calculate and show results
-    cd /opt/profolio
-    local final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
-    local frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
-    local backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
+    if ! cd /opt/profolio; then
+        error "Could not access profolio directory"
+        return 1
+    fi
+    local final_size
+    local frontend_nm_size
+    local backend_nm_size
+    final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
+    frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
+    backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
     
     success "✅ SAFE production optimization completed"
     info "    Final application size: $final_size"
@@ -1779,32 +1834,29 @@ optimize_production_safe() {
     info "    Optimization level: SAFE (all features preserved)"
 }
 
-# Aggressive production optimization - applies ultra-aggressive cleanup
+# Aggressive production optimization
 optimize_production_aggressive() {
     info "☢️  AGGRESSIVE production optimization (ultra-aggressive cleanup)..."
     
-    # First do safe optimization
-    info "  → Step 1: Safe removal of devDependencies..."
     optimize_production_safe
     
-    cd /opt/profolio
+    if ! cd /opt/profolio; then
+        error "Could not access profolio directory"
+        return 1
+    fi
     
-    # Ultra-aggressive cleanup
     info "  → Step 2: Ultra-aggressive cleanup (Docker-style optimization)..."
     
-    # Remove duplicate packages and deduplicate node_modules
     info "    • Deduplicating node_modules..."
-    cd frontend && sudo -u profolio npm dedupe --silent 2>/dev/null || true
-    cd ../backend && sudo -u profolio npm dedupe --silent 2>/dev/null || true
+    cd frontend && sudo -u profolio pnpm install --frozen-lockfile 2>/dev/null || true
+    cd ../backend && sudo -u profolio pnpm install --frozen-lockfile 2>/dev/null || true
     cd ..
     
-    # Remove source maps and debug files
     info "    • Removing source maps and debug files..."
     sudo -u profolio find . -name "*.map" -delete 2>/dev/null || true
     sudo -u profolio find . -name "*.d.ts.map" -delete 2>/dev/null || true
     sudo -u profolio find . -name "tsconfig.tsbuildinfo" -delete 2>/dev/null || true
     
-    # Remove test files and documentation
     info "    • Removing test files and documentation..."
     sudo -u profolio find ./node_modules -name "test" -type d -exec rm -rf {} + 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -1815,39 +1867,33 @@ optimize_production_aggressive() {
     sudo -u profolio find ./node_modules -name "CHANGELOG*" -delete 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "*.md" -delete 2>/dev/null || true
     
-    # Remove example and demo files
     info "    • Removing examples and demo files..."
     sudo -u profolio find ./node_modules -name "example*" -type d -exec rm -rf {} + 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "demo*" -type d -exec rm -rf {} + 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "sample*" -type d -exec rm -rf {} + 2>/dev/null || true
     
-    # Remove platform-specific binaries for other architectures
     info "    • Removing platform-specific binaries..."
-    local current_arch=$(uname -m)
-    if [ "$current_arch" = "x86_64" ]; then
-        # Remove ARM binaries if we're on x86_64
+    local current_arch
+    current_arch=$(uname -m)
+    if [[ "$current_arch" == "x86_64" ]]; then
         sudo -u profolio find ./node_modules -path "*/prebuilds/linux-arm*" -exec rm -rf {} + 2>/dev/null || true
         sudo -u profolio find ./node_modules -path "*/prebuilds/darwin-*" -exec rm -rf {} + 2>/dev/null || true
         sudo -u profolio find ./node_modules -path "*/prebuilds/win32-*" -exec rm -rf {} + 2>/dev/null || true
     fi
     
-    # Remove unnecessary locale files
     info "    • Removing unnecessary locale files..."
     sudo -u profolio find ./node_modules -path "*/locales/*" ! -name "en*" -delete 2>/dev/null || true
     
-    # Remove font files that aren't being used
     info "    • Cleaning up unused font files..."
     sudo -u profolio find ./node_modules -name "*.woff" -size +100k -delete 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "*.woff2" -size +100k -delete 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "*.ttf" -size +100k -delete 2>/dev/null || true
     
-    # Remove large image files in node_modules
     info "    • Removing large image files..."
     sudo -u profolio find ./node_modules -name "*.png" -size +50k -delete 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "*.jpg" -size +50k -delete 2>/dev/null || true
     sudo -u profolio find ./node_modules -name "*.jpeg" -size +50k -delete 2>/dev/null || true
     
-    # Aggressive cache cleanup
     info "    • Aggressive cache and temporary file cleanup..."
     sudo -u profolio rm -rf frontend/.next/trace frontend/.next/static/chunks/*.map 2>/dev/null || true
     sudo -u profolio rm -rf backend/dist/*.map backend/.tsbuildinfo 2>/dev/null || true
@@ -1855,11 +1901,12 @@ optimize_production_aggressive() {
     sudo -u profolio find . -name ".cache" -type d -exec rm -rf {} + 2>/dev/null || true
     sudo -u profolio find . -name "*.log" -delete 2>/dev/null || true
     
-    # Final calculations and warnings
-    cd /opt/profolio
-    local final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
-    local frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
-    local backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
+    local final_size
+    local frontend_nm_size
+    local backend_nm_size
+    final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
+    frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
+    backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
     
     success "✅ AGGRESSIVE production optimization completed"
     warn "    Final application size: $final_size"
@@ -2733,15 +2780,17 @@ show_help() {
     echo -e "${WHITE}USAGE:${NC}"
     echo "  $0 [OPTIONS]"
     echo ""
-    echo -e "${WHITE}OPTIONS:${NC}"
+    echo -e "${WHITE}BASIC OPTIONS:${NC}"
     echo -e "  ${GREEN}--auto, --unattended${NC}     Run with default configuration"
     echo -e "  ${GREEN}--version VERSION${NC}        Install/update to specific version"
+    echo -e "  ${GREEN}--list-versions${NC}          Show available versions and exit"
+    echo -e "  ${GREEN}--help, -h${NC}               Show this help message"
+    echo ""
+    echo -e "${WHITE}ADVANCED OPTIONS:${NC}"
     echo -e "  ${GREEN}--force-version VERSION${NC}  Force version (skip existence check)"
     echo -e "  ${GREEN}--no-rollback${NC}            Disable automatic rollback on failure"
-    echo -e "  ${GREEN}--list-versions${NC}          Show available versions and exit"
     echo -e "  ${GREEN}--rollback${NC}               Execute manual rollback to previous version"
-    echo -e "  ${GREEN}--update-installer${NC}        Update only the installer script"
-    echo -e "  ${GREEN}--help, -h${NC}               Show this help message"
+    echo -e "  ${GREEN}--update-installer${NC}        ${YELLOW}Advanced:${NC} Update only the installer script"
     echo ""
     echo -e "${WHITE}VERSION FORMATS:${NC}"
     echo -e "  ${YELLOW}v1.0.3${NC}                   Install specific release version"
@@ -2750,19 +2799,26 @@ show_help() {
     echo -e "  ${YELLOW}latest${NC}                   Install latest stable release"
     echo ""
     echo -e "${WHITE}EXAMPLES:${NC}"
-    echo -e "  ${CYAN}$0${NC}                        Interactive installation"
-    echo -e "  ${CYAN}$0 --auto${NC}                 Quick installation with defaults"
-    echo -e "  ${CYAN}$0 --version v1.0.3${NC}       Install specific version"
-    echo -e "  ${CYAN}$0 --version main${NC}         Install latest development"
+    echo -e "  ${CYAN}$0${NC}                        Interactive installation ${WHITE}(installer auto-updated)${NC}"
+    echo -e "  ${CYAN}$0 --auto${NC}                 Quick installation with defaults ${WHITE}(installer auto-updated)${NC}"
+    echo -e "  ${CYAN}$0 --version v1.0.3${NC}       Install specific version ${WHITE}(installer auto-updated)${NC}"
+    echo -e "  ${CYAN}$0 --version main${NC}         Install latest development ${WHITE}(installer auto-updated)${NC}"
     echo -e "  ${CYAN}$0 --list-versions${NC}        Show available versions"
     echo -e "  ${CYAN}$0 --rollback${NC}             Rollback to previous version"
-    echo -e "  ${CYAN}$0 --update-installer${NC}      Update only the installer script"
+    echo ""
+    echo -e "  ${YELLOW}Advanced installer management:${NC}"
+    echo -e "  ${CYAN}$0 --update-installer${NC}      Update only the installer script ${WHITE}(no app changes)${NC}"
     echo ""
     echo -e "${WHITE}PROXMOX LXC FEATURES:${NC}"
     echo -e "  • ${GREEN}Auto-start on boot${NC} - Services automatically start when container reboots"
     echo -e "  • ${GREEN}Optimized for containers${NC} - Resource-efficient Proxmox LXC deployment"
     echo -e "  • ${GREEN}Enterprise reliability${NC} - Production-ready with comprehensive monitoring"
-    echo -e "  • ${GREEN}Automatic updates${NC} - Self-updating installer with latest improvements"
+    echo -e "  • ${GREEN}Automatic installer updates${NC} - Installer script updated during normal operations"
+    echo ""
+    echo -e "${WHITE}INSTALLER UPDATE BEHAVIOR:${NC}"
+    echo -e "  ${GREEN}✅ Default operations${NC} (install/update/repair) automatically update the installer"
+    echo -e "  ${YELLOW}⚙️  Advanced option${NC} (--update-installer) updates ONLY the installer script"
+    echo -e "  ${BLUE}ℹ️  Use advanced option${NC} when you want to update installer without touching Profolio"
     echo ""
     echo -e "${WHITE}ROLLBACK FEATURES:${NC}"
     echo -e "  • ${GREEN}Automatic rollback${NC} on failed updates"
@@ -3053,7 +3109,7 @@ Group=profolio
 WorkingDirectory=/opt/profolio/backend
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
+ExecStart=/usr/bin/pnpm run start
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -3076,7 +3132,7 @@ Group=profolio
 WorkingDirectory=/opt/profolio/frontend
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
+ExecStart=/usr/bin/pnpm run start
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -3216,7 +3272,7 @@ fresh_install() {
     local system_steps=(
         "Creating profolio user" "useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || true"
         "Updating package lists" "apt update"
-        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server"
+        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4"
     )
     
     if ! execute_steps "System Setup" "${system_steps[@]}"; then

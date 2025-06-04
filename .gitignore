@@ -1,66 +1,102 @@
-# Dependencies
+# ===============================================
+# PROFOLIO - COMPREHENSIVE .GITIGNORE
+# ===============================================
+# This file replaces all sub-directory .gitignore files
+# Covers both frontend (Next.js) and backend (Node.js/NestJS)
+
+# ===============================================
+# CRITICAL SECURITY - ENVIRONMENT VARIABLES
+# ===============================================
+.env
+.env.*
+.env*.local
+*.env
+.env.secrets
+
+# ===============================================
+# DEPENDENCIES & PACKAGE MANAGERS
+# ===============================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
 */package-lock.json
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Build artifacts
+# ===============================================
+# BUILD ARTIFACTS & OUTPUT
+# ===============================================
+# Backend
 backend/dist/
+dist/
+
+# Frontend (Next.js)
 frontend/.next/
 frontend/out/
+frontend/build/
+.next/
+out/
+build/
 
+# General build artifacts
+build/Release
+*.tsbuildinfo
+
+# ===============================================
+# TESTING & COVERAGE
+# ===============================================
+coverage/
+.nyc_output
+/coverage
+
+# ===============================================
+# DEVELOPMENT & RUNTIME
+# ===============================================
 # Runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-
-# nyc test coverage
-.nyc_output
-
-# Grunt intermediate storage
-.grunt
-
-# Bower dependency directory
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
-# Compiled binary addons
-build/Release
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
 .node_repl_history
 
-# Output of 'npm pack'
-*.tgz
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# Yarn Integrity file
+# Temporary files
+tmp/
+temp/
+*.tgz
+.grunt
+bower_components
+.lock-wscript
+jspm_packages/
+.npm
 .yarn-integrity
 
-# dotenv environment variables file
-.env
-
-# IDE files
+# ===============================================
+# IDEs & EDITORS
+# ===============================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS generated files (Mac/Windows)
+# ===============================================
+# OS GENERATED FILES
+# ===============================================
 .DS_Store
 .DS_Store?
 ._*
@@ -69,10 +105,48 @@ jspm_packages/
 ehthumbs.db
 Thumbs.db
 
-# Logs
-logs
-*.log
+# ===============================================
+# NEXT.JS SPECIFIC
+# ===============================================
+next-env.d.ts
 
-# Temporary files
-tmp/
-temp/
+# ===============================================
+# DEPLOYMENT & SERVICES
+# ===============================================
+# Vercel
+.vercel
+
+# ===============================================
+# SENSITIVE CONFIGURATION FILES
+# ===============================================
+# Firebase configuration
+firebase-config.json
+*/firebase-config.json
+*/config/firebase-config.json
+frontend/public/firebase-config.json
+
+# API keys and secrets
+api-keys.json
+*/api-keys.json
+*/config/api-keys.json
+frontend/src/config/api-keys.json
+
+# Google Services
+*/config/google-places-config.json
+frontend/src/config/google-places-config.json
+
+# ===============================================
+# GENERATED & TEMPORARY ASSETS
+# ===============================================
+# Generated logo files
+profolio-logo-*px.svg
+
+# Development temp files
+frontend/public/temp-bank-file-examples-to-be-deleted
+
+# ===============================================
+# BACKUPS & MISC
+# ===============================================
+*.backup
+*.bak
+*.old

@@ -6,6 +6,7 @@ import { HeaderLayout } from './headerLayout';
 import { FooterLayout as Footer } from "@/components/layout/footerLayout";
 import DemoModeBanner from "@/components/layout/DemoModeBanner";
 import MobileBottomNav from "@/components/navigation/mobileBottomNav";
+import { NetworkStatus } from "@/components/ui/NetworkStatus";
 import { useAuth } from "@/lib/unifiedAuth";
 import { createUserContext } from '@/lib/userUtils';
 import { motion } from "framer-motion";
@@ -57,7 +58,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   // Create consistent user context using centralized utility
   const currentUser = useMemo(() => {
     return createUserContext(user, userProfile, isDemoMode);
-  }, [user?.id, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
+  }, [user, userProfile, isDemoMode]);
 
   // Cleanup function for abort controller
   const cleanup = useCallback(() => {
@@ -191,6 +192,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <AppContext.Provider value={appValue}>
       <>
+        {/* 🚀 OFFLINE UX: Global network status indicator */}
+        <NetworkStatus position="top" />
+        
         {/* Animated background for app pages */}
         {isAppSection && (
           <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -230,7 +234,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
               }}
             />
             <motion.div 
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full opacity-15 dark:opacity-10 filter blur-3xl gradient-animation"
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl gradient-animation"
               animate={{
                 x: [0, 30, -30, 0],
                 y: [0, -30, 30, 0],

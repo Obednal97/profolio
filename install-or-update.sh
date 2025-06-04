@@ -775,7 +775,7 @@ create_proxmox_container() {
             
             # Download and execute installer in container
             pct exec $PROXMOX_VMID -- bash -c "
-                apt update && apt install -y curl wget
+                apt update && apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4
                 curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | bash
             "
         else
@@ -1637,12 +1637,12 @@ build_application() {
     chown -R profolio:profolio /opt/profolio
     
     local steps=(
-        "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio npm install"
-        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio npx prisma generate"
-        "Running database migrations" "cd /opt/profolio/backend && sudo -u profolio npx prisma migrate deploy"
-        "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio npx nest build"
-        "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio npm install"
-        "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio npm run build"
+        "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio pnpm install"
+        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma generate"
+        "Running database migrations" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma migrate deploy"
+        "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio pnpm run build"
+        "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio pnpm install"
+        "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio pnpm run build"
         "Optimizing for production deployment" "optimize_production_deployment"
         "Cleaning build artifacts and cache" "cleanup_build_artifacts"
     )
@@ -1673,7 +1673,7 @@ cleanup_build_artifacts() {
     
     # Remove package manager cache
     info "  → Cleaning package manager cache..."
-    sudo -u profolio npm cache clean --force 2>/dev/null || true
+    sudo -u profolio pnpm store prune 2>/dev/null || true
     
     # Remove any remaining dev-only files
     info "  → Removing development files..."
@@ -1725,7 +1725,7 @@ optimize_production_safe() {
         
         if [ -n "$backend_dev_packages" ]; then
             for package in $backend_dev_packages; do
-                sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+                sudo -u profolio pnpm remove "$package" 2>/dev/null || true
             done
             success "  ✅ Backend: Removed devDependencies: $backend_dev_packages"
         else
@@ -1751,7 +1751,7 @@ optimize_production_safe() {
         
         if [ -n "$frontend_dev_packages" ]; then
             for package in $frontend_dev_packages; do
-                sudo -u profolio npm uninstall "$package" --silent 2>/dev/null || true
+                sudo -u profolio pnpm remove "$package" 2>/dev/null || true
             done
             success "  ✅ Frontend: Removed devDependencies: $frontend_dev_packages"
         else
@@ -1763,7 +1763,7 @@ optimize_production_safe() {
     info "  → Basic cleanup (caches and temporary files)..."
     sudo -u profolio rm -rf frontend/.next/cache backend/node_modules/.cache 2>/dev/null || true
     sudo -u profolio rm -rf frontend/node_modules/.cache backend/.npm 2>/dev/null || true
-    sudo -u profolio npm cache clean --force 2>/dev/null || true
+    sudo -u profolio pnpm store prune 2>/dev/null || true
     
     # Calculate and show results
     cd /opt/profolio
@@ -1793,8 +1793,8 @@ optimize_production_aggressive() {
     
     # Remove duplicate packages and deduplicate node_modules
     info "    • Deduplicating node_modules..."
-    cd frontend && sudo -u profolio npm dedupe --silent 2>/dev/null || true
-    cd ../backend && sudo -u profolio npm dedupe --silent 2>/dev/null || true
+    cd frontend && sudo -u profolio pnpm install --frozen-lockfile 2>/dev/null || true
+    cd ../backend && sudo -u profolio pnpm install --frozen-lockfile 2>/dev/null || true
     cd ..
     
     # Remove source maps and debug files
@@ -2927,7 +2927,7 @@ Group=profolio
 WorkingDirectory=/opt/profolio/backend
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
+ExecStart=/usr/bin/pnpm run start
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -2950,7 +2950,7 @@ Group=profolio
 WorkingDirectory=/opt/profolio/frontend
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
+ExecStart=/usr/bin/pnpm run start
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -3090,7 +3090,7 @@ fresh_install() {
     local system_steps=(
         "Creating profolio user" "useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || true"
         "Updating package lists" "apt update"
-        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server"
+        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4"
     )
     
     if ! execute_steps "System Setup" "${system_steps[@]}"; then

@@ -278,7 +278,7 @@ sudo journalctl -u profolio-backend -n 50  # Recent backend logs
 2. **Transfer to offline system** via USB/network
 3. **Install without internet** using pre-downloaded dependencies
 
-See our [**Offline Installation Guide**](docs/installation/OFFLINE_INSTALLATION.md) for detailed instructions.
+See our [**Offline Installation Guide**](docs/setup/offline-installation.md) for detailed instructions.
 
 ---
 
@@ -290,13 +290,13 @@ See our [**Offline Installation Guide**](docs/installation/OFFLINE_INSTALLATION.
 git clone https://github.com/Obednal97/profolio.git
 cd profolio
 
-# Install dependencies
-cd backend && npm install
-cd ../frontend && npm install
+# Install dependencies (using pnpm for better performance)
+cd backend && pnpm install
+cd ../frontend && pnpm install
 
 # Start development servers
-npm run dev:backend    # http://localhost:3001
-npm run dev:frontend   # http://localhost:3000
+pnpm run dev:backend    # http://localhost:3001
+pnpm run dev:frontend   # http://localhost:3000
 ```
 
 ### **Customization Options**
@@ -313,11 +313,11 @@ npm run dev:frontend   # http://localhost:3000
 ## 📚 **Documentation & Support**
 
 ### **Comprehensive Guides**
-- 📖 **[Installation Guide](docs/installation/)** - Step-by-step setup instructions
-- 🔧 **[Configuration Guide](docs/configuration/)** - Customization and optimization
-- 🛡️ **[Security Guide](docs/security/)** - Hardening and best practices
-- 🔄 **[Backup & Recovery](docs/backup/)** - Data protection strategies
-- ❓ **[Troubleshooting](docs/troubleshooting/)** - Common issues and solutions
+- 📖 **[Setup & Installation](docs/setup/)** - Complete installation guides for all platforms
+- 🔧 **[Development](docs/development/)** - Technical documentation for developers
+- 🛡️ **[Security Policy](SECURITY.md)** - Security policies and best practices
+- 🔄 **[Processes](docs/processes/)** - Development workflows and standards
+- ❓ **[Features](docs/features/)** - Feature specifications and technical details
 
 ### **Community Support**
 - 💬 **[GitHub Discussions](https://github.com/Obednal97/profolio/discussions)** - Community Q&A

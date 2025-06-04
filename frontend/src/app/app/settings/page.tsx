@@ -196,13 +196,15 @@ interface ProfileTabProps {
     bio: string;
     location: string;
   };
-  setProfileData: React.Dispatch<React.SetStateAction<{
-    name: string;
-    email: string;
-    phone: string;
-    bio: string;
-    location: string;
-  }>>;
+  setProfileData: React.Dispatch<
+    React.SetStateAction<{
+      name: string;
+      email: string;
+      phone: string;
+      bio: string;
+      location: string;
+    }>
+  >;
   profileLoading: boolean;
   handleProfileUpdate: (e: React.FormEvent) => Promise<void>;
   loading: boolean;
@@ -211,7 +213,7 @@ interface ProfileTabProps {
 
 // Type for preferences
 interface PreferencesType {
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   currency: string;
   language: string;
   notifications: {
@@ -226,13 +228,13 @@ interface PreferencesType {
 }
 
 // Define ProfileTab outside of SettingsPage to prevent recreation on every render
-const ProfileTab = ({ 
-  profileData, 
-  setProfileData, 
-  profileLoading, 
-  handleProfileUpdate, 
-  loading, 
-  isDemoMode
+const ProfileTab = ({
+  profileData,
+  setProfileData,
+  profileLoading,
+  handleProfileUpdate,
+  loading,
+  isDemoMode,
 }: ProfileTabProps) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -253,51 +255,64 @@ const ProfileTab = ({
             <input
               type="text"
               value={profileData.name}
-              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+              onChange={(e) =>
+                setProfileData({ ...profileData, name: e.target.value })
+              }
               className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Email Address
-              {!isDemoMode && <span className="text-gray-500 text-xs ml-2">(cannot be changed)</span>}
+              {!isDemoMode && (
+                <span className="text-gray-500 text-xs ml-2">
+                  (cannot be changed)
+                </span>
+              )}
             </label>
             <input
               type="email"
               value={profileData.email}
-              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+              onChange={(e) =>
+                setProfileData({ ...profileData, email: e.target.value })
+              }
               disabled={!isDemoMode}
               className={`w-full backdrop-blur-sm border rounded-xl px-4 py-3 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-200 ${
-                !isDemoMode 
-                  ? 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-50 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10'
+                !isDemoMode
+                  ? "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  : "bg-gray-50 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10"
               }`}
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Phone Number <span className="text-gray-500 text-xs">(optional)</span>
+              Phone Number{" "}
+              <span className="text-gray-500 text-xs">(optional)</span>
             </label>
             <input
               type="tel"
               value={profileData.phone}
-              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+              onChange={(e) =>
+                setProfileData({ ...profileData, phone: e.target.value })
+              }
               className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
               placeholder="+1 (555) 123-4567"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Location <span className="text-gray-500 text-xs">(optional)</span>
             </label>
             <select
               value={profileData.location}
-              onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+              onChange={(e) =>
+                setProfileData({ ...profileData, location: e.target.value })
+              }
               className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
             >
               {countries.map((country) => (
@@ -308,20 +323,22 @@ const ProfileTab = ({
             </select>
           </div>
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Bio
           </label>
           <textarea
             value={profileData.bio}
-            onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+            onChange={(e) =>
+              setProfileData({ ...profileData, bio: e.target.value })
+            }
             className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
             rows={4}
             placeholder="Tell us about yourself..."
           />
         </div>
-        
+
         <Button
           type="submit"
           disabled={loading}
@@ -334,85 +351,69 @@ const ProfileTab = ({
   </motion.div>
 );
 
-// Secure preferences storage (non-sensitive data only)
+// SECURITY FIX: Remove client-side token management to prevent XSS vulnerabilities
+// Tokens should ONLY be managed server-side via httpOnly cookies
+
+// Secure preferences management (non-sensitive data only)
 function getSecurePreferences(): { tokenExpiration?: string } {
-  if (typeof window !== 'undefined') {
-    try {
-      const prefs = sessionStorage.getItem('app-preferences');
-      return prefs ? JSON.parse(prefs) : {};
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to parse app preferences:', error);
-      }
-      return {};
+  try {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("user-preferences");
+      return stored ? JSON.parse(stored) : {};
     }
+  } catch (error) {
+    console.warn("Failed to get preferences:", error);
   }
   return {};
 }
 
 function setSecurePreferences(prefs: { tokenExpiration?: string }): void {
-  if (typeof window !== 'undefined') {
-    try {
-      sessionStorage.setItem('app-preferences', JSON.stringify(prefs));
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to store app preferences:', error);
-      }
+  try {
+    if (typeof window !== "undefined") {
+      const existing = getSecurePreferences();
+      const updated = { ...existing, ...prefs };
+      localStorage.setItem("user-preferences", JSON.stringify(updated));
     }
-  }
-}
-
-// Secure token management for httpOnly cookies
-function setSecureToken(token: string): void {
-  // Note: httpOnly cookies must be set by the server
-  // This is a client-side fallback for development
-  if (typeof window !== 'undefined') {
-    if (process.env.NODE_ENV === 'development') {
-      // Development: Use secure cookie attributes
-      document.cookie = `auth-token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=86400`;
-    } else {
-      // Production: Token should be set by server as httpOnly cookie
-      console.warn('Token should be set by server as httpOnly cookie in production');
-    }
-  }
-}
-
-function clearSecureToken(): void {
-  if (typeof window !== 'undefined') {
-    // Clear the cookie by setting expired date
-    document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+  } catch (error) {
+    console.warn("Failed to set preferences:", error);
   }
 }
 
 // Security Tab component
-const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: (e: React.FormEvent) => Promise<void>; loading: boolean }) => {
+const SecurityTab = ({
+  handlePasswordUpdate,
+  loading,
+}: {
+  handlePasswordUpdate: (e: React.FormEvent) => Promise<void>;
+  loading: boolean;
+}) => {
   const [tokenExpiration, setTokenExpiration] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const prefs = getSecurePreferences();
-      return prefs.tokenExpiration || '30days';
+      return prefs.tokenExpiration || "30days";
     }
-    return '30days';
+    return "30days";
   });
 
   // Check if we're in cloud mode
-  const isCloudMode = typeof window !== 'undefined' && (
-    window.location.hostname.includes('.vercel.app') || 
-    window.location.hostname.includes('.netlify.app') ||
-    process.env.NODE_ENV === 'production'
-  );
+  const isCloudMode =
+    typeof window !== "undefined" &&
+    (window.location.hostname.includes(".vercel.app") ||
+      window.location.hostname.includes(".netlify.app") ||
+      process.env.NODE_ENV === "production");
 
   const handleTokenExpirationChange = (value: string) => {
     setTokenExpiration(value);
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       setSecurePreferences({ tokenExpiration: value });
     }
   };
 
   const tokenOptions = [
-    { value: '1day', label: '1 Day' },
-    { value: '7days', label: '7 Days' },
-    { value: '30days', label: '30 Days' },
-    { value: 'unlimited', label: 'Unlimited' }
+    { value: "1day", label: "1 Day" },
+    { value: "7days", label: "7 Days" },
+    { value: "30days", label: "30 Days" },
+    { value: "unlimited", label: "Unlimited" },
   ];
 
   return (
@@ -432,7 +433,7 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
             required
           />
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             New Password
@@ -443,7 +444,7 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
             required
           />
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Confirm New Password
@@ -454,7 +455,7 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
             required
           />
         </div>
-        
+
         <Button
           type="submit"
           disabled={loading}
@@ -466,15 +467,20 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
 
       {/* Session Management */}
       <div className="border-t border-gray-200 dark:border-white/10 pt-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Session Management</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Session Management
+        </h3>
+
         {!isCloudMode && (
           <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10 mb-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-gray-900 dark:text-white font-medium mb-2">Session Duration</p>
+                <p className="text-gray-900 dark:text-white font-medium mb-2">
+                  Session Duration
+                </p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Choose how long you stay signed in before being automatically logged out for security.
+                  Choose how long you stay signed in before being automatically
+                  logged out for security.
                 </p>
                 <select
                   value={tokenExpiration}
@@ -482,7 +488,11 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
                   className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
                 >
                   {tokenOptions.map((option) => (
-                    <option key={option.value} value={option.value} className="bg-white dark:bg-gray-800">
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      className="bg-white dark:bg-gray-800"
+                    >
                       {option.label}
                     </option>
                   ))}
@@ -497,25 +507,37 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
             <div className="flex items-center">
               <i className="fas fa-info-circle text-blue-500 mr-3"></i>
               <div>
-                <p className="text-blue-900 dark:text-blue-200 font-medium">Cloud Mode Security</p>
+                <p className="text-blue-900 dark:text-blue-200 font-medium">
+                  Cloud Mode Security
+                </p>
                 <p className="text-blue-700 dark:text-blue-300 text-sm">
-                  For security, sessions automatically expire after 30 days in cloud mode.
+                  For security, sessions automatically expire after 30 days in
+                  cloud mode.
                 </p>
               </div>
             </div>
           </div>
         )}
       </div>
-      
+
       <div className="border-t border-gray-200 dark:border-white/10 pt-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Two-Factor Authentication</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Two-Factor Authentication
+        </h3>
         <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-900 dark:text-white font-medium">Authenticator App</p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Use an authenticator app to generate codes</p>
+              <p className="text-gray-900 dark:text-white font-medium">
+                Authenticator App
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Use an authenticator app to generate codes
+              </p>
             </div>
-            <Button variant="ghost" className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10">
+            <Button
+              variant="ghost"
+              className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+            >
               Enable
             </Button>
           </div>
@@ -526,16 +548,16 @@ const SecurityTab = ({ handlePasswordUpdate, loading }: { handlePasswordUpdate: 
 };
 
 // Preferences Tab component
-const PreferencesTab = ({ 
-  preferences, 
-  setPreferences, 
-  handlePreferencesUpdate, 
-  loading 
-}: { 
-  preferences: PreferencesType; 
-  setPreferences: React.Dispatch<React.SetStateAction<PreferencesType>>; 
-  handlePreferencesUpdate: () => Promise<void>; 
-  loading: boolean 
+const PreferencesTab = ({
+  preferences,
+  setPreferences,
+  handlePreferencesUpdate,
+  loading,
+}: {
+  preferences: PreferencesType;
+  setPreferences: React.Dispatch<React.SetStateAction<PreferencesType>>;
+  handlePreferencesUpdate: () => Promise<void>;
+  loading: boolean;
 }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -549,76 +571,120 @@ const PreferencesTab = ({
         </label>
         <select
           value={preferences.theme}
-          onChange={(e) => setPreferences({ ...preferences, theme: e.target.value as 'light' | 'dark' | 'system' })}
+          onChange={(e) =>
+            setPreferences({
+              ...preferences,
+              theme: e.target.value as "light" | "dark" | "system",
+            })
+          }
           className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
         >
-          <option value="light" className="bg-white dark:bg-gray-800">Light</option>
-          <option value="dark" className="bg-white dark:bg-gray-800">Dark</option>
-          <option value="system" className="bg-white dark:bg-gray-800">System</option>
+          <option value="light" className="bg-white dark:bg-gray-800">
+            Light
+          </option>
+          <option value="dark" className="bg-white dark:bg-gray-800">
+            Dark
+          </option>
+          <option value="system" className="bg-white dark:bg-gray-800">
+            System
+          </option>
         </select>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Currency
         </label>
         <select
           value={preferences.currency}
-          onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
+          onChange={(e) =>
+            setPreferences({ ...preferences, currency: e.target.value })
+          }
           className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
         >
-          <option value="USD" className="bg-white dark:bg-gray-800">USD ($)</option>
-          <option value="EUR" className="bg-white dark:bg-gray-800">EUR (€)</option>
-          <option value="GBP" className="bg-white dark:bg-gray-800">GBP (£)</option>
-          <option value="JPY" className="bg-white dark:bg-gray-800">JPY (¥)</option>
+          <option value="USD" className="bg-white dark:bg-gray-800">
+            USD ($)
+          </option>
+          <option value="EUR" className="bg-white dark:bg-gray-800">
+            EUR (€)
+          </option>
+          <option value="GBP" className="bg-white dark:bg-gray-800">
+            GBP (£)
+          </option>
+          <option value="JPY" className="bg-white dark:bg-gray-800">
+            JPY (¥)
+          </option>
         </select>
       </div>
-      
+
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Notifications
+        </h3>
+
         <div className="space-y-3">
           <label className="flex items-center justify-between">
-            <span className="text-gray-700 dark:text-gray-300">Email Notifications</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              Email Notifications
+            </span>
             <input
               type="checkbox"
               checked={preferences.notifications.email}
-              onChange={(e) => setPreferences({
-                ...preferences,
-                notifications: { ...preferences.notifications, email: e.target.checked }
-              })}
+              onChange={(e) =>
+                setPreferences({
+                  ...preferences,
+                  notifications: {
+                    ...preferences.notifications,
+                    email: e.target.checked,
+                  },
+                })
+              }
               className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
             />
           </label>
-          
+
           <label className="flex items-center justify-between">
-            <span className="text-gray-700 dark:text-gray-300">Push Notifications</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              Push Notifications
+            </span>
             <input
               type="checkbox"
               checked={preferences.notifications.push}
-              onChange={(e) => setPreferences({
-                ...preferences,
-                notifications: { ...preferences.notifications, push: e.target.checked }
-              })}
+              onChange={(e) =>
+                setPreferences({
+                  ...preferences,
+                  notifications: {
+                    ...preferences.notifications,
+                    push: e.target.checked,
+                  },
+                })
+              }
               className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
             />
           </label>
-          
+
           <label className="flex items-center justify-between">
-            <span className="text-gray-700 dark:text-gray-300">Marketing Emails</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              Marketing Emails
+            </span>
             <input
               type="checkbox"
               checked={preferences.notifications.marketing}
-              onChange={(e) => setPreferences({
-                ...preferences,
-                notifications: { ...preferences.notifications, marketing: e.target.checked }
-              })}
+              onChange={(e) =>
+                setPreferences({
+                  ...preferences,
+                  notifications: {
+                    ...preferences.notifications,
+                    marketing: e.target.checked,
+                  },
+                })
+              }
               className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
             />
           </label>
         </div>
       </div>
-      
+
       <Button
         onClick={handlePreferencesUpdate}
         disabled={loading}
@@ -631,7 +697,11 @@ const PreferencesTab = ({
 );
 
 // Account Tab component
-const AccountTab = ({ setShowDeleteModal }: { setShowDeleteModal: (value: boolean) => void }) => (
+const AccountTab = ({
+  setShowDeleteModal,
+}: {
+  setShowDeleteModal: (value: boolean) => void;
+}) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -654,13 +724,12 @@ const AccountTab = ({ setShowDeleteModal }: { setShowDeleteModal: (value: boolea
 
 // Helper function to clear corrupted authentication data
 const clearAuthData = () => {
-  if (typeof window !== 'undefined') {
-    clearSecureToken();
+  if (typeof window !== "undefined") {
     // Clear any remaining localStorage items (legacy cleanup)
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('firebase-token');
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🧹 [Settings] Cleared corrupted authentication data');
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("firebase-token");
+    if (process.env.NODE_ENV === "development") {
+      console.log("🧹 [Settings] Cleared corrupted authentication data");
     }
   }
 };
@@ -668,70 +737,56 @@ const clearAuthData = () => {
 // Helper function to get fresh authentication token
 const getFreshAuthToken = async (): Promise<string | null> => {
   try {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 [Settings] Getting fresh authentication token...');
-    }
-    
-    // Get Firebase auth instance
-    const { getFirebaseAuth } = await import('@/lib/firebase');
-    const auth = await getFirebaseAuth();
-    const currentUser = auth.currentUser;
-    
-    if (!currentUser) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ [Settings] No Firebase user found');
-      }
+    const { getAuth } = await import("firebase/auth");
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      console.error("❌ [Settings] No Firebase user found");
       return null;
     }
-    
+
     // Get fresh Firebase token
-    const firebaseToken = await currentUser.getIdToken(true); // Force refresh
-    if (process.env.NODE_ENV === 'development') {
-      console.log('✅ [Settings] Got fresh Firebase token');
-    }
-    
+    const firebaseToken = await user.getIdToken(true);
+    console.log("✅ [Settings] Got fresh Firebase token");
+
     // Exchange for backend JWT
-    const response = await fetch('/api/auth/firebase-exchange', {
-      method: 'POST',
+    const response = await fetch("/api/auth/firebase-exchange", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ firebaseToken }),
     });
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 [Settings] Firebase token exchange response status:', response.status);
-    }
-    
+
+    console.log(
+      "🔄 [Settings] Firebase token exchange response status:",
+      response.status
+    );
+
     if (!response.ok) {
       const errorText = await response.text();
-      if (process.env.NODE_ENV === 'development') {
-        console.error('❌ [Settings] Token exchange failed:', response.status, errorText);
-      }
+      console.error(
+        "❌ [Settings] Token exchange failed:",
+        response.status,
+        errorText
+      );
       return null;
     }
-    
+
     const data = await response.json();
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📄 [Settings] Token exchange response:', data);
-    }
-    
+    console.log("📄 [Settings] Token exchange response:", data);
+
     if (data.success && data.token) {
-      setSecureToken(data.token);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ [Settings] Fresh backend JWT obtained and stored');
-      }
       return data.token;
     } else {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('❌ [Settings] Token exchange successful but no token in response');
-      }
+      console.error(
+        "❌ [Settings] Token exchange successful but no token in response"
+      );
       return null;
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('❌ [Settings] Error getting fresh auth token:', error);
-    }
+    console.error("❌ [Settings] Error getting fresh auth token:", error);
     return null;
   }
 };
@@ -747,29 +802,32 @@ function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Check if user is in demo mode
-  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
-  
+  const isDemoMode =
+    typeof window !== "undefined" &&
+    localStorage.getItem("demo-mode") === "true";
+
   // Use Firebase user data or demo user data with enhanced Google profile extraction
   const currentUser = useMemo(() => {
     if (user) {
       return {
         id: user.id,
-        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
-        email: user.email || '',
-        phone: '', // Will be loaded from userProfile if available
-        photoURL: '', // Will be loaded from userProfile if available
+        name:
+          user.displayName || user.name || user.email?.split("@")[0] || "User",
+        email: user.email || "",
+        phone: "", // Will be loaded from userProfile if available
+        photoURL: "", // Will be loaded from userProfile if available
       };
     } else if (isDemoMode) {
       return {
-        id: 'demo-user-id',
-        name: 'Demo User',
-        email: 'demo@profolio.com',
-        phone: '+1 (555) 123-4567',
-        location: 'San Francisco, CA'
+        id: "demo-user-id",
+        name: "Demo User",
+        email: "demo@profolio.com",
+        phone: "+1 (555) 123-4567",
+        location: "San Francisco, CA",
       };
     }
     return null;
-  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+  }, [user, isDemoMode]);
 
   // Profile form state - start with empty values
   const [profileData, setProfileData] = useState(() => ({
@@ -779,7 +837,7 @@ function SettingsPage() {
     bio: "",
     location: "",
   }));
-  
+
   // Track loading state for profile data
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -790,90 +848,95 @@ function SettingsPage() {
         setProfileLoading(false);
         return;
       }
-      
+
       try {
-        console.log('Loading profile from database for user:', currentUser.id);
-        
+        console.log("Loading profile from database for user:", currentUser.id);
+
         if (isDemoMode) {
           // For demo mode, load from localStorage
-          const storedUserData = localStorage.getItem('user-data');
+          const storedUserData = localStorage.getItem("user-data");
           if (storedUserData) {
             const parsedData = JSON.parse(storedUserData);
             setProfileData({
-              name: parsedData.name || currentUser.name || '',
-              email: parsedData.email || currentUser.email || '',
-              phone: parsedData.phone || '',
-              bio: parsedData.bio || '',
-              location: parsedData.location || '',
+              name: parsedData.name || currentUser.name || "",
+              email: parsedData.email || currentUser.email || "",
+              phone: parsedData.phone || "",
+              bio: parsedData.bio || "",
+              location: parsedData.location || "",
             });
           } else {
             // Use current user data as fallback
             setProfileData({
-              name: currentUser.name || '',
-              email: currentUser.email || '',
-              phone: '',
-              bio: '',
-              location: '',
+              name: currentUser.name || "",
+              email: currentUser.email || "",
+              phone: "",
+              bio: "",
+              location: "",
             });
           }
         } else {
-          // Handle real user - use the new backend API endpoint
-          console.log('🔄 [Settings] Starting profile update...');
-          
+          // Handle real user - use the backend API endpoint
+          console.log("🔄 [Settings] Starting profile load...");
+
           // Clear any corrupted authentication data first
           clearAuthData();
-          
+
           // Get fresh authentication token
           const backendToken = await getFreshAuthToken();
-          
+
           if (!backendToken) {
-            throw new Error('Failed to obtain authentication token. Please sign out and sign in again.');
+            throw new Error(
+              "Failed to obtain authentication token. Please sign out and sign in again."
+            );
           }
 
-          const response = await fetch('/api/auth/profile', {
-            method: 'GET',
+          const response = await fetch("/api/auth/profile", {
+            method: "GET",
             headers: {
-              'Authorization': `Bearer ${backendToken}`,
+              Authorization: `Bearer ${backendToken}`,
             },
           });
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+            throw new Error(
+              errorData.message ||
+                `HTTP ${response.status}: ${response.statusText}`
+            );
           }
 
           const data = await response.json();
-          
+
           if (data.success && data.user) {
-            console.log('Profile loaded from database:', data.user);
+            console.log("Profile loaded from database:", data.user);
             setProfileData({
-              name: data.user.name || currentUser.name || '',
-              email: data.user.email || currentUser.email || '',
-              phone: data.user.phone || '',
-              bio: data.user.bio || '',
-              location: data.user.location || '',
+              name: data.user.name || currentUser.name || "",
+              email: data.user.email || currentUser.email || "",
+              phone: data.user.phone || "",
+              bio: data.user.bio || "",
+              location: data.user.location || "",
             });
           } else {
             // No profile in database yet, use auth data as initial values
-            console.log('No profile in database, using auth data');
+            console.log("No profile in database, using auth data");
             setProfileData({
-              name: currentUser.name || '',
-              email: currentUser.email || '',
-              phone: '',
-              bio: '',
-              location: '',
+              name: currentUser.name || "",
+              email: currentUser.email || "",
+              phone: "",
+              bio: "",
+              location: "",
             });
           }
         }
       } catch (error) {
-        console.error('Failed to load profile from database:', error);
+        console.error("Failed to load profile from database:", error);
         // Fallback to auth data
         setProfileData({
-          name: currentUser.name || '',
-          email: currentUser.email || '',
-          phone: '',
-          bio: '',
-          location: '',
+          name: currentUser.name || "",
+          email: currentUser.email || "",
+          phone: "",
+          bio: "",
+          location: "",
         });
       } finally {
         setProfileLoading(false);
@@ -881,11 +944,17 @@ function SettingsPage() {
     };
 
     loadProfileFromDatabase();
-  }, [currentUser?.id, isDemoMode, user]);
+  }, [
+    currentUser?.id,
+    currentUser?.email,
+    currentUser?.name,
+    isDemoMode,
+    user,
+  ]);
 
   // Preferences state
   const [preferences, setPreferences] = useState<PreferencesType>({
-    theme: theme as 'light' | 'dark' | 'system',
+    theme: theme as "light" | "dark" | "system",
     currency: currency,
     language: "en",
     notifications: {
@@ -901,9 +970,9 @@ function SettingsPage() {
 
   // Update preferences when global context changes
   useEffect(() => {
-    setPreferences(prev => ({
+    setPreferences((prev) => ({
       ...prev,
-      theme: theme as 'light' | 'dark' | 'system',
+      theme: theme as "light" | "dark" | "system",
       currency: currency,
     }));
   }, [theme, currency]);
@@ -924,50 +993,60 @@ function SettingsPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       if (!currentUser?.id) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
-      console.log('🔄 [Settings] Updating profile for:', currentUser.id, 'isDemoMode:', isDemoMode);
+      console.log(
+        "🔄 [Settings] Updating profile for:",
+        currentUser.id,
+        "isDemoMode:",
+        isDemoMode
+      );
 
       if (isDemoMode) {
         // Handle demo mode - store in localStorage
         const demoUserData = {
-          id: 'demo-user-id',
+          id: "demo-user-id",
           name: profileData.name,
           email: profileData.email,
           phone: profileData.phone,
           lastUpdated: Date.now(),
         };
-        
-        localStorage.setItem('user-data', JSON.stringify(demoUserData));
-        console.log('✅ [Settings] Demo profile saved to localStorage:', profileData.name);
-        
-        setSuccess('Profile updated successfully!');
-        
+
+        localStorage.setItem("user-data", JSON.stringify(demoUserData));
+        console.log(
+          "✅ [Settings] Demo profile saved to localStorage:",
+          profileData.name
+        );
+
+        setSuccess("Profile updated successfully!");
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        // Handle real user - use the new backend API endpoint
-        console.log('🔄 [Settings] Starting profile update...');
-        
+        // Handle real user - use the backend API endpoint
+        console.log("🔄 [Settings] Starting profile update...");
+
         // Clear any corrupted authentication data first
         clearAuthData();
-        
+
         // Get fresh authentication token
         const backendToken = await getFreshAuthToken();
-        
+
         if (!backendToken) {
-          throw new Error('Failed to obtain authentication token. Please sign out and sign in again.');
+          throw new Error(
+            "Failed to obtain authentication token. Please sign out and sign in again."
+          );
         }
 
-        const response = await fetch('/api/auth/profile', {
-          method: 'PATCH',
+        const response = await fetch("/api/auth/profile", {
+          method: "PATCH",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${backendToken}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${backendToken}`,
           },
           body: JSON.stringify({
             name: profileData.name,
@@ -980,30 +1059,35 @@ function SettingsPage() {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+          throw new Error(
+            errorData.message ||
+              `HTTP ${response.status}: ${response.statusText}`
+          );
         }
 
         const data = await response.json();
-        
+
         if (!data.success) {
-          throw new Error(data.message || 'Failed to update profile');
+          throw new Error(data.message || "Failed to update profile");
         }
 
-        console.log('✅ [Settings] Profile saved, refreshing...');
-        
+        console.log("✅ [Settings] Profile saved, refreshing...");
+
         // Refresh the user profile in auth context to update header/dashboard
         if (refreshUserProfile) {
           await refreshUserProfile();
         }
 
-        setSuccess('Profile updated successfully!');
-        
+        setSuccess("Profile updated successfully!");
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (error) {
-      console.error('❌ [Settings] Profile update error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update profile');
+      console.error("❌ [Settings] Profile update error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to update profile"
+      );
     } finally {
       setLoading(false);
     }
@@ -1014,10 +1098,10 @@ function SettingsPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setSuccess("Password updated successfully");
     } catch (err) {
       console.error("Password update error:", err);
@@ -1031,13 +1115,13 @@ function SettingsPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       // Update global currency setting
       await setCurrency(preferences.currency);
-      
+
       // Simulate API call for other preferences
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setSuccess("Preferences updated successfully");
     } catch (err) {
       console.error("Preferences update error:", err);
@@ -1050,10 +1134,10 @@ function SettingsPage() {
   const handleAccountDeletion = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       window.location.href = "/";
     } catch (err) {
       console.error("Account deletion error:", err);
@@ -1085,7 +1169,9 @@ function SettingsPage() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Settings
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account and preferences</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Manage your account and preferences
+          </p>
         </motion.div>
 
         {/* Notifications */}
@@ -1124,12 +1210,12 @@ function SettingsPage() {
           {tabs.map((tab) => (
             <Button
               key={tab.id}
-              variant={activeTab === tab.id ? 'default' : 'ghost'}
+              variant={activeTab === tab.id ? "default" : "ghost"}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center transition-all duration-200 ${
-                activeTab === tab.id 
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg' 
-                  : 'hover:bg-white/10'
+                activeTab === tab.id
+                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg"
+                  : "hover:bg-white/10"
               }`}
             >
               <i className={`fas ${tab.icon} mr-2`} />
@@ -1141,25 +1227,60 @@ function SettingsPage() {
         {/* Tab Content */}
         <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
           <AnimatePresence mode="wait">
-            {activeTab === 'profile' && <ProfileTab key="profile" profileData={profileData} setProfileData={setProfileData} profileLoading={profileLoading} handleProfileUpdate={handleProfileUpdate} loading={loading} isDemoMode={isDemoMode} />}
-            {activeTab === 'security' && <SecurityTab key="security" handlePasswordUpdate={handlePasswordUpdate} loading={loading} />}
-            {activeTab === 'preferences' && <PreferencesTab key="preferences" preferences={preferences} setPreferences={setPreferences} handlePreferencesUpdate={handlePreferencesUpdate} loading={loading} />}
-            {activeTab === 'account' && <AccountTab key="account" setShowDeleteModal={setShowDeleteModal} />}
+            {activeTab === "profile" && (
+              <ProfileTab
+                key="profile"
+                profileData={profileData}
+                setProfileData={setProfileData}
+                profileLoading={profileLoading}
+                handleProfileUpdate={handleProfileUpdate}
+                loading={loading}
+                isDemoMode={isDemoMode}
+              />
+            )}
+            {activeTab === "security" && (
+              <SecurityTab
+                key="security"
+                handlePasswordUpdate={handlePasswordUpdate}
+                loading={loading}
+              />
+            )}
+            {activeTab === "preferences" && (
+              <PreferencesTab
+                key="preferences"
+                preferences={preferences}
+                setPreferences={setPreferences}
+                handlePreferencesUpdate={handlePreferencesUpdate}
+                loading={loading}
+              />
+            )}
+            {activeTab === "account" && (
+              <AccountTab
+                key="account"
+                setShowDeleteModal={setShowDeleteModal}
+              />
+            )}
           </AnimatePresence>
         </div>
       </div>
 
       {/* Delete Account Modal */}
       {showDeleteModal && (
-        <BaseModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+        <BaseModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+        >
           <div className="bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 rounded-2xl p-8 w-full max-w-md border border-gray-200 dark:border-white/10 shadow-2xl">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-100 mb-4">
                 <i className="fas fa-exclamation-triangle text-red-600 text-xl"></i>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Delete Account</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Delete Account
+              </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to delete your account? This action cannot be undone.
+                Are you sure you want to delete your account? This action cannot
+                be undone.
               </p>
               <div className="flex space-x-4">
                 <Button

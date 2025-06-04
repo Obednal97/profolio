@@ -1,13 +1,13 @@
 # 🚀 Profolio Quick Start Guide
 
-**Get Profolio running in minutes with the enhanced installer**
+**Get Profolio running in minutes with rollback protection and version control**
 
 ## 🎯 **Choose Your Platform**
 
 ### 🏠 **Proxmox Users** → [Proxmox LXC Container](#-proxmox-lxc-container)
 ### 🟢 **Most Users** → [Default Installation](#-default-installation)
 ### 🔧 **Power Users** → [Advanced Installation](#-advanced-installation)  
-### 🌐 **Air-Gapped** → [Offline Installation](OFFLINE_INSTALLATION.md)
+### 🌐 **Air-Gapped** → [Offline Installation](offline-installation.md)
 
 ---
 
@@ -18,7 +18,7 @@
 ### **1. One Command on Proxmox Host**
 ```bash
 # SSH into your Proxmox host and run:
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/proxmox-install-or-update.sh | sudo bash
 ```
 
 ### **2. Automatic Detection & Setup**
@@ -47,27 +47,11 @@ pct enter [CONTAINER_ID]
 http://[CONTAINER_IP]:3000
 ```
 
-### **5. Container Management**
-```bash
-# Container status
-pct status [CONTAINER_ID]
-
-# Start/stop container
-pct start [CONTAINER_ID]
-pct stop [CONTAINER_ID]
-
-# Container backup
-vzdump [CONTAINER_ID] --storage local
-
-# View container list
-pct list
-```
-
 ---
 
 ## 🟢 **Default Installation**
 
-**Perfect for most users who want a quick, reliable setup**
+**Perfect for most users who want a quick, reliable setup with automatic rollback protection**
 
 ### **1. One Command Installation**
 ```bash
@@ -76,10 +60,10 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-
 
 ### **2. Choose Default Mode**
 When prompted, select **Default Mode** (option 1) for:
-- ✅ Smart version detection (latest stable or rebuild)
-- ✅ Environment preservation (Firebase safe)
-- ✅ Rollback protection (automatic on failure)
-- ✅ Sensible defaults (one confirmation and go!)
+- ✅ **Smart version detection** (latest stable or rebuild)
+- ✅ **Environment preservation** (Firebase credentials safe)
+- ✅ **Rollback protection** (automatic on failure)
+- ✅ **Sensible defaults** (one confirmation and go!)
 
 ### **3. Access Your Instance**
 ```
@@ -87,13 +71,13 @@ Frontend: http://YOUR_SERVER_IP:3000
 Backend:  http://YOUR_SERVER_IP:3001
 ```
 
-**That's it!** 🎉 Your Profolio instance is ready.
+**That's it!** 🎉 Your Profolio instance is ready with automatic rollback protection.
 
 ---
 
 ## 🔧 **Advanced Installation**
 
-**For users who want full control over the installation process**
+**For users who want full control over installation process and version management**
 
 ### **1. Download Installer**
 ```bash
@@ -106,18 +90,18 @@ sudo ./install-or-update.sh
 Select **Advanced Mode** (option 2) to configure:
 
 **Action Options:**
-- 🆕 Update to latest stable (recommended for older versions)
-- 🔄 Rebuild current version (if you have latest)
-- 📦 Select specific version (e.g., v1.2.0, main)
-- 🛠️ Repair installation (fix broken services)
+- 🆕 **Update to latest stable** (recommended for older versions)
+- 🔄 **Rebuild current version** (if you have latest)
+- 📦 **Select specific version** (e.g., v1.2.0, main)
+- 🛠️ **Repair installation** (fix broken services)
 
 **Environment Options:**
-- ✅ Preserve existing config (keeps Firebase credentials)
-- 🆕 Reset to defaults (fresh environment)
+- ✅ **Preserve existing config** (keeps Firebase credentials)
+- 🆕 **Reset to defaults** (fresh environment)
 
 **Safety Options:**
-- 🛡️ Rollback protection (recommended - auto-rollback on failure)
-- ⚡ Fast mode (disable rollback for speed)
+- 🛡️ **Rollback protection** (recommended - auto-rollback on failure)
+- ⚡ **Fast mode** (disable rollback for speed)
 
 ### **3. Review and Confirm**
 The installer shows a summary of all your choices:
@@ -131,6 +115,39 @@ Rollback Protection: yes
 ```
 
 Choose: **Proceed**, **Change settings**, or **Cancel**
+
+---
+
+## 🛡️ **New Features: Rollback Protection & Version Control**
+
+### **✅ Automatic Rollback on Failure**
+
+The installer now automatically rolls back to the previous working version if anything goes wrong during an update.
+
+**What happens:**
+- ✅ Creates rollback point before starting
+- ✅ Detects any failure during update
+- ✅ Automatically restores previous version
+- ✅ Restarts services with working version
+- ✅ Preserves all your data and settings
+
+### **✅ Version-Specific Installation**
+
+You can now install or update to any specific version.
+
+```bash
+# Install specific version
+sudo ./install-or-update.sh --version v1.0.3
+
+# Update to older version (downgrade)
+sudo ./install-or-update.sh --version v1.0.2
+
+# Install latest development version
+sudo ./install-or-update.sh --version main
+
+# See all available versions
+sudo ./install-or-update.sh --list-versions
+```
 
 ---
 
@@ -181,6 +198,24 @@ If anything goes wrong:
 - 🔄 **Manual rollback** available anytime
 - ✅ **Zero data loss** protection
 
+**Example Rollback in Action:**
+```bash
+$ sudo ./install-or-update.sh --version v1.0.3
+🚀 PROFOLIO INSTALLER/UPDATER v2.0
+✅ Rollback Protection Enabled
+
+[5/7] Building application...
+❌ Failed to build application
+
+🔄 EXECUTING AUTOMATIC ROLLBACK...
+✅ Rolling back to git commit: a1b2c3d4
+✅ Rebuilding previous version...
+✅ Restarting services with previous version...
+
+🎉 ROLLBACK COMPLETED SUCCESSFULLY
+✅ Services restored to previous working version
+```
+
 ---
 
 ## 🎭 **Demo Mode**
@@ -211,6 +246,19 @@ sudo journalctl -u profolio-frontend -f
 sudo systemctl restart profolio-backend profolio-frontend
 ```
 
+**Update Failures:**
+```bash
+# Try automatic rollback
+sudo ./install-or-update.sh --rollback
+
+# Check available backups
+ls -la /opt/profolio-backups/
+
+# Manual service restart
+sudo systemctl daemon-reload
+sudo systemctl restart profolio-backend profolio-frontend
+```
+
 **Permission Errors:**
 ```bash
 # Fix ownership
@@ -227,20 +275,6 @@ sudo chmod 600 /opt/profolio/backend/.env
 cat /opt/profolio/frontend/.env.production
 
 # Should show real Firebase credentials, not template values
-# If template values, run: sudo ./fix_firebase_env.sh
-```
-
-**Update Failures:**
-```bash
-# Try automatic rollback
-sudo ./install-or-update.sh --rollback
-
-# Check available backups
-ls -la /opt/profolio-backups/
-
-# Manual service restart
-sudo systemctl daemon-reload
-sudo systemctl restart profolio-backend profolio-frontend
 ```
 
 ---
@@ -288,11 +322,12 @@ ls -la /opt/profolio-backups/
 
 ## 🆘 **Get Help**
 
-- **📖 Documentation**: [README.md](../../README.md)
+- **📖 Documentation**: [Main README](../../README.md)
+- **🏠 Proxmox Guide**: [Proxmox Installation](proxmox-installation.md)
+- **🔧 Advanced Features**: [Advanced Features Guide](advanced-features.md)
 - **🐛 Bug Reports**: [GitHub Issues](https://github.com/Obednal97/profolio/issues)
 - **💬 Community**: [GitHub Discussions](https://github.com/Obednal97/profolio/discussions)
-- **📧 Email**: [hello@profolio.com](mailto:hello@profolio.com)
 
 ---
 
-**Ready to take control of your portfolio? Let's go! 🚀** 
+**Ready to take control of your portfolio with enterprise-grade reliability? Let's go! 🚀** 

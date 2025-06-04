@@ -55,7 +55,7 @@ export function MarketDataWidget() {
       };
     }
     return null;
-  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+  }, [user, isDemoMode]);
 
   // Cleanup function for abort controller
   const cleanup = useCallback(() => {
@@ -65,15 +65,15 @@ export function MarketDataWidget() {
     }
   }, []);
 
-  // Default top index funds for new users
-  const defaultSymbols = [
+  // Default top index funds for new users - moved outside to be stable
+  const defaultSymbols = useMemo(() => [
     { symbol: 'SPY', name: 'S&P 500 ETF' },
     { symbol: 'QQQ', name: 'NASDAQ 100 ETF' },
     { symbol: 'VTI', name: 'Total Stock Market ETF' }
-  ];
+  ], []);
 
-  // Enhanced demo price data with more realistic mock prices
-  const demoMockPrices: Record<string, { basePrice: number; name: string }> = {
+  // Enhanced demo price data with more realistic mock prices - moved outside to be stable
+  const demoMockPrices = useMemo((): Record<string, { basePrice: number; name: string }> => ({
     'SPY': { basePrice: 589.75, name: 'S&P 500 ETF' },
     'QQQ': { basePrice: 429.88, name: 'NASDAQ 100 ETF' },
     'VTI': { basePrice: 278.92, name: 'Total Stock Market ETF' },
@@ -91,9 +91,9 @@ export function MarketDataWidget() {
     'V': { basePrice: 311.83, name: 'Visa Inc.' },
     'BTC-USD': { basePrice: 95847.23, name: 'Bitcoin USD' },
     'ETH-USD': { basePrice: 3456.78, name: 'Ethereum USD' },
-  };
+  }), []);
 
-  const generateRealisticMockData = (symbol: string): { price: number; change: number; changePercent: number } => {
+  const generateRealisticMockData = useCallback((symbol: string): { price: number; change: number; changePercent: number } => {
     const mockData = demoMockPrices[symbol];
     const basePrice = mockData?.basePrice || (Math.random() * 500 + 50);
     
@@ -111,9 +111,9 @@ export function MarketDataWidget() {
       change: parseFloat(change.toFixed(2)),
       changePercent: parseFloat(changePercent.toFixed(2))
     };
-  };
+  }, [demoMockPrices]);
 
-  const fetchLivePrice = async (symbol: string): Promise<{ price: number; change: number; changePercent: number } | null> => {
+  const fetchLivePrice = useCallback(async (symbol: string): Promise<{ price: number; change: number; changePercent: number } | null> => {
     try {
       // Check cache first
       const cached = cacheRef.current.get(symbol);
@@ -133,12 +133,10 @@ export function MarketDataWidget() {
         headers['Authorization'] = 'Bearer demo-token-secure-123';
       }
       
-      // Call backend directly for better performance and reliability
-      const backendUrl = process.env.NODE_ENV === 'production'
-        ? `${process.env.NEXT_PUBLIC_API_URL || window.location.origin}/api/market-data/cached-price/${encodeURIComponent(symbol)}`
-        : `http://localhost:3001/api/market-data/cached-price/${encodeURIComponent(symbol)}`;
+      // Call Next.js API proxy route (which forwards to backend)
+      const apiUrl = `/api/market-data/cached-price/${encodeURIComponent(symbol)}`;
       
-      const response = await fetch(backendUrl, { 
+      const response = await fetch(apiUrl, { 
         headers,
         signal: abortControllerRef.current?.signal
       });
@@ -160,17 +158,19 @@ export function MarketDataWidget() {
           
           return result;
         }
+      } else {
+        console.error('❌ [MarketData] API error for', symbol, ':', response.status, response.statusText);
       }
       
       // Fallback to mock data if API unavailable
       return generateRealisticMockData(symbol);
       
     } catch (error) {
-      console.error(`Error fetching price for ${symbol}:`, error);
+      console.error(`❌ [MarketData] Error fetching price for ${symbol}:`, error);
       // Always fallback to mock data on error
       return generateRealisticMockData(symbol);
     }
-  };
+  }, [token, isDemoMode, generateRealisticMockData]);
 
   useEffect(() => {
     const fetchMarketData = async () => {
@@ -245,7 +245,7 @@ export function MarketDataWidget() {
         }
 
         if (isDemoMode) {
-          console.log('🎭 Demo mode: Fetching real market data with temporary session');
+          // Skip verbose logging for demo mode
         }
 
         // Fetch live prices for all symbols (uses backend APIs for both demo and real users)
@@ -289,7 +289,7 @@ export function MarketDataWidget() {
         
         // Enhanced error handling with fallback to demo data
         if (isDemoMode) {
-          console.log('🎭 Demo mode: Error occurred, using fallback mock data');
+          // Use fallback data for demo mode
         } else {
           setError('Live data temporarily unavailable');
         }
@@ -316,7 +316,7 @@ export function MarketDataWidget() {
     };
 
     fetchMarketData();
-  }, [currentUser?.id, isDemoMode, cleanup]);
+  }, [currentUser?.id, isDemoMode, cleanup, defaultSymbols, demoMockPrices, fetchLivePrice, generateRealisticMockData, token]);
 
   // Cleanup on unmount
   useEffect(() => {

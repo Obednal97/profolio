@@ -2,15 +2,15 @@ name: 🧪 Continuous Integration
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test-backend:
     name: 🔧 Backend Tests
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -26,153 +26,191 @@ jobs:
           - 5432:5432
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 📦 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
 
-    - name: 📚 Install dependencies
-      run: |
-        cd backend
-        npm ci
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
 
-    - name: 🔍 TypeScript check
-      run: |
-        cd backend
-        npx tsc --noEmit
+      - name: 📦 Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-    - name: 🧹 Lint check
-      run: |
-        cd backend
-        npm run lint
+      - name: 🎯 Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
-    - name: 🗄️ Setup test database
-      run: |
-        cd backend
-        npm run prisma:generate
-        npm run prisma:migrate:deploy
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+      - name: 📚 Install dependencies
+        run: |
+          cd backend
+          pnpm install --frozen-lockfile
 
-    - name: 🧪 Run tests
-      run: |
-        cd backend
-        npm test
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
-        JWT_SECRET: test-jwt-secret
-        API_ENCRYPTION_KEY: test-encryption-key
+      - name: 🔍 TypeScript check
+        run: |
+          cd backend
+          pnpm run type-check
 
-    - name: 📊 Test coverage
-      run: |
-        cd backend
-        npm run test:cov
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
-        JWT_SECRET: test-jwt-secret
-        API_ENCRYPTION_KEY: test-encryption-key
+      - name: 🧹 Lint check
+        run: |
+          cd backend
+          pnpm run lint
+
+      - name: 🗄️ Setup test database
+        run: |
+          cd backend
+          pnpm prisma generate
+          pnpm prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+
+      - name: 🧪 Run tests
+        run: |
+          cd backend
+          pnpm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+          JWT_SECRET: test-jwt-secret
+          API_ENCRYPTION_KEY: test-encryption-key
+
+      - name: 📊 Test coverage
+        run: |
+          cd backend
+          pnpm run test:cov
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+          JWT_SECRET: test-jwt-secret
+          API_ENCRYPTION_KEY: test-encryption-key
 
   test-frontend:
     name: 🎨 Frontend Tests
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 📦 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
 
-    - name: 📚 Install dependencies
-      run: |
-        cd frontend
-        npm ci
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
 
-    - name: 🔍 TypeScript check
-      run: |
-        cd frontend
-        npx tsc --noEmit
+      - name: 📦 Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-    - name: 🧹 Lint check
-      run: |
-        cd frontend
-        npm run lint
+      - name: 🎯 Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
-    - name: 🧪 Run tests
-      run: |
-        cd frontend
-        npm test
+      - name: 📚 Install dependencies
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
 
-    - name: 🏗️ Build check
-      run: |
-        cd frontend
-        npm run build
-      env:
-        NEXT_PUBLIC_API_URL: http://localhost:3001
+      - name: 🔍 TypeScript check
+        run: |
+          cd frontend
+          pnpm run type-check
+
+      - name: 🧹 Lint check
+        run: |
+          cd frontend
+          pnpm run lint
+
+      - name: 🧪 Run tests
+        run: |
+          cd frontend
+          pnpm test
+        if: always()
+
+      - name: 🏗️ Build check
+        run: |
+          cd frontend
+          pnpm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
 
   security-scan:
     name: 🔒 Security Scan
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 🔍 Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
+      - name: 🔍 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
 
-    - name: 📊 Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: 📊 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
 
-    - name: 🔐 Run CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
-      with:
-        languages: javascript
+      - name: 🔐 Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: javascript
 
   dependency-check:
     name: 📦 Dependency Check
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 📦 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
 
-    - name: 🔍 Audit backend dependencies
-      run: |
-        cd backend
-        npm audit --audit-level=moderate
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
 
-    - name: 🔍 Audit frontend dependencies
-      run: |
-        cd frontend
-        npm audit --audit-level=moderate
+      - name: 🔍 Audit backend dependencies
+        run: |
+          cd backend
+          pnpm audit --audit-level=moderate
 
-    - name: 📊 Check for outdated packages
-      run: |
-        cd backend && npm outdated || true
-        cd ../frontend && npm outdated || true
+      - name: 🔍 Audit frontend dependencies
+        run: |
+          cd frontend
+          pnpm audit --audit-level=moderate
+
+      - name: 📊 Check for outdated packages
+        run: |
+          cd backend && pnpm outdated || true
+          cd ../frontend && pnpm outdated || true
 
   docker-build:
     name: 🐳 Docker Build Test
@@ -180,20 +218,20 @@ jobs:
     if: github.event_name == 'pull_request'
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 🐳 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: 🏗️ Build Docker image (test)
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: false
-        tags: profolio:test
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: 🏗️ Build Docker image (test)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: profolio:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   integration-test:
     name: 🔗 Integration Tests
@@ -215,69 +253,80 @@ jobs:
           - 5432:5432
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 📦 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
 
-    - name: 📚 Install all dependencies
-      run: |
-        cd backend && npm ci
-        cd ../frontend && npm ci
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
 
-    - name: 🗄️ Setup database
-      run: |
-        cd backend
-        npm run prisma:generate
-        npm run prisma:migrate:deploy
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+      - name: 📚 Install all dependencies
+        run: |
+          cd backend && pnpm install --frozen-lockfile
+          cd ../frontend && pnpm install --frozen-lockfile
 
-    - name: 🏗️ Build applications
-      run: |
-        cd backend && npm run build
-        cd ../frontend && npm run build
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
-        JWT_SECRET: test-jwt-secret
-        API_ENCRYPTION_KEY: test-encryption-key
-        NEXT_PUBLIC_API_URL: http://localhost:3001
+      - name: 🗄️ Setup database
+        run: |
+          cd backend
+          pnpm prisma generate
+          pnpm prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
 
-    - name: 🚀 Start services
-      run: |
-        cd backend && npm run start:prod &
-        sleep 10
-        cd ../frontend && npm start &
-        sleep 10
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
-        JWT_SECRET: test-jwt-secret
-        API_ENCRYPTION_KEY: test-encryption-key
-        NEXT_PUBLIC_API_URL: http://localhost:3001
+      - name: 🏗️ Build applications
+        run: |
+          cd backend && pnpm run build
+          cd ../frontend && pnpm run build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+          JWT_SECRET: test-jwt-secret
+          API_ENCRYPTION_KEY: test-encryption-key
+          NEXT_PUBLIC_API_URL: http://localhost:3001
 
-    - name: 🧪 Health check
-      run: |
-        curl -f http://localhost:3001/health || exit 1
-        curl -f http://localhost:3000 || exit 1
+      - name: 🚀 Start services
+        run: |
+          cd backend && pnpm run start:prod &
+          sleep 10
+          cd ../frontend && pnpm start &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+          JWT_SECRET: test-jwt-secret
+          API_ENCRYPTION_KEY: test-encryption-key
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+      - name: 🧪 Health check
+        run: |
+          curl -f http://localhost:3001/health || exit 1
+          curl -f http://localhost:3000 || exit 1
 
   status-check:
     name: ✅ All Tests Passed
     runs-on: ubuntu-latest
-    needs: [test-backend, test-frontend, security-scan, dependency-check, integration-test]
+    needs:
+      [
+        test-backend,
+        test-frontend,
+        security-scan,
+        dependency-check,
+        integration-test,
+      ]
     if: always()
 
     steps:
-    - name: ✅ Mark as successful
-      if: ${{ needs.test-backend.result == 'success' && needs.test-frontend.result == 'success' && needs.security-scan.result == 'success' && needs.dependency-check.result == 'success' && needs.integration-test.result == 'success' }}
-      run: |
-        echo "🎉 All CI checks passed!"
+      - name: ✅ Mark as successful
+        if: ${{ needs.test-backend.result == 'success' && needs.test-frontend.result == 'success' && needs.security-scan.result == 'success' && needs.dependency-check.result == 'success' && needs.integration-test.result == 'success' }}
+        run: |
+          echo "🎉 All CI checks passed!"
 
-    - name: ❌ Mark as failed
-      if: ${{ needs.test-backend.result == 'failure' || needs.test-frontend.result == 'failure' || needs.security-scan.result == 'failure' || needs.dependency-check.result == 'failure' || needs.integration-test.result == 'failure' }}
-      run: |
-        echo "❌ Some CI checks failed"
-        exit 1 
+      - name: ❌ Mark as failed
+        if: ${{ needs.test-backend.result == 'failure' || needs.test-frontend.result == 'failure' || needs.security-scan.result == 'failure' || needs.dependency-check.result == 'failure' || needs.integration-test.result == 'failure' }}
+        run: |
+          echo "❌ Some CI checks failed"
+          exit 1

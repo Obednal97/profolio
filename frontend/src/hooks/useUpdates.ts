@@ -60,7 +60,7 @@ export function useUpdates(): UseUpdatesReturn {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // Check if we're in self-hosted mode or development (for testing)
-  const isSelfHosted = () => {
+  const isSelfHosted = useCallback(() => {
     // Allow in development mode for testing
     if (process.env.NODE_ENV === 'development') {
       return true;
@@ -68,12 +68,12 @@ export function useUpdates(): UseUpdatesReturn {
     
     return process.env.NEXT_PUBLIC_DEPLOYMENT_MODE !== 'cloud' && 
            !process.env.NEXT_PUBLIC_DISABLE_UPDATES;
-  };
+  }, []);
 
   // Check if we're in demo mode (no actual updates allowed)
-  const isDemoMode = () => {
+  const isDemoMode = useCallback(() => {
     return process.env.NODE_ENV === 'development' || !token;
-  };
+  }, [token]);
 
   // API headers with auth - memoized
   const getHeaders = useCallback(() => ({
@@ -292,7 +292,7 @@ export function useUpdates(): UseUpdatesReturn {
     setUpdateInfo(mockUpdateInfo);
     setLastChecked(new Date());
     setIsChecking(false);
-  }, [token, API_BASE, fetchGitHubReleases, getHeaders]);
+  }, [token, API_BASE, fetchGitHubReleases, getHeaders, isSelfHosted]);
 
   // Start update process - optimized
   const startUpdate = useCallback(async (version?: string) => {
@@ -359,7 +359,7 @@ export function useUpdates(): UseUpdatesReturn {
       setIsUpdating(false);
       throw new Error('Failed to start update');
     }
-  }, [token, API_BASE, checkForUpdates, isDemoMode, getHeaders]);
+  }, [token, API_BASE, checkForUpdates, isDemoMode, getHeaders, isSelfHosted]);
 
   // Cancel ongoing update - optimized
   const cancelUpdate = useCallback(async () => {
@@ -382,7 +382,7 @@ export function useUpdates(): UseUpdatesReturn {
     } catch {
       // Error handling removed for cleaner development experience
     }
-  }, [token, API_BASE, eventSource, getHeaders]);
+  }, [token, API_BASE, eventSource, getHeaders, isSelfHosted]);
 
   // Clear update status - optimized
   const clearUpdateStatus = useCallback(() => {
@@ -415,7 +415,7 @@ export function useUpdates(): UseUpdatesReturn {
 
     // Cleanup for demo mode
     return cleanup;
-  }, []); // Remove checkForUpdates from dependencies to prevent infinite loop
+  }, [checkForUpdates, isDemoMode, cleanup]); // Remove checkForUpdates from dependencies to prevent infinite loop
 
   // Get current update status on mount - optimized with cleanup
   useEffect(() => {
@@ -457,7 +457,7 @@ export function useUpdates(): UseUpdatesReturn {
     };
 
     getUpdateStatus();
-  }, [token, API_BASE, getHeaders]);
+  }, [token, API_BASE, getHeaders, isDemoMode, isSelfHosted]);
 
   // Cleanup on unmount
   useEffect(() => {

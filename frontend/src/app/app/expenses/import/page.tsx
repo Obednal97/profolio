@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/unifiedAuth';
 import dynamic from 'next/dynamic';
@@ -49,7 +49,11 @@ export default function ExpenseImportPage() {
 
   // Check if user is in demo mode
   const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
-  const currentUser = user || (isDemoMode ? { id: 'demo-user-id' } : null);
+  
+  // Memoize currentUser to prevent useCallback dependency changes
+  const currentUser = useMemo(() => {
+    return user || (isDemoMode ? { id: 'demo-user-id' } : null);
+  }, [user, isDemoMode]);
 
   const handleParsed = (result: ParseResult) => {
     console.log('Parse result:', result);

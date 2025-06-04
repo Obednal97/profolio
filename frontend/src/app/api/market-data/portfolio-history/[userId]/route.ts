@@ -1,7 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 // Mark this route as dynamic to prevent static generation
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+// IMPROVEMENT: Input validation utility
+const validateDaysParameter = (days: string | null): number => {
+  if (!days) return 30; // Default to 30 days
+
+  const numDays = parseInt(days, 10);
+
+  // IMPROVEMENT: Validate range to prevent abuse
+  if (isNaN(numDays) || numDays < 1 || numDays > 365) {
+    return 30; // Default to 30 days for invalid input
+  }
+
+  return numDays;
+};
+
+// IMPROVEMENT: Validate authorization header format
+const validateAuthHeader = (authHeader: string | null): string => {
+  if (!authHeader) return "";
+
+  // Basic validation for Bearer token format
+  if (
+    !authHeader.startsWith("Bearer ") &&
+    !authHeader.startsWith("demo-token-")
+  ) {
+    return "";
+  }
+
+  // IMPROVEMENT: Sanitize header to prevent injection
+  return authHeader.replace(/[^\w\s\-\.]/g, "").substring(0, 500);
+};
 
 export async function GET(
   request: NextRequest,
@@ -9,52 +39,104 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const days = searchParams.get('days') || '30';
+    const rawDays = searchParams.get("days");
     const resolvedParams = await params;
     const userId = resolvedParams.userId;
 
+    // IMPROVEMENT: Validate and sanitize inputs
+    const validatedDays = validateDaysParameter(rawDays);
+
+    // IMPROVEMENT: Validate userId parameter
+    if (!userId || !/^[a-zA-Z0-9\-_]+$/.test(userId)) {
+      return NextResponse.json(
+        {
+          status: "ERROR",
+          error: "Invalid user ID format",
+          data: [],
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if user is in demo mode
-    const isDemoMode = request.headers.get('x-demo-mode') === 'true' ||
-                      searchParams.get('demo') === 'true';
+    const isDemoMode =
+      request.headers.get("x-demo-mode") === "true" ||
+      searchParams.get("demo") === "true";
 
     if (isDemoMode) {
       // For demo mode, return empty array since we don't have real historical data
       return NextResponse.json({
-        status: 'OK',
+        status: "OK",
         data: [],
-        message: 'Demo mode: No historical data available'
+        message: "Demo mode: No historical data available",
       });
     }
 
     // Get the backend URL from environment or default
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-    
+    const backendUrl = process.env.BACKEND_URL || "http://localhost:3001";
+
+    // IMPROVEMENT: Validate and sanitize authorization header
+    const authHeader = validateAuthHeader(request.headers.get("authorization"));
+
     // Forward request to backend
     const backendResponse = await fetch(
-      `${backendUrl}/api/market-data/portfolio-history/${userId}?days=${days}`,
+      `${backendUrl}/api/market-data/portfolio-history/${encodeURIComponent(
+        userId
+      )}?days=${validatedDays}`,
       {
         headers: {
-          'Authorization': request.headers.get('authorization') || '',
-          'Content-Type': 'application/json',
+          Authorization: authHeader,
+          "Content-Type": "application/json",
         },
+        // IMPROVEMENT: Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(10000), // 10 second timeout
       }
     );
 
     if (!backendResponse.ok) {
-      throw new Error(`Backend responded with ${backendResponse.status}`);
+      // IMPROVEMENT: Log backend errors for debugging but don't expose to client
+      console.error(
+        `Backend portfolio history error: ${backendResponse.status} ${backendResponse.statusText}`
+      );
+
+      return NextResponse.json(
+        {
+          status: "ERROR",
+          error: "Unable to fetch portfolio history",
+          data: [],
+        },
+        { status: backendResponse.status === 404 ? 404 : 500 }
+      );
     }
 
     const data = await backendResponse.json();
-    return NextResponse.json(data);
 
+    // IMPROVEMENT: Validate response structure
+    if (!data || typeof data !== "object") {
+      throw new Error("Invalid response format from backend");
+    }
+
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Portfolio history API error:', error);
-    
-    return NextResponse.json({
-      status: 'ERROR',
-      error: 'Failed to fetch portfolio history',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      data: [] // Return empty array as fallback
-    }, { status: 500 });
+    // IMPROVEMENT: Enhanced error logging without exposing sensitive information
+    if (error instanceof Error) {
+      console.error("Portfolio history API error:", {
+        message: error.message,
+        name: error.name,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      console.error("Portfolio history API error: Unknown error type");
+    }
+
+    // IMPROVEMENT: Generic error response to prevent information disclosure
+    return NextResponse.json(
+      {
+        status: "ERROR",
+        error: "Unable to process request",
+        data: [],
+      },
+      { status: 500 }
+    );
   }
-} 
+}

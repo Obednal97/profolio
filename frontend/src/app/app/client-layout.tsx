@@ -5,10 +5,12 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/unifiedAuth';
 import { initializeDemoData } from '@/lib/demoData';
+import { AuthLoadingState } from '@/components/ui/AuthLoadingState';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [authFlow, setAuthFlow] = useState<'loading' | 'signing-in' | 'signing-out' | 'authenticated' | 'unauthenticated'>('loading');
   const router = useRouter();
 
   // Always call hooks at the top level (React Hooks rules)
@@ -41,8 +43,39 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (!isClient) return;
 
     try {
-      // Only redirect if not loading and no user and not in demo mode
-      if (!loading && !user && !isDemoMode) {
+      // Determine authentication flow state
+      if (loading) {
+        // Check for specific auth flow indicators in URL or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const authAction = urlParams.get('auth-action');
+        
+        if (authAction === 'signing-in') {
+          setAuthFlow('signing-in');
+        } else if (authAction === 'signing-out') {
+          setAuthFlow('signing-out');
+        } else {
+          setAuthFlow('loading');
+        }
+      } else if ((user && user.id) || isDemoMode) {
+        // Check if we just finished signing in
+        const urlParams = new URLSearchParams(window.location.search);
+        const authAction = urlParams.get('auth-action');
+        
+        if (authAction === 'signing-in') {
+          // Clear the query parameter and show signing in state briefly
+          setAuthFlow('signing-in');
+          // Clear the parameter after a short delay
+          setTimeout(() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('auth-action');
+            window.history.replaceState({}, '', url.toString());
+            setAuthFlow('authenticated');
+          }, 1500);
+        } else {
+          setAuthFlow('authenticated');
+        }
+      } else {
+        setAuthFlow('unauthenticated');
         // Redirect to sign-in page where user can choose demo mode
         router.push('/auth/signIn');
       }
@@ -79,36 +112,47 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  // Show loading while checking auth state OR while on server side
-  if (!isClient || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#101828]">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {!isClient ? 'Initializing...' : 'Loading...'}
-          </p>
+  // Handle different authentication flow states
+  switch (authFlow) {
+    case 'loading':
+      return <AuthLoadingState type="loading" message="Initializing application..." />;
+      
+    case 'signing-in':
+      return <AuthLoadingState type="signing-in" />;
+      
+    case 'signing-out':
+      return <AuthLoadingState type="signing-out" />;
+      
+    case 'unauthenticated':
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+          {/* Animated background blobs */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-20 dark:opacity-10 animate-pulse" />
+            <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-20 dark:opacity-10 animate-pulse" style={{ animationDelay: '2s' }} />
+            <div className="absolute top-40 left-40 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-3xl opacity-20 dark:opacity-10 animate-pulse" style={{ animationDelay: '4s' }} />
+          </div>
+          
+          <div className="relative z-10 text-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/50 max-w-md w-full">
+            <div className="text-6xl mb-6">
+              <i className="fas fa-lock text-blue-500 dark:text-blue-400"></i>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              Authentication Required
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Please sign in to access your portfolio dashboard
+            </p>
+            <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Redirecting to sign in...
+            </p>
+          </div>
         </div>
-      </div>
-    );
+      );
+      
+    case 'authenticated':
+    default:
+      return <>{children}</>;
   }
-
-  // Don't render if no user and not in demo mode
-  if (!user && !isDemoMode) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🔐</div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">
-            Authentication Required
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Redirecting to sign in...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
 }

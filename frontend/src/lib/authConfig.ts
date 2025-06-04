@@ -34,29 +34,29 @@ function detectAuthMode(): AuthConfig['mode'] {
     return forcedMode;
   }
   
-  // Priority 2: Check if we're on localhost (self-hosted)
-  const isLocalhost = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  
-  if (isLocalhost) {
-    console.log('🏠 Auth mode: local (localhost detected)');
-    return 'local';
-  }
-  
-  // Priority 3: Check if Firebase config is available via environment variables
+  // Priority 2: Check if Firebase config is available via environment variables
   const envFirebaseConfig = getFirebaseConfigFromEnv();
   if (envFirebaseConfig) {
     console.log('☁️ Auth mode: firebase (environment config available)');
     return 'firebase';
   }
   
-  // Priority 4: Check if Firebase config file is available
+  // Priority 3: Check if Firebase config file is available
   const hasFirebaseConfigFile = typeof window !== 'undefined' && 
     localStorage.getItem('firebase-config-available') === 'true';
   
   if (hasFirebaseConfigFile) {
     console.log('☁️ Auth mode: firebase (config file available)');
     return 'firebase';
+  }
+  
+  // Priority 4: Check if we're on localhost (self-hosted) - ONLY if no explicit config
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  
+  if (isLocalhost) {
+    console.log('🏠 Auth mode: local (localhost detected, no Firebase config)');
+    return 'local';
   }
   
   // Priority 5: Default fallback to local mode
@@ -146,17 +146,17 @@ export function getAuthModeSync(): AuthConfig['mode'] {
   const forcedMode = process.env.NEXT_PUBLIC_AUTH_MODE as 'local' | 'firebase' | undefined;
   if (forcedMode) return forcedMode;
   
-  // Priority 2: Localhost detection
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isLocalhost) return 'local';
-  
-  // Priority 3: Environment Firebase config
+  // Priority 2: Environment Firebase config
   const envConfig = getFirebaseConfigFromEnv();
   if (envConfig) return 'firebase';
   
-  // Priority 4: Config file availability
+  // Priority 3: Config file availability
   const hasFirebaseConfigFile = localStorage.getItem('firebase-config-available') === 'true';
   if (hasFirebaseConfigFile) return 'firebase';
+  
+  // Priority 4: Localhost detection - ONLY if no explicit config
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocalhost) return 'local';
   
   // Priority 5: Default to local
   return 'local';

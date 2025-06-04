@@ -462,20 +462,26 @@ export function PropertyModal({
     }
   }, [getGoogleApiKey, cleanup]);
 
-  // Debounced address search - only when not in manual mode - optimized with proper cleanup
+  // Address search with debouncing and cleanup
   useEffect(() => {
-    // Cleanup previous timeout and request
+    // Cancel any ongoing requests
     cleanup();
 
-    // Debounce the API call to avoid too many requests
-    debounceTimeoutRef.current = setTimeout(() => {
-      if (addressInput && !manualAddressEntry) {
+    // Only search if user is not in manual mode and has entered at least 3 characters
+    if (!manualAddressEntry && addressInput.length >= 3) {
+      setLoadingAddress(true);
+      
+      // Debounce the search
+      debounceTimeoutRef.current = setTimeout(() => {
         searchAddresses(addressInput);
-      }
-    }, 500);
+      }, 500);
+    } else {
+      setShowSuggestions(false);
+      setAddressSuggestions([]);
+    }
 
     return cleanup;
-  }, [addressInput, manualAddressEntry, searchAddresses]);
+  }, [addressInput, manualAddressEntry, searchAddresses, cleanup]);
 
   // Cleanup on unmount
   useEffect(() => {

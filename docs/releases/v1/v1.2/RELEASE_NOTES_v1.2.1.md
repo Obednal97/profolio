@@ -116,7 +116,7 @@ The update wizard now clearly explains environment protection:
 ## 📚 Documentation Added
 
 ### Environment Preservation Feature Guide
-**Location**: `docs/installer/ENVIRONMENT_PRESERVATION_FEATURE.md`
+**Location**: `docs/setup/environment-preservation.md`
 
 **Includes**:
 - Complete feature overview and problem explanation

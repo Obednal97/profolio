@@ -5,11 +5,11 @@ cd /opt/profolio/backend
 
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then
-    npm ci --production
+    pnpm install --prod
 fi
 
-# Build the application using npx (no global CLI needed)
-npx nest build
+# Build the application using pnpm
+pnpm run build
 
 # Start the application
-npm run start
+pnpm run start

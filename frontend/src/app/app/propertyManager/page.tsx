@@ -57,7 +57,7 @@ export default function PropertyManager() {
       };
     }
     return null;
-  }, [user?.id, user?.displayName, user?.name, user?.email, isDemoMode]);
+  }, [user, isDemoMode]);
 
   // Cleanup function for abort controller
   const cleanup = useCallback(() => {

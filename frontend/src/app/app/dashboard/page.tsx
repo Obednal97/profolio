@@ -1,20 +1,27 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
-import Link from 'next/link';
-import Confetti from 'react-confetti';
-import NetWorthDisplay from '@/components/netWorthDisplay';
-import { MarketDataWidget } from '@/components/ui/marketData/marketDataWidget';
-import { useAuth } from '@/lib/unifiedAuth';
-import { createUserContext } from '@/lib/userUtils';
-import { 
-  SkeletonCard, 
-  SkeletonChart, 
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import NetWorthDisplay from "@/components/netWorthDisplay";
+import { MarketDataWidget } from "@/components/ui/marketData/marketDataWidget";
+import { useAuth } from "@/lib/unifiedAuth";
+import { createUserContext } from "@/lib/userUtils";
+import { useAppPagePreloader } from "@/hooks/usePagePreloader";
+import {
+  SkeletonCard,
+  SkeletonChart,
   SkeletonStat,
   Skeleton,
   SkeletonList,
-  SkeletonButton
-} from '@/components/ui/skeleton';
+  SkeletonButton,
+} from "@/components/ui/skeleton";
+
+// IMPROVEMENT: Dynamic import of Confetti to prevent hydration issues
+const Confetti = dynamic(() => import("react-confetti"), {
+  ssr: false,
+  loading: () => null,
+});
 
 interface Transaction {
   type: string;
@@ -42,6 +49,38 @@ interface DashboardData {
   }>;
   news: NewsArticle[];
 }
+
+// IMPROVEMENT: Safe localStorage access utility
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      console.warn("localStorage access failed:", error);
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      console.warn("localStorage write failed:", error);
+    }
+  },
+};
+
+// IMPROVEMENT: Safe window dimensions access
+const getWindowDimensions = () => {
+  if (typeof window === "undefined") {
+    return { width: 1920, height: 1080 }; // Default dimensions for SSR
+  }
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  };
+};
 
 // Skeleton component for the entire dashboard
 function DashboardSkeleton() {
@@ -134,22 +173,44 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [dimensions, setDimensions] = useState(getWindowDimensions());
 
-  // Check if user is in demo mode
-  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
-  
+  // IMPROVEMENT: Check if user is in demo mode with safe localStorage access
+  const isDemoMode = useMemo(() => {
+    return safeLocalStorage.getItem("demo-mode") === "true";
+  }, []);
+
   // Use centralized user context utility for consistent display
   const currentUser = useMemo(() => {
     return createUserContext(user, userProfile, isDemoMode);
-  }, [user?.id, user?.displayName, user?.email, userProfile?.name, isDemoMode]);
+  }, [user, userProfile, isDemoMode]);
 
-  // Dynamic greeting system
+  // 🚀 Intelligent preloader - starts after dashboard loads successfully
+  useAppPagePreloader({
+    delay: 2000, // Wait 2 seconds after dashboard loads
+  });
+
+  // IMPROVEMENT: Safe window resize handling for Confetti
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      setDimensions(getWindowDimensions());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // IMPROVEMENT: Enhanced greeting system with better error handling
   const greeting = useMemo(() => {
     if (!currentUser?.name) return "Welcome to Profolio";
-    
+
     const name = currentUser.name;
-    const isFirstVisit = typeof window !== 'undefined' && !localStorage.getItem('user-has-visited-dashboard');
-    
+    const isFirstVisit = !safeLocalStorage.getItem(
+      "user-has-visited-dashboard"
+    );
+
     // First-time user greetings
     if (isFirstVisit) {
       const firstTimeGreetings = [
@@ -160,9 +221,11 @@ export default function DashboardPage() {
         `Welcome ${name}! Your financial journey starts here 🚀`,
         `Great to see you ${name}! Ready to take control? 📈`,
       ];
-      return firstTimeGreetings[Math.floor(Math.random() * firstTimeGreetings.length)];
+      return firstTimeGreetings[
+        Math.floor(Math.random() * firstTimeGreetings.length)
+      ];
     }
-    
+
     // Returning user greetings - 20+ variations
     const returningGreetings = [
       `Welcome back, ${name}! 👋`,
@@ -190,14 +253,18 @@ export default function DashboardPage() {
       `Hi there ${name}! Your dedication is inspiring 💎`,
       `Welcome ${name}! Success is a journey, not a destination 🚀`,
     ];
-    
-    return returningGreetings[Math.floor(Math.random() * returningGreetings.length)];
-  }, [currentUser?.name]);
+
+    return returningGreetings[
+      Math.floor(Math.random() * returningGreetings.length)
+    ];
+  }, [currentUser]);
 
   // Dynamic subtitle
   const subtitle = useMemo(() => {
-    const isFirstVisit = typeof window !== 'undefined' && !localStorage.getItem('user-has-visited-dashboard');
-    
+    const isFirstVisit = !safeLocalStorage.getItem(
+      "user-has-visited-dashboard"
+    );
+
     if (isFirstVisit) {
       const firstTimeSubtitles = [
         "Let's set up your financial dashboard and start tracking your wealth",
@@ -207,9 +274,11 @@ export default function DashboardPage() {
         "Let's build something amazing together",
         "Ready to transform how you manage money?",
       ];
-      return firstTimeSubtitles[Math.floor(Math.random() * firstTimeSubtitles.length)];
+      return firstTimeSubtitles[
+        Math.floor(Math.random() * firstTimeSubtitles.length)
+      ];
     }
-    
+
     const returningSubtitles = [
       "Here's your financial overview for today",
       "Let's see how your portfolio is performing",
@@ -222,70 +291,112 @@ export default function DashboardPage() {
       "Here's your latest portfolio update",
       "Time to see how your money is working",
     ];
-    
-    return returningSubtitles[Math.floor(Math.random() * returningSubtitles.length)];
-  }, [currentUser?.name]);
+
+    return returningSubtitles[
+      Math.floor(Math.random() * returningSubtitles.length)
+    ];
+  }, []);
+
+  // IMPROVEMENT: Enhanced data fetching with better error handling
+  const fetchDashboardData = useCallback(async () => {
+    if (!currentUser?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Mark that user has visited dashboard (for greeting system)
+      safeLocalStorage.setItem("user-has-visited-dashboard", "true");
+
+      // IMPROVEMENT: Reduced artificial delay for better UX
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // IMPROVEMENT: More realistic mock data generation
+      const mockDashboardData: DashboardData = {
+        totalAssets: 875420 + Math.floor(Math.random() * 50000), // Add some variance
+        totalExpenses: 4230 + Math.floor(Math.random() * 1000),
+        properties: 2,
+        monthlyIncome: 12500,
+        transactions: [
+          {
+            type: "income",
+            amount: 5000,
+            date: "2024-01-15",
+            description: "Salary Payment",
+          },
+          {
+            type: "expense",
+            amount: 150,
+            date: "2024-01-14",
+            description: "Grocery Shopping",
+          },
+          {
+            type: "expense",
+            amount: 89,
+            date: "2024-01-13",
+            description: "Netflix Subscription",
+          },
+          {
+            type: "income",
+            amount: 250,
+            date: "2024-01-12",
+            description: "Freelance Project",
+          },
+          {
+            type: "expense",
+            amount: 45,
+            date: "2024-01-11",
+            description: "Gas Station",
+          },
+        ],
+        portfolioHistory: [],
+        news: [
+          {
+            title: "S&P 500 Reaches New All-Time High",
+            source: "Reuters",
+            time: "2 hours ago",
+            url: "#",
+          },
+          {
+            title: "Fed Signals Potential Rate Cuts in 2024",
+            source: "Bloomberg",
+            time: "4 hours ago",
+            url: "#",
+          },
+          {
+            title: "Bitcoin Surges Past $70,000",
+            source: "CoinDesk",
+            time: "6 hours ago",
+            url: "#",
+          },
+        ],
+      };
+
+      setData(mockDashboardData);
+
+      // IMPROVEMENT: Enhanced confetti logic with safe localStorage
+      const lastVisit = safeLocalStorage.getItem("lastDashboardVisit");
+      const today = new Date().toDateString();
+      if (lastVisit !== today) {
+        setShowConfetti(true);
+        safeLocalStorage.setItem("lastDashboardVisit", today);
+        // IMPROVEMENT: Automatic cleanup of confetti
+        setTimeout(() => setShowConfetti(false), 5000);
+      }
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+      setError(err instanceof Error ? err.message : "Failed to load dashboard");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!currentUser?.id) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Mark that user has visited dashboard (for greeting system)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('user-has-visited-dashboard', 'true');
-        }
-        
-        // Add artificial delay to show skeleton
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Mock the dashboard data for now
-        const mockDashboardData: DashboardData = {
-          totalAssets: 875420,
-          totalExpenses: 4230,
-          properties: 2,
-          monthlyIncome: 12500,
-          transactions: [
-            { type: 'income', amount: 5000, date: '2024-01-15', description: 'Salary Payment' },
-            { type: 'expense', amount: 150, date: '2024-01-14', description: 'Grocery Shopping' },
-            { type: 'expense', amount: 89, date: '2024-01-13', description: 'Netflix Subscription' },
-            { type: 'income', amount: 250, date: '2024-01-12', description: 'Freelance Project' },
-            { type: 'expense', amount: 45, date: '2024-01-11', description: 'Gas Station' },
-          ],
-          portfolioHistory: [],
-          news: [
-            { title: 'S&P 500 Reaches New All-Time High', source: 'Reuters', time: '2 hours ago', url: '#' },
-            { title: 'Fed Signals Potential Rate Cuts in 2024', source: 'Bloomberg', time: '4 hours ago', url: '#' },
-            { title: 'Bitcoin Surges Past $70,000', source: 'CoinDesk', time: '6 hours ago', url: '#' },
-          ]
-        };
-        
-        setData(mockDashboardData);
-
-        // Check if it's user's first login today
-        const lastVisit = localStorage.getItem('lastDashboardVisit');
-        const today = new Date().toDateString();
-        if (lastVisit !== today) {
-          setShowConfetti(true);
-          localStorage.setItem('lastDashboardVisit', today);
-          setTimeout(() => setShowConfetti(false), 5000);
-        }
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
-  }, [currentUser]);
+  }, [fetchDashboardData]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -301,7 +412,7 @@ export default function DashboardPage() {
           </h3>
           <p className="text-red-600 dark:text-red-300">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={fetchDashboardData}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             Try Again
@@ -318,15 +429,15 @@ export default function DashboardPage() {
     monthlyIncome: 0,
     transactions: [],
     portfolioHistory: [],
-    news: []
+    news: [],
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
       {showConfetti && (
         <Confetti
-          width={window.innerWidth}
-          height={window.innerHeight}
+          width={dimensions.width}
+          height={dimensions.height}
           recycle={false}
           numberOfPieces={200}
           gravity={0.1}
@@ -338,9 +449,7 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {greeting}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {subtitle}
-        </p>
+        <p className="text-gray-600 dark:text-gray-400">{subtitle}</p>
       </div>
 
       {/* Net Worth Display */}
@@ -357,7 +466,9 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Assets</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Total Assets
+              </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 ${dashboardData.totalAssets.toLocaleString()}
               </p>
@@ -375,7 +486,9 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Monthly Expenses</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Monthly Expenses
+              </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 ${dashboardData.totalExpenses.toLocaleString()}
               </p>
@@ -393,7 +506,9 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Properties</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Properties
+              </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {dashboardData.properties}
               </p>
@@ -410,7 +525,9 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Monthly Income</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Monthly Income
+              </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 ${dashboardData.monthlyIncome.toLocaleString()}
               </p>
@@ -494,36 +611,50 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-3">
-              {dashboardData.transactions.slice(0, 5).map((transaction: Transaction, index: number) => (
-                <div key={index} className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      transaction.type === 'income' 
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                        : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                    }`}>
-                      <i className={`fas ${
-                        transaction.type === 'income' ? 'fa-arrow-down' : 'fa-arrow-up'
-                      }`}></i>
+              {dashboardData.transactions
+                .slice(0, 5)
+                .map((transaction: Transaction, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between py-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          transaction.type === "income"
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                            : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        <i
+                          className={`fas ${
+                            transaction.type === "income"
+                              ? "fa-arrow-down"
+                              : "fa-arrow-up"
+                          }`}
+                        ></i>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {transaction.description}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {transaction.description}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {new Date(transaction.date).toLocaleDateString()}
-                      </p>
-                    </div>
+                    <p
+                      className={`text-sm font-semibold ${
+                        transaction.type === "income"
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {transaction.type === "income" ? "+" : "-"}$
+                      {transaction.amount.toLocaleString()}
+                    </p>
                   </div>
-                  <p className={`text-sm font-semibold ${
-                    transaction.type === 'income' 
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}>
-                    {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
-                  </p>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
 
@@ -536,27 +667,29 @@ export default function DashboardPage() {
               Market News
             </h2>
             <div className="space-y-4">
-              {dashboardData.news.slice(0, 3).map((article: NewsArticle, index: number) => (
-                <a
-                  key={index}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 -m-2 rounded-lg transition-colors"
-                >
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
-                    {article.title}
-                  </h3>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {article.source}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {article.time}
-                    </span>
-                  </div>
-                </a>
-              ))}
+              {dashboardData.news
+                .slice(0, 3)
+                .map((article: NewsArticle, index: number) => (
+                  <a
+                    key={index}
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 -m-2 rounded-lg transition-colors"
+                  >
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                      {article.title}
+                    </h3>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {article.source}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {article.time}
+                      </span>
+                    </div>
+                  </a>
+                ))}
             </div>
           </div>
         </div>

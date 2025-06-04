@@ -319,14 +319,14 @@ TODO: Add commit counts, files changed, contributors
 function validateBuilds() {
   try {
     info('Testing frontend build...');
-    execSync('npm run build', { 
+    execSync('pnpm run build', { 
       cwd: join(PROJECT_ROOT, 'frontend'),
       stdio: 'pipe'
     });
     success('Frontend build successful');
     
     info('Testing backend build...');
-    execSync('npm run build', { 
+    execSync('pnpm run build', { 
       cwd: join(PROJECT_ROOT, 'backend'),
       stdio: 'pipe'
     });

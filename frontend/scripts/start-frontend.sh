@@ -5,8 +5,8 @@ cd /opt/profolio/frontend
 
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then
-    npm ci --production
+    pnpm install --prod
 fi
 
 # Start the application in production mode
-npm run start
+pnpm run start
