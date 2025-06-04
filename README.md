@@ -47,21 +47,25 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-
 
 ### 🏠 **Proxmox LXC Container** (Recommended)
 
-**Perfect for homelabs and production environments:**
+**Enhanced Proxmox-specific installer with container optimizations:**
 
 ```bash
-# Run on Proxmox host - automatically detects and offers container creation
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+# Proxmox-optimized installer with auto-start and enhanced management
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/proxmox-install-or-update.sh | sudo bash
 ```
 
-**Container benefits:**
-- 🛡️ **Isolation** - Dedicated environment with resource limits
+**Proxmox-specific features:**
+- 🛡️ **Isolation** - Dedicated environment with resource limits  
 - 💾 **Easy backups** - Snapshot entire container in seconds
 - 🔄 **Migration** - Move between Proxmox hosts seamlessly
 - ⚙️ **Resource control** - CPU/memory allocation per your needs
+- 🚀 **Auto-start on boot** - Services automatically start when container reboots
+- 🔧 **Installer-only updates** - Update just the installer script without touching the application
+- 📦 **Container-optimized** - Resource-efficient deployment for LXC environments
 
 ### 🎛️ **Advanced Installation Options**
 
+**Standard installer options:**
 ```bash
 # Install specific version
 sudo ./install-or-update.sh --version v1.9.1
@@ -74,6 +78,15 @@ sudo ./install-or-update.sh --list-versions
 
 # Emergency rollback (automatic on failures)
 sudo ./install-or-update.sh --rollback
+```
+
+**Proxmox installer additional options:**
+```bash
+# Update only the Proxmox installer script
+sudo ./proxmox-install-or-update.sh --update-installer
+
+# View Proxmox-specific features
+sudo ./proxmox-install-or-update.sh --help
 ```
 
 ---
@@ -221,9 +234,11 @@ sudo journalctl -u profolio-backend -u profolio-frontend -f
 # Restart services
 sudo systemctl restart profolio-backend profolio-frontend
 
-# Enable auto-start on boot
+# Auto-start on boot (automatically configured by installer)
 sudo systemctl enable profolio-backend profolio-frontend
 ```
+
+**Note**: The Proxmox installer automatically configures services to start on container reboot, ensuring your Profolio instance is always available after system restarts.
 
 ### **Updates & Maintenance**
 ```bash
