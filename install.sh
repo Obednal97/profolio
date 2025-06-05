@@ -11,7 +11,7 @@
 set -eo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
-INSTALLER_VERSION="1.11.12"
+INSTALLER_VERSION="1.11.13"
 REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
@@ -160,6 +160,7 @@ download_all_modules() {
     done
     
     printf "\r\033[K${BLUE}Downloading $total installer modules${NC} ${GREEN}✓${NC}\n"
+    echo -e "${GREEN}[SUCCESS]${NC} All modules downloaded ($total files)"
     
     # Clean up temp files
     rm -f "$temp_log" "$temp_log.complete"
@@ -461,13 +462,32 @@ main() {
         
         if [[ "$install_choice" == "2" ]]; then
             echo ""
-            # Try to run configuration wizard for advanced options
-            if command -v run_configuration_wizard >/dev/null 2>&1; then
-                if ! run_configuration_wizard; then
-                    echo -e "${YELLOW}Configuration wizard failed, using defaults${NC}"
+            # Check if configuration wizard is available
+            local wizard_found=false
+            
+            # First check if the wizard module file exists
+            if [[ -f "features/configuration-wizard.sh" ]]; then
+                # Source it if not already loaded
+                source "features/configuration-wizard.sh" 2>/dev/null || true
+                wizard_found=true
+            fi
+            
+            # Now try to run the wizard
+            if [[ "$wizard_found" == "true" ]]; then
+                if command -v config_run_installation_wizard >/dev/null 2>&1; then
+                    echo -e "${CYAN}🧙 Starting Configuration Wizard...${NC}"
+                    echo ""
+                    config_run_installation_wizard
+                elif command -v run_configuration_wizard >/dev/null 2>&1; then
+                    echo -e "${CYAN}🧙 Starting Configuration Wizard...${NC}"
+                    echo ""
+                    run_configuration_wizard
+                else
+                    echo -e "${YELLOW}🔧 Configuration wizard functions not available${NC}"
+                    echo -e "${BLUE}Proceeding with enhanced default installation...${NC}"
                 fi
             else
-                echo -e "${YELLOW}🔧 Advanced configuration not available in this session${NC}"
+                echo -e "${YELLOW}🔧 Configuration wizard module not found${NC}"
                 echo -e "${BLUE}Proceeding with enhanced default installation...${NC}"
             fi
         fi

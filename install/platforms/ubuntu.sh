@@ -216,7 +216,7 @@ install_essential_packages() {
         printf "\r${BLUE}Fixing package dependencies${NC} ${YELLOW}${spin:$i:1}${NC}"
         sleep 0.1
     done
-    printf "\r${BLUE}Fixing package dependencies${NC} ${GREEN}✓${NC}\n"
+    printf "\r\033[K${BLUE}Fixing package dependencies${NC} ${GREEN}✓${NC}\n"
     
     local essential_packages=(
         "curl"
@@ -287,13 +287,13 @@ install_essential_packages() {
     rm -f /tmp/install_status
     
     if [[ "$status" == "SUCCESS" ]]; then
-        printf "\r${BLUE}Installing essential system packages${NC} ${GREEN}✓${NC}\n"
+        printf "\r\033[K${BLUE}Installing essential system packages${NC} ${GREEN}✓${NC}\n"
     elif [[ "$status" == "PARTIAL" ]]; then
-        printf "\r${BLUE}Installing essential system packages${NC} ${YELLOW}⚠${NC}\n"
+        printf "\r\033[K${BLUE}Installing essential system packages${NC} ${YELLOW}⚠${NC}\n"
         warn "Some packages failed to install: ${failed_packages[*]}"
         warn "Continuing anyway - these may not be critical for Profolio"
     else
-        printf "\r${BLUE}Installing essential system packages${NC} ${RED}✗${NC}\n"
+        printf "\r\033[K${BLUE}Installing essential system packages${NC} ${RED}✗${NC}\n"
         error "Failed to install essential packages"
         
         if [ ${#failed_packages[@]} -eq 0 ]; then
@@ -343,13 +343,13 @@ install_essential_packages() {
     rm -f /tmp/pg_install_status
     
     if [[ "$status" == "SUCCESS" ]]; then
-        printf "\r${BLUE}Installing PostgreSQL database${NC} ${GREEN}✓${NC}\n"
+        printf "\r\033[K${BLUE}Installing PostgreSQL database${NC} ${GREEN}✓${NC}\n"
     elif [[ "$status" == "PARTIAL" ]]; then
-        printf "\r${BLUE}Installing PostgreSQL database${NC} ${YELLOW}⚠${NC}\n"
+        printf "\r\033[K${BLUE}Installing PostgreSQL database${NC} ${YELLOW}⚠${NC}\n"
         warn "Some PostgreSQL packages failed: ${pg_failed[*]}"
         warn "Continuing anyway - core PostgreSQL may still work"
     else
-        printf "\r${BLUE}Installing PostgreSQL database${NC} ${RED}✗${NC}\n"
+        printf "\r\033[K${BLUE}Installing PostgreSQL database${NC} ${RED}✗${NC}\n"
         error "Failed to install any PostgreSQL packages - this will prevent Profolio from working"
         return 1
     fi
@@ -547,8 +547,10 @@ optimize_ubuntu_system() {
     fi
     
     # Configure automatic security updates
-    if apt-get install -y unattended-upgrades; then
-        dpkg-reconfigure -plow unattended-upgrades
+    if apt-get install -y unattended-upgrades &>/dev/null; then
+        # Set up automatic security updates non-interactively
+        echo 'unattended-upgrades unattended-upgrades/enable_auto_updates boolean true' | debconf-set-selections
+        DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -plow unattended-upgrades &>/dev/null
         success "Automatic security updates configured"
     fi
     

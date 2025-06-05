@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.13] - 2025-06-05
+
+### Fixed
+
+- **Database URL Encoding**: Fixed password encoding in database URLs to handle special characters properly
+- **Color Code Display**: Fixed escape sequences (`033[0m`) appearing after progress indicators by ensuring proper terminal clearing
+- **Configuration Wizard**: Fixed advanced installation option to properly load and run the configuration wizard
+- **Unattended Upgrades**: Made package configuration non-interactive to prevent dialog popups during installation
+- **Module Loading**: Ensured configuration wizard module is properly sourced when Advanced Installation is selected
+
+### Changed
+
+- **Database Password Encoding**: Now uses proper URL encoding for special characters in database passwords
+- **Installer UI**: Cleaner output with proper escape sequence handling
+- **Module Source Order**: Configuration wizard now explicitly sourced when needed
+- **Package Configuration**: All dpkg-reconfigure calls now use DEBIAN_FRONTEND=noninteractive
+
+### Improved
+
+- **Error Handling**: Better fallback mechanisms for module loading failures
+- **User Experience**: Smoother installation flow with less verbose output
+- **Compatibility**: Better handling of special characters in generated passwords
+
 ## [v1.11.12] - 2025-06-05
 
 ### Fixed
