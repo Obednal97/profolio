@@ -52,7 +52,8 @@ fi
 
 # LXC container platform handler
 handle_lxc-container_platform() {
-    info "🐧 LXC Container detected - using Ubuntu installer"
+    # Suppress verbose output for clean UI
+    # info "🐧 LXC Container detected - using Ubuntu installer"
     
     # Export color variables and functions to ensure they're available in sourced modules
     export RED GREEN YELLOW BLUE CYAN WHITE NC
@@ -61,14 +62,14 @@ handle_lxc-container_platform() {
     # Source the Ubuntu platform installer
     local ubuntu_installer="platforms/ubuntu.sh"
     if [[ -f "$ubuntu_installer" ]]; then
-        info "Executing Ubuntu platform installation for LXC container..."
+        # info "Executing Ubuntu platform installation for LXC container..."
         
         # Source and execute in the same subshell to preserve context
         if source "$ubuntu_installer" && handle_ubuntu_platform "$@"; then
-            success "LXC container installation completed successfully"
+            # success "LXC container installation completed successfully"
             return 0
         else
-            error "Ubuntu platform installation failed"
+            # error "Ubuntu platform installation failed"
             return 1
         fi
     else

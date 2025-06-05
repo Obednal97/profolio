@@ -11,7 +11,7 @@
 set -eo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
-INSTALLER_VERSION="1.11.10"
+INSTALLER_VERSION="1.11.11"
 REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
@@ -230,6 +230,13 @@ load_essential_functions() {
     
     printf "\r${BLUE}Loading installer functions${NC} ${GREEN}✓${NC}\n"
     rm -f /tmp/loading_complete
+    
+    # Export critical functions after loading
+    for func in install_profolio_application; do
+        if command -v "$func" >/dev/null 2>&1; then
+            export -f "$func"
+        fi
+    done
 }
 
 # Execute platform installation
@@ -237,23 +244,24 @@ install_for_platform() {
     local detected_platform="$1"
     shift  # Remove platform from arguments
     
-    log "Starting installation for platform: $detected_platform"
+    # Suppress verbose logging for clean UI
+    # log "Starting installation for platform: $detected_platform"
     
     # Try direct platform file first
     local platform_file="platforms/${detected_platform}.sh"
     if [[ -f "$platform_file" ]]; then
-        log "Using direct platform installer: $platform_file"
+        # log "Using direct platform installer: $platform_file"
         source "$platform_file"
         
         # Call the platform handler function
         local handler_function="handle_${detected_platform}_platform"
         if command -v "$handler_function" >/dev/null 2>&1; then
-            log "Executing $handler_function..."
+            # log "Executing $handler_function..."
             if "$handler_function" "$@"; then
-                success "Platform installation completed successfully"
+                # success "Platform installation completed successfully"
                 return 0
             else
-                warning "Platform installation failed"
+                # warning "Platform installation failed"
                 return 1
             fi
         else
@@ -379,6 +387,11 @@ main() {
     
     # Load essential functions
     load_essential_functions
+    
+    # Export critical functions to ensure they're available in all subshells
+    if command -v install_profolio_application >/dev/null 2>&1; then
+        export -f install_profolio_application
+    fi
     
     # Detect platform using the proper module function
     local platform

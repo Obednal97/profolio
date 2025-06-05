@@ -198,9 +198,22 @@ install_essential_packages() {
     info "Installing essential packages for Profolio..."
     
     # First, try to fix any broken packages
-    info "Fixing any broken package dependencies first..."
-    apt-get --fix-broken install -y 2>/dev/null || warn "Some dependencies could not be fixed automatically"
-    dpkg --configure -a 2>/dev/null || warn "Some packages could not be configured"
+    echo -ne "${BLUE}Fixing package dependencies${NC} "
+    {
+        apt-get --fix-broken install -y &>/dev/null || true
+        dpkg --configure -a &>/dev/null || true
+    } &
+    
+    # Show spinner
+    local spin='-\|/'
+    local i=0
+    local pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        i=$(((i+1) % 4))
+        printf "\r${BLUE}Fixing package dependencies${NC} ${YELLOW}${spin:$i:1}${NC}"
+        sleep 0.1
+    done
+    printf "\r${BLUE}Fixing package dependencies${NC} ${GREEN}✓${NC}\n"
     
     local essential_packages=(
         "curl"
@@ -490,7 +503,8 @@ optimize_ubuntu_system() {
 
 # Main Ubuntu platform handler
 handle_ubuntu_platform() {
-    info "Ubuntu/Debian platform detected"
+    # Suppress verbose output for clean UI
+    # info "Ubuntu/Debian platform detected"
     
     # Check if distribution is supported
     if ! is_supported_distribution; then
@@ -512,7 +526,8 @@ handle_ubuntu_platform() {
     distro_name=$(get_distribution_name)
     version_id=$(detect_ubuntu_version)
     
-    success "Supported distribution detected: $distro_name $version_id"
+    # Suppress for clean UI
+    # success "Supported distribution detected: $distro_name $version_id"
     
     # Check if running as root
     if [ "$EUID" -ne 0 ]; then
@@ -550,6 +565,28 @@ handle_ubuntu_platform() {
     
     # Now install the actual Profolio application
     info "Starting Profolio application installation..."
+    
+    # Check if function exists and try to source it if not
+    if ! command -v install_profolio_application >/dev/null 2>&1; then
+        warning "Profolio installer function not found, attempting to source..."
+        
+        # Try to source the installer module directly
+        local installer_module
+        for path in "/tmp/profolio-installer-$$/core/profolio-installer.sh" "core/profolio-installer.sh" "../core/profolio-installer.sh"; do
+            if [[ -f "$path" ]]; then
+                installer_module="$path"
+                break
+            fi
+        done
+        
+        if [[ -n "$installer_module" ]] && source "$installer_module"; then
+            success "Profolio installer module loaded"
+        else
+            error "Failed to load Profolio installer module"
+            return 1
+        fi
+    fi
+    
     if ! install_profolio_application; then
         error "Failed to install Profolio application"
         return 1
