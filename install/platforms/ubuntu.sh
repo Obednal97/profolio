@@ -22,6 +22,31 @@ if [[ -z "${RED:-}" ]]; then
     readonly NC='\033[0m'
 fi
 
+# Define logging functions if not already defined
+if ! command -v info &> /dev/null; then
+    info() {
+        echo -e "${BLUE}[INFO]${NC} $1"
+    }
+fi
+
+if ! command -v success &> /dev/null; then
+    success() {
+        echo -e "${GREEN}[SUCCESS]${NC} $1"
+    }
+fi
+
+if ! command -v warn &> /dev/null; then
+    warn() {
+        echo -e "${YELLOW}[WARN]${NC} $1"
+    }
+fi
+
+if ! command -v error &> /dev/null; then
+    error() {
+        echo -e "${RED}[ERROR]${NC} $1" >&2
+    }
+fi
+
 # Module info function
 ubuntu_platform_info() {
     echo "Ubuntu/Debian Platform Module v1.0.0"
@@ -183,6 +208,11 @@ update_package_repositories() {
 install_essential_packages() {
     info "Installing essential packages for Profolio..."
     
+    # First, try to fix any broken packages
+    info "Fixing any broken package dependencies first..."
+    apt-get --fix-broken install -y 2>/dev/null || warn "Some dependencies could not be fixed automatically"
+    dpkg --configure -a 2>/dev/null || warn "Some packages could not be configured"
+    
     local essential_packages=(
         "curl"
         "wget"
@@ -214,32 +244,74 @@ install_essential_packages() {
         "npm"
     )
     
-    # Install essential packages
+    # Install essential packages with better error handling
     info "Installing essential system packages..."
-    if apt-get install -y "${essential_packages[@]}"; then
+    local failed_packages=()
+    
+    # Try to install all essential packages at once first
+    if apt-get install -y "${essential_packages[@]}" 2>/dev/null; then
         success "Essential packages installed successfully"
     else
-        error "Failed to install essential packages"
-        return 1
+        warn "Batch installation failed, trying individual packages..."
+        
+        # Install packages individually to identify which ones fail
+        for package in "${essential_packages[@]}"; do
+            if apt-get install -y "$package" 2>/dev/null; then
+                info "✓ Installed: $package"
+            else
+                warn "✗ Failed to install: $package"
+                failed_packages+=("$package")
+            fi
+        done
+        
+        if [ ${#failed_packages[@]} -eq 0 ]; then
+            success "All essential packages installed successfully"
+        else
+            warn "Some packages failed to install: ${failed_packages[*]}"
+            warn "Continuing anyway - these may not be critical for Profolio"
+        fi
     fi
     
-    # Install PostgreSQL
+    # Install PostgreSQL with error handling
     info "Installing PostgreSQL database..."
-    if apt-get install -y "${postgresql_packages[@]}"; then
+    if apt-get install -y "${postgresql_packages[@]}" 2>/dev/null; then
         success "PostgreSQL installed successfully"
     else
-        error "Failed to install PostgreSQL"
-        return 1
+        warn "PostgreSQL batch installation failed, trying individual packages..."
+        local pg_failed=()
+        
+        for package in "${postgresql_packages[@]}"; do
+            if apt-get install -y "$package" 2>/dev/null; then
+                info "✓ Installed: $package"
+            else
+                warn "✗ Failed to install: $package"
+                pg_failed+=("$package")
+            fi
+        done
+        
+        if [ ${#pg_failed[@]} -eq ${#postgresql_packages[@]} ]; then
+            error "Failed to install any PostgreSQL packages - this will prevent Profolio from working"
+            return 1
+        elif [ ${#pg_failed[@]} -gt 0 ]; then
+            warn "Some PostgreSQL packages failed: ${pg_failed[*]}"
+            warn "Continuing anyway - core PostgreSQL may still work"
+        else
+            success "PostgreSQL installed successfully"
+        fi
     fi
     
-    # Install Node.js (we'll upgrade to latest LTS later)
+    # Install Node.js with error handling
     info "Installing Node.js..."
-    if apt-get install -y "${nodejs_packages[@]}"; then
+    if apt-get install -y "${nodejs_packages[@]}" 2>/dev/null; then
         success "Node.js installed successfully"
     else
-        error "Failed to install Node.js"
-        return 1
+        warn "Node.js installation failed, will install from NodeSource repository later"
+        warn "This is common and will be handled during Profolio application installation"
     fi
+    
+    # Clean up any package issues
+    apt-get autoremove -y 2>/dev/null || true
+    apt-get autoclean 2>/dev/null || true
     
     return 0
 }
