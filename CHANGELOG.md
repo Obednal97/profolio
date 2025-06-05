@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v1.11.9] - 2025-06-05
+## [v1.11.10] - 2025-01-07
+
+### Fixed
+
+- **Color Variable Scoping**: Fixed WHITE variable undefined errors in LXC container installations
+- **Variable Export Issues**: Resolved color variable scoping issues by exporting all variables before module loading
+- **Escape Sequence Display**: Fixed issue where escape sequences (033[0m) were shown in output
+- **Platform Module Integration**: Fixed variable availability issues when platform modules are sourced from wrappers
+- **LXC Container Support**: Resolved all remaining issues with LXC container platform installation
+
+### Changed
+
+- **Variable Management**: All color variables now exported to ensure availability in subshells
+- **Module Loading**: Improved variable propagation across module boundaries
+- **Error Handling**: Better handling of undefined variable errors in platform modules
+
+## [v1.11.9] - 2025-01-07
 
 ### Added
 
