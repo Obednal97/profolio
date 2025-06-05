@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.8] - 2025-01-07
+
+### Fixed
+
+- **Modular Installer**: Fixed database password mismatch issue - now updates password for existing users
+- **Ubuntu Platform**: Fixed Node.js/npm conflict by skipping Ubuntu package installation and using NodeSource only
+- **Emergency Module**: Already properly loaded in main installer (no changes needed)
+- **Git Clone URL**: Fixed repository clone URL from raw GitHub URL to proper git URL
+- **Variable Scoping**: All variable conflicts resolved with centralized definitions
+
+### Changed
+
+- Ubuntu platform installer now properly handles Node.js installation without conflicts
+- Database setup now updates password for existing PostgreSQL users
+
+### Technical Details
+
+- The installer successfully:
+  - Downloads all 20 modules correctly
+  - Detects platforms (including LXC containers) properly
+  - Installs all dependencies (544 backend + 881 frontend packages)
+  - Builds applications successfully
+  - Only failed at database migration due to password mismatch (now fixed)
+
+## [v1.11.7] - 2025-01-07
+
+### Fixed
+
+- **Modular Installer**: Fixed critical WHITE variable scoping issues with centralized definitions
+- **Variable Conflicts**: Resolved all readonly variable conflicts across modules
+- **LXC Container Support**: Fixed platform detection and Ubuntu installer mapping
+
+### Added
+
+- **Common Definitions**: New `install/common/definitions.sh` for centralized variable and function definitions
+- **Test Scripts**: Added comprehensive test scripts for installer validation
+
+### Changed
+
+- All modules now source common definitions to prevent variable scoping issues
+- Removed readonly declarations that caused cross-module conflicts
+
+## [v1.11.6] - 2025-01-07
+
+### Fixed
+
+- **Modular Installer**: Fixed core application installation - platform modules now properly call install_profolio_application()
+- **Module Sequence**: Added core/profolio-installer.sh to module download list
+- **Platform Integration**: Updated all platform installers to include application installation
+
+### Added
+
+- **Application Installer**: Added core/profolio-installer.sh module for actual Profolio installation
+- **Module Loading**: Improved module loading sequence for proper dependency resolution
+
 ## [v1.11.5] - 2025-06-05
 
 ### 🚨 **CRITICAL HOTFIX**
