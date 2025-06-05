@@ -8,43 +8,32 @@
 # Provides: Package management, service configuration, system optimization
 #
 # Compatible: Ubuntu 20.04+, Debian 11+, and derivatives
-# Dependencies: utils/logging.sh, utils/ui.sh, utils/validation.sh
+# Dependencies: common/definitions.sh
 # =============================================================================
 
-# Define color variables if not already defined
-if [[ -z "${RED:-}" ]]; then
-    readonly RED='\033[0;31m'
-    readonly GREEN='\033[0;32m'
-    readonly YELLOW='\033[1;33m'
-    readonly BLUE='\033[0;34m'
-    readonly CYAN='\033[0;36m'
-    readonly WHITE='\033[1;37m'
-    readonly NC='\033[0m'
-fi
-
-# Define logging functions if not already defined
-if ! command -v info &> /dev/null; then
-    info() {
-        echo -e "${BLUE}[INFO]${NC} $1"
-    }
-fi
-
-if ! command -v success &> /dev/null; then
-    success() {
-        echo -e "${GREEN}[SUCCESS]${NC} $1"
-    }
-fi
-
-if ! command -v warn &> /dev/null; then
-    warn() {
-        echo -e "${YELLOW}[WARN]${NC} $1"
-    }
-fi
-
-if ! command -v error &> /dev/null; then
-    error() {
-        echo -e "${RED}[ERROR]${NC} $1" >&2
-    }
+# Source common definitions if not already loaded
+if [[ -z "${PROFOLIO_DEFINITIONS_LOADED:-}" ]]; then
+    # Try to source from relative path first
+    if [[ -f "$(dirname "${BASH_SOURCE[0]}")/../common/definitions.sh" ]]; then
+        source "$(dirname "${BASH_SOURCE[0]}")/../common/definitions.sh"
+    elif [[ -f "common/definitions.sh" ]]; then
+        source "common/definitions.sh"
+    else
+        # Fallback: Define minimal requirements inline
+        echo "[ERROR] Common definitions not found, using fallback" >&2
+        RED='\033[0;31m'
+        GREEN='\033[0;32m'
+        YELLOW='\033[1;33m'
+        BLUE='\033[0;34m'
+        CYAN='\033[0;36m'
+        WHITE='\033[1;37m'
+        NC='\033[0m'
+        
+        info() { echo -e "${BLUE}[INFO]${NC} $*" >&2; }
+        success() { echo -e "${GREEN}[SUCCESS]${NC} $*" >&2; }
+        warn() { echo -e "${YELLOW}[WARN]${NC} $*" >&2; }
+        error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
+    fi
 fi
 
 # Module info function

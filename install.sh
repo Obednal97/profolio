@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # =============================================================================
-# PROFOLIO INSTALLER v1.11.5
+# PROFOLIO INSTALLER v1.12.0
 # =============================================================================
-# Simple, reliable installer that downloads all 14 modules
-# Uses direct platform execution without complex module validation
+# Modular installer with centralized definitions for reliable execution
+# Uses common/definitions.sh to prevent variable scoping issues
 # =============================================================================
 
 set -euo pipefail
 
 # Configuration
-readonly INSTALLER_VERSION="1.11.5"
+readonly INSTALLER_VERSION="1.12.0"
 readonly REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
@@ -54,7 +54,12 @@ trap cleanup EXIT
 
 # Platform detection
 detect_platform() {
-    if [[ -f "/etc/pve/version" ]]; then
+    # Check for LXC container first
+    if [[ -f "/proc/1/environ" ]] && grep -q "container=lxc" /proc/1/environ 2>/dev/null; then
+        echo "lxc-container"
+    elif [[ -d "/proc/vz" ]] && [[ ! -d "/proc/bc" ]]; then
+        echo "lxc-container"
+    elif [[ -f "/etc/pve/version" ]]; then
         echo "proxmox"
     elif [[ -f "/.dockerenv" ]]; then
         echo "docker"
@@ -75,16 +80,19 @@ detect_platform() {
     fi
 }
 
-# Download all 14 modules
+# Download all modules
 download_all_modules() {
-    log "Downloading all 15 Profolio installer modules..."
+    log "Downloading all Profolio installer modules..."
     
     # Create temp directory structure
     mkdir -p "$TEMP_DIR"
     cd "$TEMP_DIR"
     
-    # All 14 modules (tiny files, no reason not to download them all)
+    # All modules (including the new common definitions)
     local modules=(
+        # Common definitions (MUST BE FIRST!)
+        "common/definitions.sh"
+        
         # Core modules
         "module-loader.sh"
         "bootstrap.sh"
@@ -136,6 +144,15 @@ download_all_modules() {
 
 # Load essential functions without complex validation
 load_essential_functions() {
+    # CRITICAL: Source common definitions FIRST!
+    if [[ -f "common/definitions.sh" ]]; then
+        info "Loading common definitions..."
+        source "common/definitions.sh" || {
+            error "Failed to load common definitions"
+            return 1
+        }
+    fi
+    
     # Source utility modules first
     for util in utils/*.sh; do
         if [[ -f "$util" ]]; then
