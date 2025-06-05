@@ -79,34 +79,90 @@ load_module() {
     fi
 }
 
-# Load modules in dependency order
+# Load modules in dependency order (selective or all)
 load_all_modules() {
     module_log "Starting module loading sequence..."
     
-    # Phase 1: Utility modules (dependencies for everything else)
+    # Phase 1: Utility modules (always needed)
     load_module "utils/logging.sh" || return 1
     load_module "utils/ui.sh" || return 1
     load_module "utils/validation.sh" || return 1
     load_module "utils/platform-detection.sh" || return 1
     
-    # Phase 2: Core modules (depend on utilities)
-    load_module "core/version-control.sh" || return 1
-    load_module "core/rollback.sh" || return 1
+    # Phase 2: Core modules (always needed)
     load_module "core/profolio-installer.sh" || return 1
     
-    # Phase 3: Feature modules (depend on utilities and sometimes core)
-    load_module "features/optimization.sh" || return 1
-    load_module "features/ssh-hardening.sh" || return 1
-    load_module "features/configuration-wizard.sh" || return 1
-    load_module "features/backup-management.sh" || return 1
-    load_module "features/installation-reporting.sh" || return 1
+    # Selective loading based on environment variables
+    if [[ "${SELECTIVE_LOADING:-false}" == "true" ]]; then
+        load_selective_modules
+    else
+        load_all_available_modules
+    fi
     
-    # Phase 4: Platform modules (depend on utilities and platform detection)
-    load_module "platforms/proxmox.sh" || return 1
-    load_module "platforms/ubuntu.sh" || return 1
-    load_module "platforms/docker.sh" || return 1
+    module_log "Module loading completed"
+    return 0
+}
+
+# Load only modules needed for specific platform/state
+load_selective_modules() {
+    local platform="${TARGET_PLATFORM:-unknown}"
+    local state="${INSTALLATION_STATE:-first-install}"
     
-    module_log "All modules loaded successfully"
+    module_log "Selective loading for platform: $platform, state: $state"
+    
+    # Load platform-specific module
+    case "$platform" in
+        ubuntu|debian|lxc-container)
+            load_module "platforms/ubuntu.sh" || return 1
+            ;;
+        proxmox)
+            load_module "platforms/proxmox.sh" || return 1
+            ;;
+        docker)
+            load_module "platforms/docker.sh" || return 1
+            ;;
+        emergency)
+            load_module "platforms/emergency.sh" || return 1
+            ;;
+    esac
+    
+    # Load state-specific modules
+    case "$state" in
+        update)
+            load_module "core/version-control.sh" || return 1
+            load_module "core/rollback.sh" || return 1
+            ;;
+        emergency)
+            load_module "platforms/emergency.sh" || return 1
+            ;;
+    esac
+    
+    module_log "Selective modules loaded for $platform platform"
+    return 0
+}
+
+# Load all available modules (legacy mode)
+load_all_available_modules() {
+    module_log "Loading all available modules..."
+    
+    # Core modules
+    load_module "core/version-control.sh" || return 1
+    load_module "core/rollback.sh" || return 1
+    
+    # Feature modules (optional - continue if they fail)
+    load_module "features/optimization.sh" || module_log "Optional module optimization.sh not available"
+    load_module "features/ssh-hardening.sh" || module_log "Optional module ssh-hardening.sh not available"
+    load_module "features/configuration-wizard.sh" || module_log "Optional module configuration-wizard.sh not available"
+    load_module "features/backup-management.sh" || module_log "Optional module backup-management.sh not available"
+    load_module "features/installation-reporting.sh" || module_log "Optional module installation-reporting.sh not available"
+    
+    # Platform modules
+    load_module "platforms/proxmox.sh" || module_log "Platform module proxmox.sh not available"
+    load_module "platforms/ubuntu.sh" || module_log "Platform module ubuntu.sh not available"
+    load_module "platforms/docker.sh" || module_log "Platform module docker.sh not available"
+    load_module "platforms/emergency.sh" || module_log "Platform module emergency.sh not available"
+    
+    module_log "All available modules loaded"
     return 0
 }
 
@@ -186,6 +242,7 @@ validate_module_functions() {
         "handle_proxmox_installation"
         "handle_ubuntu_platform"
         "handle_docker_platform"
+        "handle_emergency_installation"
     )
     
     local missing_functions=()
