@@ -1,0 +1,357 @@
+name: 🧪 E2E Tests & Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: "Type of tests to run"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - security
+          - performance
+          - accessibility
+
+jobs:
+  setup:
+    name: 🔧 Setup Test Environment
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-security: ${{ steps.check-changes.outputs.security }}
+      should-run-performance: ${{ steps.check-changes.outputs.performance }}
+      should-run-accessibility: ${{ steps.check-changes.outputs.accessibility }}
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: 🔍 Check file changes
+        id: check-changes
+        run: |
+          # Check if changes affect security-critical areas
+          SECURITY_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E "(auth|login|password|jwt|crypto|security)" | wc -l)
+          echo "security=$( [ $SECURITY_FILES -gt 0 ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+
+          # Check if changes affect performance-critical areas
+          PERF_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E "(components|pages|api|hooks)" | wc -l)
+          echo "performance=$( [ $PERF_FILES -gt 0 ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+
+          # Check if changes affect UI components
+          UI_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E "(components|pages|styles)" | wc -l)
+          echo "accessibility=$( [ $UI_FILES -gt 0 ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+
+  build-and-start:
+    name: 🏗️ Build & Start Services
+    runs-on: ubuntu-latest
+    needs: setup
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: profolio_e2e
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
+
+      - name: 📦 Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            frontend/node_modules
+            backend/node_modules
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: 📚 Install dependencies
+        run: |
+          cd backend && pnpm install --frozen-lockfile
+          cd ../frontend && pnpm install --frozen-lockfile
+
+      - name: 🗄️ Setup test database
+        run: |
+          cd backend
+          pnpm prisma generate
+          pnpm prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
+
+      - name: 🏗️ Build applications
+        run: |
+          cd backend && pnpm run build
+          cd ../frontend && pnpm run build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
+          JWT_SECRET: e2e-test-jwt-secret
+          API_ENCRYPTION_KEY: e2e-test-encryption-key
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+      - name: 🚀 Start backend service
+        run: |
+          cd backend && pnpm run start:prod &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
+          JWT_SECRET: e2e-test-jwt-secret
+          API_ENCRYPTION_KEY: e2e-test-encryption-key
+          PORT: 3001
+
+      - name: 🚀 Start frontend service
+        run: |
+          cd frontend && pnpm start &
+          sleep 10
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+      - name: 🧪 Health check services
+        run: |
+          curl -f http://localhost:3001/health || exit 1
+          curl -f http://localhost:3000 || exit 1
+
+      - name: 📦 Install Playwright browsers
+        run: |
+          cd frontend
+          pnpm dlx playwright install --with-deps
+
+      - name: 🧪 Run E2E tests
+        run: |
+          cd frontend
+          pnpm run test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+  security-tests:
+    name: 🔒 Security E2E Tests
+    runs-on: ubuntu-latest
+    needs: [setup, build-and-start]
+    if: needs.setup.outputs.should-run-security == 'true' || github.event.inputs.test_type == 'security' || github.event.inputs.test_type == 'all'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
+
+      - name: 📚 Install dependencies
+        run: |
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: 📦 Install Playwright browsers
+        run: |
+          cd frontend
+          pnpm dlx playwright install --with-deps
+
+      - name: 🔒 Run security-focused E2E tests
+        run: |
+          cd frontend
+          pnpm run test:e2e:security
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: 🔍 OWASP ZAP Security Scan
+        uses: zaproxy/action-full-scan@v0.8.0
+        with:
+          target: "http://localhost:3000"
+          rules_file_name: ".zap/rules.tsv"
+          cmd_options: "-a"
+
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    needs: [setup, build-and-start]
+    if: needs.setup.outputs.should-run-performance == 'true' || github.event.inputs.test_type == 'performance' || github.event.inputs.test_type == 'all'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
+
+      - name: 📚 Install dependencies
+        run: |
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: ⚡ Run Lighthouse performance audit
+        run: |
+          cd frontend
+          pnpm run test:performance
+        env:
+          LIGHTHOUSE_URL: http://localhost:3000
+
+      - name: 📊 Performance budget check
+        run: |
+          cd frontend
+          npx lighthouse http://localhost:3000 \
+            --budget-path=.lighthouse/budget.json \
+            --output=json \
+            --output-path=./reports/lighthouse-budget.json
+
+      - name: 📦 Bundle size analysis
+        run: |
+          cd frontend
+          pnpm run build:analyze
+
+      - name: 📊 Upload performance reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-reports
+          path: |
+            frontend/reports/
+            frontend/.next/analyze/
+          retention-days: 30
+
+  accessibility-tests:
+    name: ♿ Accessibility Tests
+    runs-on: ubuntu-latest
+    needs: [setup, build-and-start]
+    if: needs.setup.outputs.should-run-accessibility == 'true' || github.event.inputs.test_type == 'accessibility' || github.event.inputs.test_type == 'all'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
+
+      - name: 📚 Install dependencies
+        run: |
+          cd frontend && pnpm install --frozen-lockfile
+
+      - name: 📦 Install Playwright browsers
+        run: |
+          cd frontend
+          pnpm dlx playwright install --with-deps
+
+      - name: ♿ Run accessibility audit with axe-core
+        run: |
+          cd frontend
+          npx playwright test --grep="Accessibility"
+
+      - name: ♿ WAVE accessibility scan
+        run: |
+          # Install WAVE CLI tool and run scan
+          npm install -g @wave/cli
+          wave http://localhost:3000 --output json --outfile reports/wave-report.json
+
+      - name: 📊 Upload accessibility reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accessibility-reports
+          path: frontend/reports/
+          retention-days: 30
+
+  load-testing:
+    name: 🚀 Load Testing
+    runs-on: ubuntu-latest
+    needs: build-and-start
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'load-test')
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: 🚀 Run load tests
+        run: |
+          k6 run scripts/load-test.js
+        env:
+          BASE_URL: http://localhost:3000
+
+  validation-report:
+    name: 📊 Validation Report
+    runs-on: ubuntu-latest
+    needs:
+      [build-and-start, security-tests, performance-tests, accessibility-tests]
+    if: always()
+
+    steps:
+      - name: 📊 Compile test results
+        run: |
+          echo "## 🧪 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|---------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.build-and-start.result }} | Core functionality tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Tests | ${{ needs.security-tests.result }} | Security validation |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Tests | ${{ needs.performance-tests.result }} | Performance benchmarks |" >> $GITHUB_STEP_SUMMARY
+          echo "| Accessibility Tests | ${{ needs.accessibility-tests.result }} | WCAG compliance |" >> $GITHUB_STEP_SUMMARY
+
+      - name: ✅ All tests passed
+        if: needs.build-and-start.result == 'success' && (needs.security-tests.result == 'success' || needs.security-tests.result == 'skipped') && (needs.performance-tests.result == 'success' || needs.performance-tests.result == 'skipped') && (needs.accessibility-tests.result == 'success' || needs.accessibility-tests.result == 'skipped')
+        run: |
+          echo "🎉 All E2E tests and validations passed!"
+          echo "✅ Ready for merge/deployment"
+
+      - name: ❌ Tests failed
+        if: needs.build-and-start.result == 'failure' || needs.security-tests.result == 'failure' || needs.performance-tests.result == 'failure' || needs.accessibility-tests.result == 'failure'
+        run: |
+          echo "❌ Some tests failed - blocking merge/deployment"
+          exit 1
