@@ -77,7 +77,7 @@ detect_platform() {
 
 # Download all 14 modules
 download_all_modules() {
-    log "Downloading all 14 Profolio installer modules..."
+    log "Downloading all 15 Profolio installer modules..."
     
     # Create temp directory structure
     mkdir -p "$TEMP_DIR"
@@ -103,6 +103,7 @@ download_all_modules() {
         "platforms/proxmox.sh"
         "platforms/docker.sh"
         "platforms/emergency.sh"
+        "platforms/lxc-container.sh"
         
         # Feature modules
         "features/optimization.sh"
@@ -164,33 +165,21 @@ load_essential_functions() {
 
 # Execute platform installation
 install_for_platform() {
-    local platform="$1"
+    local detected_platform="$1"
     shift  # Remove platform from arguments
     
-    # Map platform to actual installer file
-    local installer_platform="$platform"
-    case "$platform" in
-        lxc-container|generic-linux)
-            installer_platform="ubuntu"  # LXC containers and generic Linux use Ubuntu installer
-            ;;
-        docker-container)
-            installer_platform="docker"
-            ;;
-        proxmox-host)
-            installer_platform="proxmox"
-            ;;
-    esac
+    log "Starting installation for platform: $detected_platform"
     
-    log "Executing $platform platform installation (using $installer_platform installer)..."
-    
-    # Source the platform module
-    local platform_file="platforms/${installer_platform}.sh"
+    # Try direct platform file first
+    local platform_file="platforms/${detected_platform}.sh"
     if [[ -f "$platform_file" ]]; then
+        log "Using direct platform installer: $platform_file"
         source "$platform_file"
         
         # Call the platform handler function
-        local handler_function="handle_${installer_platform}_platform"
+        local handler_function="handle_${detected_platform}_platform"
         if command -v "$handler_function" >/dev/null 2>&1; then
+            log "Executing $handler_function..."
             if "$handler_function" "$@"; then
                 success "Platform installation completed successfully"
                 return 0
@@ -199,12 +188,42 @@ install_for_platform() {
                 return 1
             fi
         else
-            warning "Platform handler function $handler_function not found"
+            error "Platform handler function $handler_function not available"
             return 1
         fi
     else
-        error "Platform file $platform_file not found"
-        return 1
+        # Fallback mapping for older platforms
+        local fallback_platform="ubuntu"
+        case "$detected_platform" in
+            generic-linux|debian) fallback_platform="ubuntu" ;;
+            docker-container) fallback_platform="docker" ;;
+            proxmox-host) fallback_platform="proxmox" ;;
+        esac
+        
+        log "Direct platform file not found, using fallback: platforms/${fallback_platform}.sh"
+        
+        local fallback_file="platforms/${fallback_platform}.sh"
+        if [[ -f "$fallback_file" ]]; then
+            source "$fallback_file"
+            
+            local fallback_function="handle_${fallback_platform}_platform"
+            if command -v "$fallback_function" >/dev/null 2>&1; then
+                log "Executing fallback $fallback_function..."
+                if "$fallback_function" "$@"; then
+                    success "Fallback platform installation completed successfully"
+                    return 0
+                else
+                    warning "Fallback platform installation failed"
+                    return 1
+                fi
+            else
+                error "Fallback platform handler $fallback_function not available"
+                return 1
+            fi
+        else
+            error "Neither direct platform file nor fallback found"
+            return 1
+        fi
     fi
 }
 
