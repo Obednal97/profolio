@@ -2,22 +2,35 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Authentication @security", () => {
   test.beforeEach(async ({ page }) => {
-    // Start from the homepage
-    await page.goto("/");
+    // Navigate to the sign-in page
+    await page.goto("/auth/signIn");
   });
 
   test("should display login form", async ({ page }) => {
-    await page.click('[data-testid="login-button"]');
+    // Check if login button exists (cloud mode) or if form is directly visible (self-hosted mode)
+    const loginButton = page.locator('[data-testid="login-button"]');
+    const emailInput = page.locator('input[type="email"]');
 
-    await expect(page.locator('[data-testid="login-form"]')).toBeVisible();
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    if (await loginButton.isVisible()) {
+      // Cloud mode - click to expand email form
+      await loginButton.click();
+    }
+
+    // Now the form should be visible
+    await expect(emailInput).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
   });
 
   test("should show validation errors for invalid credentials", async ({
     page,
   }) => {
-    await page.click('[data-testid="login-button"]');
+    // Ensure login form is expanded
+    const loginButton = page.locator('[data-testid="login-button"]');
+    if (await loginButton.isVisible()) {
+      await loginButton.click();
+      // Wait for form to expand
+      await expect(page.locator('input[type="email"]')).toBeVisible();
+    }
 
     // Try to submit with empty fields
     await page.click('[data-testid="submit-login"]');
@@ -28,7 +41,13 @@ test.describe("Authentication @security", () => {
   test("should prevent SQL injection in login form @security", async ({
     page,
   }) => {
-    await page.click('[data-testid="login-button"]');
+    // Ensure login form is expanded
+    const loginButton = page.locator('[data-testid="login-button"]');
+    if (await loginButton.isVisible()) {
+      await loginButton.click();
+      // Wait for form to expand
+      await expect(page.locator('input[type="email"]')).toBeVisible();
+    }
 
     // Attempt SQL injection
     await page.fill('input[type="email"]', "admin'; DROP TABLE users; --");
@@ -42,7 +61,13 @@ test.describe("Authentication @security", () => {
   });
 
   test("should rate limit login attempts @security", async ({ page }) => {
-    await page.click('[data-testid="login-button"]');
+    // Ensure login form is expanded
+    const loginButton = page.locator('[data-testid="login-button"]');
+    if (await loginButton.isVisible()) {
+      await loginButton.click();
+      // Wait for form to expand
+      await expect(page.locator('input[type="email"]')).toBeVisible();
+    }
 
     // Make multiple failed login attempts
     for (let i = 0; i < 6; i++) {
@@ -73,7 +98,14 @@ test.describe("Authentication @security", () => {
       });
     });
 
-    await page.click('[data-testid="login-button"]');
+    // Ensure login form is expanded
+    const loginButton = page.locator('[data-testid="login-button"]');
+    if (await loginButton.isVisible()) {
+      await loginButton.click();
+      // Wait for form to expand
+      await expect(page.locator('input[type="email"]')).toBeVisible();
+    }
+
     await page.fill('input[type="email"]', "test@example.com");
     await page.fill('input[type="password"]', "correctpassword");
     await page.click('[data-testid="submit-login"]');
@@ -82,22 +114,24 @@ test.describe("Authentication @security", () => {
   });
 
   test("should logout and clear session", async ({ page }) => {
-    // Mock logged in state
-    await page.goto("/dashboard");
+    // Mock logged in state - use demo button instead
+    await page.click('[data-testid="demo-button"]');
+
+    // Wait for dashboard navigation
+    await expect(page).toHaveURL(/.*\/dashboard/);
 
     await page.click('[data-testid="user-menu"]');
     await page.click('[data-testid="logout-button"]');
 
     // Should redirect to home and clear auth state
-    await expect(page).toHaveURL("/");
-    await expect(page.locator('[data-testid="login-button"]')).toBeVisible();
+    await expect(page).toHaveURL(/.*\/(auth|signIn)/);
   });
 
   test("should protect authenticated routes @security", async ({ page }) => {
     // Try to access protected route without authentication
-    await page.goto("/dashboard");
+    await page.goto("/app/dashboard");
 
     // Should redirect to login or show unauthorized
-    await expect(page).toHaveURL(/.*\/(login|auth|$)/);
+    await expect(page).toHaveURL(/.*\/(login|auth|signIn)/);
   });
 });

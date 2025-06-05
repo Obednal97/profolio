@@ -1,0 +1,6 @@
+<testsuites id="" name="" tests="1" failures="0" skipped="0" errors="0" time="1.377472">
+<testsuite name="auth.spec.ts" timestamp="2025-06-05T10:24:53.507Z" hostname="chromium" tests="1" failures="0" skipped="0" time="0.793" errors="0">
+<testcase name="Authentication @security › should display login form" classname="auth.spec.ts" time="0.793">
+</testcase>
+</testsuite>
+</testsuites>

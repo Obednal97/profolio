@@ -564,6 +564,7 @@ export default function DashboardPage() {
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <Link
+                data-testid="portfolio-dashboard-link"
                 href="/app/portfolio"
                 className="flex items-center justify-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
               >
