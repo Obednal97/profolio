@@ -5,7 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v1.11.8] - 2025-01-07
+## [v1.11.9] - 2025-01-07
+
+### Added
+
+- **Enhanced Configuration Wizard**: Complete installation customization with all modular features
+  - Installation type selection: Fresh, Update to Latest, Update to Specific Version, Development, Rebuild, Rollback
+  - Version selection for specific versions
+  - Backup options with create/skip choices
+  - Optimization levels: High Performance, Balanced, Resource Efficient, Development Mode
+  - Recovery point selection for rollbacks from existing backups
+- **Improved User Interface**: Clean, minimal output with loading spinners and status indicators
+  - Animated download progress with spinner instead of verbose line-by-line output
+  - Clean system information display (platform, status, distribution)
+  - Background processing for less important tasks
+  - Progress indicators that turn to checkmarks when completed
+- **Smart Installation Detection**: Automatically detects current installation status
+  - Fresh installation vs Update vs Repair/Rebuild detection
+  - Current version detection and display
+  - Service status checking (running/stopped)
+  - Contextual installation options based on current state
+
+### Changed
+
+- **Module Loading**: Enhanced with visual feedback and spinner animation
+- **Platform Detection**: Now displays clean system information instead of verbose logging
+- **User Experience**: Dramatically reduced verbose output while maintaining functionality
+- **Configuration Options**: All modular installer capabilities now accessible through wizard
+
+### Technical Details
+
+- Configuration wizard provides full access to:
+  - Version control module (rollback, specific versions, development branch)
+  - Backup management module (create backups, recovery points)
+  - Optimization module (performance levels, resource management)
+  - Installation reporting module (status detection, smart options)
+- Maintains backward compatibility with quick installation for users who prefer defaults
+- Enhanced UI module provides consistent visual feedback across all operations
+
+## [v1.11.8] - 2025-06-05
 
 ### Fixed
 
@@ -29,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Builds applications successfully
   - Only failed at database migration due to password mismatch (now fixed)
 
-## [v1.11.7] - 2025-01-07
+## [v1.11.7] - 2025-06-05
 
 ### Fixed
 
@@ -47,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All modules now source common definitions to prevent variable scoping issues
 - Removed readonly declarations that caused cross-module conflicts
 
-## [v1.11.6] - 2025-01-07
+## [v1.11.6] - 2025-06-05
 
 ### Fixed
 

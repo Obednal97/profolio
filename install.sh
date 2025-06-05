@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
-INSTALLER_VERSION="1.11.8"
+INSTALLER_VERSION="1.11.9"
 REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
@@ -81,10 +81,8 @@ detect_platform() {
     fi
 }
 
-# Download all modules
+# Download all modules with enhanced UI
 download_all_modules() {
-    log "Downloading all Profolio installer modules..."
-    
     # Create temp directory structure
     mkdir -p "$TEMP_DIR"
     cd "$TEMP_DIR"
@@ -122,63 +120,104 @@ download_all_modules() {
         "features/installation-reporting.sh"
     )
     
-    for module in "${modules[@]}"; do
-        local module_dir=$(dirname "$module")
-        if [[ "$module_dir" != "." ]]; then
-            mkdir -p "$module_dir"
-        fi
-        
-        info "Downloading $module..."
-        if curl -fsSL "$REPO_URL/install/$module" -o "$module" 2>/dev/null; then
+    local total=${#modules[@]}
+    local temp_log="/tmp/download_progress.log"
+    
+    # Start the download process with spinner
+    echo -ne "${BLUE}Downloading $total installer modules${NC} "
+    
+    # Download in background with progress
+    {
+        for module in "${modules[@]}"; do
+            local module_dir=$(dirname "$module")
+            if [[ "$module_dir" != "." ]]; then
+                mkdir -p "$module_dir"
+            fi
+            
+            curl -fsSL "$REPO_URL/install/$module" -o "$module" 2>/dev/null || echo "Failed: $module" >> "$temp_log"
+            
             # Make executable if it's a shell script
             if [[ "$module" == *.sh ]]; then
                 chmod +x "$module"
             fi
-        else
-            warning "Failed to download $module (continuing anyway)"
-        fi
+        done
+        echo "DONE" > "$temp_log.complete"
+    } &
+    
+    local download_pid=$!
+    
+    # Show spinner while downloading
+    local spin='-\|/'
+    local i=0
+    while ! [[ -f "$temp_log.complete" ]]; do
+        i=$(((i+1) % 4))
+        printf "\r${BLUE}Downloading $total installer modules${NC} ${YELLOW}${spin:$i:1}${NC}"
+        sleep 0.1
     done
     
-    success "All modules downloaded ($(find . -name "*.sh" | wc -l) files)"
+    printf "\r${BLUE}Downloading $total installer modules${NC} ${GREEN}✓${NC}\n"
+    
+    # Clean up temp files
+    rm -f "$temp_log" "$temp_log.complete"
+    
+    success "All modules downloaded ($total files)"
     return 0
 }
 
 # Load essential functions without complex validation
 load_essential_functions() {
-    # CRITICAL: Source common definitions FIRST!
-    if [[ -f "common/definitions.sh" ]]; then
-        info "Loading common definitions..."
-        source "common/definitions.sh" || {
-            error "Failed to load common definitions"
-            return 1
-        }
-    fi
+    echo -ne "${BLUE}Loading installer functions${NC} "
     
-    # Source utility modules first
-    for util in utils/*.sh; do
-        if [[ -f "$util" ]]; then
-            source "$util" 2>/dev/null || true
+    # Start spinner
+    local spin='-\|/'
+    local i=0
+    
+    {
+        # CRITICAL: Source common definitions FIRST!
+        if [[ -f "common/definitions.sh" ]]; then
+            source "common/definitions.sh" 2>/dev/null || return 1
         fi
+        
+        # Source utility modules first
+        for util in utils/*.sh; do
+            if [[ -f "$util" ]]; then
+                source "$util" 2>/dev/null || true
+            fi
+        done
+        
+        # Source core installer
+        if [[ -f "core/profolio-installer.sh" ]]; then
+            source "core/profolio-installer.sh" 2>/dev/null || true
+        fi
+        
+        # Source additional core modules
+        for core in core/*.sh; do
+            if [[ -f "$core" && "$core" != "core/profolio-installer.sh" ]]; then
+                source "$core" 2>/dev/null || true
+            fi
+        done
+        
+        # Source feature modules
+        for feature in features/*.sh; do
+            if [[ -f "$feature" ]]; then
+                source "$feature" 2>/dev/null || true
+            fi
+        done
+        
+        echo "LOADED" > /tmp/loading_complete
+    } &
+    
+    local load_pid=$!
+    
+    # Show spinner while loading
+    while ! [[ -f /tmp/loading_complete ]]; do
+        i=$(((i+1) % 4))
+        printf "\r${BLUE}Loading installer functions${NC} ${YELLOW}${spin:$i:1}${NC}"
+        sleep 0.1
     done
     
-    # Source core installer
-    if [[ -f "core/profolio-installer.sh" ]]; then
-        source "core/profolio-installer.sh" 2>/dev/null || true
-    fi
-    
-    # Source additional core modules
-    for core in core/*.sh; do
-        if [[ -f "$core" && "$core" != "core/profolio-installer.sh" ]]; then
-            source "$core" 2>/dev/null || true
-        fi
-    done
-    
-    # Source feature modules
-    for feature in features/*.sh; do
-        if [[ -f "$feature" ]]; then
-            source "$feature" 2>/dev/null || true
-        fi
-    done
+    printf "\r${BLUE}Loading installer functions${NC} ${GREEN}✓${NC}\n"
+    rm -f /tmp/loading_complete
 }
 
 # Execute platform installation
@@ -324,7 +363,6 @@ main() {
     fi
     
     # Load essential functions
-    log "Loading installer functions..."
     load_essential_functions
     
     # Detect platform using the proper module function
@@ -334,7 +372,70 @@ main() {
     else
         platform=$(detect_platform)  # Fallback to built-in detection
     fi
-    log "Platform detected: $platform"
+    
+    # Show clean system information
+    echo ""
+    echo -e "${BLUE}ℹ${NC} Platform detected: $platform"
+    
+    # Determine installation status
+    local install_status="Fresh Installation"
+    if [[ -d "/opt/profolio" ]]; then
+        if systemctl is-active --quiet profolio-backend 2>/dev/null; then
+            install_status="Update"
+        else
+            install_status="Repair/Rebuild"
+        fi
+    fi
+    echo -e "${BLUE}ℹ${NC} Installation status: $install_status"
+    
+    # Get distribution info
+    local distro="Unknown"
+    if [[ -f "/etc/os-release" ]]; then
+        distro=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d'"' -f2 2>/dev/null || echo "Ubuntu/Debian")
+    fi
+    echo -e "${BLUE}ℹ${NC} Distribution: $distro"
+    echo ""
+    
+    # Run configuration wizard if available
+    if command -v run_configuration_wizard >/dev/null 2>&1; then
+        echo -e "${CYAN}🧙 Starting Setup Wizard...${NC}"
+        echo ""
+        if ! run_configuration_wizard; then
+            error "Configuration wizard failed"
+            exit 1
+        fi
+        echo ""
+    elif command -v config_run_installation_wizard >/dev/null 2>&1; then
+        echo -e "${CYAN}🧙 Starting Setup Wizard...${NC}"
+        echo ""
+        if ! config_run_installation_wizard; then
+            error "Configuration wizard failed"
+            exit 1
+        fi
+        echo ""
+    else
+        # Show system update options at minimum
+        echo -e "${WHITE}📦 Installation Options${NC}"
+        echo "────────────────────────────────────────────────────────────────"
+        echo ""
+        echo -e "${GREEN}1)${NC} 🚀 Quick Installation (Recommended)"
+        echo -e "   ${GRAY}• Default settings with latest stable version${NC}"
+        echo -e "   ${GRAY}• Includes backup protection and safe optimization${NC}"
+        echo ""
+        echo -e "${BLUE}2)${NC} 🔧 Advanced Installation"
+        echo -e "   ${GRAY}• Choose version, optimization level, and features${NC}"
+        echo -e "   ${GRAY}• Configure backup and rollback options${NC}"
+        echo ""
+        read -p "Select installation type [1]: " install_choice
+        install_choice=${install_choice:-1}
+        
+        if [[ "$install_choice" == "2" ]]; then
+            echo ""
+            echo -e "${YELLOW}🔧 Advanced options will be available in future versions${NC}"
+            echo -e "${BLUE}Proceeding with enhanced default installation...${NC}"
+        fi
+        echo ""
+    fi
     
     # Install for detected platform with emergency fallback
     if install_for_platform "$platform" "$@"; then

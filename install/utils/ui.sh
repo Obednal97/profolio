@@ -1,9 +1,299 @@
 #!/bin/bash
 
-# 🎨 UI Utilities Module
-# ======================
-# Provides progress indicators, spinners, and user interface helpers
-# Used by all installer components for consistent UX
+# =============================================================================
+# PROFOLIO INSTALLER - ENHANCED UI MODULE
+# =============================================================================
+# Provides beautiful UI components including loading spinners, progress bars,
+# clean output formatting, and animated status indicators
+# =============================================================================
+
+# Source common definitions
+if [[ -f "${TEMP_DIR:-/tmp}/common/definitions.sh" ]]; then
+    source "${TEMP_DIR:-/tmp}/common/definitions.sh"
+fi
+
+# UI State variables
+UI_SPINNER_PID=""
+UI_CURRENT_STEP=0
+UI_TOTAL_STEPS=0
+
+# Loading spinner characters
+SPINNER_CHARS="⣾⣽⣻⢿⡿⣟⣯⣷"
+
+# Progress indicators
+PROGRESS_EMPTY="░"
+PROGRESS_FILLED="█"
+PROGRESS_WIDTH=50
+
+# Enhanced logging with spinner support
+ui_start_spinner() {
+    local message="$1"
+    local temp_file="/tmp/ui_spinner_$$"
+    
+    # Stop any existing spinner
+    ui_stop_spinner
+    
+    echo -ne "${BLUE}${message}${NC} "
+    
+    # Start spinner in background
+    {
+        local i=0
+        while true; do
+            printf "\r${BLUE}${message}${NC} ${YELLOW}%s${NC}" "${SPINNER_CHARS:$i:1}"
+            ((i = (i + 1) % ${#SPINNER_CHARS}))
+            sleep 0.1
+        done
+    } &
+    
+    UI_SPINNER_PID=$!
+    echo $UI_SPINNER_PID > "$temp_file"
+}
+
+ui_stop_spinner() {
+    local status="${1:-success}"
+    local temp_file="/tmp/ui_spinner_$$"
+    
+    if [[ -f "$temp_file" ]]; then
+        local pid=$(cat "$temp_file")
+        kill "$pid" 2>/dev/null
+        rm -f "$temp_file"
+    fi
+    
+    if [[ -n "$UI_SPINNER_PID" ]]; then
+        kill "$UI_SPINNER_PID" 2>/dev/null
+        UI_SPINNER_PID=""
+    fi
+    
+    # Clear spinner line and show result
+    printf "\r\033[K"
+    
+    case "$status" in
+        "success")
+            echo -e "${GREEN}✓${NC}"
+            ;;
+        "warning")
+            echo -e "${YELLOW}⚠${NC}"
+            ;;
+        "error")
+            echo -e "${RED}✗${NC}"
+            ;;
+        *)
+            echo -e "${GREEN}✓${NC}"
+            ;;
+    esac
+}
+
+# Enhanced progress tracking
+ui_set_progress_steps() {
+    UI_TOTAL_STEPS="$1"
+    UI_CURRENT_STEP=0
+}
+
+ui_progress_step() {
+    local message="$1"
+    local show_spinner="${2:-true}"
+    
+    ((UI_CURRENT_STEP++))
+    
+    if [[ "$show_spinner" == "true" ]]; then
+        ui_start_spinner "[$UI_CURRENT_STEP/$UI_TOTAL_STEPS] $message"
+    else
+        echo -e "${BLUE}[$UI_CURRENT_STEP/$UI_TOTAL_STEPS] $message${NC}"
+    fi
+}
+
+ui_progress_complete() {
+    local status="${1:-success}"
+    local message="$2"
+    
+    ui_stop_spinner "$status"
+    
+    if [[ -n "$message" ]]; then
+        case "$status" in
+            "success")
+                echo -e "${GREEN}$message${NC}"
+                ;;
+            "warning")
+                echo -e "${YELLOW}$message${NC}"
+                ;;
+            "error")
+                echo -e "${RED}$message${NC}"
+                ;;
+        esac
+    fi
+}
+
+# Progress bar
+ui_show_progress_bar() {
+    local current="$1"
+    local total="$2"
+    local message="$3"
+    
+    local percentage=$((current * 100 / total))
+    local filled_width=$((current * PROGRESS_WIDTH / total))
+    local empty_width=$((PROGRESS_WIDTH - filled_width))
+    
+    local filled=$(printf "%.0s$PROGRESS_FILLED" $(seq 1 $filled_width))
+    local empty=$(printf "%.0s$PROGRESS_EMPTY" $(seq 1 $empty_width))
+    
+    printf "\r${BLUE}%s${NC} [${GREEN}%s${GRAY}%s${NC}] ${WHITE}%d%%${NC}" \
+           "$message" "$filled" "$empty" "$percentage"
+}
+
+# Clean section headers
+ui_section_header() {
+    local title="$1"
+    local width=60
+    
+    echo ""
+    echo -e "${WHITE}$(printf "%.${width}s" "$(printf "%*s" $(((${#title} + $width) / 2)) "$title")" | tr ' ' '─')${NC}"
+    echo -e "${CYAN}$title${NC}"
+    echo -e "${WHITE}$(printf "%.${width}s" "" | tr ' ' '─')${NC}"
+    echo ""
+}
+
+# Status indicators
+ui_status_line() {
+    local status="$1"
+    local message="$2"
+    local detail="$3"
+    
+    case "$status" in
+        "success"|"✓")
+            echo -e "${GREEN}✓${NC} $message${GRAY}${detail:+ ($detail)}${NC}"
+            ;;
+        "warning"|"⚠")
+            echo -e "${YELLOW}⚠${NC} $message${GRAY}${detail:+ ($detail)}${NC}"
+            ;;
+        "error"|"✗")
+            echo -e "${RED}✗${NC} $message${GRAY}${detail:+ ($detail)}${NC}"
+            ;;
+        "info"|"ℹ")
+            echo -e "${BLUE}ℹ${NC} $message${GRAY}${detail:+ ($detail)}${NC}"
+            ;;
+        "pending"|"○")
+            echo -e "${GRAY}○${NC} $message${GRAY}${detail:+ ($detail)}${NC}"
+            ;;
+        *)
+            echo -e "  $message${GRAY}${detail:+ ($detail)}${NC}"
+            ;;
+    esac
+}
+
+# Compact module download progress
+ui_download_modules() {
+    local modules=("$@")
+    local total=${#modules[@]}
+    
+    ui_start_spinner "Downloading $total installer modules"
+    
+    # Simulate downloading (replace with actual download logic)
+    for i in "${!modules[@]}"; do
+        local module="${modules[$i]}"
+        sleep 0.1  # Simulate download time
+        
+        # Update progress
+        ui_show_progress_bar $((i + 1)) "$total" "Downloading modules"
+    done
+    
+    ui_stop_spinner "success"
+    echo ""
+    ui_status_line "success" "All modules downloaded" "$total files"
+}
+
+# System information display
+ui_show_system_info() {
+    local platform="$1"
+    local distro="$2"
+    local status="$3"
+    
+    echo ""
+    ui_status_line "info" "Platform detected" "$platform"
+    ui_status_line "info" "Distribution" "$distro"
+    ui_status_line "info" "Installation status" "$status"
+    echo ""
+}
+
+# Installation summary
+ui_installation_summary() {
+    local server_ip="$1"
+    
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                     🎉 INSTALLATION COMPLETE!                 ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo -e "${WHITE}🌐 Your Profolio instance is ready!${NC}"
+    echo ""
+    echo -e "${WHITE}📍 Access URLs:${NC}"
+    echo -e "   • ${GREEN}Frontend:${NC} http://${server_ip}:3000"
+    echo -e "   • ${BLUE}Backend:${NC}  http://${server_ip}:3001"
+    echo ""
+    echo -e "${WHITE}🔧 Service Management:${NC}"
+    echo -e "   • ${CYAN}Status:${NC}  systemctl status profolio-backend profolio-frontend"
+    echo -e "   • ${CYAN}Logs:${NC}    journalctl -u profolio-backend -u profolio-frontend -f"
+    echo -e "   • ${CYAN}Restart:${NC} systemctl restart profolio-backend profolio-frontend"
+    echo ""
+}
+
+# Background task management
+ui_run_background_task() {
+    local task_command="$1"
+    local task_name="$2"
+    local temp_file="/tmp/ui_bg_task_$$"
+    
+    ui_start_spinner "$task_name"
+    
+    # Run command in background and capture output
+    {
+        eval "$task_command" >/dev/null 2>&1
+        echo $? > "$temp_file"
+    } &
+    
+    local task_pid=$!
+    
+    # Wait for completion
+    wait $task_pid
+    local exit_code=$(cat "$temp_file" 2>/dev/null || echo "1")
+    rm -f "$temp_file"
+    
+    if [[ "$exit_code" == "0" ]]; then
+        ui_stop_spinner "success"
+        return 0
+    else
+        ui_stop_spinner "error"
+        return 1
+    fi
+}
+
+# Compact package installation display
+ui_install_packages() {
+    local package_type="$1"
+    local package_count="$2"
+    
+    if [[ "$package_count" -gt 0 ]]; then
+        ui_start_spinner "Installing $package_type ($package_count packages)"
+        
+        # This would be called from the actual package installation
+        # The calling function should call ui_stop_spinner when done
+    else
+        ui_status_line "info" "No $package_type packages to install"
+    fi
+}
+
+# Clean up UI state
+ui_cleanup() {
+    ui_stop_spinner 2>/dev/null
+    # Clear any remaining temp files
+    rm -f /tmp/ui_spinner_$$ /tmp/ui_bg_task_$$
+}
+
+# Set up cleanup trap
+trap ui_cleanup EXIT
+
+# Module metadata
+UI_MODULE_VERSION="2.0.0"
+UI_MODULE_DEPENDENCIES="common/definitions.sh"
 
 # ==============================================================================
 # DEPENDENCIES
@@ -279,31 +569,6 @@ ui_menu() {
 # PROGRESS BARS & VISUAL FEEDBACK
 # ==============================================================================
 
-# Simple progress bar
-ui_progress_bar() {
-    local current="$1"
-    local total="$2"
-    local width="${3:-50}"
-    local message="${4:-}"
-    
-    local percentage=$((current * 100 / total))
-    local filled=$((current * width / total))
-    local empty=$((width - filled))
-    
-    printf "\r${BLUE}["
-    printf "%*s" $filled | tr ' ' '█'
-    printf "%*s" $empty | tr ' ' '░'
-    printf "] %d%% ${NC}" $percentage
-    
-    if [[ -n "$message" ]]; then
-        printf " %s" "$message"
-    fi
-    
-    if [[ $current -eq $total ]]; then
-        printf "\n"
-    fi
-}
-
 # Loading animation
 ui_loading() {
     local message="$1"
@@ -359,10 +624,6 @@ show_banner() { ui_show_banner "$@"; }
 # ==============================================================================
 # MODULE INFORMATION
 # ==============================================================================
-
-# Module version and info
-UI_MODULE_VERSION="1.0.0"
-UI_MODULE_LOADED=true
 
 # Display module info
 ui_module_info() {

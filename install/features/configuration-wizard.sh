@@ -64,29 +64,318 @@ config_get_info() {
     echo "Dependencies: ${CONFIG_DEPENDENCIES[*]}"
 }
 
-# Main installation configuration wizard
-config_run_installation_wizard() {
+# Enhanced installation configuration wizard
+run_configuration_wizard() {
     if ! config_check_dependencies; then
         return 1
     fi
     
-    echo -e "${WHITE}🔧 PROFOLIO CONFIGURATION WIZARD${NC}"
-    echo -e "${YELLOW}Configure your Profolio installation${NC}"
-    echo ""
+    # Check current installation status
+    local current_status="fresh"
+    local current_version=""
     
-    # Installation mode selection
-    echo -e "${CYAN}Installation Mode:${NC}"
-    echo "  1) ${GREEN}Quick Install${NC} (recommended defaults)"
-    echo "  2) ${BLUE}Advanced Setup${NC} (custom configuration)"
-    echo ""
-    read -p "Select installation mode [1]: " install_mode
-    install_mode=${install_mode:-1}
-    
-    if [ "$install_mode" = "1" ]; then
-        config_run_quick_install
-    else
-        config_run_advanced_setup
+    if [[ -d "/opt/profolio" ]]; then
+        if systemctl is-active --quiet profolio-backend 2>/dev/null; then
+            current_status="running"
+        else
+            current_status="stopped"
+        fi
+        
+        if [[ -f "/opt/profolio/package.json" ]]; then
+            current_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+        fi
     fi
+    
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                 🧙 PROFOLIO SETUP WIZARD                    ║"
+    echo "║              Self-Hosted Portfolio Management                ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    if [[ "$current_status" != "fresh" ]]; then
+        echo -e "${BLUE}Current Installation:${NC} $current_version ($current_status)"
+        echo ""
+    fi
+    
+    # Installation type selection
+    echo -e "${WHITE}📦 Installation Type Selection${NC}"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    
+    if [[ "$current_status" == "fresh" ]]; then
+        echo -e "${GREEN}1)${NC} 🆕 Fresh Installation (Recommended)"
+        echo -e "   ${GRAY}• Clean installation of latest Profolio${NC}"
+        echo ""
+        echo -e "${BLUE}2)${NC} 📋 Install Specific Version"
+        echo -e "   ${GRAY}• Choose exact version to install${NC}"
+        echo ""
+        echo -e "${CYAN}3)${NC} 🚀 Install Development Version"
+        echo -e "   ${GRAY}• Latest features from main branch${NC}"
+        echo ""
+    else
+        echo -e "${GREEN}1)${NC} 🔄 Update to Latest Stable"
+        echo -e "   ${GRAY}• Update to newest stable release${NC}"
+        echo ""
+        echo -e "${BLUE}2)${NC} 📋 Update to Specific Version"
+        echo -e "   ${GRAY}• Choose exact version to install${NC}"
+        echo ""
+        echo -e "${CYAN}3)${NC} 🚀 Update to Development Version"
+        echo -e "   ${GRAY}• Latest features from main branch${NC}"
+        echo ""
+        echo -e "${YELLOW}4)${NC} 🔧 Rebuild Current Installation"
+        echo -e "   ${GRAY}• Rebuild services and dependencies${NC}"
+        echo ""
+        echo -e "${RED}5)${NC} ↩️ Rollback to Previous Version"
+        echo -e "   ${GRAY}• Restore from backup (if available)${NC}"
+        echo ""
+    fi
+    
+    read -p "Select installation type [1]: " install_choice
+    install_choice=${install_choice:-1}
+    
+    # Set installation type based on choice
+    case $install_choice in
+        1) 
+            if [[ "$current_status" == "fresh" ]]; then
+                WIZARD_INSTALL_TYPE="fresh"
+            else
+                WIZARD_INSTALL_TYPE="update-stable"
+            fi
+            ;;
+        2) 
+            WIZARD_INSTALL_TYPE="specific-version"
+            config_select_specific_version
+            ;;
+        3) 
+            WIZARD_INSTALL_TYPE="development"
+            WIZARD_VERSION="main"
+            ;;
+        4) 
+            if [[ "$current_status" != "fresh" ]]; then
+                WIZARD_INSTALL_TYPE="rebuild"
+            else
+                WIZARD_INSTALL_TYPE="fresh"
+            fi
+            ;;
+        5) 
+            if [[ "$current_status" != "fresh" ]]; then
+                WIZARD_INSTALL_TYPE="rollback"
+                config_select_rollback_point
+            else
+                WIZARD_INSTALL_TYPE="fresh"
+            fi
+            ;;
+        *) 
+            WIZARD_INSTALL_TYPE="fresh"
+            ;;
+    esac
+    
+    # Backup options
+    if [[ "$current_status" != "fresh" && "$WIZARD_INSTALL_TYPE" != "rollback" ]]; then
+        config_select_backup_options
+    fi
+    
+    # Optimization options
+    config_select_optimization_options
+    
+    # Show summary and confirm
+    config_show_wizard_summary
+    
+    # Save configuration
+    config_save_wizard_config
+}
+
+# Select specific version
+config_select_specific_version() {
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                    📋 VERSION SELECTION                       ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    echo "Available versions:"
+    echo -e "${GREEN}• v1.11.8${NC} (Latest Stable)"
+    echo -e "${BLUE}• v1.11.7${NC}"
+    echo -e "${BLUE}• v1.11.6${NC}"
+    echo -e "${BLUE}• v1.11.5${NC}"
+    echo -e "${GRAY}• v1.11.4${NC}"
+    echo -e "${GRAY}• v1.11.3${NC}"
+    echo -e "${GRAY}• main${NC} (Development Branch)"
+    echo ""
+    
+    read -p "Enter version (e.g., v1.11.8) [v1.11.8]: " version_input
+    WIZARD_VERSION=${version_input:-v1.11.8}
+    
+    echo -e "${GREEN}✓${NC} Selected version: $WIZARD_VERSION"
+    sleep 1
+}
+
+# Select rollback point
+config_select_rollback_point() {
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                   ↩️ ROLLBACK SELECTION                       ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    # Check for available backups
+    if [[ -d "/opt/profolio-backups" ]]; then
+        echo "Available recovery points:"
+        local backup_count=0
+        for backup in /opt/profolio-backups/backup_*; do
+            if [[ -f "$backup" ]]; then
+                backup_count=$((backup_count + 1))
+                local backup_date=$(basename "$backup" | sed 's/backup_//' | sed 's/.tar.gz//')
+                echo -e "${GREEN}${backup_count})${NC} Backup from ${backup_date}"
+            fi
+        done
+        
+        if [[ $backup_count -eq 0 ]]; then
+            echo -e "${RED}No backups found.${NC}"
+            echo "Rollback not available. Switching to rebuild mode."
+            WIZARD_INSTALL_TYPE="rebuild"
+            sleep 2
+            return
+        fi
+        
+        read -p "Select recovery point [1]: " recovery_choice
+        recovery_choice=${recovery_choice:-1}
+        
+        # Set recovery point
+        WIZARD_RECOVERY_POINT=$(ls /opt/profolio-backups/backup_* | sed -n "${recovery_choice}p")
+    else
+        echo -e "${RED}No backup directory found.${NC}"
+        echo "Rollback not available. Switching to rebuild mode."
+        WIZARD_INSTALL_TYPE="rebuild"
+        sleep 2
+    fi
+}
+
+# Select backup options
+config_select_backup_options() {
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                    💾 BACKUP OPTIONS                          ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    echo -e "${GREEN}1)${NC} 🔒 Create backup before installation (Recommended)"
+    echo -e "   ${GRAY}• Safely restore if something goes wrong${NC}"
+    echo -e "   ${GRAY}• Takes 2-5 minutes depending on data size${NC}"
+    echo ""
+    echo -e "${YELLOW}2)${NC} ⚡ Skip backup (Faster installation)"
+    echo -e "   ${GRAY}• Installation completes faster${NC}"
+    echo -e "   ${GRAY}• No rollback option if issues occur${NC}"
+    echo ""
+    
+    read -p "Backup option [1]: " backup_choice
+    backup_choice=${backup_choice:-1}
+    
+    case $backup_choice in
+        1) WIZARD_BACKUP_ENABLED="true" ;;
+        2) WIZARD_BACKUP_ENABLED="false" ;;
+        *) WIZARD_BACKUP_ENABLED="true" ;;
+    esac
+    
+    echo -e "${GREEN}✓${NC} Backup: $WIZARD_BACKUP_ENABLED"
+    sleep 1
+}
+
+# Select optimization options
+config_select_optimization_options() {
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                  ⚡ OPTIMIZATION OPTIONS                      ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    echo -e "${GREEN}1)${NC} 🚀 High Performance"
+    echo -e "   ${GRAY}• Optimized for speed and responsiveness${NC}"
+    echo -e "   ${GRAY}• Uses more system resources${NC}"
+    echo ""
+    echo -e "${BLUE}2)${NC} ⚖️ Balanced (Recommended)"
+    echo -e "   ${GRAY}• Good performance with reasonable resource usage${NC}"
+    echo -e "   ${GRAY}• Suitable for most installations${NC}"
+    echo ""
+    echo -e "${YELLOW}3)${NC} 💚 Resource Efficient"
+    echo -e "   ${GRAY}• Minimal resource usage${NC}"
+    echo -e "   ${GRAY}• Suitable for low-spec systems${NC}"
+    echo ""
+    echo -e "${GRAY}4)${NC} 🏗️ Development Mode"
+    echo -e "   ${GRAY}• Includes development tools and debug features${NC}"
+    echo -e "   ${GRAY}• Not recommended for production${NC}"
+    echo ""
+    
+    read -p "Optimization level [2]: " opt_choice
+    opt_choice=${opt_choice:-2}
+    
+    case $opt_choice in
+        1) WIZARD_OPTIMIZATION="performance" ;;
+        2) WIZARD_OPTIMIZATION="balanced" ;;
+        3) WIZARD_OPTIMIZATION="efficient" ;;
+        4) WIZARD_OPTIMIZATION="development" ;;
+        *) WIZARD_OPTIMIZATION="balanced" ;;
+    esac
+    
+    echo -e "${GREEN}✓${NC} Optimization: $WIZARD_OPTIMIZATION"
+    sleep 1
+}
+
+# Show wizard summary
+config_show_wizard_summary() {
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                  📋 INSTALLATION SUMMARY                      ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    echo -e "${BLUE}Installation Type:${NC} $WIZARD_INSTALL_TYPE"
+    
+    if [[ -n "$WIZARD_VERSION" ]]; then
+        echo -e "${BLUE}Version:${NC} $WIZARD_VERSION"
+    fi
+    
+    if [[ -n "$WIZARD_RECOVERY_POINT" ]]; then
+        echo -e "${BLUE}Recovery Point:${NC} $(basename "$WIZARD_RECOVERY_POINT")"
+    fi
+    
+    if [[ -n "$WIZARD_BACKUP_ENABLED" ]]; then
+        echo -e "${BLUE}Backup:${NC} $WIZARD_BACKUP_ENABLED"
+    fi
+    
+    echo -e "${BLUE}Optimization:${NC} $WIZARD_OPTIMIZATION"
+    echo -e "${BLUE}Platform:${NC} $(detect_platform)"
+    echo ""
+    
+    read -p "Proceed with installation? (y/n) [y]: " confirm
+    confirm=${confirm:-y}
+    
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo -e "${RED}Installation cancelled by user${NC}"
+        exit 1
+    fi
+}
+
+# Save wizard configuration
+config_save_wizard_config() {
+    local config_file="/tmp/profolio-wizard-config"
+    
+    cat > "$config_file" << EOF
+WIZARD_INSTALL_TYPE="$WIZARD_INSTALL_TYPE"
+WIZARD_VERSION="$WIZARD_VERSION"
+WIZARD_BACKUP_ENABLED="$WIZARD_BACKUP_ENABLED"
+WIZARD_OPTIMIZATION="$WIZARD_OPTIMIZATION"
+WIZARD_RECOVERY_POINT="$WIZARD_RECOVERY_POINT"
+EOF
+    
+    echo -e "${GREEN}✓${NC} Configuration saved"
+    sleep 1
+}
+
+# Main installation configuration wizard (legacy compatibility)
+config_run_installation_wizard() {
+    run_configuration_wizard
 }
 
 # Quick installation with defaults
