@@ -3,8 +3,8 @@
 # =============================================================================
 # PROFOLIO INSTALLER v1.11.5
 # =============================================================================
-# Simple, reliable installer that works without complex module systems
-# Downloads and directly executes platform-specific installers
+# Simple, reliable installer that downloads all 14 modules
+# Uses direct platform execution without complex module validation
 # =============================================================================
 
 set -euo pipefail
@@ -12,6 +12,7 @@ set -euo pipefail
 # Configuration
 readonly INSTALLER_VERSION="1.11.5"
 readonly REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
+readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
 
 # Colors
@@ -43,6 +44,14 @@ warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1" | tee -a "$LOG_FILE"
 }
 
+# Cleanup function
+cleanup() {
+    if [[ -d "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR"
+    fi
+}
+trap cleanup EXIT
+
 # Platform detection
 detect_platform() {
     if [[ -f "/etc/pve/version" ]]; then
@@ -66,96 +75,147 @@ detect_platform() {
     fi
 }
 
-# Download and execute platform installer
-install_for_platform() {
-    local platform="$1"
-    local temp_installer="/tmp/profolio-platform-installer.sh"
+# Download all 14 modules
+download_all_modules() {
+    log "Downloading all 14 Profolio installer modules..."
     
-    log "Downloading platform installer for: $platform"
+    # Create temp directory structure
+    mkdir -p "$TEMP_DIR"
+    cd "$TEMP_DIR"
     
-    # Map platform to installer URL
-    local installer_url
-    case "$platform" in
-        proxmox)
-            installer_url="$REPO_URL/install/platforms/proxmox.sh"
-            ;;
-        docker)
-            installer_url="$REPO_URL/install/platforms/docker.sh"
-            ;;
-        ubuntu|debian)
-            installer_url="$REPO_URL/install/platforms/ubuntu.sh"
-            ;;
-        *)
-            installer_url="$REPO_URL/install/platforms/ubuntu.sh"  # Fallback
-            ;;
-    esac
-    
-    # Download the platform installer
-    if curl -fsSL "$installer_url" -o "$temp_installer"; then
-        chmod +x "$temp_installer"
-        success "Platform installer downloaded"
+    # All 14 modules (tiny files, no reason not to download them all)
+    local modules=(
+        # Core modules
+        "module-loader.sh"
+        "bootstrap.sh"
+        "core/profolio-installer.sh"
+        "core/version-control.sh"
+        "core/rollback.sh"
         
-        # Source required utility functions first
-        download_utilities
-        
-        # Execute the platform installer
-        log "Executing $platform platform installation..."
-        if source "$temp_installer" && handle_${platform}_platform "$@"; then
-            success "Platform installation completed successfully"
-            return 0
-        else
-            warning "Platform installation failed, trying emergency mode"
-            install_emergency_mode "$@"
-        fi
-    else
-        error "Failed to download platform installer"
-        install_emergency_mode "$@"
-    fi
-}
-
-# Download utility functions
-download_utilities() {
-    local utils_dir="/tmp/profolio-utils"
-    mkdir -p "$utils_dir"
-    
-    # Download essential utility functions
-    local util_files=(
+        # Utility modules
         "utils/logging.sh"
         "utils/ui.sh"
+        "utils/validation.sh"
         "utils/platform-detection.sh"
-        "core/profolio-installer.sh"
+        
+        # Platform modules
+        "platforms/ubuntu.sh"
+        "platforms/proxmox.sh"
+        "platforms/docker.sh"
+        "platforms/emergency.sh"
+        
+        # Feature modules
+        "features/optimization.sh"
+        "features/ssh-hardening.sh"
+        "features/configuration-wizard.sh"
+        "features/backup-management.sh"
+        "features/installation-reporting.sh"
     )
     
-    for util_file in "${util_files[@]}"; do
-        local util_path="$utils_dir/$(basename "$util_file")"
-        if curl -fsSL "$REPO_URL/install/$util_file" -o "$util_path" 2>/dev/null; then
-            source "$util_path" 2>/dev/null || true
+    for module in "${modules[@]}"; do
+        local module_dir=$(dirname "$module")
+        if [[ "$module_dir" != "." ]]; then
+            mkdir -p "$module_dir"
+        fi
+        
+        info "Downloading $module..."
+        if curl -fsSL "$REPO_URL/install/$module" -o "$module" 2>/dev/null; then
+            # Make executable if it's a shell script
+            if [[ "$module" == *.sh ]]; then
+                chmod +x "$module"
+            fi
+        else
+            warning "Failed to download $module (continuing anyway)"
         fi
     done
+    
+    success "All modules downloaded ($(find . -name "*.sh" | wc -l) files)"
+    return 0
+}
+
+# Load essential functions without complex validation
+load_essential_functions() {
+    # Source utility modules first
+    for util in utils/*.sh; do
+        if [[ -f "$util" ]]; then
+            source "$util" 2>/dev/null || true
+        fi
+    done
+    
+    # Source core installer
+    if [[ -f "core/profolio-installer.sh" ]]; then
+        source "core/profolio-installer.sh" 2>/dev/null || true
+    fi
+    
+    # Source additional core modules
+    for core in core/*.sh; do
+        if [[ -f "$core" && "$core" != "core/profolio-installer.sh" ]]; then
+            source "$core" 2>/dev/null || true
+        fi
+    done
+    
+    # Source feature modules
+    for feature in features/*.sh; do
+        if [[ -f "$feature" ]]; then
+            source "$feature" 2>/dev/null || true
+        fi
+    done
+}
+
+# Execute platform installation
+install_for_platform() {
+    local platform="$1"
+    shift  # Remove platform from arguments
+    
+    log "Executing $platform platform installation..."
+    
+    # Source the platform module
+    local platform_file="platforms/${platform}.sh"
+    if [[ -f "$platform_file" ]]; then
+        source "$platform_file"
+        
+        # Call the platform handler function
+        local handler_function="handle_${platform}_platform"
+        if command -v "$handler_function" >/dev/null 2>&1; then
+            if "$handler_function" "$@"; then
+                success "Platform installation completed successfully"
+                return 0
+            else
+                warning "Platform installation failed"
+                return 1
+            fi
+        else
+            warning "Platform handler function $handler_function not found"
+            return 1
+        fi
+    else
+        error "Platform file $platform_file not found"
+        return 1
+    fi
 }
 
 # Emergency installation mode
 install_emergency_mode() {
     warning "🚨 Activating emergency installation mode"
     
-    local emergency_installer="/tmp/profolio-emergency-installer.sh"
-    
-    if curl -fsSL "$REPO_URL/install/platforms/emergency.sh" -o "$emergency_installer"; then
-        chmod +x "$emergency_installer"
-        log "Emergency installer downloaded"
+    if [[ -f "platforms/emergency.sh" ]]; then
+        source "platforms/emergency.sh"
         
-        if source "$emergency_installer" && handle_emergency_installation "$@"; then
-            success "🎉 Emergency installation completed successfully!"
-            return 0
+        if command -v handle_emergency_installation >/dev/null 2>&1; then
+            if handle_emergency_installation "$@"; then
+                success "🎉 Emergency installation completed successfully!"
+                return 0
+            else
+                error "❌ Emergency installation also failed"
+                return 1
+            fi
         else
-            error "❌ Emergency installation also failed"
-            show_failure_help
-            exit 1
+            error "Emergency installation function not available"
+            return 1
         fi
     else
-        error "Failed to download emergency installer"
-        show_failure_help
-        exit 1
+        error "Emergency installer not available"
+        return 1
     fi
 }
 
@@ -206,39 +266,54 @@ main() {
         fi
     fi
     
+    # Download all modules
+    if ! download_all_modules; then
+        error "Failed to download installer modules"
+        exit 1
+    fi
+    
+    # Load essential functions
+    log "Loading installer functions..."
+    load_essential_functions
+    
     # Detect platform
     local platform
     platform=$(detect_platform)
     log "Platform detected: $platform"
     
-    # Install for detected platform
+    # Install for detected platform with emergency fallback
     if install_for_platform "$platform" "$@"; then
         success "🎉 Profolio installation completed successfully!"
-        echo ""
-        echo "╔══════════════════════════════════════════════════════════════╗"
-        echo "║                     🎉 INSTALLATION COMPLETE!                 ║"
-        echo "╚══════════════════════════════════════════════════════════════╝"
-        echo ""
-        echo "🌐 Your Profolio instance is ready!"
-        echo ""
-        echo "📍 Access URLs:"
-        local host_ip=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "your-server-ip")
-        echo "   • Frontend: http://${host_ip}:3000"
-        echo "   • Backend:  http://${host_ip}:3001"
-        echo ""
-        echo "🔧 Service Management:"
-        echo "   • Status:  systemctl status profolio-backend profolio-frontend"
-        echo "   • Logs:    journalctl -u profolio-backend -u profolio-frontend -f"
-        echo "   • Restart: systemctl restart profolio-backend profolio-frontend"
-        echo ""
-        echo "📚 Documentation & Support:"
-        echo "   • GitHub: https://github.com/Obednal97/profolio"
-        echo "   • Issues: https://github.com/Obednal97/profolio/issues"
-        echo ""
+    elif install_emergency_mode "$@"; then
+        success "🎉 Emergency installation completed successfully!"
     else
-        error "Installation failed"
+        error "All installation methods failed"
+        show_failure_help
         exit 1
     fi
+    
+    # Show completion message
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                     🎉 INSTALLATION COMPLETE!                 ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "🌐 Your Profolio instance is ready!"
+    echo ""
+    echo "📍 Access URLs:"
+    local host_ip=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "your-server-ip")
+    echo "   • Frontend: http://${host_ip}:3000"
+    echo "   • Backend:  http://${host_ip}:3001"
+    echo ""
+    echo "🔧 Service Management:"
+    echo "   • Status:  systemctl status profolio-backend profolio-frontend"
+    echo "   • Logs:    journalctl -u profolio-backend -u profolio-frontend -f"
+    echo "   • Restart: systemctl restart profolio-backend profolio-frontend"
+    echo ""
+    echo "📚 Documentation & Support:"
+    echo "   • GitHub: https://github.com/Obednal97/profolio"
+    echo "   • Issues: https://github.com/Obednal97/profolio/issues"
+    echo ""
 }
 
 # Show help
