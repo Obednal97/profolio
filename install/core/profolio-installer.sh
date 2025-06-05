@@ -175,7 +175,9 @@ BEGIN
         CREATE USER profolio WITH ENCRYPTED PASSWORD '$db_password';
         RAISE NOTICE 'User profolio created';
     ELSE
-        RAISE NOTICE 'User profolio already exists';
+        -- Update password for existing user
+        ALTER USER profolio WITH ENCRYPTED PASSWORD '$db_password';
+        RAISE NOTICE 'User profolio already exists - password updated';
     END IF;
     
     -- Create database if not exists

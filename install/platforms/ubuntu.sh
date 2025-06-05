@@ -228,10 +228,8 @@ install_essential_packages() {
         "postgresql-client"
     )
     
-    local nodejs_packages=(
-        "nodejs"
-        "npm"
-    )
+    # Note: We'll handle Node.js separately to avoid conflicts
+    # NodeSource nodejs includes npm, so we don't install npm separately
     
     # Install essential packages with better error handling
     info "Installing essential system packages..."
@@ -289,14 +287,10 @@ install_essential_packages() {
         fi
     fi
     
-    # Install Node.js with error handling
-    info "Installing Node.js..."
-    if apt-get install -y "${nodejs_packages[@]}" 2>/dev/null; then
-        success "Node.js installed successfully"
-    else
-        warn "Node.js installation failed, will install from NodeSource repository later"
-        warn "This is common and will be handled during Profolio application installation"
-    fi
+    # Skip Node.js installation from Ubuntu repos to avoid conflicts
+    # NodeSource repository will be used in the application installer
+    info "Skipping Node.js installation from Ubuntu repositories"
+    info "Node.js will be installed from NodeSource repository during application setup"
     
     # Clean up any package issues
     apt-get autoremove -y 2>/dev/null || true
