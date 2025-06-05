@@ -1,0 +1,229 @@
+# ===============================================
+# PROFOLIO - COMPREHENSIVE .DOCKERIGNORE
+# ===============================================
+# Optimizes Docker build context for faster builds
+# and prevents sensitive files from being included
+
+# ===============================================
+# CRITICAL SECURITY - ENVIRONMENT VARIABLES
+# ===============================================
+.env
+.env.*
+.env*.local
+*.env
+.env.secrets
+
+# ===============================================
+# GIT & VERSION CONTROL
+# ===============================================
+.git
+.gitignore
+.gitattributes
+.github/
+
+# ===============================================
+# IDEs & EDITORS
+# ===============================================
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+
+# ===============================================
+# OS GENERATED FILES
+# ===============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===============================================
+# DOCUMENTATION & DEVELOPMENT FILES
+# ===============================================
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+LICENSE
+*.md
+docs/
+tests/
+
+# ===============================================
+# BUILD ARTIFACTS & OUTPUT (these will be rebuilt in container)
+# ===============================================
+# Backend
+backend/dist/
+dist/
+
+# Frontend (Next.js)
+frontend/.next/
+frontend/out/
+frontend/build/
+.next/
+out/
+build/
+
+# General build artifacts
+build/Release
+*.tsbuildinfo
+
+# ===============================================
+# DEVELOPMENT DEPENDENCIES & CACHES
+# ===============================================
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+*/package-lock.json
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ===============================================
+# TESTING & COVERAGE
+# ===============================================
+coverage/
+.nyc_output
+/coverage
+**/*.test.js
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.js
+**/*.spec.ts
+**/*.spec.tsx
+
+# Playwright testing
+frontend/playwright-report/
+frontend/test-results/
+frontend/e2e/
+
+# ===============================================
+# DEVELOPMENT & RUNTIME (NOT NEEDED IN CONTAINER)
+# ===============================================
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+.node_repl_history
+
+# Logs (these will be generated in container)
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tgz
+.grunt
+bower_components
+.lock-wscript
+jspm_packages/
+.npm
+.yarn-integrity
+
+# ===============================================
+# NEXT.JS SPECIFIC DEVELOPMENT FILES
+# ===============================================
+next-env.d.ts
+
+# ===============================================
+# DEPLOYMENT & SERVICES (NOT NEEDED FOR DOCKER BUILD)
+# ===============================================
+# Vercel
+.vercel
+
+# Docker files (not needed inside container)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ===============================================
+# INSTALLATION & SCRIPTS (NOT NEEDED IN CONTAINER)
+# ===============================================
+install/
+install.sh
+install-proxmox.sh
+scripts/
+
+# ===============================================
+# SENSITIVE CONFIGURATION FILES
+# ===============================================
+# Firebase configuration
+firebase-config.json
+*/firebase-config.json
+*/config/firebase-config.json
+frontend/public/firebase-config.json
+
+# API keys and secrets
+api-keys.json
+*/api-keys.json
+*/config/api-keys.json
+frontend/src/config/api-keys.json
+
+# Google Services
+*/config/google-places-config.json
+frontend/src/config/google-places-config.json
+
+# ===============================================
+# GENERATED & TEMPORARY ASSETS (NOT NEEDED)
+# ===============================================
+# Generated logo files
+profolio-logo-*px.svg
+
+# Development temp files
+frontend/public/temp-bank-file-examples-to-be-deleted
+
+# ===============================================
+# BACKUPS & MISC
+# ===============================================
+*.backup
+*.bak
+*.old
+
+# ===============================================
+# SENSITIVE DOCUMENTATION (SECURITY)
+# ===============================================
+# Production deployment guides (contain infrastructure details)
+docs/deployment/
+
+# Security fixes documentation (contain vulnerability details)  
+docs/fixes/
+
+# ===============================================
+# DEVELOPMENT TOOLS & CONFIGS (NOT NEEDED IN PRODUCTION)
+# ===============================================
+.eslintrc*
+.prettierrc*
+.editorconfig
+tsconfig.json
+jest.config.*
+vitest.config.*
+playwright.config.*
+
+# ===============================================
+# INCLUDE ESSENTIAL BUILD FILES
+# ===============================================
+# These files are needed for Docker build and should NOT be ignored:
+# - package.json (both frontend/ and backend/)
+# - pnpm-lock.yaml (both frontend/ and backend/) 
+# - Source code directories (frontend/src/, backend/src/)
+# - Prisma schema (backend/prisma/)
+# - Public assets (frontend/public/)
+# - docker-entrypoint.sh 
