@@ -8,7 +8,7 @@
 # Fixed: Database password updates, Node.js conflicts, proper module loading
 # =============================================================================
 
-set -euo pipefail
+set -eo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
 INSTALLER_VERSION="1.11.9"
@@ -22,6 +22,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+GRAY='\033[0;90m'
+MAGENTA='\033[0;35m'
+PURPLE='\033[0;35m'
 NC='\033[0m'
 
 # Logging functions
@@ -155,7 +159,8 @@ download_all_modules() {
         sleep 0.1
     done
     
-    printf "\r${BLUE}Downloading $total installer modules${NC} ${GREEN}✓${NC}\n"
+    printf "\r\033[K"
+    echo -e "${BLUE}Downloading $total installer modules${NC} ${GREEN}✓${NC}"
     
     # Clean up temp files
     rm -f "$temp_log" "$temp_log.complete"
@@ -201,6 +206,13 @@ load_essential_functions() {
         for feature in features/*.sh; do
             if [[ -f "$feature" ]]; then
                 source "$feature" 2>/dev/null || true
+            fi
+        done
+        
+        # Source platform modules (including emergency)
+        for platform in platforms/*.sh; do
+            if [[ -f "$platform" ]]; then
+                source "$platform" 2>/dev/null || true
             fi
         done
         
@@ -361,6 +373,9 @@ main() {
         error "Failed to download installer modules"
         exit 1
     fi
+    
+    # Export all color variables to ensure they're available in all subshells
+    export RED GREEN YELLOW BLUE CYAN WHITE GRAY MAGENTA PURPLE NC
     
     # Load essential functions
     load_essential_functions

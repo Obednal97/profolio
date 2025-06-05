@@ -86,7 +86,7 @@ run_configuration_wizard() {
         fi
     fi
     
-    clear
+    echo ""
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║                 🧙 PROFOLIO SETUP WIZARD                    ║"
     echo "║              Self-Hosted Portfolio Management                ║"
