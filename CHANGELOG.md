@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.12] - 2025-06-05
+
+### Fixed
+
+- **Clean UI/UX**: Removed duplicate success messages and verbose logging output
+- **Configuration Wizard**: Fixed advanced installation option not triggering configuration wizard properly
+- **Package Installation**: Suppressed verbose apt-get output for cleaner installation experience
+- **Platform Logging**: Removed duplicate platform detection messages for cleaner UI
+- **Function Export**: Enhanced export of critical functions to ensure availability across subshells
+- **LXC Container**: Removed remaining verbose logging from LXC container wrapper
+
+### Changed
+
+- **Installation Flow**: Advanced installation now properly triggers configuration wizard when available
+- **UI Consistency**: Standardized progress indicators and status messages across all modules
+- **Error Handling**: Improved function availability checks with fallback loading mechanisms
+
+## [v1.11.11] - 2025-06-05
+
+### Fixed
+
+- **Color Variable Export**: Added export of all color variables before module loading
+- **Module Loading**: Fixed variable scoping issues in platform module loading
+
 ## [v1.11.10] - 2025-06-05
 
 ### Fixed

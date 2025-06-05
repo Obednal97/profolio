@@ -195,7 +195,10 @@ update_package_repositories() {
 
 # Install essential packages for Profolio
 install_essential_packages() {
-    info "Installing essential packages for Profolio..."
+    echo ""
+    echo -e "${CYAN}📦 Installing Essential Packages${NC}"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
     
     # First, try to fix any broken packages
     echo -ne "${BLUE}Fixing package dependencies${NC} "
@@ -244,25 +247,54 @@ install_essential_packages() {
     # Note: We'll handle Node.js separately to avoid conflicts
     # NodeSource nodejs includes npm, so we don't install npm separately
     
-    # Install essential packages with better error handling
-    info "Installing essential system packages..."
+    # Install essential packages with clean UI
+    echo -ne "${BLUE}Installing essential system packages${NC} "
     local failed_packages=()
     
-    # Try to install all essential packages at once first
-    if apt-get install -y "${essential_packages[@]}" 2>/dev/null; then
-        success "Essential packages installed successfully"
-    else
-        warn "Batch installation failed, trying individual packages..."
-        
-        # Install packages individually to identify which ones fail
-        for package in "${essential_packages[@]}"; do
-            if apt-get install -y "$package" 2>/dev/null; then
-                info "✓ Installed: $package"
+    # Install in background with progress spinner
+    {
+        # Try to install all essential packages at once first
+        if apt-get install -y "${essential_packages[@]}" &>/dev/null; then
+            echo "SUCCESS" > /tmp/install_status
+        else
+            # Install packages individually to identify which ones fail
+            for package in "${essential_packages[@]}"; do
+                if ! apt-get install -y "$package" &>/dev/null; then
+                    failed_packages+=("$package")
+                fi
+            done
+            
+            if [ ${#failed_packages[@]} -eq 0 ]; then
+                echo "SUCCESS" > /tmp/install_status
             else
-                warn "✗ Failed to install: $package"
-                failed_packages+=("$package")
+                echo "PARTIAL" > /tmp/install_status
             fi
-        done
+        fi
+    } &
+    
+    # Show spinner
+    local spin='-\|/'
+    local i=0
+    local pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        i=$(((i+1) % 4))
+        printf "\r${BLUE}Installing essential system packages${NC} ${YELLOW}${spin:$i:1}${NC}"
+        sleep 0.1
+    done
+    
+    # Check result
+    local status=$(cat /tmp/install_status 2>/dev/null || echo "FAILED")
+    rm -f /tmp/install_status
+    
+    if [[ "$status" == "SUCCESS" ]]; then
+        printf "\r${BLUE}Installing essential system packages${NC} ${GREEN}✓${NC}\n"
+    elif [[ "$status" == "PARTIAL" ]]; then
+        printf "\r${BLUE}Installing essential system packages${NC} ${YELLOW}⚠${NC}\n"
+        warn "Some packages failed to install: ${failed_packages[*]}"
+        warn "Continuing anyway - these may not be critical for Profolio"
+    else
+        printf "\r${BLUE}Installing essential system packages${NC} ${RED}✗${NC}\n"
+        error "Failed to install essential packages"
         
         if [ ${#failed_packages[@]} -eq 0 ]; then
             success "All essential packages installed successfully"
@@ -272,32 +304,54 @@ install_essential_packages() {
         fi
     fi
     
-    # Install PostgreSQL with error handling
-    info "Installing PostgreSQL database..."
-    if apt-get install -y "${postgresql_packages[@]}" 2>/dev/null; then
-        success "PostgreSQL installed successfully"
-    else
-        warn "PostgreSQL batch installation failed, trying individual packages..."
-        local pg_failed=()
-        
-        for package in "${postgresql_packages[@]}"; do
-            if apt-get install -y "$package" 2>/dev/null; then
-                info "✓ Installed: $package"
-            else
-                warn "✗ Failed to install: $package"
-                pg_failed+=("$package")
-            fi
-        done
-        
-        if [ ${#pg_failed[@]} -eq ${#postgresql_packages[@]} ]; then
-            error "Failed to install any PostgreSQL packages - this will prevent Profolio from working"
-            return 1
-        elif [ ${#pg_failed[@]} -gt 0 ]; then
-            warn "Some PostgreSQL packages failed: ${pg_failed[*]}"
-            warn "Continuing anyway - core PostgreSQL may still work"
+    # Install PostgreSQL with clean UI
+    echo -ne "${BLUE}Installing PostgreSQL database${NC} "
+    local pg_failed=()
+    
+    {
+        if apt-get install -y "${postgresql_packages[@]}" &>/dev/null; then
+            echo "SUCCESS" > /tmp/pg_install_status
         else
-            success "PostgreSQL installed successfully"
+            for package in "${postgresql_packages[@]}"; do
+                if ! apt-get install -y "$package" &>/dev/null; then
+                    pg_failed+=("$package")
+                fi
+            done
+            
+            if [ ${#pg_failed[@]} -eq ${#postgresql_packages[@]} ]; then
+                echo "FAILED" > /tmp/pg_install_status
+            elif [ ${#pg_failed[@]} -gt 0 ]; then
+                echo "PARTIAL" > /tmp/pg_install_status
+            else
+                echo "SUCCESS" > /tmp/pg_install_status
+            fi
         fi
+    } &
+    
+    # Show spinner
+    local spin='-\|/'
+    local i=0
+    local pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        i=$(((i+1) % 4))
+        printf "\r${BLUE}Installing PostgreSQL database${NC} ${YELLOW}${spin:$i:1}${NC}"
+        sleep 0.1
+    done
+    
+    # Check result
+    local status=$(cat /tmp/pg_install_status 2>/dev/null || echo "FAILED")
+    rm -f /tmp/pg_install_status
+    
+    if [[ "$status" == "SUCCESS" ]]; then
+        printf "\r${BLUE}Installing PostgreSQL database${NC} ${GREEN}✓${NC}\n"
+    elif [[ "$status" == "PARTIAL" ]]; then
+        printf "\r${BLUE}Installing PostgreSQL database${NC} ${YELLOW}⚠${NC}\n"
+        warn "Some PostgreSQL packages failed: ${pg_failed[*]}"
+        warn "Continuing anyway - core PostgreSQL may still work"
+    else
+        printf "\r${BLUE}Installing PostgreSQL database${NC} ${RED}✗${NC}\n"
+        error "Failed to install any PostgreSQL packages - this will prevent Profolio from working"
+        return 1
     fi
     
     # Skip Node.js installation from Ubuntu repos to avoid conflicts

@@ -52,8 +52,7 @@ fi
 
 # LXC container platform handler
 handle_lxc-container_platform() {
-    # Suppress verbose output for clean UI
-    # info "🐧 LXC Container detected - using Ubuntu installer"
+    # Minimal output for clean UI
     
     # Export color variables and functions to ensure they're available in sourced modules
     export RED GREEN YELLOW BLUE CYAN WHITE NC

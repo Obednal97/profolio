@@ -11,7 +11,7 @@
 set -eo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
-INSTALLER_VERSION="1.11.11"
+INSTALLER_VERSION="1.11.12"
 REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
@@ -159,13 +159,11 @@ download_all_modules() {
         sleep 0.1
     done
     
-    printf "\r\033[K"
-    echo -e "${BLUE}Downloading $total installer modules${NC} ${GREEN}✓${NC}"
+    printf "\r\033[K${BLUE}Downloading $total installer modules${NC} ${GREEN}✓${NC}\n"
     
     # Clean up temp files
     rm -f "$temp_log" "$temp_log.complete"
     
-    success "All modules downloaded ($total files)"
     return 0
 }
 
@@ -237,6 +235,10 @@ load_essential_functions() {
             export -f "$func"
         fi
     done
+    
+    # Also export all color variables and logging functions for subshells
+    export RED GREEN YELLOW BLUE CYAN WHITE GRAY MAGENTA PURPLE NC
+    export -f log error info success warning warn debug 2>/dev/null || true
 }
 
 # Execute platform installation
@@ -459,8 +461,15 @@ main() {
         
         if [[ "$install_choice" == "2" ]]; then
             echo ""
-            echo -e "${YELLOW}🔧 Advanced options will be available in future versions${NC}"
-            echo -e "${BLUE}Proceeding with enhanced default installation...${NC}"
+            # Try to run configuration wizard for advanced options
+            if command -v run_configuration_wizard >/dev/null 2>&1; then
+                if ! run_configuration_wizard; then
+                    echo -e "${YELLOW}Configuration wizard failed, using defaults${NC}"
+                fi
+            else
+                echo -e "${YELLOW}🔧 Advanced configuration not available in this session${NC}"
+                echo -e "${BLUE}Proceeding with enhanced default installation...${NC}"
+            fi
         fi
         echo ""
     fi
