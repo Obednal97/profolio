@@ -11,6 +11,17 @@
 # Dependencies: utils/logging.sh, utils/ui.sh, utils/validation.sh
 # =============================================================================
 
+# Define color variables if not already defined
+if [[ -z "${RED:-}" ]]; then
+    readonly RED='\033[0;31m'
+    readonly GREEN='\033[0;32m'
+    readonly YELLOW='\033[1;33m'
+    readonly BLUE='\033[0;34m'
+    readonly CYAN='\033[0;36m'
+    readonly WHITE='\033[1;37m'
+    readonly NC='\033[0m'
+fi
+
 # Module info function
 ubuntu_platform_info() {
     echo "Ubuntu/Debian Platform Module v1.0.0"
