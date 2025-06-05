@@ -1,6 +1,6 @@
 # Release Notes - Profolio v1.11.1
 
-**Release Date**: 5th January 2025  
+**Release Date**: 5th June 2025  
 **Version**: 1.11.1  
 **Type**: Patch Release - Docker Build Optimization
 

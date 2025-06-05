@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.2] - 2025-06-05
+
+### 🚨 **Critical Installer Fix**
+
+#### **Missing Installer Scripts Resolution**
+
+- **Added Missing install.sh**: Created main installer entry point script that was missing from repository
+- **Added Missing install-proxmox.sh**: Created Proxmox-specific installer entry point for LXC container installations
+- **Fixed 404 Installation Errors**: Resolved curl download failures when trying to install from repository
+- **Modular Installer Integration**: Connected entry point scripts to existing modular installer architecture
+
+#### **Installation System Improvements**
+
+- **Bootstrap Integration**: Entry point scripts now properly download and execute modular installer bootstrap
+- **Proxmox Optimizations**: Enhanced Proxmox installer with container-specific features and auto-start capabilities
+- **Error Handling**: Comprehensive error messages and troubleshooting guidance for installation failures
+- **Platform Detection**: Automatic detection of Proxmox LXC environments with optimized configurations
+
+### 🔧 **Technical Fixes**
+
+#### **Repository Structure Completion**
+
+- **Root-Level Scripts**: Added executable installer scripts at repository root for direct curl access
+- **Documentation Alignment**: Fixed discrepancy between README installation commands and available files
+- **Modular Architecture**: Maintained compatibility with existing install/ directory modular system
+- **Script Permissions**: Proper executable permissions set for all installer scripts
+
+#### **User Experience Enhancements**
+
+- **Clear Installation Paths**: Users can now successfully execute documented installation commands
+- **Proxmox-Specific Features**: Enhanced LXC container support with resource optimization and management integration
+- **Installation Logging**: Comprehensive logging for troubleshooting installation issues
+- **Help Documentation**: Added --help and --container-info options for Proxmox installer
+
+### 📊 **Summary**
+
+- **Files Added**: 2 critical installer entry point scripts (install.sh, install-proxmox.sh)
+- **Bug Fixed**: Critical 404 error preventing any new installations
+- **User Impact**: Immediate resolution for all users attempting to install Profolio
+- **Installation Success**: Now fully functional installation process via documented commands
+
+**⚠️ CRITICAL PATCH**: This release fixes a blocking issue that prevented new installations. All users should now be able to successfully install Profolio using the documented curl commands.
+
 ## [v1.11.1] - 2025-06-05
 
 ### 🐳 **Docker Build Optimization**
