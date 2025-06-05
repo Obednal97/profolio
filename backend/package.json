@@ -1,6 +1,6 @@
 {
   "name": "profolio-backend",
-  "version": "1.10.3",
+  "version": "1.11.0",
   "description": "Personal finance backend for Profolio",
   "main": "dist/main.js",
   "scripts": {
@@ -11,11 +11,12 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "test": "vitest",
+    "test:unit": "vitest",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
     "test:cov": "vitest --coverage",
-    "test:integration": "vitest --config vitest.integration.config.ts",
-    "test:all": "npm run test && npm run test:integration",
+    "test:integration": "vitest --run integration",
+    "test:all": "pnpm run test && pnpm run test:integration",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

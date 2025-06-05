@@ -14,7 +14,7 @@
 # Module loader info function
 module_loader_info() {
     echo "Module Loader v1.0.0"
-    echo "  • Loads all 12 installer modules with dependency resolution"
+    echo "  • Loads all 14 installer modules with dependency resolution"
     echo "  • Provides unified entry point for modular architecture"
     echo "  • Maintains backward compatibility with existing scripts"
     echo "  • Handles platform detection and module routing"
@@ -97,6 +97,8 @@ load_all_modules() {
     load_module "features/optimization.sh" || return 1
     load_module "features/ssh-hardening.sh" || return 1
     load_module "features/configuration-wizard.sh" || return 1
+    load_module "features/backup-management.sh" || return 1
+    load_module "features/installation-reporting.sh" || return 1
     
     # Phase 4: Platform modules (depend on utilities and platform detection)
     load_module "platforms/proxmox.sh" || return 1
@@ -175,6 +177,8 @@ validate_module_functions() {
         "optimization_deploy_safe"
         "ssh_configure_server"
         "config_run_installation_wizard"
+        "backup_create_backup"
+        "reporting_show_installation_summary"
         
         # Platform functions
         "handle_proxmox_installation"
@@ -237,5 +241,5 @@ fi
 if [[ "$MODULE_LOADER_DEBUG" == "true" ]]; then
     echo "[MODULE] ✅ Profolio modular architecture loaded successfully"
     echo "[MODULE] Platform: $CURRENT_PLATFORM"
-    echo "[MODULE] Modules: 12 loaded"
+    echo "[MODULE] Modules: 14 loaded"
 fi 

@@ -82,7 +82,7 @@ detect_wsl() {
 
 # Detect if running on Unraid system
 detect_unraid() {
-    if [ -f "/etc/unraid-version" ] || [ -d "/boot/config" && -f "/usr/local/sbin/emhttp" ]; then
+    if [ -f "/etc/unraid-version" ] || ([ -d "/boot/config" ] && [ -f "/usr/local/sbin/emhttp" ]); then
         return 0  # Running on Unraid
     else
         return 1  # Not on Unraid

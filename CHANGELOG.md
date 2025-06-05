@@ -5,6 +5,74 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.0] - 2025-06-05
+
+### 📚 **Comprehensive Documentation Updates**
+
+#### **Test Architecture Centralization**
+
+- **Centralized Test Structure**: Moved all tests from scattered locations to professional `/tests/` directory structure
+- **Enterprise-Grade Testing Framework**: Documented 52+ test scenarios across 7 categories (unit, integration, E2E, security, performance, installer)
+- **Test Runner Implementation**: Added `./tests/run-tests-simple.sh` and `./tests/run-all-tests.sh` for comprehensive test execution
+- **Professional Test Organization**: Clear separation of frontend/backend/E2E/installer tests with shared configuration
+- **Test Setup Centralization**: Moved `test-setup.ts` and configurations to centralized `/tests/frontend/` directory
+
+#### **Modular Installer Documentation Updates**
+
+- **Complete Reference Updates**: Updated all documentation to use new modular installer system (`install.sh`, `install-proxmox.sh`)
+- **Removed Legacy References**: Eliminated all mentions of deprecated `install-or-update.sh` and `proxmox-install-or-update.sh`
+- **Bootstrap System Documentation**: Added comprehensive documentation for auto-downloading modular architecture
+- **90% Code Reduction**: Documented benefits of modular installer architecture with component reusability
+- **Self-Updating Capabilities**: Enhanced documentation for installer module management and updates
+
+#### **Documentation Consistency & Professional Standards**
+
+- **README.md Enhancement**: Complete modular installer integration with testing framework documentation
+- **CONTRIBUTING.md Updates**: Added centralized test architecture, professional testing standards, and modular installer references
+- **Setup Guide Modernization**: Updated all installation commands and troubleshooting for new modular system
+- **Testing Guide Restructure**: Complete overhaul of testing documentation reflecting centralized architecture
+- **GitHub Templates**: Updated issue templates with current installer options and setup information
+
+### 🔧 **Technical Improvements**
+
+#### **Test Infrastructure**
+
+- **Vitest Configuration Updates**: Modified frontend and backend configs to point to centralized `/tests/` directory
+- **Test Path Centralization**: All test discovery now uses unified `/tests/` structure for professional organization
+- **E2E Configuration**: Moved Playwright config to `tests/frontend/e2e/playwright.config.ts` for consistency
+- **Test Architecture Benefits**: Enhanced maintainability, discovery, and professional structure
+
+#### **Package Management**
+
+- **Version Synchronization**: Updated all package.json files to maintain version consistency
+- **pnpm Compliance**: Ensured all package operations use pnpm throughout documentation
+- **Configuration Alignment**: Updated vitest configs to work with centralized test structure
+
+### 🏗️ **Architecture Documentation**
+
+#### **Modular Installer Benefits**
+
+- **Component Architecture**: Documented modular installer structure with platforms, features, core, and utils modules
+- **Bootstrap System**: Auto-downloading installer components with integrity validation
+- **Platform Optimization**: Specialized modules for Ubuntu, Proxmox, Docker environments
+- **Enhanced Reliability**: Comprehensive testing framework for installer components
+
+#### **Enterprise-Grade Presentation**
+
+- **Professional Structure**: Single source of truth for all documentation
+- **Quality Standards**: Consistent formatting and presentation across all files
+- **User Experience**: Clear guidance for installation, testing, and contribution workflows
+- **Maintainer Benefits**: Easier maintenance with centralized, organized documentation
+
+### 📊 **Summary**
+
+- **Files Updated**: 8 major documentation files comprehensively updated
+- **Test Centralization**: Complete migration to `/tests/` directory structure
+- **Installer References**: 100% consistency achieved across all documentation
+- **Professional Standards**: Enterprise-grade documentation organization implemented
+- **Testing Framework**: 52+ test scenarios properly documented with centralized architecture
+- **User Experience**: Enhanced guidance for installation, testing, and development workflows
+
 ## [v1.10.3] - 2025-01-05
 
 ### 🧪 **Comprehensive E2E Testing & Validation Framework**

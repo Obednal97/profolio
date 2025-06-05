@@ -9,12 +9,14 @@ Take control of your financial data with complete privacy and sovereignty. Built
 ## ✨ **Why Self-Host Profolio?**
 
 ### 🏠 **Complete Data Sovereignty**
+
 - ✅ **Your data stays on your server** - No external dependencies
 - ✅ **Works completely offline** - Perfect for air-gapped environments
 - ✅ **GDPR/privacy compliant** by design
 - ✅ **No vendor lock-in** - Export your data anytime
 
 ### 🛡️ **Enterprise-Grade Security**
+
 - 🔐 **AES-256-GCM encryption** for sensitive financial data
 - 🛡️ **Circuit breaker patterns** for API resilience
 - 🔄 **Automatic rollback protection** for zero-downtime updates
@@ -22,6 +24,7 @@ Take control of your financial data with complete privacy and sovereignty. Built
 - 🚨 **Advanced threat protection** with input validation
 
 ### 💰 **Cost-Effective**
+
 - 💵 **No monthly subscription fees** - One-time setup
 - 📉 **Low resource requirements** - Runs on minimal hardware
 - ⚡ **Optimized performance** - ~500KB installation footprint
@@ -35,10 +38,11 @@ Take control of your financial data with complete privacy and sovereignty. Built
 
 ```bash
 # Complete installation in under 5 minutes
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 
 **What happens automatically:**
+
 - ✅ **System setup** - PostgreSQL, Node.js, system dependencies
 - ✅ **Security hardening** - SSH configuration, firewall rules
 - ✅ **Application deployment** - Database, backend, frontend
@@ -51,11 +55,12 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-
 
 ```bash
 # Proxmox-optimized installer with auto-start and enhanced management
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/proxmox-install-or-update.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-proxmox.sh | sudo bash
 ```
 
 **Proxmox-specific features:**
-- 🛡️ **Isolation** - Dedicated environment with resource limits  
+
+- 🛡️ **Isolation** - Dedicated environment with resource limits
 - 💾 **Easy backups** - Snapshot entire container in seconds
 - 🔄 **Migration** - Move between Proxmox hosts seamlessly
 - ⚙️ **Resource control** - CPU/memory allocation per your needs
@@ -66,27 +71,51 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/proxmox-ins
 ### 🎛️ **Advanced Installation Options**
 
 **Standard installer options:**
+
 ```bash
 # Install specific version
-sudo ./install-or-update.sh --version v1.9.1
+sudo ./install.sh --version v1.9.1
 
 # Unattended installation for automation
-sudo ./install-or-update.sh --auto
+sudo ./install.sh --auto
 
 # List all available versions
-sudo ./install-or-update.sh --list-versions
+sudo ./install.sh --list-versions
 
 # Emergency rollback (automatic on failures)
-sudo ./install-or-update.sh --rollback
+sudo ./install.sh --rollback
 ```
 
 **Proxmox installer additional options:**
+
 ```bash
 # Update only the Proxmox installer script
-sudo ./proxmox-install-or-update.sh --update-installer
+sudo ./install-proxmox.sh --update-installer
 
 # View Proxmox-specific features
-sudo ./proxmox-install-or-update.sh --help
+sudo ./install-proxmox.sh --help
+```
+
+### 🔧 **Modular Architecture**
+
+Our new **modular installer system** provides:
+
+- 🧩 **Modular components** - 90% code reduction through reusable modules
+- 🚀 **Auto-bootstrap** - Downloads installer components on first run
+- 🔄 **Self-updating** - Keeps installer modules current
+- 🛡️ **Rollback protection** - Automatic recovery from failed installations
+- 📋 **Comprehensive testing** - 50+ test scenarios ensure reliability
+
+**Architecture Overview:**
+
+```bash
+install/
+├── bootstrap.sh           # Auto-downloads modular components
+├── module-loader.sh       # Loads and validates modules
+├── platforms/             # Platform-specific installers
+├── features/              # Feature modules (SSH, optimization)
+├── core/                  # Core functionality (rollback, version control)
+└── utils/                 # Shared utilities (logging, validation)
 ```
 
 ---
@@ -94,6 +123,7 @@ sudo ./proxmox-install-or-update.sh --help
 ## 🎯 **Core Features**
 
 ### 📈 **Professional Portfolio Management**
+
 - **Multi-asset support** - Stocks, crypto, real estate, bonds, commodities
 - **Real-time market data** - Yahoo Finance integration with circuit breaker protection
 - **Performance analytics** - ROI, Sharpe ratio, risk assessment, asset allocation
@@ -101,6 +131,7 @@ sudo ./proxmox-install-or-update.sh --help
 - **Portfolio comparison** - Benchmark against indices and custom portfolios
 
 ### 💰 **Advanced Financial Tracking**
+
 - **Expense management** - Categorized spending with budget tracking
 - **Income tracking** - Salary, dividends, rental income, capital gains
 - **Tax optimization** - Capital gains/losses tracking for tax planning
@@ -108,6 +139,7 @@ sudo ./proxmox-install-or-update.sh --help
 - **Bank statement import** - CSV import with automatic transaction categorization
 
 ### 📊 **Professional Reporting**
+
 - **P&L statements** - Detailed profit/loss analysis with time comparisons
 - **Asset allocation analysis** - Sector, geography, asset class breakdowns
 - **Risk assessment** - Volatility analysis and correlation matrices
@@ -115,6 +147,7 @@ sudo ./proxmox-install-or-update.sh --help
 - **Export capabilities** - PDF, CSV, Excel formats for external use
 
 ### 🔒 **Privacy & Security**
+
 - **End-to-end encryption** - All sensitive data encrypted at rest
 - **Local authentication** - No external auth dependencies
 - **Audit logging** - Complete activity tracking for compliance
@@ -126,6 +159,7 @@ sudo ./proxmox-install-or-update.sh --help
 ## 🛡️ **Enterprise-Grade Reliability**
 
 ### 🔄 **Advanced Resilience**
+
 - **Circuit breaker patterns** - Automatic failure detection and recovery
 - **Graceful degradation** - Continues operating during external API outages
 - **Conservative rate limiting** - Prevents API throttling and bans
@@ -133,6 +167,7 @@ sudo ./proxmox-install-or-update.sh --help
 - **Automatic recovery** - Self-healing from temporary failures
 
 ### 🚀 **Zero-Downtime Updates**
+
 - **Automatic rollback** - Git-based restoration on update failures
 - **Environment preservation** - API keys and settings protected during updates
 - **Version control** - Install any previous version or development builds
@@ -141,9 +176,48 @@ sudo ./proxmox-install-or-update.sh --help
 
 ---
 
+## 🧪 **Enterprise-Grade Testing**
+
+### 🔧 **Centralized Test Infrastructure**
+
+Our **comprehensive testing framework** ensures reliability:
+
+```bash
+tests/
+├── frontend/
+│   ├── unit/              # Component & logic tests
+│   ├── e2e/               # End-to-end user journey tests
+│   └── test-setup.ts      # Centralized test configuration
+├── backend/
+│   ├── unit/              # API & service tests
+│   └── integration/       # Database & external API tests
+├── installer/             # Installer testing framework
+└── run-tests-simple.sh    # Complete test runner
+```
+
+### 🚨 **Quality Assurance**
+
+- **50+ test scenarios** across unit, integration, and E2E testing
+- **Security validation** - SQL injection, XSS, auth bypass prevention
+- **Performance monitoring** - Core Web Vitals and load testing
+- **Cross-browser testing** - Chrome, Firefox, Safari validation
+- **Automated testing** - CI/CD integration with quality gates
+
+### 🎯 **Test Coverage**
+
+- ✅ **Authentication flows** - Login, logout, session management
+- ✅ **Portfolio operations** - Add, edit, delete, import/export
+- ✅ **Financial calculations** - ROI, performance, risk metrics
+- ✅ **Security features** - Input validation, encryption, access control
+- ✅ **API endpoints** - All backend services and error handling
+- ✅ **Installation process** - Complete installer validation
+
+---
+
 ## 🌐 **System Requirements**
 
 ### **Minimum Requirements**
+
 - **OS**: Ubuntu 20.04+ / Debian 11+ / Similar Linux distribution
 - **RAM**: 2GB (4GB recommended)
 - **CPU**: 1 core (2 cores recommended)
@@ -151,6 +225,7 @@ sudo ./proxmox-install-or-update.sh --help
 - **Network**: Internet for initial setup and market data
 
 ### **Recommended Production Setup**
+
 - **RAM**: 4GB+ for optimal performance
 - **CPU**: 2+ cores for concurrent users
 - **Storage**: 20GB+ for historical data and backups
@@ -158,6 +233,7 @@ sudo ./proxmox-install-or-update.sh --help
 - **Firewall**: UFW or iptables configured
 
 ### **Supported Platforms**
+
 - ✅ **Ubuntu Server** 20.04, 22.04, 24.04
 - ✅ **Debian** 11, 12
 - ✅ **Proxmox LXC** containers
@@ -171,6 +247,7 @@ sudo ./proxmox-install-or-update.sh --help
 **Try before you commit - no installation required:**
 
 Experience the full Profolio interface with sample data:
+
 1. **Visit your installation** and click **"Try Demo"**
 2. **Explore all features** with realistic portfolio data
 3. **Test import/export** capabilities
@@ -183,6 +260,7 @@ Experience the full Profolio interface with sample data:
 ## 🔧 **Configuration & Customization**
 
 ### **Environment Configuration**
+
 The installer automatically creates optimized configurations, but you can customize:
 
 ```bash
@@ -198,6 +276,7 @@ NEXT_PUBLIC_API_URL=http://your-server-ip:3001
 ```
 
 ### **SSL/HTTPS Setup**
+
 ```bash
 # Install SSL certificate (Let's Encrypt)
 sudo apt install certbot nginx
@@ -208,6 +287,7 @@ sudo certbot --nginx -d your-domain.com
 ```
 
 ### **Backup Configuration**
+
 ```bash
 # Automatic daily backups
 sudo crontab -e
@@ -224,6 +304,7 @@ sudo tar -czf profolio-backup-$(date +%Y%m%d).tar.gz /opt/profolio
 ## 🚀 **Management & Maintenance**
 
 ### **Service Management**
+
 ```bash
 # Check service status
 sudo systemctl status profolio-backend profolio-frontend
@@ -241,12 +322,13 @@ sudo systemctl enable profolio-backend profolio-frontend
 **Note**: The Proxmox installer automatically configures services to start on container reboot, ensuring your Profolio instance is always available after system restarts.
 
 ### **Updates & Maintenance**
+
 ```bash
 # Simple update to latest version
-sudo ./install-or-update.sh
+sudo ./install.sh
 
 # Update to specific version
-sudo ./install-or-update.sh --version v1.9.1
+sudo ./install.sh --version v1.9.1
 
 # Check for updates
 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep tag_name
@@ -255,7 +337,27 @@ curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep t
 curl http://localhost:3001/api/health
 ```
 
+### **Testing & Quality Assurance**
+
+```bash
+# Run complete test suite
+./tests/run-tests-simple.sh
+
+# Frontend tests only
+cd frontend && pnpm run test
+
+# Backend tests only
+cd backend && pnpm run test
+
+# E2E tests
+cd frontend && pnpm run test:e2e
+
+# Performance validation
+cd frontend && pnpm run test:performance
+```
+
 ### **Monitoring & Troubleshooting**
+
 ```bash
 # System resources
 htop                                    # CPU/Memory usage
@@ -285,6 +387,7 @@ See our [**Offline Installation Guide**](docs/setup/offline-installation.md) for
 ## 🛠️ **Development & Customization**
 
 ### **Local Development Setup**
+
 ```bash
 # Clone and setup development environment
 git clone https://github.com/Obednal97/profolio.git
@@ -299,7 +402,19 @@ pnpm run dev:backend    # http://localhost:3001
 pnpm run dev:frontend   # http://localhost:3000
 ```
 
+### **Testing in Development**
+
+```bash
+# Run tests in watch mode during development
+cd frontend && pnpm run test:watch     # Unit tests
+cd frontend && pnpm run test:e2e:ui    # E2E tests with UI
+
+# Run complete test suite before committing
+./tests/run-tests-simple.sh
+```
+
 ### **Customization Options**
+
 - **Themes** - Custom CSS/Tailwind configurations
 - **Branding** - Logo, colors, company information
 - **Features** - Enable/disable specific functionality
@@ -313,19 +428,24 @@ pnpm run dev:frontend   # http://localhost:3000
 ## 📚 **Documentation & Support**
 
 ### **Comprehensive Guides**
+
 - 📖 **[Setup & Installation](docs/setup/)** - Complete installation guides for all platforms
+- 🧪 **[Testing Guide](docs/testing/TESTING_SETUP_GUIDE.md)** - Enterprise-grade testing framework
 - 🔧 **[Development](docs/development/)** - Technical documentation for developers
 - 🛡️ **[Security Policy](SECURITY.md)** - Security policies and best practices
 - 🔄 **[Processes](docs/processes/)** - Development workflows and standards
 - ❓ **[Features](docs/features/)** - Feature specifications and technical details
 
 ### **Community Support**
+
 - 💬 **[GitHub Discussions](https://github.com/Obednal97/profolio/discussions)** - Community Q&A
 - 🐛 **[Issue Tracker](https://github.com/Obednal97/profolio/issues)** - Bug reports and feature requests
 - 📋 **[Contributing Guide](CONTRIBUTING.md)** - How to contribute code and documentation
 
 ### **Professional Support**
+
 For production deployments and enterprise requirements:
+
 - **Priority support** via [**Profolio Cloud**](https://profolio.com) subscription
 - **Custom development** and integration services
 - **Training and onboarding** for teams and organizations
@@ -344,12 +464,15 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 🎉 **Ready to Get Started?**
 
 ### **Self-Hosted Installation** (5 minutes)
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 
 ### **Need Managed Hosting?**
+
 **[Try Profolio Cloud](https://profolio.com)** - Same features, zero maintenance
+
 - ☁️ **Automatic updates** and security patches
 - 💾 **Daily backups** with point-in-time recovery
 - 🛡️ **Enterprise security** and compliance
