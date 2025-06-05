@@ -287,10 +287,39 @@ create_proxmox_container() {
             echo -e "${BLUE}📦 Entering container to install Profolio...${NC}"
             echo ""
             
+            # Ask about system updates before installation
+            echo -e "${CYAN}📦 Container System Update Options:${NC}"
+            echo -e "${YELLOW}Update container packages before installing Profolio?${NC}"
+            echo ""
+            echo -e "${WHITE}Options:${NC}"
+            echo -e "   ${GREEN}1)${NC} Skip system updates (just install Profolio packages)"
+            echo -e "   ${BLUE}2)${NC} Update package lists only (recommended)"  
+            echo -e "   ${YELLOW}3)${NC} Full system update (lists + upgrade packages)"
+            echo ""
+            read -p "Select update option [2]: " container_update_choice
+            container_update_choice=${container_update_choice:-2}
+            
+            # Build update command based on choice
+            local update_cmd=""
+            case $container_update_choice in
+                1)
+                    info "Skipping container system updates"
+                    update_cmd=""
+                    ;;
+                2)
+                    info "Updating container package lists only"
+                    update_cmd="apt update &&"
+                    ;;
+                3)
+                    info "Performing full container system update"
+                    update_cmd="apt update && apt upgrade -y &&"
+                    ;;
+            esac
+            
             # Download and execute installer in container
             pct exec $PROXMOX_VMID -- bash -c "
-                apt update && apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4
-                curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | bash
+                ${update_cmd} apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4
+                curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | bash
             "
         else
             echo -e "${YELLOW}ℹ️  Container ready. To install Profolio later:${NC}"

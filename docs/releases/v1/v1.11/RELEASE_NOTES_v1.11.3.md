@@ -1,6 +1,6 @@
 # Profolio v1.11.3 Release Notes
 
-**Release Date**: 5th January 2025  
+**Release Date**: 5th June 2025  
 **Type**: Critical Bug Fix Release  
 **Installer Status**: ✅ **FULLY FUNCTIONAL**
 

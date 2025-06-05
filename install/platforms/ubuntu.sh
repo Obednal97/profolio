@@ -98,27 +98,70 @@ fix_package_dependencies() {
 
 # Update package repositories
 update_package_repositories() {
-    info "Updating package repositories..."
+    info "Package repository management..."
     
-    # Fix dependencies first
-    fix_package_dependencies
+    # Ask user about system updates first
+    echo ""
+    echo -e "${CYAN}📦 System Update Options:${NC}"
+    echo -e "${YELLOW}The installer can update your system packages before installing Profolio.${NC}"
+    echo -e "${YELLOW}This downloads package lists and optionally upgrades existing packages.${NC}"
+    echo ""
+    echo -e "${WHITE}Options:${NC}"
+    echo -e "   ${GREEN}1)${NC} Skip system updates (just install Profolio packages)"
+    echo -e "   ${BLUE}2)${NC} Update package lists only (recommended)"
+    echo -e "   ${YELLOW}3)${NC} Update package lists + upgrade existing packages"
+    echo ""
+    echo -e "${CYAN}Recommendation:${NC} Option 2 (update lists) is usually sufficient for Profolio installation."
+    echo ""
     
-    # Update package lists
-    if apt-get update; then
-        success "Package repositories updated successfully"
-    else
-        error "Failed to update package repositories"
-        return 1
-    fi
+    read -p "Select update option [2]: " update_choice
+    update_choice=${update_choice:-2}
     
-    # Optional: upgrade existing packages
-    read -p "Upgrade existing packages? (recommended) (y/n) [y]: " upgrade_confirm
-    if [[ "$upgrade_confirm" =~ ^[Yy]?$ ]]; then
-        info "Upgrading existing packages..."
-        if apt-get upgrade -y; then
-            success "System packages upgraded successfully"
+    case $update_choice in
+        1)
+            info "Skipping system updates as requested"
+            echo -e "${YELLOW}⚠️  Note: If package installation fails, you may need to update package lists manually${NC}"
+            return 0
+            ;;
+        2)
+            info "Updating package lists only..."
+            ;;
+        3)
+            info "Updating package lists and upgrading existing packages..."
+            ;;
+        *)
+            warn "Invalid choice, defaulting to option 2 (update lists only)"
+            update_choice=2
+            ;;
+    esac
+    
+    # Fix dependencies first if we're doing any updates
+    if [ "$update_choice" != "1" ]; then
+        fix_package_dependencies
+        
+        # Update package lists
+        info "Updating package repository lists..."
+        if apt-get update; then
+            success "Package repository lists updated successfully"
         else
-            warn "Some packages failed to upgrade, continuing anyway"
+            error "Failed to update package repository lists"
+            echo -e "${YELLOW}This may cause package installation to fail.${NC}"
+            read -p "Continue anyway? (y/n) [y]: " continue_anyway
+            if [[ ! "$continue_anyway" =~ ^[Yy]?$ ]]; then
+                return 1
+            fi
+        fi
+        
+        # Upgrade existing packages if requested
+        if [ "$update_choice" = "3" ]; then
+            info "Upgrading existing system packages..."
+            echo -e "${YELLOW}This may take several minutes and download significant data...${NC}"
+            
+            if apt-get upgrade -y; then
+                success "System packages upgraded successfully"
+            else
+                warn "Some packages failed to upgrade, continuing anyway"
+            fi
         fi
     fi
     

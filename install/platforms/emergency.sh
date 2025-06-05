@@ -38,6 +38,22 @@ fi
 emergency_fix_dependencies() {
     info "🚨 Emergency dependency fixing..."
     
+    # Ask user about system updates
+    echo ""
+    echo -e "${CYAN}📦 Emergency System Update Options:${NC}"
+    echo -e "${YELLOW}Emergency recovery can update system packages to fix dependency issues.${NC}"
+    echo ""
+    echo -e "${WHITE}Options:${NC}"
+    echo -e "   ${GREEN}1)${NC} Skip system updates (try to fix with existing packages)"
+    echo -e "   ${BLUE}2)${NC} Update package lists only (recommended)"
+    echo -e "   ${YELLOW}3)${NC} Full system update (may take significant time)"
+    echo ""
+    echo -e "${CYAN}Note:${NC} Emergency recovery often requires updated package lists to work properly."
+    echo ""
+    
+    read -p "Select update option [2]: " emergency_update_choice
+    emergency_update_choice=${emergency_update_choice:-2}
+    
     # Force configure all packages
     info "Force configuring all packages..."
     dpkg --configure -a --force-confold 2>/dev/null || warn "Some packages could not be configured"
@@ -56,13 +72,26 @@ emergency_fix_dependencies() {
         ca-certificates curl wget gnupg lsb-release git 2>/dev/null || \
     warn "Some essential packages failed to install"
     
-    # Clean and update
+    # Clean and update based on user choice
     apt-get clean
     apt-get autoclean
     apt-get autoremove -y 2>/dev/null || true
     
-    # Force update
-    apt-get update --fix-missing 2>/dev/null || warn "Package update had issues"
+    # Handle updates based on user choice
+    case $emergency_update_choice in
+        1)
+            info "Skipping system updates as requested"
+            ;;
+        2)
+            info "Updating package lists for emergency recovery..."
+            apt-get update --fix-missing 2>/dev/null || warn "Package update had issues"
+            ;;
+        3)
+            info "Performing full system update for emergency recovery..."
+            apt-get update --fix-missing 2>/dev/null || warn "Package update had issues"
+            apt-get upgrade -y 2>/dev/null || warn "Package upgrade had issues"
+            ;;
+    esac
     
     success "Emergency dependency fixing completed"
     return 0
@@ -101,7 +130,11 @@ emergency_install_nodejs() {
         warn "NodeSource installation failed, trying alternative method"
         
         # Fallback: Install from Ubuntu repos
-        apt-get update
+        # Only update if user previously consented to updates
+        if [ "${emergency_update_choice:-2}" != "1" ]; then
+            info "Updating package lists for Node.js installation..."
+            apt-get update 2>/dev/null || warn "Package update had issues"
+        fi
         apt-get install -y nodejs npm
         
         # Upgrade npm
@@ -138,8 +171,13 @@ emergency_install_postgresql() {
     # Clean PostgreSQL data if corrupted
     rm -rf /var/lib/postgresql/*/main 2>/dev/null || true
     
-    # Fresh PostgreSQL installation
-    apt-get update
+    # Fresh PostgreSQL installation  
+    # Only update if user previously consented to updates
+    if [ "${emergency_update_choice:-2}" != "1" ]; then
+        info "Updating package lists for PostgreSQL installation..."
+        apt-get update 2>/dev/null || warn "Package update had issues"
+    fi
+    
     if apt-get install -y postgresql postgresql-contrib postgresql-client; then
         success "PostgreSQL installed successfully"
     else

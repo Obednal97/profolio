@@ -5,7 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v1.11.3] - 2025-01-05
+## [v1.11.4] - 2025-06-05
+
+### ✨ **Optional System Updates Enhancement**
+
+#### **User-Controlled System Updates**
+
+- **Interactive Update Options**: Added user choice prompts for system package updates across all installer platforms
+- **Safe Default Configuration**: Option 2 (update package lists only) set as recommended default for all platforms
+- **Three Update Choices**: Skip updates entirely, update lists only (recommended), or full system upgrade
+- **Clear User Guidance**: Detailed explanations of each option with time and bandwidth impact warnings
+
+#### **Platform-Specific Update Controls**
+
+- **Ubuntu Platform Enhancement**: Comprehensive system update options with dependency fixing and error handling
+- **Proxmox Container Updates**: Optional container system updates before Profolio installation with user control
+- **Emergency Recovery Updates**: Emergency platform includes update controls with explanation of necessity
+- **Backward Compatibility**: All platforms work with defaults for non-interactive operation
+
+#### **Installation Safety Improvements**
+
+- **No Automatic Downloads**: Eliminated automatic system updates without user consent
+- **Bandwidth Consideration**: Users can avoid lengthy downloads when not needed for installation
+- **Time Efficiency**: Skip system updates when installing on fresh or recently updated systems
+- **User Education**: Clear warnings about potential package installation issues when skipping updates
+
+### 🧪 **Enhanced Test Coverage**
+
+#### **Comprehensive System Update Testing**
+
+- **New Unit Test Suite**: Added 30+ tests specifically for optional system update functionality
+- **Platform Integration Tests**: Updated integration tests to cover new system update functions
+- **User Experience Testing**: Validated interactive prompts, defaults, and error handling
+- **Function Availability Tests**: Verified all new update functions are properly loaded and callable
+
+#### **Test Architecture Updates**
+
+- **Updated Test Files**: Enhanced existing system and integration tests for v1.12.0 compatibility
+- **File Reference Fixes**: Updated all test references from `install-or-update-modular.sh` to `install.sh`
+- **Function Coverage**: Added tests for `install_profolio_application`, emergency functions, and platform update handlers
+- **Quality Assurance**: Comprehensive validation of user choice handling and security compliance
+
+### 🔧 **Technical Improvements**
+
+#### **User Experience Design**
+
+- **Consistent UI Formatting**: Standardized update prompt formatting across all platforms with emoji icons
+- **Color-Coded Options**: Green (skip), Blue (recommended), Yellow (full upgrade) for clear visual hierarchy
+- **Progress Indicators**: Clear feedback during update processes with descriptive status messages
+- **Error Recovery**: Graceful handling of update failures with option to continue installation
+
+#### **Security & Safety**
+
+- **No Forced Updates**: Removed all automatic system modifications without user consent
+- **Safe Installation Patterns**: Installer works even when system updates are completely skipped
+- **Permission Respect**: System updates only occur when explicitly requested by user
+- **Input Validation**: Proper handling of user choices with fallback to safe defaults
+
+### 📊 **Summary**
+
+- **Files Modified**: 3 platform modules, 3 test files enhanced, 1 new comprehensive test suite
+- **User Impact**: Complete control over system update process during Profolio installation
+- **Security Enhancement**: Eliminated surprise downloads and system modifications without consent
+- **Testing Coverage**: 35+ new tests ensuring reliable functionality across all platforms
+- **Installation Safety**: Users can install Profolio efficiently without unwanted system changes
+
+## [v1.11.3] - 2025-06-05
 
 ### 🛠️ **Critical Installer System Fix**
 

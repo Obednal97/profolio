@@ -49,32 +49,13 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh 
 - ✅ **Service management** - Systemd services with auto-restart
 - ✅ **SSL-ready** - Production configuration out of the box
 
-### 🏠 **Proxmox LXC Container** (Recommended)
-
-**Enhanced Proxmox-specific installer with container optimizations:**
-
-```bash
-# Proxmox-optimized installer with auto-start and enhanced management
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-proxmox.sh | sudo bash
-```
-
-**Proxmox-specific features:**
-
-- 🛡️ **Isolation** - Dedicated environment with resource limits
-- 💾 **Easy backups** - Snapshot entire container in seconds
-- 🔄 **Migration** - Move between Proxmox hosts seamlessly
-- ⚙️ **Resource control** - CPU/memory allocation per your needs
-- 🚀 **Auto-start on boot** - Services automatically start when container reboots
-- 🔧 **Installer-only updates** - Update just the installer script without touching the application
-- 📦 **Container-optimized** - Resource-efficient deployment for LXC environments
-
 ### 🎛️ **Advanced Installation Options**
 
 **Standard installer options:**
 
 ```bash
 # Install specific version
-sudo ./install.sh --version v1.9.1
+sudo ./install.sh --version v1.11.4
 
 # Unattended installation for automation
 sudo ./install.sh --auto
@@ -84,16 +65,6 @@ sudo ./install.sh --list-versions
 
 # Emergency rollback (automatic on failures)
 sudo ./install.sh --rollback
-```
-
-**Proxmox installer additional options:**
-
-```bash
-# Update only the Proxmox installer script
-sudo ./install-proxmox.sh --update-installer
-
-# View Proxmox-specific features
-sudo ./install-proxmox.sh --help
 ```
 
 ### 🔧 **Modular Architecture**
@@ -328,7 +299,7 @@ sudo systemctl enable profolio-backend profolio-frontend
 sudo ./install.sh
 
 # Update to specific version
-sudo ./install.sh --version v1.9.1
+sudo ./install.sh --version v1.11.4
 
 # Check for updates
 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep tag_name

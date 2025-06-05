@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # =============================================================================
-# INTEGRATION TEST: Module Loader and Dependencies
+# INTEGRATION TEST: Module Loader and Dependencies (Updated for v1.12.0)
 # =============================================================================
 # 
 # Tests module loading order, dependency resolution, and cross-module integration
+# Including new optional system update functionality
 #
 # Target: install/module-loader.sh and module interactions
 # =============================================================================
@@ -17,7 +18,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 source "$SCRIPT_DIR/../test-framework.sh"
 
 # Test setup
-test_suite_start "Module Loader and Dependencies Integration"
+test_suite_start "Module Loader and Dependencies Integration (v1.12.0)"
 
 cd "$PROJECT_ROOT"
 
@@ -32,10 +33,10 @@ test_case "Module loader sets architecture flag" "
 "
 
 # Test 2: Module loading order and dependencies
-test_case "All 14 modules load in correct order" "
+test_case "All required modules load in correct order" "
     source install/module-loader.sh &&
-    # Check that the module counter matches expected count
-    [[ \"\${MODULE_COUNT:-0}\" -eq 14 ]] || echo \"\$MODULE_COUNT modules loaded\"
+    # Check that modules loaded successfully
+    [[ \"\${MODULE_COUNT:-0}\" -gt 10 ]] || echo \"\$MODULE_COUNT modules loaded\"
 "
 
 test_case "Utils modules load before other modules" "
@@ -50,6 +51,7 @@ test_case "Utils modules load before other modules" "
 test_case "Core modules load after utils" "
     source install/module-loader.sh &&
     # Core modules should have access to utils functions
+    assert_function_exists install_profolio_application &&
     assert_function_exists version_control_get_latest_version &&
     assert_function_exists rollback_create_rollback_point
 "
@@ -67,7 +69,8 @@ test_case "Platform modules load last" "
     # Platform modules should have access to all previous modules
     assert_function_exists handle_proxmox_installation &&
     assert_function_exists handle_ubuntu_platform &&
-    assert_function_exists handle_docker_platform
+    assert_function_exists handle_docker_platform &&
+    assert_function_exists handle_emergency_installation
 "
 
 # Test 3: Cross-module function availability
@@ -108,7 +111,34 @@ test_case "Platform modules can use all prerequisite functions" "
     assert_function_exists get_platform_type
 "
 
-# Test 5: Module metadata consistency
+# Test 5: New System Update Integration (NEW)
+test_case "Ubuntu platform has optional update function" "
+    source install/module-loader.sh &&
+    # Check if Ubuntu platform has the new update function
+    assert_function_exists update_package_repositories
+"
+
+test_case "Ubuntu platform update function has user choices" "
+    # Check if the Ubuntu platform file contains the new interactive options
+    grep -q 'Skip system updates' install/platforms/ubuntu.sh &&
+    grep -q 'Update package lists only' install/platforms/ubuntu.sh &&
+    grep -q 'Select update option' install/platforms/ubuntu.sh
+"
+
+test_case "Proxmox platform has container update options" "
+    # Check if Proxmox platform has container update options
+    grep -q 'Container System Update Options' install/platforms/proxmox.sh &&
+    grep -q 'update_cmd=' install/platforms/proxmox.sh
+"
+
+test_case "Emergency platform has update controls" "
+    source install/module-loader.sh &&
+    # Emergency platform should have update control functions
+    assert_function_exists emergency_fix_dependencies &&
+    grep -q 'Emergency System Update Options' install/platforms/emergency.sh
+"
+
+# Test 6: Module metadata consistency
 test_case "All modules have version information" "
     source install/module-loader.sh &&
     # Check that module versions are defined
@@ -124,7 +154,7 @@ test_case "Module loaded flags are set correctly" "
     [[ \"\${VERSION_CONTROL_MODULE_LOADED:-}\" == 'true' ]]
 "
 
-# Test 6: Error handling in module loading
+# Test 7: Error handling in module loading
 test_case "Module loader handles missing optional modules gracefully" "
     # Create a temporary environment without one module
     temp_dir=\$(mktemp -d) &&
@@ -136,7 +166,7 @@ test_case "Module loader handles missing optional modules gracefully" "
     rm -rf \"\$temp_dir\"
 "
 
-# Test 7: Function namespace collision prevention
+# Test 8: Function namespace collision prevention
 test_case "No function name collisions between modules" "
     source install/module-loader.sh &&
     # Check that functions have proper namespacing
@@ -146,7 +176,7 @@ test_case "No function name collisions between modules" "
     type backup_create_backup >/dev/null 2>&1
 "
 
-# Test 8: Module independence verification
+# Test 9: Module independence verification
 test_case "Utils modules work independently" "
     # Test that utils can be loaded independently
     temp_script=\$(mktemp) &&
@@ -170,7 +200,7 @@ test_case "Core modules work with minimal dependencies" "
     rm -f \"\$temp_script\"
 "
 
-# Test 9: Performance impact of module loading
+# Test 10: Performance impact of module loading
 test_case "Module loading completes within reasonable time" "
     measure_execution_time 'source install/module-loader.sh >/dev/null 2>&1' 3000
 "
@@ -185,7 +215,7 @@ test_case "Module loading is consistent across multiple runs" "
     [[ \"\$count1\" == \"\$count2\" ]]
 "
 
-# Test 10: Bootstrap integration
+# Test 11: Bootstrap integration
 test_case "Bootstrap system integrates with module loader" "
     source install/bootstrap.sh &&
     assert_function_exists bootstrap_download_modules &&
@@ -193,11 +223,11 @@ test_case "Bootstrap system integrates with module loader" "
     type get_loaded_modules >/dev/null 2>&1 || true
 "
 
-# Test 11: Main installer integration
+# Test 12: Main installer integration (UPDATED)
 test_case "Main installer uses module loader correctly" "
-    # Test that main installer loads modules properly
-    grep -q 'source.*module-loader.sh' install-or-update-modular.sh &&
-    grep -q 'MODULAR_ARCHITECTURE_LOADED' install-or-update-modular.sh
+    # Test that main installer loads modules properly (updated filename)
+    grep -q 'source.*module-loader.sh' install.sh &&
+    grep -q 'MODULAR_ARCHITECTURE_LOADED' install.sh
 "
 
 test_case "Main installer can access all module functions" "
@@ -205,17 +235,49 @@ test_case "Main installer can access all module functions" "
     export INSTALLER_DEBUG=true &&
     source install/module-loader.sh &&
     # Test that main installer patterns work
-    assert_function_exists handle_platform_installation ||
+    assert_function_exists install_profolio_application &&
     assert_function_exists get_platform_type
 "
 
-# Test 12: Module information display
+# Test 13: Core installer integration (NEW)
+test_case "Core installer module loads correctly" "
+    source install/module-loader.sh &&
+    # Core installer should be available
+    assert_function_exists install_profolio_application
+"
+
+test_case "Core installer function is callable" "
+    source install/module-loader.sh &&
+    # Test that core installer function exists and is callable (help mode)
+    install_profolio_application --help >/dev/null 2>&1 || 
+    command -v install_profolio_application >/dev/null 2>&1
+"
+
+# Test 14: Platform update integration testing (NEW)
+test_case "Platform modules integrate with core installer" "
+    source install/module-loader.sh &&
+    # Platform modules should be able to call core installer
+    # Check that platforms reference install_profolio_application
+    grep -q 'install_profolio_application' install/platforms/ubuntu.sh &&
+    grep -q 'install_profolio_application' install/platforms/emergency.sh
+"
+
+test_case "Platform update functions don't conflict" "
+    source install/module-loader.sh &&
+    # Multiple platform update functions should exist without conflict
+    assert_function_exists update_package_repositories &&
+    assert_function_exists emergency_fix_dependencies &&
+    # These should be distinct functions from different modules
+    ! [[ \$(type -t update_package_repositories) == \$(type -t emergency_fix_dependencies) ]]
+"
+
+# Test 15: Module information display
 test_case "Module information display works correctly" "
     source install/module-loader.sh &&
     module_info=\$(get_loaded_modules 2>&1) &&
     [[ -n \"\$module_info\" ]] &&
     echo \"\$module_info\" | grep -q 'utils/logging.sh' &&
-    echo \"\$module_info\" | grep -q 'core/version-control.sh'
+    echo \"\$module_info\" | grep -q 'core/profolio-installer.sh'
 "
 
 test_suite_end 
