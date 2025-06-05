@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.3] - 2025-01-05
+
+### 🛠️ **Critical Installer System Fix**
+
+#### **Modular Installer Application Installation**
+
+- **CRITICAL FIX**: Fixed modular installer system missing actual Profolio application installation
+- **Core Module Loading**: Added `core/profolio-installer.sh` to module loader sequence
+- **Platform Integration**: Updated Ubuntu and Proxmox platforms to call application installer after system setup
+- **Function Validation**: Added `install_profolio_application` to required function validation list
+
+#### **Package Dependency Resolution**
+
+- **Dependency Fixing**: Added comprehensive package dependency fixing to Ubuntu platform
+- **Broken Package Resolution**: Automated dpkg configuration and apt --fix-broken install
+- **Package Cache Management**: Enhanced package cache cleaning and repository updates
+- **Ubuntu 22.04 Compatibility**: Resolved container environment dependency conflicts
+
+#### **Installation Workflow Completion**
+
+- **Complete Installation Chain**: Platform setup → dependency fixing → application installation
+- **Proxmox LXC Support**: Application installer now runs in LXC containers after environment setup
+- **Error Prevention**: Fixed root cause of installers claiming success while installing nothing
+- **Module Architecture**: Maintained 90% code reduction benefits while fixing missing functionality
+
+### 📝 **Technical Details**
+
+**Root Cause Analysis**:
+
+- Modular installer architecture was incomplete - platform modules only did system setup
+- Core application installer existed but wasn't loaded by module loader
+- Platform modules returned success after system setup without installing application
+- Ubuntu package conflicts prevented clean installation in container environments
+
+**Solution Implementation**:
+
+- Added `core/profolio-installer.sh` to module loading sequence in phase 2
+- Updated `handle_ubuntu_platform()` to call `install_profolio_application()`
+- Updated `handle_proxmox_installation()` to call installer when in LXC container
+- Added `fix_package_dependencies()` function to resolve apt conflicts
+
+### 🎯 **Impact**
+
+- **Installation Success**: All installer entry points now actually install Profolio
+- **Container Compatibility**: Fixed Ubuntu 22.04 container dependency issues
+- **Modular Benefits**: Maintained code reusability while fixing core functionality
+- **User Experience**: Installers now work as documented and expected
+
 ## [v1.11.2] - 2025-06-05
 
 ### 🚨 **Critical Installer Fix**

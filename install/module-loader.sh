@@ -92,6 +92,7 @@ load_all_modules() {
     # Phase 2: Core modules (depend on utilities)
     load_module "core/version-control.sh" || return 1
     load_module "core/rollback.sh" || return 1
+    load_module "core/profolio-installer.sh" || return 1
     
     # Phase 3: Feature modules (depend on utilities and sometimes core)
     load_module "features/optimization.sh" || return 1
@@ -172,6 +173,7 @@ validate_module_functions() {
         # Core functions
         "version_control_get_latest_version"
         "rollback_create_rollback_point"
+        "install_profolio_application"
         
         # Feature functions
         "optimization_deploy_safe"

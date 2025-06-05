@@ -342,7 +342,16 @@ handle_proxmox_installation() {
         esac
     elif detect_lxc_container; then
         info "Running inside LXC container - perfect for Profolio!"
-        return 0  # Continue with normal installation
+        
+        # Install Profolio application inside the container
+        info "Starting Profolio application installation in LXC container..."
+        if ! install_profolio_application; then
+            error "Failed to install Profolio application in container"
+            return 1
+        fi
+        
+        success "Profolio installation in LXC container completed successfully"
+        return 0
     else
         # Regular Linux system
         return 0  # Continue with normal installation

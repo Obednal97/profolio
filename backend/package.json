@@ -1,6 +1,6 @@
 {
   "name": "profolio-backend",
-  "version": "1.11.2",
+  "version": "1.11.3",
   "description": "Personal finance backend for Profolio",
   "main": "dist/main.js",
   "scripts": {

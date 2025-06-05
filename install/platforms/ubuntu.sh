@@ -72,9 +72,36 @@ is_supported_distribution() {
     fi
 }
 
+# Fix broken package dependencies
+fix_package_dependencies() {
+    info "Fixing broken package dependencies..."
+    
+    # Try to fix broken packages first
+    info "Configuring unconfigured packages..."
+    dpkg --configure -a 2>/dev/null || warn "Some packages could not be configured"
+    
+    # Fix broken dependencies
+    info "Fixing broken dependencies..."
+    apt-get --fix-broken install -y 2>/dev/null || warn "Some dependencies could not be fixed automatically"
+    
+    # Force install essential packages if needed
+    info "Installing essential tools..."
+    apt-get install -y --reinstall ca-certificates curl wget gnupg lsb-release 2>/dev/null || warn "Some essential packages failed to install"
+    
+    # Clean package cache
+    apt-get clean
+    apt-get autoclean
+    
+    success "Package dependency fixing completed"
+    return 0
+}
+
 # Update package repositories
 update_package_repositories() {
     info "Updating package repositories..."
+    
+    # Fix dependencies first
+    fix_package_dependencies
     
     # Update package lists
     if apt-get update; then
@@ -411,6 +438,15 @@ handle_ubuntu_platform() {
     optimize_ubuntu_system
     
     success "Ubuntu/Debian platform setup completed"
+    
+    # Now install the actual Profolio application
+    info "Starting Profolio application installation..."
+    if ! install_profolio_application; then
+        error "Failed to install Profolio application"
+        return 1
+    fi
+    
+    success "Ubuntu/Debian platform installation completed successfully"
     return 0
 }
 
