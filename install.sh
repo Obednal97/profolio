@@ -1,18 +1,17 @@
 #!/bin/bash
 
 # =============================================================================
-# PROFOLIO INSTALLER v1.11.4
+# PROFOLIO INSTALLER v1.11.5
 # =============================================================================
-# Single entry point for Profolio installation with modular architecture
-# Downloads and executes the comprehensive modular installer system
+# Simple, reliable installer that works without complex module systems
+# Downloads and directly executes platform-specific installers
 # =============================================================================
 
 set -euo pipefail
 
 # Configuration
-readonly INSTALLER_VERSION="1.11.4"
+readonly INSTALLER_VERSION="1.11.5"
 readonly REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
-readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
 
 # Colors
@@ -40,56 +39,141 @@ success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1" | tee -a "$LOG_FILE"
 }
 
-# Cleanup function
-cleanup() {
-    if [[ -d "$TEMP_DIR" ]]; then
-        rm -rf "$TEMP_DIR"
+warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1" | tee -a "$LOG_FILE"
+}
+
+# Platform detection
+detect_platform() {
+    if [[ -f "/etc/pve/version" ]]; then
+        echo "proxmox"
+    elif [[ -f "/.dockerenv" ]]; then
+        echo "docker"
+    elif command -v lsb_release >/dev/null 2>&1; then
+        local distro=$(lsb_release -is 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        case "$distro" in
+            ubuntu|debian) echo "$distro" ;;
+            *) echo "ubuntu" ;;  # Default to ubuntu for unknown distros
+        esac
+    elif [[ -f "/etc/os-release" ]]; then
+        local distro=$(grep -E '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"' | tr '[:upper:]' '[:lower:]')
+        case "$distro" in
+            ubuntu|debian) echo "$distro" ;;
+            *) echo "ubuntu" ;;  # Default to ubuntu
+        esac
+    else
+        echo "ubuntu"  # Default fallback
     fi
 }
-trap cleanup EXIT
 
-# Download modular installer
-download_installer() {
-    log "Downloading Profolio modular installer..."
+# Download and execute platform installer
+install_for_platform() {
+    local platform="$1"
+    local temp_installer="/tmp/profolio-platform-installer.sh"
     
-    # Create temp directory
-    mkdir -p "$TEMP_DIR"
-    cd "$TEMP_DIR"
+    log "Downloading platform installer for: $platform"
     
-    # Download essential modules
-    local modules=(
-        "module-loader.sh"
+    # Map platform to installer URL
+    local installer_url
+    case "$platform" in
+        proxmox)
+            installer_url="$REPO_URL/install/platforms/proxmox.sh"
+            ;;
+        docker)
+            installer_url="$REPO_URL/install/platforms/docker.sh"
+            ;;
+        ubuntu|debian)
+            installer_url="$REPO_URL/install/platforms/ubuntu.sh"
+            ;;
+        *)
+            installer_url="$REPO_URL/install/platforms/ubuntu.sh"  # Fallback
+            ;;
+    esac
+    
+    # Download the platform installer
+    if curl -fsSL "$installer_url" -o "$temp_installer"; then
+        chmod +x "$temp_installer"
+        success "Platform installer downloaded"
+        
+        # Source required utility functions first
+        download_utilities
+        
+        # Execute the platform installer
+        log "Executing $platform platform installation..."
+        if source "$temp_installer" && handle_${platform}_platform "$@"; then
+            success "Platform installation completed successfully"
+            return 0
+        else
+            warning "Platform installation failed, trying emergency mode"
+            install_emergency_mode "$@"
+        fi
+    else
+        error "Failed to download platform installer"
+        install_emergency_mode "$@"
+    fi
+}
+
+# Download utility functions
+download_utilities() {
+    local utils_dir="/tmp/profolio-utils"
+    mkdir -p "$utils_dir"
+    
+    # Download essential utility functions
+    local util_files=(
         "utils/logging.sh"
         "utils/ui.sh"
-        "utils/validation.sh"
         "utils/platform-detection.sh"
         "core/profolio-installer.sh"
-        "platforms/ubuntu.sh"
-        "platforms/proxmox.sh"
-        "platforms/docker.sh"
-        "platforms/emergency.sh"
     )
     
-    for module in "${modules[@]}"; do
-        local module_dir=$(dirname "$module")
-        if [[ "$module_dir" != "." ]]; then
-            mkdir -p "$module_dir"
-        fi
-        
-        info "Downloading $module..."
-        if ! curl -fsSL "$REPO_URL/install/$module" -o "$module"; then
-            error "Failed to download $module"
-            return 1
-        fi
-        
-        # Make executable if it's a shell script
-        if [[ "$module" == *.sh ]]; then
-            chmod +x "$module"
+    for util_file in "${util_files[@]}"; do
+        local util_path="$utils_dir/$(basename "$util_file")"
+        if curl -fsSL "$REPO_URL/install/$util_file" -o "$util_path" 2>/dev/null; then
+            source "$util_path" 2>/dev/null || true
         fi
     done
+}
+
+# Emergency installation mode
+install_emergency_mode() {
+    warning "🚨 Activating emergency installation mode"
     
-    success "Modular installer downloaded successfully"
-    return 0
+    local emergency_installer="/tmp/profolio-emergency-installer.sh"
+    
+    if curl -fsSL "$REPO_URL/install/platforms/emergency.sh" -o "$emergency_installer"; then
+        chmod +x "$emergency_installer"
+        log "Emergency installer downloaded"
+        
+        if source "$emergency_installer" && handle_emergency_installation "$@"; then
+            success "🎉 Emergency installation completed successfully!"
+            return 0
+        else
+            error "❌ Emergency installation also failed"
+            show_failure_help
+            exit 1
+        fi
+    else
+        error "Failed to download emergency installer"
+        show_failure_help
+        exit 1
+    fi
+}
+
+# Show help when installation fails
+show_failure_help() {
+    echo ""
+    echo "╔════════════════════════════════════════════════════════════════╗"
+    echo "║                    ⚠️  INSTALLATION FAILED                      ║"
+    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "📞 Get Support:"
+    echo "   • GitHub Issues: https://github.com/Obednal97/profolio/issues"
+    echo "   • Include log file: $LOG_FILE"
+    echo ""
+    echo "🔧 Manual Installation:"
+    echo "   • Clone repo: git clone https://github.com/Obednal97/profolio.git"
+    echo "   • See documentation: docs/INSTALLATION.md"
+    echo ""
 }
 
 # Main installer function
@@ -122,85 +206,39 @@ main() {
         fi
     fi
     
-    # Download modular installer
-    if ! download_installer; then
-        error "Failed to download installer modules"
-        exit 1
-    fi
-    
-    # Change to temp directory with modules
-    cd "$TEMP_DIR"
-    
-    # Load the modular architecture
-    log "Loading modular installer architecture..."
-    if ! source "module-loader.sh"; then
-        error "Failed to load modular installer"
-        exit 1
-    fi
-    
     # Detect platform
     local platform
-    if ! platform=$(get_platform_type); then
-        error "Platform detection failed"
-        exit 1
-    fi
-    
+    platform=$(detect_platform)
     log "Platform detected: $platform"
     
-    # Execute platform-specific installation
-    case "$platform" in
-        ubuntu|debian|lxc-container)
-            log "Starting Ubuntu/Debian installation..."
-            if ! handle_ubuntu_platform "$@"; then
-                error "Ubuntu installation failed, trying emergency mode..."
-                handle_emergency_installation "$@"
-            fi
-            ;;
-        proxmox)
-            log "Starting Proxmox installation..."
-            if ! handle_proxmox_installation "$@"; then
-                error "Proxmox installation failed, trying emergency mode..."
-                handle_emergency_installation "$@"
-            fi
-            ;;
-        docker)
-            log "Starting Docker installation..."
-            if ! handle_docker_platform "$@"; then
-                error "Docker installation failed, trying emergency mode..."
-                handle_emergency_installation "$@"
-            fi
-            ;;
-        *)
-            log "Unknown platform '$platform', trying Ubuntu installation..."
-            if ! handle_ubuntu_platform "$@"; then
-                error "Generic installation failed, trying emergency mode..."
-                handle_emergency_installation "$@"
-            fi
-            ;;
-    esac
-    
-    success "🎉 Profolio installation completed successfully!"
-    echo ""
-    echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                     🎉 INSTALLATION COMPLETE!                 ║"
-    echo "╚══════════════════════════════════════════════════════════════╝"
-    echo ""
-    echo "🌐 Your Profolio instance is ready!"
-    echo ""
-    echo "📍 Access URLs:"
-    local host_ip=$(hostname -I | awk '{print $1}')
-    echo "   • Frontend: http://${host_ip}:3000"
-    echo "   • Backend:  http://${host_ip}:3001"
-    echo ""
-    echo "🔧 Service Management:"
-    echo "   • Status:  systemctl status profolio-backend profolio-frontend"
-    echo "   • Logs:    journalctl -u profolio-backend -u profolio-frontend -f"
-    echo "   • Restart: systemctl restart profolio-backend profolio-frontend"
-    echo ""
-    echo "📚 Documentation & Support:"
-    echo "   • GitHub: https://github.com/Obednal97/profolio"
-    echo "   • Issues: https://github.com/Obednal97/profolio/issues"
-    echo ""
+    # Install for detected platform
+    if install_for_platform "$platform" "$@"; then
+        success "🎉 Profolio installation completed successfully!"
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════╗"
+        echo "║                     🎉 INSTALLATION COMPLETE!                 ║"
+        echo "╚══════════════════════════════════════════════════════════════╝"
+        echo ""
+        echo "🌐 Your Profolio instance is ready!"
+        echo ""
+        echo "📍 Access URLs:"
+        local host_ip=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "your-server-ip")
+        echo "   • Frontend: http://${host_ip}:3000"
+        echo "   • Backend:  http://${host_ip}:3001"
+        echo ""
+        echo "🔧 Service Management:"
+        echo "   • Status:  systemctl status profolio-backend profolio-frontend"
+        echo "   • Logs:    journalctl -u profolio-backend -u profolio-frontend -f"
+        echo "   • Restart: systemctl restart profolio-backend profolio-frontend"
+        echo ""
+        echo "📚 Documentation & Support:"
+        echo "   • GitHub: https://github.com/Obednal97/profolio"
+        echo "   • Issues: https://github.com/Obednal97/profolio/issues"
+        echo ""
+    else
+        error "Installation failed"
+        exit 1
+    fi
 }
 
 # Show help
@@ -216,9 +254,6 @@ show_help() {
     echo "Examples:"
     echo "  # Standard installation"
     echo "  sudo bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh)\""
-    echo ""
-    echo "  # Proxmox LXC container"
-    echo "  sudo bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-proxmox.sh)\""
     echo ""
 }
 
