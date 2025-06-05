@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.5] - 2025-06-05
+
+### 🚨 **CRITICAL HOTFIX**
+
+#### **Installer Failure Resolution**
+
+- **Fixed complete installer failure**: Resolved critical issue where v1.11.4 installer was using broken v2.0.0 caching system
+- **Restored installation functionality**: Users can now successfully install Profolio and see optional system update prompts
+- **Simplified architecture**: Replaced complex caching system with reliable temporary directory approach
+- **Fixed garbled output**: Eliminated jumbled log messages and version number mismatches
+- **Maintained optional system updates**: All v1.11.4 optional system update features preserved and working
+
+#### **Technical Details**
+
+- **Removed**: Broken v2.0.0 local caching system causing module loading failures
+- **Restored**: Simple, proven installer architecture using temporary directories
+- **Fixed**: Platform detection and module loading that was completely broken
+- **Maintained**: Emergency fallback system and modular architecture
+
+**Impact**: This resolves the deployment-blocking issue where installations would fail with garbled output and no user interaction.
+
 ## [v1.11.4] - 2025-06-05
 
 ### ✨ **Optional System Updates Enhancement**
