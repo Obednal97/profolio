@@ -42,6 +42,12 @@ TARGET_VERSION=""
 FORCE_VERSION=false
 ROLLBACK_ENABLED=true
 
+# Enhanced configuration variables for full feature parity
+USER_ACTION_CHOICE=""
+OPTIMIZATION_LEVEL="safe"
+SKIP_ENV_PRESERVATION=false
+EXPERIENCE_MODE="default"
+
 # Show banner using modular UI
 show_banner() {
     ui_show_banner "Profolio Installer" "$INSTALLER_VERSION" "Modular Architecture"
@@ -120,6 +126,25 @@ handle_platform_installation() {
         "proxmox-host")
             handle_proxmox_installation
             ;;
+        "unraid")
+            info "Unraid detected - using Docker container approach"
+            echo -e "${CYAN}🐳 Unraid Docker Installation${NC}"
+            echo -e "${YELLOW}For Unraid, we recommend using Docker containers via Unraid's web interface.${NC}"
+            echo -e "${BLUE}Please use the Community Applications plugin to install Profolio,${NC}"
+            echo -e "${BLUE}or create a custom Docker container with the following settings:${NC}"
+            echo ""
+            echo -e "${WHITE}Docker Run Command:${NC}"
+            echo -e "${GREEN}docker run -d --name=profolio \\${NC}"
+            echo -e "${GREEN}  -p 3000:3000 -p 3001:3001 \\${NC}"
+            echo -e "${GREEN}  -v /mnt/user/appdata/profolio:/opt/profolio/data \\${NC}"
+            echo -e "${GREEN}  -e NODE_ENV=production \\${NC}"
+            echo -e "${GREEN}  --restart unless-stopped \\${NC}"
+            echo -e "${GREEN}  profolio:latest${NC}"
+            echo ""
+            echo -e "${YELLOW}Note: This installer is designed for direct Linux installation.${NC}"
+            echo -e "${YELLOW}For Unraid, please use the Docker method above.${NC}"
+            return 1
+            ;;
         "lxc-container"|"generic-linux")
             handle_ubuntu_platform
             ;;
@@ -134,10 +159,349 @@ handle_platform_installation() {
     esac
 }
 
+# Manage backups with improved feedback
+manage_backups() {
+    local backup_type=$1
+    local backup_dir="/opt/profolio-backups"
+    
+    mkdir -p "$backup_dir"
+    
+    # Create new backup
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local new_backup_dir="$backup_dir/${backup_type}_${timestamp}"
+    mkdir -p "$new_backup_dir"
+    
+    info "Creating backup..."
+    
+    # Backup database
+    if sudo -u postgres pg_dump profolio > "$new_backup_dir/database.sql" 2>/dev/null; then
+        success "Database backup created"
+    else
+        warn "Database backup failed (may not exist yet)"
+    fi
+    
+    # Backup application
+    if [[ -d "/opt/profolio" ]]; then
+        cp -r /opt/profolio "$new_backup_dir/application"
+        success "Application backup created"
+    fi
+    
+    # Cleanup old backups (keep only 3 most recent)
+    local backup_count=$(ls -1 "$backup_dir" | grep "^${backup_type}_" | wc -l)
+    if [[ "$backup_count" -gt 3 ]]; then
+        local backups_to_remove=$((backup_count - 3))
+        ls -1 "$backup_dir" | grep "^${backup_type}_" | head -n "$backups_to_remove" | while read -r old_backup; do
+            rm -rf "$backup_dir/$old_backup"
+            info "Removed old backup: $old_backup"
+        done
+    fi
+    
+    success "Backup created: $new_backup_dir"
+}
+
+# Enhanced configuration wizard with default/advanced modes
+run_enhanced_configuration_wizard() {
+    echo -e "${WHITE}🔧 PROFOLIO CONFIGURATION WIZARD${NC}"
+    echo -e "${YELLOW}Configure your Profolio installation${NC}"
+    echo ""
+    
+    # Installation Mode Selection
+    echo -e "${CYAN}Installation Mode:${NC}"
+    echo "  1) ${GREEN}Quick Install${NC} (recommended defaults)"
+    echo "  2) ${BLUE}Advanced Setup${NC} (custom configuration)"
+    echo ""
+    read -p "Select installation mode [1]: " install_mode
+    install_mode=${install_mode:-1}
+    
+    if [[ "$install_mode" == "1" ]]; then
+        # Quick install mode
+        AUTO_INSTALL=true
+        OPTIMIZATION_LEVEL="safe"
+        EXPERIENCE_MODE="default"
+        
+        echo ""
+        echo -e "${GREEN}📋 Quick Install Mode Selected${NC}"
+        echo -e "${CYAN}Final Settings:${NC}"
+        echo -e "  • Installation: Default configuration"
+        echo -e "  • Optimization: Safe (recommended)"
+        echo -e "  • SSH: Enabled with key-only authentication"
+        echo -e "  • Network: DHCP (automatic)"
+        echo ""
+        return
+    fi
+    
+    # Advanced Mode
+    EXPERIENCE_MODE="advanced"
+    echo ""
+    echo -e "${BLUE}🔧 Advanced Mode Selected${NC}"
+    echo ""
+    
+    # Optimization Level Selection
+    echo -e "${CYAN}🔧 Optimization Level Choice:${NC}"
+    echo -e "  Choose how aggressively to optimize the installation size:"
+    echo ""
+    echo -e "  1) ${GREEN}Safe Optimization${NC} (recommended - ~600-800MB)"
+    echo -e "     • Removes only development dependencies after build"
+    echo -e "     • Preserves all production-needed packages"
+    echo -e "     • ${GREEN}Safest option - all features guaranteed to work${NC}"
+    echo ""
+    echo -e "  2) ${YELLOW}Aggressive Optimization${NC} (⚠️  ~400-500MB - use with caution)"
+    echo -e "     • Removes development dependencies + Docker-style cleanup"
+    echo -e "     • Ultra-aggressive space reduction"
+    echo -e "     • ${YELLOW}May affect debugging capabilities${NC}"
+    echo ""
+    read -p "Select optimization level [1]: " opt_choice
+    opt_choice=${opt_choice:-1}
+    
+    if [[ "$opt_choice" == "2" ]]; then
+        echo ""
+        echo -e "${RED}⚠️  AGGRESSIVE OPTIMIZATION WARNING${NC}"
+        echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}This mode applies ultra-aggressive size reduction techniques${NC}"
+        echo ""
+        read -p "Proceed with aggressive optimization? (y/n) [n]: " aggressive_confirm
+        if [[ "$aggressive_confirm" =~ ^[Yy]$ ]]; then
+            OPTIMIZATION_LEVEL="aggressive"
+            warn "Aggressive optimization confirmed"
+        else
+            OPTIMIZATION_LEVEL="safe"
+            success "Using safe optimization instead"
+        fi
+    else
+        OPTIMIZATION_LEVEL="safe"
+        success "Safe optimization selected"
+    fi
+    
+    echo ""
+    echo -e "${BLUE}📋 Advanced Mode Configuration:${NC}"
+    echo -e "${CYAN}Final Settings:${NC}"
+    echo -e "  • Installation: Advanced configuration"
+    echo -e "  • Optimization: $OPTIMIZATION_LEVEL"
+    echo -e "  • SSH: Enabled with key-only authentication"
+    echo -e "  • Network: DHCP (automatic)"
+    echo ""
+}
+
+# Enhanced update wizard with comprehensive options
+run_enhanced_update_wizard() {
+    echo -e "${WHITE}🔄 PROFOLIO UPDATE WIZARD${NC}"
+    echo -e "${YELLOW}Update your existing Profolio installation${NC}"
+    echo ""
+    
+    # Show current version info
+    local current_version="unknown"
+    local latest_version="checking..."
+    
+    if [[ -f "/opt/profolio/package.json" ]]; then
+        current_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+        echo -e "${BLUE}Current Version:${NC} $current_version"
+    fi
+    
+    # Get latest version
+    info "Checking for updates..."
+    latest_version=$(version_control_get_latest_version)
+    
+    if [[ "$latest_version" != "unknown" ]]; then
+        echo -e "${BLUE}Latest Stable Version:${NC} $latest_version"
+    else
+        echo -e "${BLUE}Latest Stable Version:${NC} Unable to check"
+    fi
+    echo ""
+    
+    # Experience Level Selection
+    echo -e "${CYAN}🎛️ Choose Your Experience:${NC}"
+    echo -e "  1) ${GREEN}Default Mode${NC} (recommended - quick update with sensible defaults)"
+    echo -e "  2) ${BLUE}Advanced Mode${NC} (full control over all options)"
+    echo ""
+    read -p "Select mode [1]: " experience_mode
+    experience_mode=${experience_mode:-1}
+    
+    # Initialize preferences
+    local action_choice=""
+    local version_choice=""
+    local preserve_env="yes"
+    local enable_rollback="yes"
+    
+    if [[ "$experience_mode" == "1" ]]; then
+        # Default Mode
+        EXPERIENCE_MODE="default"
+        echo -e "${GREEN}📋 Default Mode Selected${NC}"
+        echo ""
+        
+        if [[ "$current_version" == "$latest_version" ]]; then
+            action_choice="rebuild"
+            version_choice="$current_version"
+            echo -e "${YELLOW}ℹ️  You have the latest stable version${NC}"
+            echo -e "${CYAN}Default Action:${NC} Rebuild current version"
+        else
+            action_choice="update"
+            version_choice="$latest_version"
+            echo -e "${CYAN}Default Action:${NC} Update to latest stable version ($latest_version)"
+        fi
+        
+        OPTIMIZATION_LEVEL="safe"
+        echo -e "${CYAN}Environment Preservation:${NC} Yes (credentials preserved)"
+        echo -e "${CYAN}Rollback Protection:${NC} Yes (automatic rollback on failure)"
+        echo -e "${CYAN}Optimization Level:${NC} Safe (recommended)"
+        echo ""
+        
+        read -p "Proceed with default settings? (y/n) [y]: " default_confirm
+        if [[ ! "$default_confirm" =~ ^[Yy]?$ ]]; then
+            info "Update cancelled by user"
+            exit 0
+        fi
+    else
+        # Advanced Mode
+        EXPERIENCE_MODE="advanced"
+        echo -e "${BLUE}🔧 Advanced Mode Selected${NC}"
+        echo ""
+        
+        # Action Selection
+        echo -e "${CYAN}Choose Update Action:${NC}"
+        if [[ "$current_version" == "$latest_version" ]]; then
+            echo -e "  1) ${YELLOW}Rebuild current version${NC} (recommended - you have latest stable)"
+            echo -e "  2) ${BLUE}Update to specific version${NC} (upgrade/downgrade)"
+            echo -e "  3) ${PURPLE}Update to development version${NC} (main branch)"
+            echo -e "  4) ${CYAN}Repair installation${NC} (fix services and rebuild)"
+            echo ""
+            read -p "Select action [1]: " action_input
+            action_input=${action_input:-1}
+            
+            case $action_input in
+                1) action_choice="rebuild"; version_choice="$current_version" ;;
+                2) action_choice="select" ;;
+                3) action_choice="development"; version_choice="main" ;;
+                4) action_choice="repair"; version_choice="$current_version" ;;
+                *) action_choice="rebuild"; version_choice="$current_version" ;;
+            esac
+        else
+            echo -e "  1) ${GREEN}Update to latest stable${NC} (recommended - $latest_version)"
+            echo -e "  2) ${BLUE}Select specific version${NC} (upgrade/downgrade)"
+            echo -e "  3) ${PURPLE}Update to development version${NC} (main branch)"
+            echo -e "  4) ${YELLOW}Rebuild current version${NC} (keep $current_version)"
+            echo -e "  5) ${CYAN}Repair installation${NC} (fix services and rebuild)"
+            echo ""
+            read -p "Select action [1]: " action_input
+            action_input=${action_input:-1}
+            
+            case $action_input in
+                1) action_choice="update"; version_choice="$latest_version" ;;
+                2) action_choice="select" ;;
+                3) action_choice="development"; version_choice="main" ;;
+                4) action_choice="rebuild"; version_choice="$current_version" ;;
+                5) action_choice="repair"; version_choice="$current_version" ;;
+                *) action_choice="update"; version_choice="$latest_version" ;;
+            esac
+        fi
+        
+        # Version Selection if needed
+        if [[ "$action_choice" == "select" ]]; then
+            echo ""
+            echo -e "${CYAN}📋 Available Versions:${NC}"
+            version_control_list_versions
+            read -p "Enter version to install (e.g., v1.0.2, main): " version_input
+            if [[ -z "$version_input" ]]; then
+                error "No version specified"
+                exit 1
+            fi
+            version_choice="$version_input"
+        fi
+        
+        # Environment Preservation
+        echo ""
+        echo -e "${CYAN}Environment Configuration:${NC}"
+        echo -e "  Do you want to preserve existing Firebase credentials and settings?"
+        echo ""
+        read -p "Preserve environment configuration? (y/n) [y]: " preserve_input
+        preserve_env=${preserve_input:-y}
+        if [[ "$preserve_env" =~ ^[Yy] ]]; then
+            preserve_env="yes"
+            SKIP_ENV_PRESERVATION=false
+        else
+            preserve_env="no"
+            SKIP_ENV_PRESERVATION=true
+        fi
+        
+        # Rollback Protection
+        echo ""
+        echo -e "${CYAN}Rollback Protection:${NC}"
+        echo -e "  Enable automatic rollback if update fails?"
+        echo ""
+        read -p "Enable rollback protection? (y/n) [y]: " rollback_input
+        enable_rollback=${rollback_input:-y}
+        if [[ "$enable_rollback" =~ ^[Yy] ]]; then
+            enable_rollback="yes"
+            ROLLBACK_ENABLED=true
+        else
+            enable_rollback="no"
+            ROLLBACK_ENABLED=false
+        fi
+        
+        # Optimization Level
+        echo ""
+        echo -e "${CYAN}🔧 Optimization Level:${NC}"
+        echo -e "  1) ${GREEN}Safe Optimization${NC} (recommended)"
+        echo -e "  2) ${YELLOW}Aggressive Optimization${NC} (⚠️  use with caution)"
+        echo ""
+        read -p "Select optimization level [1]: " opt_level_input
+        opt_level_input=${opt_level_input:-1}
+        
+        if [[ "$opt_level_input" == "2" ]]; then
+            echo ""
+            echo -e "${RED}⚠️  AGGRESSIVE OPTIMIZATION WARNING${NC}"
+            read -p "Proceed with aggressive optimization? (y/n) [n]: " aggressive_confirm
+            if [[ "$aggressive_confirm" =~ ^[Yy]$ ]]; then
+                OPTIMIZATION_LEVEL="aggressive"
+                warn "Aggressive optimization confirmed"
+            else
+                OPTIMIZATION_LEVEL="safe"
+                success "Using safe optimization instead"
+            fi
+        else
+            OPTIMIZATION_LEVEL="safe"
+        fi
+    fi
+    
+    # Show Summary
+    echo ""
+    echo -e "${WHITE}📋 UPDATE SUMMARY${NC}"
+    echo -e "${CYAN}════════════════════════════════════════${NC}"
+    
+    case "$action_choice" in
+        "update") echo -e "${BLUE}Action:${NC} Update to latest stable version" ;;
+        "rebuild") echo -e "${BLUE}Action:${NC} Rebuild current version" ;;
+        "development") echo -e "${BLUE}Action:${NC} Update to development version" ;;
+        "select") echo -e "${BLUE}Action:${NC} Install specific version" ;;
+        "repair") echo -e "${BLUE}Action:${NC} Repair installation" ;;
+    esac
+    
+    echo -e "${BLUE}Target Version:${NC} $version_choice"
+    echo -e "${BLUE}Environment Preservation:${NC} $preserve_env"
+    echo -e "${BLUE}Rollback Protection:${NC} $enable_rollback"
+    echo -e "${BLUE}Optimization Level:${NC} $OPTIMIZATION_LEVEL"
+    echo ""
+    
+    # Final confirmation
+    read -p "Proceed with update? (y/n) [y]: " final_confirm
+    if [[ ! "$final_confirm" =~ ^[Yy]?$ ]]; then
+        info "Update cancelled by user"
+        exit 0
+    fi
+    
+    # Set global variables
+    TARGET_VERSION="$version_choice"
+    USER_ACTION_CHOICE="$action_choice"
+    
+    success "Update confirmed. Installing version: $version_choice"
+}
+
 # Enhanced fresh installation using modular architecture
 fresh_install() {
     OPERATION_TYPE="INSTALL"
     info "Starting fresh installation"
+    
+    # Create backup before installation
+    manage_backups "install"
     
     # Use modular platform-specific installation
     if ! handle_platform_installation; then
@@ -212,17 +576,149 @@ repair_installation() {
     success "Repair completed successfully"
 }
 
-# Show completion status
+# Show completion status with comprehensive reporting
 show_completion_status() {
     local operation_type="$1"
     local success="$2"
     
     echo ""
+    echo -e "${WHITE}════════════════════════════════════════════════════════════════${NC}"
+    
     if [[ "$success" == "true" ]]; then
-        ui_show_progress "✅ $operation_type COMPLETED SUCCESSFULLY" 100
+        echo -e "${GREEN}✅ $operation_type COMPLETED SUCCESSFULLY${NC}"
+        echo -e "${WHITE}════════════════════════════════════════════════════════════════${NC}"
+        
+        # Show installation summary
+        show_installation_summary
+        
+        # Show access information
+        show_access_information
+        
+        # Show next steps
+        show_next_steps "$operation_type"
     else
-        ui_show_progress "❌ $operation_type FAILED" 100
+        echo -e "${RED}❌ $operation_type FAILED${NC}"
+        echo -e "${WHITE}════════════════════════════════════════════════════════════════${NC}"
+        
+        # Show failure information
+        echo -e "${YELLOW}⚠️  Installation failed. Check the logs above for details.${NC}"
+        if [[ "$ROLLBACK_ENABLED" == "true" ]]; then
+            echo -e "${CYAN}🔄 Rollback protection was enabled. System should be restored to previous state.${NC}"
+        fi
+        echo -e "${BLUE}💡 For support, please check the installation logs and documentation.${NC}"
     fi
+    
+    echo -e "${WHITE}════════════════════════════════════════════════════════════════${NC}"
+    echo ""
+}
+
+# Show installation summary
+show_installation_summary() {
+    echo -e "${CYAN}📊 INSTALLATION SUMMARY${NC}"
+    echo -e "${CYAN}────────────────────────────────────────${NC}"
+    
+    # Version information
+    if [[ -f "/opt/profolio/package.json" ]]; then
+        local current_version=$(grep '"version"' /opt/profolio/package.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
+        echo -e "${BLUE}Version:${NC} $current_version"
+    fi
+    
+    # Platform information
+    echo -e "${BLUE}Platform:${NC} $CURRENT_PLATFORM"
+    
+    # Optimization level
+    echo -e "${BLUE}Optimization:${NC} ${OPTIMIZATION_LEVEL^}"
+    
+    # Installation size
+    if [[ -d "/opt/profolio" ]]; then
+        local app_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1 || echo "unknown")
+        echo -e "${BLUE}Installation Size:${NC} $app_size"
+    fi
+    
+    # Service status
+    echo -e "${BLUE}Services:${NC}"
+    if systemctl is-active --quiet profolio-backend profolio-frontend 2>/dev/null; then
+        echo -e "  ✅ Backend and Frontend services running"
+    elif systemctl is-active --quiet profolio-backend 2>/dev/null; then
+        echo -e "  ⚠️  Backend running, Frontend stopped"
+    elif systemctl is-active --quiet profolio-frontend 2>/dev/null; then
+        echo -e "  ⚠️  Frontend running, Backend stopped"
+    else
+        echo -e "  ❌ Services not running"
+    fi
+    
+    echo ""
+}
+
+# Show access information
+show_access_information() {
+    echo -e "${CYAN}🌐 ACCESS INFORMATION${NC}"
+    echo -e "${CYAN}────────────────────────────────────────${NC}"
+    
+    # Get local IP address
+    local local_ip=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "localhost")
+    
+    echo -e "${GREEN}🚀 Profolio Application:${NC}"
+    echo -e "   ${WHITE}http://$local_ip:3000${NC}"
+    echo -e "   ${WHITE}https://$local_ip:3000${NC} (if SSL configured)"
+    echo ""
+    
+    echo -e "${GREEN}🔧 Management:${NC}"
+    echo -e "   ${WHITE}Backend API: http://$local_ip:3001${NC}"
+    echo -e "   ${WHITE}Health Check: http://$local_ip:3001/health${NC}"
+    echo ""
+    
+    # SSH information
+    echo -e "${GREEN}🔐 SSH Access:${NC}"
+    echo -e "   ${WHITE}ssh profolio@$local_ip${NC}"
+    if [[ -f "/home/profolio/.ssh/id_rsa" ]]; then
+        echo -e "   ${YELLOW}Note: SSH key-only authentication enabled${NC}"
+        echo -e "   ${YELLOW}Private key location: /home/profolio/.ssh/id_rsa${NC}"
+    fi
+    echo ""
+}
+
+# Show next steps based on operation type
+show_next_steps() {
+    local operation_type="$1"
+    
+    echo -e "${CYAN}📋 NEXT STEPS${NC}"
+    echo -e "${CYAN}────────────────────────────────────────${NC}"
+    
+    case "$operation_type" in
+        "INSTALL")
+            echo -e "${GREEN}1. Configure Authentication:${NC}"
+            echo -e "   • Set up Firebase authentication in the web interface"
+            echo -e "   • Configure user accounts and permissions"
+            echo ""
+            echo -e "${GREEN}2. Initial Setup:${NC}"
+            echo -e "   • Add your first portfolio and accounts"
+            echo -e "   • Configure market data sources"
+            echo -e "   • Set up backup schedules"
+            ;;
+        "UPDATE")
+            echo -e "${GREEN}1. Verify Update:${NC}"
+            echo -e "   • Check that all features are working correctly"
+            echo -e "   • Verify data integrity"
+            echo -e "   • Test authentication and access"
+            echo ""
+            echo -e "${GREEN}2. Post-Update Tasks:${NC}"
+            echo -e "   • Review new features and capabilities"
+            echo -e "   • Update any custom configurations if needed"
+            ;;
+        "REPAIR")
+            echo -e "${GREEN}1. Verify Repair:${NC}"
+            echo -e "   • Check that services are running properly"
+            echo -e "   • Test application functionality"
+            echo -e "   • Verify database connectivity"
+            ;;
+    esac
+    
+    echo ""
+    echo -e "${GREEN}📚 Documentation:${NC}"
+    echo -e "   • Installation Guide: https://github.com/Obednal97/profolio/docs"
+    echo -e "   • User Manual: https://github.com/Obednal97/profolio/wiki"
+    echo -e "   • Support: https://github.com/Obednal97/profolio/issues"
     echo ""
 }
 
@@ -343,14 +839,14 @@ main() {
         0)
             info "Action: First installation"
             if [[ "$AUTO_INSTALL" == "false" ]]; then
-                config_run_installation_wizard
+                run_enhanced_configuration_wizard
             fi
             fresh_install
             ;;
         1|2)
             info "Action: Existing installation detected"
             if [[ "$AUTO_INSTALL" == "false" ]]; then
-                config_run_update_wizard
+                run_enhanced_update_wizard
             fi
             
             # Determine action based on user choice
@@ -358,8 +854,17 @@ main() {
                 "repair")
                     repair_installation
                     ;;
+                "rebuild")
+                    update_installation  # Rebuild is essentially an update to same version
+                    ;;
+                "development")
+                    update_installation  # Update to development version
+                    ;;
+                "select")
+                    update_installation  # Update to selected version
+                    ;;
                 *)
-                    update_installation
+                    update_installation  # Default to update
                     ;;
             esac
             ;;

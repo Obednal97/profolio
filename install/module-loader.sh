@@ -111,6 +111,20 @@ load_all_modules() {
 initialize_modular_architecture() {
     module_log "Initializing Profolio modular architecture..."
     
+    # Try to load bootstrap system first
+    if [[ -f "$MODULE_BASE_PATH/bootstrap.sh" ]]; then
+        module_log "Loading bootstrap system..."
+        source "$MODULE_BASE_PATH/bootstrap.sh"
+        
+        # Initialize bootstrap (downloads modules if needed)
+        if ! initialize_bootstrap; then
+            echo "ERROR: Bootstrap initialization failed" >&2
+            return 1
+        fi
+    else
+        module_log "Bootstrap system not found - assuming modules are present"
+    fi
+    
     # Load all modules
     if ! load_all_modules; then
         echo "ERROR: Failed to load modular architecture" >&2

@@ -80,10 +80,21 @@ detect_wsl() {
     fi
 }
 
+# Detect if running on Unraid system
+detect_unraid() {
+    if [ -f "/etc/unraid-version" ] || [ -d "/boot/config" && -f "/usr/local/sbin/emhttp" ]; then
+        return 0  # Running on Unraid
+    else
+        return 1  # Not on Unraid
+    fi
+}
+
 # Get the platform type as a string
 get_platform_type() {
     if detect_proxmox_host; then
         echo "proxmox-host"
+    elif detect_unraid; then
+        echo "unraid"
     elif detect_lxc_container; then
         echo "lxc-container"
     elif detect_docker_container; then
@@ -105,6 +116,11 @@ get_platform_info() {
             echo "Platform: Proxmox VE Host"
             echo "Recommendation: Create LXC container for Profolio"
             echo "Features: Container management, VM management, clustering"
+            ;;
+        "unraid")
+            echo "Platform: Unraid Server"
+            echo "Recommendation: Use Docker installation via Unraid's Docker management"
+            echo "Features: Docker container management, plugin system, web interface"
             ;;
         "lxc-container")
             echo "Platform: LXC Container"
@@ -144,6 +160,10 @@ check_platform_compatibility() {
             echo "COMPATIBLE: Proxmox host detected - can create LXC container"
             return 0
             ;;
+        "unraid")
+            echo "COMPATIBLE: Unraid detected - use Docker container installation"
+            return 0
+            ;;
         "lxc-container")
             echo "OPTIMAL: LXC container is ideal for Profolio deployment"
             return 0
@@ -176,6 +196,9 @@ get_installation_approach() {
         "proxmox-host")
             echo "container-creation"
             ;;
+        "unraid")
+            echo "docker-unraid"
+            ;;
         "lxc-container")
             echo "direct-install"
             ;;
@@ -203,6 +226,11 @@ get_platform_warnings() {
         "proxmox-host")
             echo "WARNING: Installing directly on Proxmox host is not recommended"
             echo "RECOMMENDATION: Create dedicated LXC container for better isolation"
+            ;;
+        "unraid")
+            echo "INFO: Unraid detected - Docker installation recommended"
+            echo "RECOMMENDATION: Use Unraid's Docker interface for easy management"
+            echo "RECOMMENDATION: Set up persistent storage for Profolio data"
             ;;
         "docker-container")
             echo "INFO: Limited system access in Docker container"
