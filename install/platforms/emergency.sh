@@ -12,14 +12,18 @@
 # =============================================================================
 
 # Define color variables if not already defined
-if [[ -z "${RED:-}" ]]; then
-    readonly RED='\033[0;31m'
-    readonly GREEN='\033[0;32m'
-    readonly YELLOW='\033[1;33m'
-    readonly BLUE='\033[0;34m'
-    readonly CYAN='\033[0;36m'
-    readonly WHITE='\033[1;37m'
-    readonly NC='\033[0m'
+# Source common definitions if available
+if [[ -f "${TEMP_DIR:-/tmp}/common/definitions.sh" ]]; then
+    source "${TEMP_DIR:-/tmp}/common/definitions.sh"
+elif [[ -z "${RED:-}" ]]; then
+    # Fallback definitions (no readonly to avoid conflicts)
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    CYAN='\033[0;36m'
+    WHITE='\033[1;37m'
+    NC='\033[0m'
 fi
 
 # Module info function

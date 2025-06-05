@@ -9,19 +9,19 @@
 
 set -euo pipefail
 
-# Configuration
-readonly INSTALLER_VERSION="1.12.0"
-readonly REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
+# Configuration (these will be loaded from common/definitions.sh)
+INSTALLER_VERSION="1.12.0"
+REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
 
-# Colors
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m'
+# Temporary colors (will be replaced by common/definitions.sh)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
 # Logging functions
 log() {
