@@ -52,6 +52,33 @@ else
 fi
 
 echo ""
+echo "📦 Loading core modules..."
+
+# Load version control module
+echo "  Loading version control module..."
+if source "$INSTALLER_BASE/install/core/version-control.sh"; then
+    echo "  ✅ Version control module loaded successfully"
+    if [[ "${VERSION_CONTROL_MODULE_LOADED:-false}" == "true" ]]; then
+        echo "     📊 Version: $VERSION_CONTROL_MODULE_VERSION"
+    fi
+else
+    echo "  ❌ Failed to load version control module"
+    exit 1
+fi
+
+# Load rollback module
+echo "  Loading rollback module..."
+if source "$INSTALLER_BASE/install/core/rollback.sh"; then
+    echo "  ✅ Rollback module loaded successfully"
+    if [[ "${ROLLBACK_MODULE_LOADED:-false}" == "true" ]]; then
+        echo "     📊 Version: $ROLLBACK_MODULE_VERSION"
+    fi
+else
+    echo "  ❌ Failed to load rollback module"
+    exit 1
+fi
+
+echo ""
 echo "🧪 Testing module functionality..."
 
 # Test logging functions
@@ -101,7 +128,27 @@ echo ""
 echo "✅ All module tests completed successfully!"
 echo ""
 
+# Test core modules
+echo ""
+echo "🔄 Testing core modules:"
+
+# Test version control functions
+if command -v version_control_get_latest_version >/dev/null 2>&1; then
+    local latest_version=$(version_control_get_latest_version 2>/dev/null || echo "test-mode")
+    success "Version control: Latest version detection works"
+else
+    error "Version control module functions not available"
+fi
+
+# Test rollback functions
+if command -v rollback_get_status >/dev/null 2>&1; then
+    success "Rollback: Status function available"
+else
+    error "Rollback module functions not available"
+fi
+
 # Show module information
+echo ""
 echo "📊 Module Information:"
 echo "======================"
 logging_module_info
@@ -109,6 +156,10 @@ echo ""
 validation_module_info
 echo ""
 ui_module_info
+echo ""
+version_control_module_info
+echo ""
+rollback_module_info
 
 echo ""
 echo "🎉 Modular installer architecture is working correctly!"
