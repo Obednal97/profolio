@@ -1,6 +1,6 @@
 {
   "name": "profolio",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
   "main": "install-or-update.sh",
   "scripts": {
@@ -10,10 +10,26 @@
     "setup": "./setup.sh",
     "dev:backend": "cd backend && pnpm run start:dev",
     "dev:frontend": "cd frontend && pnpm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:backend": "cd backend && pnpm run build",
     "build:frontend": "cd frontend && pnpm run build",
+    "build": "npm run build:backend && npm run build:frontend",
     "test:backend": "cd backend && pnpm test",
-    "test:frontend": "cd frontend && pnpm test"
+    "test:frontend": "cd frontend && pnpm test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "type-check:backend": "cd backend && pnpm run type-check",
+    "type-check:frontend": "cd frontend && pnpm run type-check",
+    "type-check": "npm run type-check:backend && npm run type-check:frontend",
+    "lint:backend": "cd backend && pnpm run lint",
+    "lint:frontend": "cd frontend && pnpm run lint",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "prepare-release": "node scripts/prepare-release.mjs",
+    "validate-env": "./scripts/validate-environment.sh",
+    "setup-dev": "./scripts/setup-dev-environment.sh",
+    "dev-tools": "./scripts/dev-tools.sh",
+    "db-tools": "./scripts/db-tools.sh",
+    "install-hooks": "./scripts/install-git-hooks.sh",
+    "pre-commit": "npm run type-check && npm run lint && npm run build"
   },
   "repository": {
     "type": "git",
@@ -55,6 +71,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "http-proxy": "^1.18.1"
+    "http-proxy": "^1.18.1",
+    "concurrently": "^9.1.0"
   }
 }

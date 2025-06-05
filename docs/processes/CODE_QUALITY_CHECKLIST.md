@@ -2,11 +2,9 @@
 
 **Profolio Enterprise-Grade Development Standards**
 
-**Version**: 4.0  
-**Last Updated**: December 2025  
-**Status**: ✅ Enhanced for pnpm, Prisma, API Proxy Architecture & Production Security
-
-**🆕 NEW IN v4.0**: pnpm package manager migration, Prisma database model validation, API proxy security architecture, and enhanced deprecation handling.
+**Version**: 5.0  
+**Last Updated**: January 2025  
+**Status**: ✅ Enhanced for Security & Quality Excellence
 
 ---
 
@@ -18,9 +16,9 @@ This checklist ensures all code changes maintain our enterprise-grade standards 
 
 ---
 
-## 📦 **Package Manager Standards** _(NEW CRITICAL SECTION)_
+## 📦 **Package Manager Standards** _(MANDATORY)_
 
-### 🚀 **pnpm Requirements** _(MANDATORY)_
+### 🚀 **pnpm Requirements**
 
 - [ ] **Use pnpm for all package operations** - `pnpm install`, `pnpm add`, `pnpm run` (not npm)
 - [ ] **Package.json includes packageManager** - `"packageManager": "pnpm@9.14.4"` specified
@@ -29,25 +27,25 @@ This checklist ensures all code changes maintain our enterprise-grade standards 
 - [ ] **Workspace configuration** - pnpm workspace settings properly configured if applicable
 - [ ] **Cache efficiency** - No unnecessary cache clearing or rebuilding
 
-### 💾 **Database & ORM Standards** _(MANDATORY)_
+### 💾 **Database & ORM Standards**
 
 - [ ] **Prisma client generated** - `pnpm prisma generate` runs without errors
-- [ ] **Database models accessible** - `prisma.user.findMany()` works (no "Property 'user' does not exist" errors)
+- [ ] **Database models accessible** - All Prisma models properly typed and accessible
 - [ ] **Prisma output path configured** - Generator output set to `../node_modules/.prisma/client`
 - [ ] **Type safety verified** - All Prisma models properly typed in TypeScript
 - [ ] **Migration safety** - Database migrations tested locally before deployment
 - [ ] **Connection management** - Proper connection pooling and cleanup
 
-### 🚨 **Dependency Management** _(ENHANCED)_
+### 🚨 **Dependency Management**
 
-- [ ] **Deprecation warnings addressed** - No deprecated packages (e.g., @types/dompurify when package has built-in types)
+- [ ] **Deprecation warnings addressed** - No deprecated packages
 - [ ] **Security vulnerabilities resolved** - `pnpm audit` shows no high/critical issues
 - [ ] **Phantom dependencies prevented** - pnpm's strict resolution enforced
 - [ ] **Bundle size monitored** - No unnecessary dependencies added to production builds
 - [ ] **License compliance** - All dependencies have compatible licenses
 - [ ] **Peer dependency conflicts resolved** - No version mismatches
 
-### 🔗 **API Architecture Standards** _(NEW CRITICAL SECTION)_
+### 🔗 **API Architecture Standards**
 
 - [ ] **No direct backend calls from frontend** - All API calls use Next.js proxy routes (`/api/*`)
 - [ ] **Proxy routes properly configured** - Backend URL environment variable used (`BACKEND_URL`)
@@ -84,7 +82,7 @@ This checklist ensures all code changes maintain our enterprise-grade standards 
 
 - **Node.js**: Use built-in `crypto` module for all cryptographic operations
 - **Authentication**: NextAuth.js, Auth0, Supabase Auth, Firebase Auth, Clerk
-- **Encryption**: Use `crypto.createCipherGCM()`, never `crypto.createCipher()`
+- **Encryption**: Use `crypto.createCipherGCM()`, never deprecated methods
 - **Hashing**: Use `bcrypt`, `scrypt`, or `argon2` libraries for passwords
 - **Random**: Use `crypto.randomBytes()`, never `Math.random()` for security
 
@@ -92,72 +90,70 @@ This checklist ensures all code changes maintain our enterprise-grade standards 
 
 ## 🔧 **General Requirements**
 
-_Apply to ALL file changes_
+### ✅ **Security Fundamentals**
 
-### ✅ **Security Fundamentals** _(ENHANCED)_
-
-- [ ] No hardcoded secrets, API keys, passwords, or tokens (scan with `git grep -E "(password|secret|key|token).*=.*['\"][^'\"]{8,}"`)
-- [ ] All user inputs properly validated and sanitized (no direct database queries with user input)
+- [ ] No hardcoded secrets, API keys, passwords, or tokens
+- [ ] All user inputs properly validated and sanitized
 - [ ] Authentication/authorization checks in place where needed
 - [ ] No `eval()` or `dangerouslySetInnerHTML` without proper sanitization
 - [ ] HTTPS-only external API calls (no `http://` in production code)
-- [ ] Proper error handling that doesn't expose sensitive information (no stack traces to users)
-- [ ] SQL injection prevention (parameterized queries only, no string concatenation)
+- [ ] Proper error handling that doesn't expose sensitive information
+- [ ] SQL injection prevention (parameterized queries only)
 - [ ] XSS prevention (proper input sanitization, Content Security Policy headers)
-- [ ] **NEW**: No sensitive data logged to console (production console.log statements removed)
-- [ ] **NEW**: All environment variables properly configured (no undefined checks missing)
+- [ ] No sensitive data logged to console
+- [ ] All environment variables properly configured
 
-### ✅ **Git & Deployment Safety** _(ENHANCED)_
+### ✅ **Git & Deployment Safety**
 
-- [ ] No environment-specific files tracked (`.env*`, `pnpm-lock.yaml` only in git, `node_modules`, build artifacts)
+- [ ] No environment-specific files tracked
 - [ ] `.gitignore` properly configured for all environment-specific files
-- [ ] **pnpm lock file only** - `pnpm-lock.yaml` present, no `package-lock.json` or `yarn.lock`
+- [ ] **pnpm lock file only** - `pnpm-lock.yaml` present, no `package-lock.json`
 - [ ] **Package manager consistency** - `"packageManager": "pnpm@9.14.4"` in package.json
 - [ ] No temporary files, debug files, or development artifacts committed
 - [ ] No large binary files or unnecessary assets committed
-- [ ] Git history doesn't contain secrets (use `git log --all --grep="password\|secret\|key"`)
+- [ ] Git history doesn't contain secrets
 - [ ] Branch protection rules won't be bypassed by changes
 - [ ] Changes won't break production deployment process
-- [ ] **NEW**: All commits signed with GPG keys for authenticity
-- [ ] **NEW**: No force pushes to main/production branches
-- [ ] **NEW**: Prisma client generation verified post-checkout (`pnpm prisma generate`)
-- [ ] **NEW**: API proxy routes tested and working (no direct backend exposure)
+- [ ] All commits signed with GPG keys for authenticity
+- [ ] No force pushes to main/production branches
+- [ ] Prisma client generation verified post-checkout
+- [ ] API proxy routes tested and working
 
-### ✅ **TypeScript Standards** _(ENHANCED)_
+### ✅ **TypeScript Standards**
 
-- [ ] Strict type definitions (no `any` types unless absolutely necessary with comment explaining why)
+- [ ] Strict type definitions (no `any` types unless absolutely necessary with comment)
 - [ ] Proper interface/type definitions for all data structures
 - [ ] Generic types used appropriately
 - [ ] Enum usage for constants when applicable
 - [ ] Optional chaining (`?.`) used for potentially undefined properties
 - [ ] Nullish coalescing (`??`) used appropriately
-- [ ] **NEW**: All exports properly typed (no implicit any returns)
-- [ ] **NEW**: No unused variables, imports, or functions (causes build failures)
-- [ ] **NEW**: Union types preferred over `any` for flexible typing
+- [ ] All exports properly typed (no implicit any returns)
+- [ ] No unused variables, imports, or functions
+- [ ] Union types preferred over `any` for flexible typing
 
-### ✅ **Code Quality** _(ENHANCED)_
+### ✅ **Code Quality**
 
 - [ ] ESLint rules pass without warnings
 - [ ] Consistent naming conventions (camelCase for variables, PascalCase for components)
-- [ ] Meaningful variable and function names (no single letters except loop counters)
-- [ ] No unused imports or variables (critical for production builds)
+- [ ] Meaningful variable and function names
+- [ ] No unused imports or variables
 - [ ] Proper file organization and structure
 - [ ] Comments for complex logic (why, not what)
-- [ ] Maximum function length: 50 lines (prefer smaller, focused functions)
-- [ ] **NEW**: No debugging code in production (console.log, debugger statements)
-- [ ] **NEW**: All React components have proper return statements
-- [ ] **NEW**: Consistent error handling patterns across codebase
+- [ ] Maximum function length: 50 lines
+- [ ] No debugging code in production
+- [ ] All React components have proper return statements
+- [ ] Consistent error handling patterns across codebase
 
 ---
 
-## ⚡ **Performance & Efficiency** _(NEW CRITICAL SECTION)_
+## ⚡ **Performance & Efficiency**
 
 ### 🚀 **React Performance Optimization**
 
 - [ ] **React.memo** used for components that re-render frequently with same props
 - [ ] **useCallback** used for event handlers and functions passed to child components
 - [ ] **useMemo** used for expensive calculations and object/array creation
-- [ ] **Proper dependency arrays** in useEffect, useCallback, useMemo (no missing or unnecessary deps)
+- [ ] **Proper dependency arrays** in useEffect, useCallback, useMemo
 - [ ] **Component splitting** - Large components broken into smaller, focused components
 - [ ] **Lazy loading** implemented for heavy components not immediately visible
 - [ ] **Code splitting** using dynamic imports for large features/pages
@@ -165,12 +161,12 @@ _Apply to ALL file changes_
 ### 📊 **Database & API Performance**
 
 - [ ] **Database queries optimized** - No N+1 queries, proper indexing considered
-- [ ] **API response caching** implemented where appropriate (Redis, HTTP caching)
-- [ ] **Pagination** implemented for large data sets (no loading 1000+ records at once)
+- [ ] **API response caching** implemented where appropriate
+- [ ] **Pagination** implemented for large data sets
 - [ ] **Database connection pooling** configured properly
 - [ ] **Query timeout limits** set to prevent hanging requests
 - [ ] **Rate limiting** implemented on API endpoints
-- [ ] **Data compression** enabled for API responses (gzip/brotli)
+- [ ] **Data compression** enabled for API responses
 
 ### 🔄 **Resource Management**
 
@@ -178,7 +174,7 @@ _Apply to ALL file changes_
 - [ ] **File handles closed** - All file operations have proper cleanup
 - [ ] **Connection cleanup** - Database connections, HTTP clients properly closed
 - [ ] **AbortController used** for cancellable async operations
-- [ ] **Image optimization** - Proper sizing, compression, WebP format where possible
+- [ ] **Image optimization** - Proper sizing, compression, format optimization
 - [ ] **Bundle size monitoring** - No unnecessary dependencies added to builds
 
 ### 📱 **Frontend Performance**
@@ -193,7 +189,7 @@ _Apply to ALL file changes_
 
 ---
 
-## 🧪 **Code Reviews & QA Testing** _(NEW CRITICAL SECTION)_
+## 🧪 **Code Reviews & QA Testing**
 
 ### 👥 **Code Review Requirements**
 
@@ -207,7 +203,7 @@ _Apply to ALL file changes_
 
 - [ ] **Business logic correctness** - Does the code solve the intended problem?
 - [ ] **Error handling completeness** - All edge cases and failure modes covered
-- [ ] **Security vulnerability scan** - No obvious security issues introduced
+- [ ] **Security assessment** - No obvious security issues introduced
 - [ ] **Performance impact assessment** - No significant performance regressions
 - [ ] **Test coverage verification** - New code has appropriate test coverage
 - [ ] **Documentation accuracy** - Comments and docs match implementation
@@ -216,7 +212,7 @@ _Apply to ALL file changes_
 
 - [ ] **Unit tests** written for all business logic and utility functions
 - [ ] **Integration tests** for API endpoints and database operations
-- [ ] **End-to-end tests** for critical user flows (auth, payments, data entry)
+- [ ] **End-to-end tests** for critical user flows
 - [ ] **Performance tests** for high-traffic endpoints and heavy operations
 - [ ] **Security tests** for authentication, authorization, and input validation
 - [ ] **Accessibility tests** for UI components and user interactions
@@ -231,9 +227,9 @@ _Apply to ALL file changes_
 
 ---
 
-## 🐛 **Bug Sweeps & Quality Assurance** _(NEW CRITICAL SECTION)_
+## 🐛 **Bug Prevention & Quality Assurance**
 
-### 🔍 **Pre-Release Bug Sweep**
+### 🔍 **Pre-Release Quality Checks**
 
 - [ ] **Manual testing** of all modified features on multiple devices/browsers
 - [ ] **Regression testing** of existing features that might be affected
@@ -242,128 +238,116 @@ _Apply to ALL file changes_
 - [ ] **User journey testing** - Complete workflows from start to finish
 - [ ] **Performance testing** under realistic load conditions
 
-### 🚨 **Critical Bug Categories**
+### 🚨 **Critical Quality Categories**
 
-- [ ] **Security vulnerabilities** - Any auth bypass, XSS, injection, or data exposure
-- [ ] **Data corruption** - Any code that could modify/delete data incorrectly
-- [ ] **Financial errors** - Calculation mistakes, rounding errors, transaction failures
-- [ ] **Authentication failures** - Login issues, session problems, permission errors
+- [ ] **Security vulnerabilities** - Any auth bypass, injection, or data exposure issues
+- [ ] **Data integrity** - Any code that could modify/delete data incorrectly
+- [ ] **Financial accuracy** - Calculation correctness, rounding precision
+- [ ] **Authentication reliability** - Login functionality, session management
 - [ ] **Performance regressions** - Significant slowdowns or increased resource usage
-- [ ] **Accessibility violations** - Features unusable with keyboard or screen readers
+- [ ] **Accessibility compliance** - Features usable with keyboard and screen readers
 
-### 🔧 **Bug Prevention Measures**
+### 🔧 **Quality Prevention Measures**
 
-- [ ] **Static analysis tools** run on all code changes (ESLint, TypeScript, SonarQube)
-- [ ] **Dependency vulnerability scanning** using npm audit or Snyk
+- [ ] **Static analysis tools** run on all code changes
+- [ ] **Dependency vulnerability scanning** regularly performed
 - [ ] **Code complexity analysis** - Identify overly complex functions for refactoring
 - [ ] **Dead code detection** - Remove unused code that could cause confusion
-- [ ] **Type safety verification** - No TypeScript errors or `any` type usage
+- [ ] **Type safety verification** - No TypeScript errors
 - [ ] **Integration testing** with realistic data volumes and user patterns
 
 ---
 
-## 🤖 **AI-Generated Code Review** _(ENHANCED CRITICAL SECTION)_
+## 🤖 **AI-Generated Code Review**
 
-### ✅ **Security Vulnerability Checks**
+### ✅ **Enhanced Verification for AI Code**
 
-- [ ] **Authentication logic manually reviewed** (AI often implements insecure auth patterns)
-- [ ] **Input validation manually verified** (AI may miss edge cases or allow bypasses)
-- [ ] **SQL queries manually audited** (AI can generate injection-vulnerable queries)
-- [ ] **Encryption implementation verified** (AI may use weak algorithms or improper key management)
-- [ ] **CORS configuration reviewed** (AI often allows overly permissive origins)
-- [ ] **Rate limiting implementation checked** (AI may implement ineffective rate limiting)
-- [ ] **Session management audited** (AI can create session fixation vulnerabilities)
+- [ ] **Authentication logic manually reviewed** - AI patterns often need security hardening
+- [ ] **Input validation manually verified** - AI may miss edge cases
+- [ ] **Database queries manually audited** - Ensure proper parameterization
+- [ ] **Encryption implementation verified** - AI may use weak algorithms or improper key management
+- [ ] **Error handling manually verified** - Prevent information disclosure
+- [ ] **Business logic manually tested** - AI may implement incorrect business rules
+- [ ] **Resource cleanup verified** - AI often forgets cleanup functions
 
-### ✅ **Logic & Pattern Verification**
+### ✅ **Common AI Code Issues to Check**
 
-- [ ] **Business logic manually tested** (AI may implement incorrect business rules)
-- [ ] **Error handling manually verified** (AI often creates information disclosure vulnerabilities)
-- [ ] **State management patterns reviewed** (AI can create race conditions or memory leaks)
-- [ ] **API endpoint security manually checked** (authorization, input validation, rate limiting)
-- [ ] **Database access patterns audited** (proper transactions, connection management)
-
-### ✅ **Common AI Code Issues**
-
-- [ ] **No overly complex nested conditions** (AI tends to create hard-to-audit code)
-- [ ] **Proper error messages** (AI often creates verbose error messages exposing internals)
-- [ ] **Resource cleanup verified** (AI often forgets to clean up connections, timers, listeners)
-- [ ] **Dependency injection properly implemented** (AI can create tight coupling)
-- [ ] **No hardcoded configuration** (AI often embeds configuration in code)
+- [ ] **No overly complex nested conditions** - Keep code auditable
+- [ ] **Proper error messages** - Generic messages that don't expose internals
+- [ ] **Resource cleanup verified** - Connections, timers, listeners properly managed
+- [ ] **Dependency patterns** - Avoid tight coupling created by AI
+- [ ] **Configuration externalized** - No hardcoded values in AI-generated code
 
 ---
 
-## 🛡️ **Enhanced Security Requirements** _(EXPANDED)_
+## 🛡️ **Enterprise Security Standards**
 
-### 🔐 **Authentication & Authorization** _(ENHANCED)_
+### 🔐 **Authentication & Authorization**
 
 - [ ] **Multi-factor authentication support** where applicable
-- [ ] **Secure token storage** (httpOnly cookies preferred, no localStorage for sensitive tokens)
-- [ ] **Proper session management** (secure session invalidation, timeout handling)
-- [ ] **Rate limiting for auth endpoints** (account lockout, brute force protection)
+- [ ] **Secure token storage** - httpOnly cookies preferred for sensitive data
+- [ ] **Proper session management** - Secure invalidation, timeout handling
+- [ ] **Rate limiting for auth endpoints** - Brute force protection
 - [ ] **CSRF protection** implemented correctly
-- [ ] **Password strength validation** (minimum requirements enforced)
-- [ ] **Account lockout mechanisms** (temporary lockouts after failed attempts)
-- [ ] **NEW**: JWT tokens properly validated (signature, expiration, issuer verification)
-- [ ] **NEW**: Refresh token rotation implemented securely
-- [ ] **NEW**: No authentication bypass conditions (all paths properly protected)
+- [ ] **Password strength validation** - Minimum requirements enforced
+- [ ] **Account lockout mechanisms** - Temporary lockouts after failed attempts
+- [ ] **JWT tokens properly validated** - Signature, expiration, issuer verification
+- [ ] **Refresh token rotation** implemented securely
+- [ ] **No authentication bypass conditions** - All paths properly protected
 
-### 🔒 **Encryption & Data Protection** _(ENHANCED)_
+### 🔒 **Encryption & Data Protection**
 
-- [ ] **AES-256-GCM minimum** for symmetric encryption (no weaker algorithms)
+- [ ] **AES-256-GCM minimum** for symmetric encryption
 - [ ] **RSA-4096 or ECDSA-P256** minimum for asymmetric encryption
-- [ ] **bcrypt/scrypt/Argon2** for password hashing (no MD5, SHA1, or plain SHA256)
-- [ ] **Secure random number generation** (crypto.randomBytes, not Math.random)
-- [ ] **Proper key management** (keys rotated, not hardcoded, proper storage)
+- [ ] **bcrypt/scrypt/Argon2** for password hashing
+- [ ] **Secure random number generation** - crypto.randomBytes only
+- [ ] **Proper key management** - Keys rotated, not hardcoded, properly stored
 - [ ] **TLS 1.3 minimum** for all external communications
 - [ ] **Certificate pinning** where applicable
 - [ ] **Data encryption at rest** for sensitive information
-- [ ] **Secure key derivation** (PBKDF2, scrypt, or Argon2 with proper parameters)
+- [ ] **Secure key derivation** - PBKDF2, scrypt, or Argon2 with proper parameters
 
-### 🌐 **API Security** _(ENHANCED)_
+### 🌐 **API Security**
 
-- [ ] **Input validation on all endpoints** (whitelist validation, proper sanitization)
+- [ ] **Input validation on all endpoints** - Whitelist validation, proper sanitization
 - [ ] **Authentication middleware applied** to all protected routes
-- [ ] **Authorization checks for resource access** (proper permission verification)
-- [ ] **Request rate limiting** (per-IP and per-user limits)
-- [ ] **SQL injection prevention** (parameterized queries only)
-- [ ] **XSS prevention in responses** (proper output encoding)
-- [ ] **Proper error responses** (no sensitive data leakage, generic error messages)
-- [ ] **NEW**: CORS configured restrictively (specific origins, no wildcards in production)
-- [ ] **NEW**: Request size limits enforced (prevent DoS attacks)
-- [ ] **NEW**: API versioning implemented securely
-- [ ] **NEW**: No debug endpoints in production code
+- [ ] **Authorization checks for resource access** - Proper permission verification
+- [ ] **Request rate limiting** - Per-IP and per-user limits
+- [ ] **SQL injection prevention** - Parameterized queries only
+- [ ] **XSS prevention in responses** - Proper output encoding
+- [ ] **Proper error responses** - No sensitive data leakage
+- [ ] **CORS configured restrictively** - Specific origins, no wildcards in production
+- [ ] **Request size limits enforced** - Prevent DoS attacks
+- [ ] **API versioning implemented** securely
+- [ ] **No debug endpoints in production code**
 
-### 🔍 **Input Validation & Sanitization** _(ENHANCED)_
+### 🔍 **Input Validation & Sanitization**
 
-- [ ] **All user inputs validated** (type, length, format, range checking)
-- [ ] **SQL injection prevention** (parameterized queries, ORM usage)
-- [ ] **XSS prevention** (output encoding, CSP headers)
-- [ ] **Path traversal prevention** (file path validation)
-- [ ] **JSON input validation** (schema validation, size limits)
-- [ ] **File upload security** (type validation, size limits, virus scanning)
-- [ ] **Email validation** (proper regex, disposable email detection)
-- [ ] **URL validation** (protocol restrictions, domain whitelisting)
-- [ ] **Phone number validation** (format checking, length limits)
+- [ ] **All user inputs validated** - Type, length, format, range checking
+- [ ] **Path traversal prevention** - File path validation
+- [ ] **JSON input validation** - Schema validation, size limits
+- [ ] **File upload security** - Type validation, size limits
+- [ ] **Email validation** - Proper regex, disposable email detection
+- [ ] **URL validation** - Protocol restrictions, domain whitelisting
+- [ ] **Phone number validation** - Format checking, length limits
 
 ---
 
-## 🏛️ **Enterprise Security Auditing & Compliance** _(NEW CRITICAL SECTION)_
+## 🏛️ **Enterprise Compliance & Auditing**
 
-### 🔍 **Mandatory Security Audit Requirements** _(CRITICAL)_
+### 🔍 **Security Audit Requirements**
 
-- [ ] **Comprehensive security audit** completed before production deployment
-- [ ] **Code review for vulnerabilities** by qualified security expert
-- [ ] **Authentication security review** - All auth flows manually tested and audited
-- [ ] **API security assessment** - All endpoints tested for security vulnerabilities
-- [ ] **Session management audit** - Token handling, expiration, and invalidation reviewed
-- [ ] **Database security review** - Access controls, injection prevention, data exposure
-- [ ] **Input validation audit** - All user inputs tested for bypasses and edge cases
-- [ ] **Error handling security review** - No sensitive information disclosed in errors
+- [ ] **Comprehensive security review** completed before production deployment
+- [ ] **Authentication security audit** - All auth flows tested and verified
+- [ ] **API security assessment** - All endpoints tested for vulnerabilities
+- [ ] **Database security review** - Access controls and data protection verified
+- [ ] **Input validation audit** - All user inputs tested for proper handling
+- [ ] **Error handling security review** - No sensitive information disclosed
 - [ ] **Logging security audit** - No sensitive data logged, proper sanitization
 
-### 🔐 **Comprehensive Encryption Audit** _(MANDATORY)_
+### 🔐 **Comprehensive Encryption Audit**
 
-- [ ] **Algorithm assessment** - Only approved encryption algorithms used (AES-256-GCM, ChaCha20-Poly1305)
+- [ ] **Algorithm assessment** - Only approved encryption algorithms used
 - [ ] **Key management review** - Proper key generation, storage, rotation, and destruction
 - [ ] **Data-at-rest encryption** - All sensitive data encrypted in database and file storage
 - [ ] **Data-in-transit encryption** - TLS 1.3 minimum for all communications
@@ -374,25 +358,46 @@ _Apply to ALL file changes_
 - [ ] **Cryptographic randomness** - crypto.randomBytes() used for all security-critical random values
 - [ ] **No custom crypto implementations** - All cryptography uses established libraries
 
-### ⚖️ **GDPR & Data Privacy Compliance** _(MANDATORY)_
+### ⚖️ **Privacy & Data Protection Compliance**
 
-- [ ] **Data mapping completed** - All personal data collection, processing, and storage documented
-- [ ] **Lawful basis established** - Legal justification for all personal data processing
-- [ ] **Privacy policy implemented** - Clear, accessible privacy notice for users
-- [ ] **Consent mechanisms** - Granular consent options for different data processing purposes
-- [ ] **Right to access** - Users can request and receive their personal data
-- [ ] **Right to rectification** - Users can correct inaccurate personal data
-- [ ] **Right to erasure** - Users can delete their personal data ("right to be forgotten")
-- [ ] **Right to portability** - Users can export their data in machine-readable format
-- [ ] **Right to object** - Users can opt-out of certain data processing activities
+- [ ] **Data mapping completed** - All personal data processing documented
+- [ ] **Lawful basis established** - Legal justification for data processing
+- [ ] **Privacy policy implemented** - Clear, accessible privacy notice
+- [ ] **Consent mechanisms** - Granular consent options implemented
+- [ ] **User rights supported** - Access, rectification, erasure, portability
 - [ ] **Data retention policies** - Clear retention periods and automatic deletion
-- [ ] **Data breach procedures** - Incident response plan for personal data breaches
+- [ ] **Data breach procedures** - Incident response plan in place
 - [ ] **Data protection by design** - Privacy considerations built into system architecture
 - [ ] **International transfers** - Proper safeguards for data transfers outside EU/UK
 - [ ] **Data processor agreements** - Contracts with third-party services handling personal data
-- [ ] **Regular compliance audits** - Periodic reviews of GDPR compliance measures
+- [ ] **Regular compliance audits** - Periodic reviews of compliance measures
 
-### 🎯 **Penetration Testing & Vulnerability Assessment** _(MANDATORY)_
+### 🚨 **API Rate Limiting & DoS Protection**
+
+- [ ] **Global rate limiting** implemented (requests per IP per time window)
+- [ ] **Per-user rate limiting** implemented (requests per authenticated user)
+- [ ] **Endpoint-specific limits** configured (different limits for different API endpoints)
+- [ ] **Authentication endpoint protection** - Strict rate limiting for login/signup
+- [ ] **Burst protection** - Handle sudden traffic spikes gracefully
+- [ ] **Rate limit headers** - Proper HTTP headers returned to clients
+- [ ] **Rate limit monitoring** - Alerting when limits are exceeded
+- [ ] **Request size limits** - Maximum payload size enforced
+- [ ] **Connection limits** - Maximum concurrent connections per IP
+- [ ] **Bot detection** - Automated traffic detection and mitigation
+
+### 🔒 **Advanced Security Hardening**
+
+- [ ] **Security headers implemented** - HSTS, CSP, X-Frame-Options, X-Content-Type-Options
+- [ ] **Subresource Integrity (SRI)** - Verification of third-party resources
+- [ ] **DNS security** - DNSSEC implementation and monitoring
+- [ ] **Email security** - SPF, DKIM, DMARC records configured
+- [ ] **Software composition analysis** - Third-party dependency vulnerability monitoring
+- [ ] **Container security** - Docker image scanning and runtime protection
+- [ ] **Secrets management** - Dedicated secrets management system
+- [ ] **Multi-factor authentication** - MFA required for all administrative access
+- [ ] **Privileged access management** - Least privilege principle enforced
+
+### 🎯 **Vulnerability Assessment & Penetration Testing**
 
 - [ ] **Automated vulnerability scanning** - OWASP ZAP, Nessus, or similar tools run regularly
 - [ ] **Manual penetration testing** - Qualified security professional conducts manual tests
@@ -409,240 +414,9 @@ _Apply to ALL file changes_
 - [ ] **Compliance testing** - Verification against security standards (ISO 27001, SOC 2, etc.)
 - [ ] **Red team exercises** - Comprehensive adversarial security testing
 
-### 🚨 **API Rate Limiting & DoS Protection** _(ENHANCED)_
-
-- [ ] **Global rate limiting** implemented (requests per IP per time window)
-- [ ] **Per-user rate limiting** implemented (requests per authenticated user)
-- [ ] **Endpoint-specific limits** configured (different limits for different API endpoints)
-- [ ] **Authentication endpoint protection** - Strict rate limiting for login/signup
-- [ ] **Burst protection** - Handle sudden traffic spikes gracefully
-- [ ] **Rate limit headers** - Proper HTTP headers returned to clients
-- [ ] **Rate limit monitoring** - Alerting when limits are exceeded
-- [ ] **DDoS protection** - CloudFlare, AWS Shield, or similar service enabled
-- [ ] **Request size limits** - Maximum payload size enforced
-- [ ] **Connection limits** - Maximum concurrent connections per IP
-- [ ] **Slowloris protection** - Protection against slow HTTP attacks
-- [ ] **Bot detection** - Automated traffic detection and mitigation
-
-### 📊 **Security Monitoring & Incident Response** _(NEW)_
-
-- [ ] **Security Information and Event Management (SIEM)** - Centralized security monitoring
-- [ ] **Intrusion Detection System (IDS)** - Network and host-based intrusion detection
-- [ ] **Security alerting** - Real-time alerts for security events
-- [ ] **Log aggregation** - Centralized logging with security event correlation
-- [ ] **Incident response plan** - Documented procedures for security incidents
-- [ ] **Incident response team** - Designated personnel with clear roles and responsibilities
-- [ ] **Breach notification procedures** - Legal and regulatory notification requirements
-- [ ] **Forensic capabilities** - Ability to investigate and analyze security incidents
-- [ ] **Business continuity planning** - Procedures for maintaining operations during incidents
-- [ ] **Regular security drills** - Practice incident response procedures
-
-### 🔒 **Advanced Security Hardening** _(NEW)_
-
-- [ ] **Security headers implemented** - HSTS, CSP, X-Frame-Options, X-Content-Type-Options
-- [ ] **Subresource Integrity (SRI)** - Verification of third-party resources
-- [ ] **Certificate Transparency monitoring** - Detection of malicious certificates
-- [ ] **DNS security** - DNSSEC implementation and monitoring
-- [ ] **Email security** - SPF, DKIM, DMARC records configured
-- [ ] **Software composition analysis** - Third-party dependency vulnerability monitoring
-- [ ] **Container security** - Docker image scanning and runtime protection
-- [ ] **Secrets management** - Dedicated secrets management system (HashiCorp Vault, AWS Secrets Manager)
-- [ ] **Multi-factor authentication** - MFA required for all administrative access
-- [ ] **Privileged access management** - Least privilege principle enforced
-
 ---
 
-## 🔄 **Enhanced Pre-Commit Checklist** _(ENHANCED)_
-
-### ✅ **Build & Verification** _(ENHANCED)_
-
-- [ ] **`pnpm run build` succeeds without errors** _(MANDATORY - blocks production)_
-- [ ] **`pnpm run type-check` passes** _(MANDATORY - prevents runtime errors)_
-- [ ] **`pnpm run lint` passes without warnings** _(MANDATORY - ensures code quality)_
-- [ ] **All tests pass** (`pnpm run test`) _(MANDATORY where tests exist)_
-- [ ] **Prisma client generated** (`pnpm prisma generate`) _(MANDATORY for database changes)_
-- [ ] **No console errors in development** _(check browser console)_
-- [ ] **NEW**: Frontend builds successfully in production mode (`NODE_ENV=production pnpm run build`)
-- [ ] **NEW**: No TypeScript `any` types introduced without justification
-- [ ] **NEW**: No ESLint rule disables without proper comment explaining why
-- [ ] **NEW**: Performance benchmarks pass (no significant regressions)
-- [ ] **NEW**: Database models accessible (`prisma.user.findMany()` works)
-- [ ] **NEW**: API proxy routes responding (`/api/auth/profile`, `/api/market-data/cached-price/AAPL`)
-
-### ✅ **Security Verification** _(ENHANCED)_
-
-- [ ] **No secrets committed** (run `git diff HEAD~1 | grep -E "(password|secret|key|token)"`)
-- [ ] **All new endpoints authenticated** and authorized properly
-- [ ] **Input validation added** for all new user inputs
-- [ ] **Error handling reviewed** for information disclosure
-- [ ] **Dependencies scanned** for vulnerabilities (`pnpm audit`)
-- [ ] **HTTPS enforced** for all external API calls
-- [ ] **CORS configured** restrictively
-- [ ] **NEW**: No custom auth/encryption implementations (use proven libraries)
-- [ ] **NEW**: All crypto operations use established libraries
-- [ ] **NEW**: No direct backend calls from frontend (all use `/api/*` proxies)
-- [ ] **NEW**: Authorization headers properly forwarded in API proxies
-
-### ✅ **Production Deployment Safety** _(ENHANCED)_
-
-- [ ] **No environment-specific files** added to git (`package-lock.json`, `.env*`, etc.)
-- [ ] **pnpm lock file properly tracked** (`pnpm-lock.yaml` in git, not `package-lock.json`)
-- [ ] **Database migrations tested** locally if applicable
-- [ ] **Rollback plan documented** for significant changes
-- [ ] **Feature flags implemented** for risky changes
-- [ ] **Performance impact assessed** (no blocking operations added)
-- [ ] **Memory leak prevention** verified (cleanup functions implemented)
-- [ ] **NEW**: Load testing completed for high-traffic features
-- [ ] **NEW**: Monitoring and alerting configured for new features
-- [ ] **NEW**: Prisma migrations safe for production
-- [ ] **NEW**: API proxy configuration tested in staging environment
-
----
-
-## 🚨 **Enhanced Critical Violations** _(UPDATED)_
-
-_Issues that MUST be fixed before merge_
-
-1. **Security vulnerabilities** (hardcoded secrets, XSS, injection, weak encryption)
-2. **Custom auth/encryption implementations** (use proven libraries only)
-3. **Memory leaks** (uncleaned timers, event listeners, AbortController)
-4. **Performance regressions** (blocking operations, unnecessary re-renders)
-5. **Financial precision errors** (floating-point arithmetic on money)
-6. **Accessibility violations** (keyboard navigation, screen readers)
-7. **Build failures** (TypeScript errors, linting failures)
-8. **Git file tracking violations** (environment files, build artifacts tracked)
-9. **Authentication/authorization bypasses**
-10. **Input validation failures** (SQL injection, XSS vulnerabilities)
-11. **NEW**: Test coverage below 80% for new features
-12. **NEW**: Performance benchmarks failing (>20% regression)
-13. **NEW**: Unhandled error scenarios in critical paths
-14. **NEW**: Package manager violations (npm commands used instead of pnpm)
-15. **NEW**: Lock file conflicts (package-lock.json present with pnpm-lock.yaml)
-16. **NEW**: Prisma client generation failures (database models not accessible)
-17. **NEW**: Direct backend calls from frontend (bypassing API proxies)
-18. **NEW**: Deprecated package warnings not addressed
-19. **NEW**: Database migration safety violations (untested migrations)
-20. **🆕 ENTERPRISE CRITICAL**: **Security audit failures** (code not reviewed by security expert)
-21. **🆕 ENTERPRISE CRITICAL**: **Encryption audit failures** (weak algorithms, improper key management)
-22. **🆕 ENTERPRISE CRITICAL**: **GDPR compliance violations** (missing consent, improper data handling)
-23. **🆕 ENTERPRISE CRITICAL**: **Penetration testing failures** (unaddressed security vulnerabilities)
-24. **🆕 ENTERPRISE CRITICAL**: **Rate limiting bypass** (API endpoints without proper protection)
-25. **🆕 ENTERPRISE CRITICAL**: **Incident response gaps** (no security monitoring or alerting)
-26. **🆕 ENTERPRISE CRITICAL**: **Data privacy violations** (missing data retention policies, improper international transfers)
-27. **🆕 ENTERPRISE CRITICAL**: **Security hardening failures** (missing security headers, weak certificate management)
-28. **🆕 ENTERPRISE CRITICAL**: **Advanced threat protection gaps** (no intrusion detection, SIEM missing)
-
----
-
-## 🔧 **Automated Tools Integration** _(ENHANCED)_
-
-### ✅ **Pre-commit Hooks** _(Enhanced Setup)_
-
-```bash
-# Install comprehensive development tools
-pnpm add --save-dev husky lint-staged prettier eslint @typescript-eslint/eslint-plugin
-
-# Add to package.json
-{
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged && pnpm run type-check && pnpm run test && pnpm run build",
-      "pre-push": "pnpm run test:e2e && pnpm audit"
-    }
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write",
-      "jest --findRelatedTests --passWithNoTests"
-    ],
-    "*.{json,md}": ["prettier --write"],
-    "*.{css,scss}": ["prettier --write", "stylelint --fix"]
-  }
-}
-```
-
-### ✅ **Security Scanning** _(Enhanced)_
-
-- [ ] **pnpm audit** run and vulnerabilities addressed
-- [ ] **Snyk scan** for dependency vulnerabilities
-- [ ] **SonarQube** static analysis for security issues
-- [ ] **Git secrets** scanning for committed secrets
-- [ ] **OWASP ZAP** for API security testing
-- [ ] **NEW**: CodeQL analysis for security vulnerabilities
-- [ ] **NEW**: Dependency licensing compliance check
-- [ ] **NEW**: Performance monitoring integration
-- [ ] **NEW**: Prisma schema validation (`pnpm prisma validate`)
-- [ ] **NEW**: API proxy security testing (no direct backend exposure)
-
-### ✅ **Quality Gates** _(NEW)_
-
-- [ ] **Code coverage minimum 80%** enforced in CI/CD
-- [ ] **Performance benchmarks** must pass before deployment
-- [ ] **Security scan results** must have zero high/critical issues
-- [ ] **Accessibility audit** must pass WCAG 2.1 AA standards
-- [ ] **Bundle size limits** enforced (no unlimited growth)
-- [ ] **Load testing** required for high-traffic features
-
----
-
-## 📞 **Enhanced Getting Help** _(UPDATED)_
-
-- **Security Questions**: Review authentication patterns, consult security team for encryption
-- **Performance Questions**: Review PerformanceDashboard.tsx, AssetManager.tsx patterns
-- **Financial Precision**: Review financial.ts library usage (mandatory for financial calculations)
-- **Component Patterns**: Review optimized modal components (AssetModal.tsx, PropertyModal.tsx)
-- **Hook Patterns**: Review useNotifications.ts, useUpdates.ts
-- **AI Code Review**: Pair with senior developer for security-critical AI-generated code
-- **Deployment Issues**: Test in staging environment before production
-- **Git Issues**: Use `git status` and `git diff` before commits
-- **NEW**: **Performance Issues**: Use React DevTools Profiler and lighthouse audits
-- **NEW**: **Testing Questions**: Review existing test patterns in `__tests__` directories
-- **NEW**: **Architecture Decisions**: Consult team lead for significant architectural changes
-- **NEW**: **pnpm Migration Issues**: See `docs/development/PACKAGE_MANAGER_MIGRATION.md`
-- **NEW**: **Prisma Problems**: Check client generation with `pnpm prisma generate`
-- **NEW**: **API Proxy Issues**: Verify routes in `frontend/src/app/api/` directory
-- **NEW**: **Database Model Access**: Ensure PrismaService extends PrismaClient properly
-- **NEW**: **Deprecation Warnings**: Remove @types packages when main package has built-in types
-
----
-
-## 📊 **Quality Metrics Tracking** _(NEW SECTION)_
-
-### 📈 **Code Quality Metrics**
-
-- **Code Coverage**: Minimum 80% for new features, track trend over time
-- **Technical Debt**: Measured by SonarQube debt ratio, target <5%
-- **Cyclomatic Complexity**: Maximum 10 per function, average <6
-- **Duplication**: Less than 3% code duplication across codebase
-- **Documentation Coverage**: All public APIs documented
-
-### ⚡ **Performance Metrics**
-
-- **First Contentful Paint**: <2 seconds on 3G
-- **Time to Interactive**: <3 seconds on 3G
-- **Bundle Size**: Frontend <500KB gzipped, track growth
-- **API Response Time**: P95 <500ms for read operations
-- **Database Query Time**: P95 <100ms for simple queries
-
-### 🐛 **Bug Tracking Metrics**
-
-- **Bug Escape Rate**: <5% of bugs reach production
-- **Mean Time to Resolution**: <24 hours for critical bugs
-- **Regression Rate**: <2% of releases introduce regressions
-- **Customer-Reported Bugs**: <1 per 1000 users per month
-
----
-
-**⚠️ SPECIAL NOTE FOR AI-GENERATED CODE**: Always have a human security expert review AI-generated authentication, encryption, input validation, and database access code. AI can introduce subtle vulnerabilities that are not immediately obvious.
-
-**🚨 CRITICAL SECURITY PRINCIPLE**: Never build custom authentication or encryption systems. Use proven, battle-tested libraries and services. Even security experts get these wrong.
-
-**Version Control**: Update this checklist when new patterns or requirements are established.
-
-**🆕 v4.0 MIGRATION NOTES**: All developers must install pnpm (`npm install -g pnpm@9.14.4`) and use pnpm commands. See `docs/development/PACKAGE_MANAGER_MIGRATION.md` for complete migration guide.
-
-## 🔄 **MANDATORY RUNTIME TESTING** _(NEW CRITICAL SECTION)_
+## 🔄 **MANDATORY RUNTIME TESTING**
 
 _These checks MUST be performed on running code, not just static analysis_
 
@@ -724,7 +498,7 @@ useEffect(() => {
 
 ---
 
-## 🧪 **ENHANCED TESTING PROTOCOLS** _(UPDATED)_
+## 🧪 **Enhanced Testing Protocols**
 
 ### ✅ **Pre-Deployment Testing Checklist** _(MANDATORY)_
 
@@ -755,7 +529,7 @@ useEffect(() => {
 
 ---
 
-## 🔧 **DEVELOPMENT WORKFLOW INTEGRATION** _(ENHANCED)_
+## 🔧 **Development Workflow Integration**
 
 ### ✅ **Pre-Commit Testing Protocol** _(MANDATORY)_
 
@@ -786,7 +560,7 @@ pnpm run build:analyze  # Check bundle size changes
 lighthouse http://localhost:3000 --only-categories=performance
 ```
 
-### ✅ **React-Specific Review Checklist** _(NEW)_
+### ✅ **React-Specific Review Checklist**
 
 - [ ] **Hook dependencies reviewed** - All dependencies stable and necessary
 - [ ] **Component memoization verified** - React.memo, useMemo, useCallback used appropriately
@@ -797,7 +571,7 @@ lighthouse http://localhost:3000 --only-categories=performance
 
 ---
 
-## 📊 **RUNTIME PERFORMANCE METRICS** _(NEW MANDATORY SECTION)_
+## 📊 **Runtime Performance Metrics**
 
 ### ✅ **Performance Thresholds** _(MUST NOT EXCEED)_
 
@@ -829,7 +603,7 @@ console.clear(); /* interact with component */; console.count('messages');
 
 ---
 
-## 🚨 **CRITICAL FAILURE INDICATORS** _(IMMEDIATE STOP CRITERIA)_
+## 🚨 **Critical Failure Indicators** _(IMMEDIATE STOP CRITERIA)_
 
 If ANY of these occur during testing, **STOP DEPLOYMENT IMMEDIATELY**:
 
@@ -843,7 +617,154 @@ If ANY of these occur during testing, **STOP DEPLOYMENT IMMEDIATELY**:
 
 ---
 
-## 🔍 **POST-INCIDENT ANALYSIS PROTOCOL** _(NEW)_
+## 🔄 **Pre-Commit Checklist**
+
+### ✅ **Build & Verification** _(MANDATORY)_
+
+- [ ] **`pnpm run build` succeeds without errors** _(MANDATORY - blocks production)_
+- [ ] **`pnpm run type-check` passes** _(MANDATORY - prevents runtime errors)_
+- [ ] **`pnpm run lint` passes without warnings** _(MANDATORY - ensures code quality)_
+- [ ] **All tests pass** (`pnpm run test`) _(MANDATORY where tests exist)_
+- [ ] **Prisma client generated** (`pnpm prisma generate`) _(MANDATORY for database changes)_
+- [ ] **No console errors in development**
+- [ ] **Frontend builds successfully in production mode**
+- [ ] **No TypeScript `any` types introduced without justification**
+- [ ] **Performance benchmarks pass** - No significant regressions
+- [ ] **Database models accessible** and properly typed
+- [ ] **API proxy routes responding**
+
+### ✅ **Security Verification**
+
+- [ ] **No secrets committed** - Scan for hardcoded credentials
+- [ ] **All new endpoints authenticated** and authorized properly
+- [ ] **Input validation added** for all new user inputs
+- [ ] **Error handling reviewed** for information disclosure
+- [ ] **Dependencies scanned** for vulnerabilities
+- [ ] **HTTPS enforced** for all external API calls
+- [ ] **CORS configured** restrictively
+- [ ] **No custom auth/encryption implementations**
+- [ ] **Authorization headers properly forwarded** in API proxies
+
+### ✅ **Production Deployment Safety**
+
+- [ ] **No environment-specific files** added to git
+- [ ] **pnpm lock file properly tracked**
+- [ ] **Database migrations tested** locally if applicable
+- [ ] **Rollback plan documented** for significant changes
+- [ ] **Feature flags implemented** for risky changes
+- [ ] **Performance impact assessed**
+- [ ] **Memory leak prevention** verified
+- [ ] **Load testing completed** for high-traffic features
+- [ ] **Monitoring and alerting configured** for new features
+
+---
+
+## 🚨 **Enhanced Critical Violations**
+
+_Issues that MUST be fixed before merge_
+
+1. **Security vulnerabilities** (hardcoded secrets, XSS, injection, weak encryption)
+2. **Custom auth/encryption implementations** (use proven libraries only)
+3. **Memory leaks** (uncleaned timers, event listeners, AbortController)
+4. **Performance regressions** (blocking operations, unnecessary re-renders)
+5. **Financial precision errors** (floating-point arithmetic on money)
+6. **Accessibility violations** (keyboard navigation, screen readers)
+7. **Build failures** (TypeScript errors, linting failures)
+8. **Git file tracking violations** (environment files, build artifacts tracked)
+9. **Authentication/authorization bypasses**
+10. **Input validation failures** (SQL injection, XSS vulnerabilities)
+11. **Test coverage below 80%** for new features
+12. **Performance benchmarks failing** (>20% regression)
+13. **Unhandled error scenarios** in critical paths
+14. **Package manager violations** (npm commands used instead of pnpm)
+15. **Lock file conflicts** (package-lock.json present with pnpm-lock.yaml)
+16. **Prisma client generation failures** (database models not accessible)
+17. **Direct backend calls from frontend** (bypassing API proxies)
+18. **Deprecated package warnings** not addressed
+19. **Database migration safety violations** (untested migrations)
+20. **Runtime testing failures** (infinite loops, memory leaks, console spam)
+
+---
+
+## 🔧 **Automated Tools Integration**
+
+### ✅ **Pre-commit Hooks Setup**
+
+```bash
+# Install comprehensive development tools
+pnpm add --save-dev husky lint-staged prettier eslint @typescript-eslint/eslint-plugin
+
+# Add to package.json
+{
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged && pnpm run type-check && pnpm run test && pnpm run build",
+      "pre-push": "pnpm run test:e2e && pnpm audit"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write",
+      "jest --findRelatedTests --passWithNoTests"
+    ],
+    "*.{json,md}": ["prettier --write"],
+    "*.{css,scss}": ["prettier --write", "stylelint --fix"]
+  }
+}
+```
+
+### ✅ **Security Scanning**
+
+- [ ] **pnpm audit** run and vulnerabilities addressed
+- [ ] **Snyk scan** for dependency vulnerabilities
+- [ ] **SonarQube** static analysis for security issues
+- [ ] **Git secrets** scanning for committed secrets
+- [ ] **CodeQL analysis** for security vulnerabilities
+- [ ] **Dependency licensing compliance** check
+- [ ] **Performance monitoring** integration
+- [ ] **Prisma schema validation** (`pnpm prisma validate`)
+- [ ] **API proxy security testing** (no direct backend exposure)
+
+### ✅ **Quality Gates**
+
+- [ ] **Code coverage minimum 80%** enforced in CI/CD
+- [ ] **Performance benchmarks** must pass before deployment
+- [ ] **Security scan results** must have zero high/critical issues
+- [ ] **Accessibility audit** must pass WCAG 2.1 AA standards
+- [ ] **Bundle size limits** enforced (no unlimited growth)
+- [ ] **Load testing** required for high-traffic features
+
+---
+
+## 📊 **Quality Metrics Tracking**
+
+### 📈 **Code Quality Metrics**
+
+- **Code Coverage**: Minimum 80% for new features, track trend over time
+- **Technical Debt**: Measured by SonarQube debt ratio, target <5%
+- **Cyclomatic Complexity**: Maximum 10 per function, average <6
+- **Duplication**: Less than 3% code duplication across codebase
+- **Documentation Coverage**: All public APIs documented
+
+### ⚡ **Performance Metrics**
+
+- **First Contentful Paint**: <2 seconds on 3G
+- **Time to Interactive**: <3 seconds on 3G
+- **Bundle Size**: Frontend <500KB gzipped, track growth
+- **API Response Time**: P95 <500ms for read operations
+- **Database Query Time**: P95 <100ms for simple queries
+
+### 🐛 **Bug Tracking Metrics**
+
+- **Bug Escape Rate**: <5% of bugs reach production
+- **Mean Time to Resolution**: <24 hours for critical bugs
+- **Regression Rate**: <2% of releases introduce regressions
+- **Customer-Reported Bugs**: <1 per 1000 users per month
+
+---
+
+## 🔍 **Post-Incident Analysis Protocol**
 
 When runtime issues are discovered:
 
@@ -864,9 +785,61 @@ When runtime issues are discovered:
 
 ---
 
+## 📞 **Enhanced Getting Help**
+
+- **Security Questions**: Review authentication patterns, consult security team for encryption
+- **Performance Questions**: Use React DevTools Profiler and lighthouse audits
+- **Financial Precision**: Review financial.ts library usage (mandatory for financial calculations)
+- **Component Patterns**: Review optimized modal components
+- **Hook Patterns**: Review existing hook implementations
+- **AI Code Review**: Pair with senior developer for security-critical AI-generated code
+- **Deployment Issues**: Test in staging environment before production
+- **Git Issues**: Use `git status` and `git diff` before commits
+- **Testing Questions**: Review existing test patterns in `__tests__` directories
+- **Architecture Decisions**: Consult team lead for significant architectural changes
+- **pnpm Migration Issues**: See package manager migration documentation
+- **Prisma Problems**: Check client generation with `pnpm prisma generate`
+- **API Proxy Issues**: Verify routes in `frontend/src/app/api/` directory
+- **Database Model Access**: Ensure PrismaService extends PrismaClient properly
+- **Deprecation Warnings**: Remove @types packages when main package has built-in types
+
+---
+
+## 📊 **Quality Metrics & Standards**
+
+### 🎯 **Code Quality Targets**
+
+- **Test Coverage**: Minimum 80% for new features
+- **Type Coverage**: 100% TypeScript, no `any` types without justification
+- **Build Time**: Frontend builds under 2 minutes
+- **Bundle Size**: No unnecessary dependencies in production
+- **Performance**: No regressions > 10% in critical paths
+
+### 📈 **Performance Standards**
+
+- **Page Load**: First Contentful Paint < 2 seconds
+- **API Response**: 95th percentile < 500ms for standard endpoints
+- **Database**: No queries > 100ms without optimization review
+- **Memory**: No memory leaks, proper cleanup verification
+- **Bundle**: Critical path bundles < 250KB gzipped
+
+### 🔒 **Security Benchmarks**
+
+- **Vulnerability Scans**: Zero high/critical vulnerabilities
+- **Authentication**: MFA supported, secure session management
+- **Data Protection**: Encryption at rest and in transit
+- **Access Control**: Principle of least privilege enforced
+- **Monitoring**: Real-time security event detection
+
+---
+
 **🚨 CRITICAL LESSON**: Static code analysis is NOT sufficient. Runtime testing in a browser with DevTools monitoring is MANDATORY for all React component changes.
 
 **⚠️ REMINDER**: A component that compiles and lints correctly can still cause infinite loops, network storms, and performance degradation. Always test runtime behavior.
+
+**Remember**: These standards ensure enterprise-grade security, performance, and maintainability. Every standard exists to prevent real-world issues and maintain our high-quality codebase.
+
+**For Questions**: Consult the specific Cursor rules in `.cursor/rules/` for implementation details and examples.
 
 ---
 
@@ -907,11 +880,11 @@ When runtime issues are discovered:
 
 **Security Score**: X/Y checks passed
 
-#### **🏛️ Enterprise Security Auditing** _(NEW CRITICAL CATEGORY)_
+#### **🏛️ Enterprise Security Auditing**
 
 - [ ] Comprehensive security audit completed - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
 - [ ] Encryption audit passed - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
-- [ ] GDPR compliance verified - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
+- [ ] Privacy compliance verified - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
 - [ ] Penetration testing completed - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
 - [ ] API rate limiting implemented - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
 - [ ] Security monitoring configured - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
@@ -928,7 +901,7 @@ When runtime issues are discovered:
 
 **Performance Score**: X/Y checks passed
 
-#### **🔄 Mandatory Runtime Testing** _(CRITICAL)_
+#### **🔄 Mandatory Runtime Testing**
 
 - [ ] Component re-render testing - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
 - [ ] Console monitoring - ✅ PASSED / 🚨 ISSUES / ❌ FAILED
@@ -984,15 +957,15 @@ When runtime issues are discovered:
 
 ### **📊 Overall Assessment**
 
-| Category                   | Score     | Status                            |
-| -------------------------- | --------- | --------------------------------- |
-| **Security**               | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
-| **🆕 Enterprise Security** | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
-| **Performance**            | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
-| **Runtime Testing**        | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
-| **Code Quality**           | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
-| **Accessibility**          | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
-| **Testing**                | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
+| Category                | Score     | Status                            |
+| ----------------------- | --------- | --------------------------------- |
+| **Security**            | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
+| **Enterprise Security** | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
+| **Performance**         | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
+| **Runtime Testing**     | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
+| **Code Quality**        | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
+| **Accessibility**       | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
+| **Testing**             | X/Y (XX%) | ✅ PASSED / 🚨 ISSUES / ❌ FAILED |
 
 **Overall Score**: XX/YY (XX%)
 
@@ -1006,7 +979,7 @@ When runtime issues are discovered:
 - 🚨 **CONDITIONAL** - Minor issues, deploy with monitoring
 - ❌ **BLOCKED** - Critical issues must be fixed before deployment
 
-**🆕 Enterprise Security Status**:
+**Enterprise Security Status**:
 
 - ✅ **SECURITY APPROVED** - All enterprise security requirements met
 - 🚨 **SECURITY CONDITIONAL** - Minor security gaps, deploy with enhanced monitoring
@@ -1018,7 +991,7 @@ When runtime issues are discovered:
 
 1. [ ] Fix critical issue in `file.tsx`
 2. [ ] Complete security audit for authentication changes
-3. [ ] Implement missing GDPR compliance controls
+3. [ ] Implement missing compliance controls
 4. [ ] Address penetration testing findings
 5. [ ] Monitor performance metrics post-deployment
 
@@ -1071,8 +1044,6 @@ When runtime issues are discovered:
 | Any score     | ❌ FAILED       | Any             | ❌ **BLOCKED**     |
 | Any score     | Any status      | Critical        | ❌ **BLOCKED**     |
 
----
-
 ### **🔍 Report Usage Guidelines**
 
 #### **For Reviewers**
@@ -1094,7 +1065,10 @@ When runtime issues are discovered:
 
 **📌 REMEMBER**: This format is designed to prevent subjective "feels good" assessments and ensure every review includes the critical runtime testing that catches real-world issues.
 
-```
+---
 
-## 🚨 **NEVER BUILD THESE YOURSELF** *(CRITICAL SECURITY PRINCIPLE)*
-```
+**⚠️ SPECIAL NOTE FOR AI-GENERATED CODE**: Always have a human security expert review AI-generated authentication, encryption, input validation, and database access code. AI can introduce subtle vulnerabilities that are not immediately obvious.
+
+**🚨 CRITICAL SECURITY PRINCIPLE**: Never build custom authentication or encryption systems. Use proven, battle-tested libraries and services. Even security experts get these wrong.
+
+**Version Control**: Update this checklist when new patterns or requirements are established.

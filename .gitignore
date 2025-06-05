@@ -90,6 +90,7 @@ jspm_packages/
 # ===============================================
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
@@ -150,3 +151,12 @@ frontend/public/temp-bank-file-examples-to-be-deleted
 *.backup
 *.bak
 *.old
+
+# ===============================================
+# SENSITIVE DOCUMENTATION (SECURITY)
+# ===============================================
+# Production deployment guides (contain infrastructure details)
+docs/deployment/
+
+# Security fixes documentation (contain vulnerability details)  
+docs/fixes/

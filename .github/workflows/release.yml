@@ -77,13 +77,14 @@ jobs:
 
       - name: 📦 Get pnpm store directory
         shell: bash
+        id: pnpm-cache
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
 
       - name: 🎯 Setup pnpm cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
@@ -265,7 +266,7 @@ jobs:
   update-documentation:
     name: 📚 Update Documentation
     runs-on: ubuntu-latest
-    needs: [create-release]
+    needs: [validate-release, create-release]
     if: ${{ !contains(needs.validate-release.outputs.version, 'rc') && !contains(needs.validate-release.outputs.version, 'beta') && !contains(needs.validate-release.outputs.version, 'alpha') }}
 
     steps:
@@ -301,7 +302,7 @@ jobs:
   notify-community:
     name: 📢 Notify Community
     runs-on: ubuntu-latest
-    needs: [create-release]
+    needs: [validate-release, create-release]
     if: success()
 
     steps:

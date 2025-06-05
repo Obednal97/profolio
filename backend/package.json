@@ -1,14 +1,16 @@
 {
   "name": "profolio-backend",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Personal finance backend for Profolio",
   "main": "dist/main.js",
   "scripts": {
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "build": "nest build",
+    "type-check": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\" --fix",
+    "test": "echo \"No tests specified\" && exit 0",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

@@ -2,39 +2,78 @@ name: Deploy to Self-Hosted Server
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:  # Allow manual triggering
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
 
 jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      secrets-exist: ${{ steps.check.outputs.secrets-exist }}
+    steps:
+      - name: Check if deployment secrets exist
+        id: check
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          if [[ -n "$HOST" && -n "$USERNAME" && -n "$SSH_KEY" ]]; then
+            echo "secrets-exist=true" >> $GITHUB_OUTPUT
+            echo "✅ Deployment secrets are configured"
+          else
+            echo "secrets-exist=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Deployment secrets not configured. Skipping deployment."
+          fi
+
   deploy:
     runs-on: ubuntu-latest
-    
+    needs: check-secrets
+    if: needs.check-secrets.outputs.secrets-exist == 'true'
+    environment: production # Optional: adds protection rules
+
     steps:
-    - name: Deploy to Server
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_KEY }}
-        script: |
-          cd /opt/profolio
-          chmod +x deploy.sh
-          ./deploy.sh deploy
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ env.USERNAME }}
+          key: ${{ env.SSH_KEY }}
+          script: |
+            cd /opt/profolio
+            chmod +x deploy.sh
+            ./deploy.sh deploy
 
   notify:
-    needs: deploy
+    needs: [check-secrets, deploy]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
-    - name: Notify Success
-      if: needs.deploy.result == 'success'
-      run: |
-        echo "✅ Deployment successful!"
-        # Add Discord/Slack notification here if desired
-    
-    - name: Notify Failure
-      if: needs.deploy.result == 'failure'
-      run: |
-        echo "❌ Deployment failed!"
-        # Add Discord/Slack notification here if desired 
+      - name: Notify Success
+        if: needs.check-secrets.outputs.secrets-exist == 'true' && needs.deploy.result == 'success'
+        run: |
+          echo "✅ Deployment successful!"
+          # Add Discord/Slack notification here if desired
+
+      - name: Notify Failure
+        if: needs.check-secrets.outputs.secrets-exist == 'true' && needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          # Add Discord/Slack notification here if desired
+
+      - name: Notify Skipped
+        if: needs.check-secrets.outputs.secrets-exist == 'false'
+        run: |
+          echo "⏭️ Deployment skipped - secrets not configured"
+          echo ""
+          echo "To enable deployment, configure these repository secrets:"
+          echo "  - HOST: Your server hostname/IP"
+          echo "  - USERNAME: SSH username"  
+          echo "  - SSH_KEY: Private SSH key for authentication"
+          echo ""
+          echo "Go to: Settings → Secrets and variables → Actions"

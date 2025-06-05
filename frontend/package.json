@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "private": true,
   "packageManager": "pnpm@9.14.4",
   "scripts": {
@@ -11,9 +11,11 @@
     "dev:mobile": "npm run dev:https",
     "build": "next build",
     "build:analyze": "ANALYZE=true next build",
+    "type-check": "tsc --noEmit",
     "start": "next start",
     "start:https": "HTTPS=true next start -p 3000",
     "lint": "next lint",
+    "test": "echo \"No tests specified\" && exit 0",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "clean:all": "npm run clean && rm -rf node_modules && npm install",
     "pwa:audit": "npx lighthouse https://localhost:3000 --only-categories=pwa --chrome-flags='--ignore-certificate-errors'",
