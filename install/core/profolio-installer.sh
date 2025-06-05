@@ -39,7 +39,7 @@ fi
 # Configuration
 PROFOLIO_DIR="${PROFOLIO_DIR:-/opt/profolio}"
 PROFOLIO_USER="${PROFOLIO_USER:-profolio}"
-REPO_URL="${REPO_URL:-https://github.com/Obednal97/profolio.git}"
+# REPO_URL and REPO_CLONE_URL are defined in common/definitions.sh
 REPO_BRANCH="${REPO_BRANCH:-main}"
 
 # Fix broken package dependencies
@@ -225,7 +225,7 @@ clone_profolio_repository() {
     fi
     
     # Clone repository
-    if git clone --depth=1 --single-branch --branch "$REPO_BRANCH" "$REPO_URL" "$PROFOLIO_DIR"; then
+    if git clone --depth=1 --single-branch --branch "$REPO_BRANCH" "${REPO_CLONE_URL:-https://github.com/Obednal97/profolio.git}" "$PROFOLIO_DIR"; then
         success "Repository cloned successfully"
     else
         error "Failed to clone repository"
