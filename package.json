@@ -24,6 +24,7 @@
     "lint:frontend": "cd frontend && pnpm run lint",
     "lint": "npm run lint:backend && npm run lint:frontend",
     "prepare-release": "node scripts/prepare-release.mjs",
+    "update-versions": "./scripts/dev-tools.sh update-versions",
     "validate-env": "./scripts/validate-environment.sh",
     "setup-dev": "./scripts/setup-dev-environment.sh",
     "dev-tools": "./scripts/dev-tools.sh",
