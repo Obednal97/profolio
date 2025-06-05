@@ -27,30 +27,59 @@ fi
 
 # Define color variables if not already defined
 if [[ -z "${RED:-}" ]]; then
-    readonly RED='\033[0;31m'
-    readonly GREEN='\033[0;32m'
-    readonly YELLOW='\033[1;33m'
-    readonly BLUE='\033[0;34m'
-    readonly CYAN='\033[0;36m'
-    readonly WHITE='\033[1;37m'
-    readonly NC='\033[0m'
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    CYAN='\033[0;36m'
+    WHITE='\033[1;37m'
+    NC='\033[0m'
+fi
+
+# Define logging functions if not already defined
+if ! command -v info &> /dev/null; then
+    info() {
+        echo -e "${BLUE}[INFO]${NC} $1"
+    }
+fi
+
+if ! command -v success &> /dev/null; then
+    success() {
+        echo -e "${GREEN}[SUCCESS]${NC} $1"
+    }
+fi
+
+if ! command -v warn &> /dev/null; then
+    warn() {
+        echo -e "${YELLOW}[WARN]${NC} $1"
+    }
+fi
+
+if ! command -v error &> /dev/null; then
+    error() {
+        echo -e "${RED}[ERROR]${NC} $1" >&2
+    }
 fi
 
 # LXC container platform handler
 handle_lxc-container_platform() {
     info "🐧 LXC Container detected - using Ubuntu installer"
     
+    # Export color variables and functions to ensure they're available in sourced modules
+    export RED GREEN YELLOW BLUE CYAN WHITE NC
+    export -f info success warn error
+    
     # Source the Ubuntu platform installer
     local ubuntu_installer="platforms/ubuntu.sh"
     if [[ -f "$ubuntu_installer" ]]; then
-        source "$ubuntu_installer"
+        info "Executing Ubuntu platform installation for LXC container..."
         
-        # Call the Ubuntu platform handler
-        if command -v handle_ubuntu_platform >/dev/null 2>&1; then
-            info "Executing Ubuntu platform installation for LXC container..."
-            handle_ubuntu_platform "$@"
+        # Source and execute in the same subshell to preserve context
+        if source "$ubuntu_installer" && handle_ubuntu_platform "$@"; then
+            success "LXC container installation completed successfully"
+            return 0
         else
-            error "Ubuntu platform handler not available after sourcing"
+            error "Ubuntu platform installation failed"
             return 1
         fi
     else
