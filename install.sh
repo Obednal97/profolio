@@ -167,15 +167,29 @@ install_for_platform() {
     local platform="$1"
     shift  # Remove platform from arguments
     
-    log "Executing $platform platform installation..."
+    # Map platform to actual installer file
+    local installer_platform="$platform"
+    case "$platform" in
+        lxc-container|generic-linux)
+            installer_platform="ubuntu"  # LXC containers and generic Linux use Ubuntu installer
+            ;;
+        docker-container)
+            installer_platform="docker"
+            ;;
+        proxmox-host)
+            installer_platform="proxmox"
+            ;;
+    esac
+    
+    log "Executing $platform platform installation (using $installer_platform installer)..."
     
     # Source the platform module
-    local platform_file="platforms/${platform}.sh"
+    local platform_file="platforms/${installer_platform}.sh"
     if [[ -f "$platform_file" ]]; then
         source "$platform_file"
         
         # Call the platform handler function
-        local handler_function="handle_${platform}_platform"
+        local handler_function="handle_${installer_platform}_platform"
         if command -v "$handler_function" >/dev/null 2>&1; then
             if "$handler_function" "$@"; then
                 success "Platform installation completed successfully"
@@ -276,9 +290,13 @@ main() {
     log "Loading installer functions..."
     load_essential_functions
     
-    # Detect platform
+    # Detect platform using the proper module function
     local platform
-    platform=$(detect_platform)
+    if command -v get_platform_type >/dev/null 2>&1; then
+        platform=$(get_platform_type)
+    else
+        platform=$(detect_platform)  # Fallback to built-in detection
+    fi
     log "Platform detected: $platform"
     
     # Install for detected platform with emergency fallback
