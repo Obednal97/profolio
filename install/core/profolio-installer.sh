@@ -8,9 +8,10 @@
 # =============================================================================
 
 # Configuration
-readonly PROFOLIO_USER="${PROFOLIO_USER:-profolio}"
-readonly PROFOLIO_DIR="${PROFOLIO_DIR:-/opt/profolio}"
-readonly REPO_BRANCH="${REPO_BRANCH:-main}"
+# Only set these variables if they're not already defined (avoid readonly conflicts)
+: "${PROFOLIO_USER:=profolio}"
+: "${PROFOLIO_DIR:=/opt/profolio}"
+: "${REPO_BRANCH:=main}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -22,22 +23,30 @@ WHITE='\033[1;37m'
 GRAY='\033[0;90m'
 NC='\033[0m'
 
-# Logging functions
-info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+# Logging functions (only define if not already available)
+if ! command -v info >/dev/null 2>&1; then
+    info() {
+        echo -e "${BLUE}[INFO]${NC} $1"
+    }
+fi
 
-success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
+if ! command -v success >/dev/null 2>&1; then
+    success() {
+        echo -e "${GREEN}[SUCCESS]${NC} $1"
+    }
+fi
 
-warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
+if ! command -v warning >/dev/null 2>&1; then
+    warning() {
+        echo -e "${YELLOW}[WARNING]${NC} $1"
+    }
+fi
 
-error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+if ! command -v error >/dev/null 2>&1; then
+    error() {
+        echo -e "${RED}[ERROR]${NC} $1"
+    }
+fi
 
 # Check if running as root
 check_root() {
