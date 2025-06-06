@@ -11,10 +11,23 @@
 set -eo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
-INSTALLER_VERSION="1.11.15"
+INSTALLER_VERSION="1.11.16"
 REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
+readonly DEBUG_LOG="/tmp/profolio-installer-debug-$$.log"
+
+# Enhanced debugging and diagnostics
+INSTALLER_DEBUG="${INSTALLER_DEBUG:-false}"
+VERBOSE_MODE="${VERBOSE_MODE:-false}"
+ENABLE_DIAGNOSTICS="${ENABLE_DIAGNOSTICS:-true}"
+
+# Diagnostic tracking arrays
+declare -A MODULE_LOAD_STATUS
+declare -A FUNCTION_AVAILABILITY 
+declare -a DIAGNOSTIC_MESSAGES
+declare -a ERROR_STACK
+declare -a LOADING_TIMELINE
 
 # Temporary colors (will be replaced by common/definitions.sh)
 RED='\033[0;31m'
@@ -49,13 +62,257 @@ warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1" | tee -a "$LOG_FILE"
 }
 
-# Enhanced cleanup function with error handling
+# Enhanced debugging function
+debug() {
+    if [[ "${INSTALLER_DEBUG}" == "true" || "${VERBOSE_MODE}" == "true" ]]; then
+        echo -e "${PURPLE}[DEBUG]${NC} $1" | tee -a "$DEBUG_LOG" >&2
+    fi
+    # Always log to debug file
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] DEBUG: $1" >> "$DEBUG_LOG"
+}
+
+# Diagnostic message tracking
+add_diagnostic() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    DIAGNOSTIC_MESSAGES+=("[$timestamp] [$level] $message")
+    
+    if [[ "${ENABLE_DIAGNOSTICS}" == "true" ]]; then
+        echo -e "${CYAN}[DIAGNOSTIC]${NC} $message" | tee -a "$DEBUG_LOG"
+    fi
+}
+
+# Error stack tracking
+push_error() {
+    local error_msg="$1"
+    local function_name="${FUNCNAME[1]:-unknown}"
+    local line_number="${BASH_LINENO[0]:-unknown}"
+    
+    ERROR_STACK+=("[$function_name:$line_number] $error_msg")
+    debug "Error pushed: $error_msg (from $function_name:$line_number)"
+}
+
+# Module loading diagnostics
+track_module_load() {
+    local module="$1"
+    local status="$2"
+    local details="${3:-}"
+    
+    MODULE_LOAD_STATUS["$module"]="$status"
+    LOADING_TIMELINE+=("$(date '+%H:%M:%S.%3N') - $module: $status $details")
+    
+    debug "Module $module: $status $details"
+    
+    if [[ "$status" == "FAILED" ]]; then
+        push_error "Failed to load module: $module ($details)"
+    fi
+}
+
+# Function availability tracking
+track_function_availability() {
+    local function_name="$1"
+    
+    if command -v "$function_name" >/dev/null 2>&1; then
+        FUNCTION_AVAILABILITY["$function_name"]="AVAILABLE"
+        debug "Function available: $function_name"
+    else
+        FUNCTION_AVAILABILITY["$function_name"]="MISSING"
+        debug "Function missing: $function_name"
+    fi
+}
+
+# Comprehensive diagnostic report
+show_diagnostic_report() {
+    local show_full="${1:-false}"
+    
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════════╗"
+    echo "║                    🔍 DIAGNOSTIC REPORT                          ║"
+    echo "╚══════════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    # Environment information
+    echo -e "${WHITE}📋 Environment Information${NC}"
+    echo "────────────────────────────────────────────────────────────────────"
+    echo -e "${BLUE}Installer Version:${NC} $INSTALLER_VERSION"
+    echo -e "${BLUE}Debug Mode:${NC} $INSTALLER_DEBUG"
+    echo -e "${BLUE}Verbose Mode:${NC} $VERBOSE_MODE"
+    echo -e "${BLUE}Working Directory:${NC} $(pwd)"
+    echo -e "${BLUE}User:${NC} $(whoami) (UID: $EUID)"
+    echo -e "${BLUE}Shell:${NC} $SHELL"
+    echo -e "${BLUE}OS:${NC} $(uname -a)"
+    if [[ -f "/etc/os-release" ]]; then
+        local distro=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d'"' -f2 2>/dev/null || echo "Unknown")
+        echo -e "${BLUE}Distribution:${NC} $distro"
+    fi
+    echo ""
+    
+    # Module loading status
+    echo -e "${WHITE}📦 Module Loading Status${NC}"
+    echo "────────────────────────────────────────────────────────────────────"
+    if [[ ${#MODULE_LOAD_STATUS[@]} -gt 0 ]]; then
+        local loaded=0
+        local failed=0
+        for module in "${!MODULE_LOAD_STATUS[@]}"; do
+            local status="${MODULE_LOAD_STATUS[$module]}"
+            if [[ "$status" == "SUCCESS" ]]; then
+                echo -e "${GREEN}✓${NC} $module"
+                ((loaded++))
+            elif [[ "$status" == "FAILED" ]]; then
+                echo -e "${RED}✗${NC} $module"
+                ((failed++))
+            else
+                echo -e "${YELLOW}?${NC} $module ($status)"
+            fi
+        done
+        echo ""
+        echo -e "${BLUE}Summary:${NC} $loaded loaded, $failed failed, $((${#MODULE_LOAD_STATUS[@]} - loaded - failed)) other"
+    else
+        echo -e "${YELLOW}No module loading data tracked${NC}"
+    fi
+    echo ""
+    
+    # Function availability
+    echo -e "${WHITE}⚙️ Function Availability${NC}"
+    echo "────────────────────────────────────────────────────────────────────"
+    if [[ ${#FUNCTION_AVAILABILITY[@]} -gt 0 ]]; then
+        local available=0
+        local missing=0
+        for func in "${!FUNCTION_AVAILABILITY[@]}"; do
+            local status="${FUNCTION_AVAILABILITY[$func]}"
+            if [[ "$status" == "AVAILABLE" ]]; then
+                echo -e "${GREEN}✓${NC} $func"
+                ((available++))
+            else
+                echo -e "${RED}✗${NC} $func"
+                ((missing++))
+            fi
+        done
+        echo ""
+        echo -e "${BLUE}Summary:${NC} $available available, $missing missing"
+    else
+        echo -e "${YELLOW}No function availability data tracked${NC}"
+    fi
+    echo ""
+    
+    # Error stack
+    if [[ ${#ERROR_STACK[@]} -gt 0 ]]; then
+        echo -e "${WHITE}🚨 Error Stack${NC}"
+        echo "────────────────────────────────────────────────────────────────────"
+        for error in "${ERROR_STACK[@]}"; do
+            echo -e "${RED}•${NC} $error"
+        done
+        echo ""
+    fi
+    
+    # Recent diagnostic messages
+    if [[ ${#DIAGNOSTIC_MESSAGES[@]} -gt 0 ]]; then
+        echo -e "${WHITE}📝 Recent Diagnostic Messages${NC}"
+        echo "────────────────────────────────────────────────────────────────────"
+        # Show last 10 messages
+        local start_idx=$((${#DIAGNOSTIC_MESSAGES[@]} - 10))
+        [[ $start_idx -lt 0 ]] && start_idx=0
+        for (( i=$start_idx; i<${#DIAGNOSTIC_MESSAGES[@]}; i++ )); do
+            echo -e "${CYAN}•${NC} ${DIAGNOSTIC_MESSAGES[$i]}"
+        done
+        echo ""
+    fi
+    
+    # Full timeline if requested
+    if [[ "$show_full" == "true" && ${#LOADING_TIMELINE[@]} -gt 0 ]]; then
+        echo -e "${WHITE}⏱️ Loading Timeline${NC}"
+        echo "────────────────────────────────────────────────────────────────────"
+        for entry in "${LOADING_TIMELINE[@]}"; do
+            echo -e "${GRAY}$entry${NC}"
+        done
+        echo ""
+    fi
+    
+    # System diagnostics
+    echo -e "${WHITE}🖥️ System Diagnostics${NC}"
+    echo "────────────────────────────────────────────────────────────────────"
+    
+    # Disk space
+    if command -v df >/dev/null 2>&1; then
+        local disk_info=$(df -h /opt 2>/dev/null | tail -1 || df -h / | tail -1)
+        echo -e "${BLUE}Disk Space:${NC} $disk_info"
+    fi
+    
+    # Memory
+    if command -v free >/dev/null 2>&1; then
+        local mem_info=$(free -h | grep '^Mem:' | awk '{print "Total: " $2 ", Available: " $7}')
+        echo -e "${BLUE}Memory:${NC} $mem_info"
+    fi
+    
+    # Network connectivity
+    if ping -c 1 github.com >/dev/null 2>&1; then
+        echo -e "${BLUE}Network:${NC} ${GREEN}Connected to GitHub${NC}"
+    else
+        echo -e "${BLUE}Network:${NC} ${RED}Cannot reach GitHub${NC}"
+    fi
+    
+    # File permissions
+    if [[ -d "$TEMP_DIR" ]]; then
+        local temp_perms=$(ls -la "$TEMP_DIR" 2>/dev/null | head -1 | awk '{print $1 " " $3 ":" $4}')
+        echo -e "${BLUE}Temp Directory:${NC} $temp_perms"
+    fi
+    
+    echo ""
+    echo -e "${WHITE}📁 Log Files${NC}"
+    echo "────────────────────────────────────────────────────────────────────"
+    echo -e "${BLUE}Main Log:${NC} $LOG_FILE"
+    echo -e "${BLUE}Debug Log:${NC} $DEBUG_LOG"
+    echo -e "${BLUE}View logs:${NC} tail -f $LOG_FILE"
+    echo -e "${BLUE}Debug mode:${NC} INSTALLER_DEBUG=true bash install.sh"
+    echo ""
+}
+
+# Show help information
+show_help() {
+    echo "Profolio Installer v$INSTALLER_VERSION"
+    echo "Self-Hosted Portfolio Management System"
+    echo ""
+    echo "Usage: \$0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help          Show this help message"
+    echo "  -d, --debug         Enable debug mode (detailed logging)"
+    echo "  -v, --verbose       Enable verbose mode (show all operations)"
+    echo "      --diagnostics   Enable diagnostic output"
+    echo "      --check-only    Dry run mode - check system without installing"
+    echo "      --dry-run       Same as --check-only"
+    echo ""
+    echo "Environment Variables:"
+    echo "  INSTALLER_DEBUG=true     Enable debug mode"
+    echo "  VERBOSE_MODE=true        Enable verbose mode"
+    echo "  ENABLE_DIAGNOSTICS=true  Enable diagnostic tracking"
+    echo ""
+    echo "Examples:"
+    echo "  \$0                       Normal installation"
+    echo "  \$0 --debug              Installation with debug output"
+    echo "  \$0 --check-only         Check system readiness without installing"
+    echo ""
+    echo "Troubleshooting:"
+    echo "  Log files:"
+    echo "    Main log:  $LOG_FILE"
+    echo "    Debug log: $DEBUG_LOG"
+    echo ""
+    echo "  Debug commands:"
+    echo "    tail -f $LOG_FILE"
+    echo "    INSTALLER_DEBUG=true \$0"
+    echo ""
+}
+
+# Enhanced cleanup function with error handling and diagnostics
 cleanup() {
     local exit_code=$?
     
     # Log cleanup start
     if [[ $exit_code -ne 0 ]]; then
         warning "Installation interrupted with exit code $exit_code"
+        push_error "Installation failed with exit code $exit_code"
     fi
     
     # Clean up temporary directory
@@ -64,21 +321,39 @@ cleanup() {
             debug "Temporary directory cleaned up successfully"
         else
             warning "Failed to clean up temporary directory: $TEMP_DIR"
+            push_error "Failed to clean up temporary directory: $TEMP_DIR"
         fi
     fi
     
     # Clean up temporary loading files
     rm -f /tmp/loading_complete /tmp/download_progress.log* 2>/dev/null || true
     
-    # If installation failed, provide helpful information
+    # If installation failed, show comprehensive diagnostics
     if [[ $exit_code -ne 0 ]] && [[ "${INSTALLATION_STARTED:-false}" == "true" ]]; then
         echo ""
-        warning "Installation was interrupted. To resume or troubleshoot:"
-        echo -e "${BLUE}• Check log file:${NC} $LOG_FILE"
-        echo -e "${BLUE}• Try emergency mode:${NC} Run the installer again"
+        warning "Installation was interrupted. Showing diagnostic information..."
+        
+        # Show diagnostic report
+        show_diagnostic_report
+        
+        echo ""
+        echo -e "${WHITE}🔧 Troubleshooting Steps${NC}"
+        echo "────────────────────────────────────────────────────────────────────"
+        echo -e "${BLUE}1. Check logs:${NC} tail -f $LOG_FILE"
+        echo -e "${BLUE}2. Debug mode:${NC} INSTALLER_DEBUG=true bash install.sh"
+        echo -e "${BLUE}3. Verbose mode:${NC} VERBOSE_MODE=true bash install.sh"
+        echo -e "${BLUE}4. Emergency mode:${NC} Run installer again (auto-fallback)"
         if command -v rollback_list_rollback_points >/dev/null 2>&1; then
-            echo -e "${BLUE}• Rollback if needed:${NC} Use rollback system"
+            echo -e "${BLUE}5. Rollback:${NC} Use rollback system if needed"
         fi
+        echo ""
+        
+        echo -e "${WHITE}📞 Getting Help${NC}"
+        echo "────────────────────────────────────────────────────────────────────"
+        echo -e "${BLUE}GitHub Issues:${NC} https://github.com/Obednal97/profolio/issues"
+        echo -e "${BLUE}Include logs:${NC} $LOG_FILE and $DEBUG_LOG"
+        echo -e "${BLUE}System info:${NC} $(uname -a)"
+        echo ""
     fi
     
     exit $exit_code
@@ -188,15 +463,26 @@ download_all_modules() {
     return 0
 }
 
-# Load essential functions without complex validation
+# Load essential functions with comprehensive diagnostics
 load_essential_functions() {
     printf "${BLUE}Loading installer functions${NC} "
+    add_diagnostic "INFO" "Starting module loading process"
     
     # CRITICAL: Source common definitions FIRST in main shell (no background process)
     if [[ -f "common/definitions.sh" ]]; then
-        source "common/definitions.sh" 2>/dev/null || return 1
+        if source "common/definitions.sh" 2>/dev/null; then
+            track_module_load "common/definitions.sh" "SUCCESS" "Core definitions loaded"
+            debug "Successfully loaded common definitions"
+        else
+            track_module_load "common/definitions.sh" "FAILED" "Source command failed"
+            error "Critical: Failed to source common/definitions.sh"
+            push_error "Could not source common/definitions.sh"
+            return 1
+        fi
     else
+        track_module_load "common/definitions.sh" "FAILED" "File not found"
         error "Critical: common/definitions.sh not found"
+        push_error "common/definitions.sh file not found in $(pwd)"
         return 1
     fi
     
@@ -208,16 +494,46 @@ load_essential_functions() {
         "utils/ui.sh"               # Enhanced UI components
     )
     
+    debug "Loading priority utility modules..."
     for util in "${priority_utils[@]}"; do
         if [[ -f "$util" ]]; then
-            source "$util" 2>/dev/null || true
+            if source "$util" 2>/dev/null; then
+                track_module_load "$util" "SUCCESS" "Priority utility loaded"
+                debug "Successfully loaded priority module: $util"
+            else
+                track_module_load "$util" "FAILED" "Source command failed"
+                warning "Failed to load priority module: $util"
+                push_error "Could not source priority module: $util"
+            fi
+        else
+            track_module_load "$util" "FAILED" "File not found"
+            debug "Priority module not found: $util"
         fi
     done
     
     # Load remaining utility modules
+    debug "Loading remaining utility modules..."
     for util in utils/*.sh; do
         if [[ -f "$util" ]]; then
-            source "$util" 2>/dev/null || true
+            # Skip if already loaded in priority
+            local skip=false
+            for priority in "${priority_utils[@]}"; do
+                if [[ "$util" == "$priority" ]]; then
+                    skip=true
+                    break
+                fi
+            done
+            
+            if [[ "$skip" == "false" ]]; then
+                if source "$util" 2>/dev/null; then
+                    track_module_load "$util" "SUCCESS" "Utility module loaded"
+                    debug "Successfully loaded utility module: $util"
+                else
+                    track_module_load "$util" "FAILED" "Source command failed"
+                    warning "Failed to load utility module: $util"
+                    push_error "Could not source utility module: $util"
+                fi
+            fi
         fi
     done
     
@@ -228,35 +544,93 @@ load_essential_functions() {
         "features/installation-reporting.sh" # Professional reporting
     )
     
+    debug "Loading priority feature modules..."
     for feature in "${priority_features[@]}"; do
         if [[ -f "$feature" ]]; then
-            source "$feature" 2>/dev/null || true
+            if source "$feature" 2>/dev/null; then
+                track_module_load "$feature" "SUCCESS" "Priority feature loaded"
+                debug "Successfully loaded priority feature: $feature"
+            else
+                track_module_load "$feature" "FAILED" "Source command failed"
+                warning "Failed to load priority feature: $feature"
+                push_error "Could not source priority feature: $feature"
+            fi
+        else
+            track_module_load "$feature" "FAILED" "File not found"
+            debug "Priority feature not found: $feature"
         fi
     done
     
     # Source core installer (the main application installer)
+    debug "Loading core installer..."
     if [[ -f "core/profolio-installer.sh" ]]; then
-        source "core/profolio-installer.sh" 2>/dev/null || true
+        if source "core/profolio-installer.sh" 2>/dev/null; then
+            track_module_load "core/profolio-installer.sh" "SUCCESS" "Main application installer loaded"
+            debug "Successfully loaded core profolio installer"
+        else
+            track_module_load "core/profolio-installer.sh" "FAILED" "Source command failed"
+            warning "Failed to load core profolio installer"
+            push_error "Could not source core/profolio-installer.sh"
+        fi
+    else
+        track_module_load "core/profolio-installer.sh" "FAILED" "File not found"
+        warning "Core profolio installer not found"
+        push_error "core/profolio-installer.sh file not found"
     fi
     
     # Source additional core modules
+    debug "Loading additional core modules..."
     for core in core/*.sh; do
         if [[ -f "$core" && "$core" != "core/profolio-installer.sh" ]]; then
-            source "$core" 2>/dev/null || true
+            if source "$core" 2>/dev/null; then
+                track_module_load "$core" "SUCCESS" "Core module loaded"
+                debug "Successfully loaded core module: $core"
+            else
+                track_module_load "$core" "FAILED" "Source command failed"
+                warning "Failed to load core module: $core"
+                push_error "Could not source core module: $core"
+            fi
         fi
     done
     
     # Load remaining feature modules
+    debug "Loading remaining feature modules..."
     for feature in features/*.sh; do
         if [[ -f "$feature" ]]; then
-            source "$feature" 2>/dev/null || true
+            # Skip if already loaded in priority
+            local skip=false
+            for priority in "${priority_features[@]}"; do
+                if [[ "$feature" == "$priority" ]]; then
+                    skip=true
+                    break
+                fi
+            done
+            
+            if [[ "$skip" == "false" ]]; then
+                if source "$feature" 2>/dev/null; then
+                    track_module_load "$feature" "SUCCESS" "Feature module loaded"
+                    debug "Successfully loaded feature module: $feature"
+                else
+                    track_module_load "$feature" "FAILED" "Source command failed"
+                    warning "Failed to load feature module: $feature"
+                    push_error "Could not source feature module: $feature"
+                fi
+            fi
         fi
     done
     
     # Source platform modules (including emergency)
+    debug "Loading platform modules..."
     for platform in platforms/*.sh; do
         if [[ -f "$platform" ]]; then
-            source "$platform" 2>/dev/null || true
+            if source "$platform" 2>/dev/null; then
+                track_module_load "$platform" "SUCCESS" "Platform module loaded"
+                debug "Successfully loaded platform module: $platform"
+            else
+                track_module_load "$platform" "FAILED" "Source command failed"
+                warning "Failed to load platform module: $platform"
+                push_error "Could not source platform module: $platform"
+            fi
         fi
     done
     
@@ -298,18 +672,41 @@ load_essential_functions() {
         "validation_validate_ip"
     )
     
+    debug "Verifying and exporting critical functions..."
+    add_diagnostic "INFO" "Starting function availability verification"
+    
     local exported_count=0
+    local missing_functions=()
+    
     for func in "${critical_functions[@]}"; do
+        track_function_availability "$func"
         if command -v "$func" >/dev/null 2>&1; then
-            export -f "$func"
-            exported_count=$((exported_count + 1))
-            debug "Exported function: $func"
+            if export -f "$func" 2>/dev/null; then
+                exported_count=$((exported_count + 1))
+                debug "Successfully exported function: $func"
+            else
+                warning "Function exists but failed to export: $func"
+                push_error "Could not export function: $func"
+                missing_functions+=("$func (export failed)")
+            fi
         else
             debug "Function not available for export: $func"
+            missing_functions+=("$func (not found)")
         fi
     done
     
     info "Professional modules loaded: $exported_count/${#critical_functions[@]} functions available"
+    
+    # Report missing critical functions
+    if [[ ${#missing_functions[@]} -gt 0 ]]; then
+        add_diagnostic "WARNING" "Missing ${#missing_functions[@]} critical functions"
+        if [[ "${INSTALLER_DEBUG}" == "true" ]]; then
+            warning "Missing critical functions:"
+            for missing in "${missing_functions[@]}"; do
+                echo -e "  ${RED}•${NC} $missing"
+            done
+        fi
+    fi
     
     # Report on professional and advanced features availability
     echo ""
@@ -367,35 +764,64 @@ load_essential_functions() {
     # Also export all color variables and logging functions for subshells
     export RED GREEN YELLOW BLUE CYAN WHITE GRAY MAGENTA PURPLE NC
     export -f log error info success warning warn debug 2>/dev/null || true
+    
+    add_diagnostic "SUCCESS" "Module loading completed"
+    debug "Module loading phase completed successfully"
 }
 
-# Execute platform installation
+# Execute platform installation with enhanced error handling
 install_for_platform() {
     local detected_platform="$1"
     shift  # Remove platform from arguments
     
-    # Suppress verbose logging for clean UI
-    # log "Starting installation for platform: $detected_platform"
+    debug "Starting platform installation for: $detected_platform"
+    add_diagnostic "INFO" "Beginning platform-specific installation for $detected_platform"
     
     # Try direct platform file first
     local platform_file="platforms/${detected_platform}.sh"
     if [[ -f "$platform_file" ]]; then
-        # log "Using direct platform installer: $platform_file"
-        source "$platform_file"
+        debug "Using direct platform installer: $platform_file"
+        
+        if source "$platform_file" 2>/dev/null; then
+            debug "Successfully sourced platform file: $platform_file"
+            add_diagnostic "SUCCESS" "Platform module $platform_file sourced successfully"
+        else
+            error "Failed to source platform file: $platform_file"
+            push_error "Could not source platform file: $platform_file"
+            add_diagnostic "ERROR" "Failed to source platform file: $platform_file"
+            return 1
+        fi
         
         # Call the platform handler function
         local handler_function="handle_${detected_platform}_platform"
+        debug "Looking for platform handler: $handler_function"
+        
         if command -v "$handler_function" >/dev/null 2>&1; then
-            # log "Executing $handler_function..."
+            debug "Executing platform handler: $handler_function"
+            add_diagnostic "INFO" "Executing platform handler: $handler_function"
+            
             if "$handler_function" "$@"; then
-                # success "Platform installation completed successfully"
+                success "Platform installation completed successfully"
+                add_diagnostic "SUCCESS" "Platform installation completed for $detected_platform"
                 return 0
             else
-                # warning "Platform installation failed"
+                error "Platform installation failed for $detected_platform"
+                push_error "Platform handler $handler_function returned failure"
+                add_diagnostic "ERROR" "Platform installation failed for $detected_platform"
                 return 1
             fi
         else
             error "Platform handler function $handler_function not available"
+            push_error "Platform handler function $handler_function not found after sourcing $platform_file"
+            add_diagnostic "ERROR" "Platform handler function $handler_function not available"
+            
+            # Show available functions for debugging
+            if [[ "${INSTALLER_DEBUG}" == "true" ]]; then
+                debug "Available functions after sourcing $platform_file:"
+                declare -F | grep -E "(handle_|platform)" | while read -r line; do
+                    debug "  $line"
+                done
+            fi
             return 1
         fi
     else
@@ -407,28 +833,60 @@ install_for_platform() {
             proxmox-host) fallback_platform="proxmox" ;;
         esac
         
-        log "Direct platform file not found, using fallback: platforms/${fallback_platform}.sh"
+        warning "Direct platform file not found: $platform_file"
+        info "Using fallback platform: $fallback_platform"
+        add_diagnostic "WARNING" "Platform file not found: $platform_file, trying fallback: $fallback_platform"
+        push_error "Direct platform file not found: $platform_file"
         
         local fallback_file="platforms/${fallback_platform}.sh"
         if [[ -f "$fallback_file" ]]; then
-            source "$fallback_file"
+            debug "Using fallback platform installer: $fallback_file"
+            
+            if source "$fallback_file" 2>/dev/null; then
+                debug "Successfully sourced fallback platform file: $fallback_file"
+                add_diagnostic "SUCCESS" "Fallback platform module $fallback_file sourced successfully"
+            else
+                error "Failed to source fallback platform file: $fallback_file"
+                push_error "Could not source fallback platform file: $fallback_file"
+                add_diagnostic "ERROR" "Failed to source fallback platform file: $fallback_file"
+                return 1
+            fi
             
             local fallback_function="handle_${fallback_platform}_platform"
+            debug "Looking for fallback platform handler: $fallback_function"
+            
             if command -v "$fallback_function" >/dev/null 2>&1; then
-                log "Executing fallback $fallback_function..."
+                debug "Executing fallback platform handler: $fallback_function"
+                add_diagnostic "INFO" "Executing fallback platform handler: $fallback_function"
+                
                 if "$fallback_function" "$@"; then
                     success "Fallback platform installation completed successfully"
+                    add_diagnostic "SUCCESS" "Fallback platform installation completed for $fallback_platform"
                     return 0
                 else
-                    warning "Fallback platform installation failed"
+                    error "Fallback platform installation failed"
+                    push_error "Fallback platform handler $fallback_function returned failure"
+                    add_diagnostic "ERROR" "Fallback platform installation failed for $fallback_platform"
                     return 1
                 fi
             else
                 error "Fallback platform handler $fallback_function not available"
+                push_error "Fallback platform handler function $fallback_function not found after sourcing $fallback_file"
+                add_diagnostic "ERROR" "Fallback platform handler $fallback_function not available"
                 return 1
             fi
         else
             error "Neither direct platform file nor fallback found"
+            push_error "No platform files available: $platform_file or $fallback_file"
+            add_diagnostic "ERROR" "No platform files available for $detected_platform"
+            
+            # Show available platform files for debugging
+            if [[ "${INSTALLER_DEBUG}" == "true" ]]; then
+                debug "Available platform files:"
+                ls -la platforms/ 2>/dev/null | while read -r line; do
+                    debug "  $line"
+                done
+            fi
             return 1
         fi
     fi
@@ -562,17 +1020,53 @@ show_failure_help() {
 
 # Main installer function
 main() {
+    # Check for diagnostic options first
+    case "${1:-}" in
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --debug|-d)
+            export INSTALLER_DEBUG="true"
+            shift
+            ;;
+        --verbose|-v)
+            export VERBOSE_MODE="true"
+            shift
+            ;;
+        --diagnostics)
+            export ENABLE_DIAGNOSTICS="true"
+            shift
+            ;;
+        --check-only|--dry-run)
+            export DRY_RUN_MODE="true"
+            shift
+            ;;
+    esac
+    
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║                 🚀 PROFOLIO INSTALLER v$INSTALLER_VERSION                 ║"
     echo "║              Self-Hosted Portfolio Management                ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo ""
     
+    # Show debug mode status
+    if [[ "${INSTALLER_DEBUG}" == "true" ]]; then
+        info "🐛 Debug mode enabled - detailed logging active"
+    fi
+    if [[ "${VERBOSE_MODE}" == "true" ]]; then
+        info "📝 Verbose mode enabled - showing all operations"
+    fi
+    if [[ "${DRY_RUN_MODE}" == "true" ]]; then
+        info "🔍 Dry run mode - checking system without installing"
+    fi
+    
     # Mark installation as started for cleanup handling
     export INSTALLATION_STARTED="true"
     
     # Log installation start
     info "Installation started at $(date '+%Y-%m-%d %H:%M:%S')"
+    add_diagnostic "INFO" "Installer started with version $INSTALLER_VERSION"
     
     # Enhanced security checks
     echo ""
@@ -748,6 +1242,51 @@ main() {
     fi
     
     echo ""
+    
+    # Dry run mode check - show diagnostics and exit without installing
+    if [[ "${DRY_RUN_MODE}" == "true" ]]; then
+        echo -e "${CYAN}🔍 DRY RUN MODE - System Check Complete${NC}"
+        echo ""
+        
+        # Show comprehensive diagnostic report
+        show_diagnostic_report true
+        
+        echo ""
+        echo -e "${WHITE}💡 Dry Run Summary${NC}"
+        echo "────────────────────────────────────────────────────────────────"
+        echo -e "${BLUE}Platform Detected:${NC} $platform"
+        echo -e "${BLUE}Installation Ready:${NC} $(if [[ -f "platforms/${platform}.sh" ]]; then echo "${GREEN}Yes${NC}"; else echo "${YELLOW}Fallback required${NC}"; fi)"
+        echo -e "${BLUE}Professional Features:${NC} $(info | grep -o '[0-9]\+/[0-9]\+' | tail -1 || echo "Unknown")"
+        
+        # Check for missing critical components
+        local missing_critical=()
+        if ! command -v install_profolio_application >/dev/null 2>&1; then
+            missing_critical+=("Core installer function")
+        fi
+        if ! command -v handle_${platform}_platform >/dev/null 2>&1; then
+            missing_critical+=("Platform handler for $platform")
+        fi
+        
+        if [[ ${#missing_critical[@]} -gt 0 ]]; then
+            echo -e "${BLUE}Critical Missing:${NC} ${RED}${missing_critical[*]}${NC}"
+            echo ""
+            echo -e "${YELLOW}⚠️ Installation would likely fail due to missing critical components${NC}"
+        else
+            echo -e "${BLUE}Critical Components:${NC} ${GREEN}All present${NC}"
+            echo ""
+            echo -e "${GREEN}✅ System appears ready for installation${NC}"
+        fi
+        
+        echo ""
+        echo -e "${WHITE}🚀 To proceed with actual installation:${NC}"
+        echo "────────────────────────────────────────────────────────────────"
+        echo -e "${BLUE}Normal mode:${NC} bash install.sh"
+        echo -e "${BLUE}Debug mode:${NC} bash install.sh --debug"
+        echo -e "${BLUE}Verbose mode:${NC} bash install.sh --verbose"
+        echo ""
+        
+        exit 0
+    fi
     
     # Show installation options
     echo -e "${WHITE}📦 Installation Options${NC}"
