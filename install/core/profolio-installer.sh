@@ -68,6 +68,15 @@ install_node() {
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt install -y nodejs
     
+    # Update PATH to ensure Node.js is immediately available
+    export PATH="/usr/bin:/usr/local/bin:$PATH"
+    
+    # Reload environment
+    hash -r
+    
+    # Give the system a moment to update
+    sleep 2
+    
     # Verify installation
     local node_version=$(node --version 2>/dev/null || echo "not_installed")
     local npm_version=$(npm --version 2>/dev/null || echo "not_installed")
@@ -75,8 +84,27 @@ install_node() {
     if [[ $node_version == v20* ]]; then
         success "Node.js installed: $node_version"
         success "npm installed: $npm_version"
+        
+        # Export for other functions to use
+        export NODE_PATH="/usr/bin/node"
+        export NPM_PATH="/usr/bin/npm"
+        
+        return 0
     else
         error "Failed to install Node.js 20. Got: $node_version"
+        
+        # Try alternative installation method
+        warning "Trying alternative Node.js installation..."
+        if curl -fsSL https://nodejs.org/dist/v20.11.1/node-v20.11.1-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1; then
+            export PATH="/usr/local/bin:$PATH"
+            hash -r
+            local alt_version=$(node --version 2>/dev/null || echo "failed")
+            if [[ $alt_version == v20* ]]; then
+                success "Node.js installed via alternative method: $alt_version"
+                return 0
+            fi
+        fi
+        
         return 1
     fi
 }
@@ -300,30 +328,56 @@ EOF
 build_applications() {
     info "Installing dependencies and building applications..."
     
+    # Verify Node.js is properly installed
+    if ! command -v node >/dev/null 2>&1; then
+        error "Node.js not found in PATH. Attempting to install..."
+        if ! install_node; then
+            error "Failed to install Node.js - cannot continue"
+            return 1
+        fi
+    fi
+    
+    # Verify we can run Node.js
+    local node_version=$(node --version 2>/dev/null || echo "")
+    if [[ -z "$node_version" ]]; then
+        error "Node.js installation appears broken"
+        return 1
+    fi
+    
+    info "Using Node.js version: $node_version"
+    
     cd "$PROFOLIO_DIR"
     
-    # Ensure pnpm is in PATH
-    export PATH="$HOME/.local/share/pnpm:$PATH"
+    # Ensure pnpm is in PATH and set up environment
+    export PATH="$HOME/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin:$PATH"
     
-    # Check if pnpm is available
-    if ! command -v pnpm >/dev/null 2>&1; then
-        warning "pnpm not found in PATH, attempting to use npm instead..."
-        # Fallback to npm if pnpm is not available
-        local package_manager="npm"
+    # Determine package manager to use
+    local package_manager=""
+    if command -v pnpm >/dev/null 2>&1; then
+        package_manager="pnpm"
+        local pnpm_version=$(pnpm --version 2>/dev/null)
+        info "Using pnpm version: $pnpm_version"
+    elif command -v npm >/dev/null 2>&1; then
+        package_manager="npm"
+        local npm_version=$(npm --version 2>/dev/null)
+        info "Using npm version: $npm_version"
     else
-        local package_manager="pnpm"
-        info "Using pnpm for package management"
+        error "No package manager (npm/pnpm) found"
+        return 1
     fi
     
     # Install root dependencies
     info "Installing root dependencies..."
-    sudo -u "$PROFOLIO_USER" $package_manager install || {
+    if sudo -u "$PROFOLIO_USER" $package_manager install 2>/dev/null; then
+        success "Root dependencies installed successfully"
+    else
         warning "Root dependency installation failed, continuing..."
-    }
+    fi
     
     # Build backend
     info "Building backend..."
     cd "$PROFOLIO_DIR/backend"
+    
     if sudo -u "$PROFOLIO_USER" $package_manager install; then
         success "Backend dependencies installed"
     else
@@ -355,6 +409,7 @@ build_applications() {
     # Build frontend
     info "Building frontend..."
     cd "$PROFOLIO_DIR/frontend"
+    
     if sudo -u "$PROFOLIO_USER" $package_manager install; then
         success "Frontend dependencies installed"
     else
@@ -485,6 +540,55 @@ start_services() {
 # Main application installation function (called by platform handlers)
 install_profolio_application() {
     info "Installing Profolio application..."
+    
+    # Check if running as root
+    check_root
+    
+    # Install Node.js if not already installed
+    if ! command -v node >/dev/null 2>&1; then
+        info "Node.js not found, installing..."
+        if ! install_node; then
+            error "Failed to install Node.js"
+            return 1
+        fi
+    else
+        local node_version=$(node --version 2>/dev/null)
+        info "Node.js already installed: $node_version"
+    fi
+    
+    # Install pnpm if not already installed
+    if ! command -v pnpm >/dev/null 2>&1; then
+        info "pnpm not found, installing..."
+        if ! install_pnpm; then
+            warning "pnpm installation failed, will use npm instead"
+        fi
+    else
+        local pnpm_version=$(pnpm --version 2>/dev/null)
+        info "pnpm already installed: $pnpm_version"
+    fi
+    
+    # Setup database if needed (only if not already configured)
+    if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw profolio 2>/dev/null; then
+        info "Database not found, setting up..."
+        if ! setup_database; then
+            error "Failed to setup database"
+            return 1
+        fi
+    else
+        info "Database already exists, using existing configuration"
+        # Create a temporary password file for environment setup
+        # Generate a new password for this installation
+        local new_db_password=$(openssl rand -base64 32)
+        echo "$new_db_password" > /tmp/profolio_db_password
+        chmod 600 /tmp/profolio_db_password
+        
+        # Update the database password
+        sudo -u postgres psql << EOF
+ALTER USER profolio WITH ENCRYPTED PASSWORD '$new_db_password';
+\q
+EOF
+        info "Database password updated for this installation"
+    fi
     
     # Create profolio user
     create_user
