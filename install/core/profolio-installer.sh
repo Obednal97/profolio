@@ -1,48 +1,59 @@
 #!/bin/bash
 
 # =============================================================================
-# PROFOLIO INSTALLER - CORE APPLICATION INSTALLER MODULE v1.0.0
+# PROFOLIO APPLICATION INSTALLER
 # =============================================================================
-# 
-# Core application installer for Profolio - platform independent
-# Provides: Application cloning, dependency installation, building, configuration
-#
-# Compatible: All platforms after system setup is complete
-# Dependencies: utils/logging.sh, utils/ui.sh, utils/validation.sh
+# Core application installer - platform independent
+# Handles Node.js, PostgreSQL, repository cloning, building, and service setup
 # =============================================================================
-
-# Module info function
-profolio_installer_info() {
-    echo "Profolio Core Application Installer v1.0.0"
-    echo "  • Git repository cloning and management"
-    echo "  • Node.js and pnpm dependency installation"
-    echo "  • Prisma database setup and migrations"
-    echo "  • Frontend and backend building"
-    echo "  • Environment configuration"
-    echo "  • Systemd service creation and management"
-}
-
-# Check if this module is being sourced
-if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
-    # Being sourced
-    if [ -n "${INSTALLER_DEBUG:-}" ]; then
-        echo "[DEBUG] Profolio core installer module loaded"
-    fi
-else
-    # Being executed directly
-    echo "Profolio Core Application Installer v1.0.0"
-    echo "This module should be sourced, not executed directly."
-    echo "Usage: source install/core/profolio-installer.sh"
-    exit 1
-fi
 
 # Configuration
-PROFOLIO_DIR="${PROFOLIO_DIR:-/opt/profolio}"
-PROFOLIO_USER="${PROFOLIO_USER:-profolio}"
-# REPO_URL and REPO_CLONE_URL are defined in common/definitions.sh
-REPO_BRANCH="${REPO_BRANCH:-main}"
+readonly PROFOLIO_USER="${PROFOLIO_USER:-profolio}"
+readonly PROFOLIO_DIR="${PROFOLIO_DIR:-/opt/profolio}"
+readonly REPO_BRANCH="${REPO_BRANCH:-main}"
 
-# Fix broken package dependencies
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+GRAY='\033[0;90m'
+NC='\033[0m'
+
+# Logging functions
+info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+debug() {
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+        echo -e "${GRAY}[DEBUG]${NC} $1"
+    fi
+}
+
+# Check if running as root
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error "This script must be run as root"
+        exit 1
+    fi
+}
+
+# Fix package dependencies
 fix_package_dependencies() {
     info "Fixing package dependencies..."
     
@@ -199,13 +210,80 @@ EOF
         success "PostgreSQL database configured"
         
         # URL encode the password to handle special characters
-        # Use perl if available, otherwise use a basic sed replacement
-        if command -v perl >/dev/null 2>&1; then
-            local encoded_password=$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "$db_password")
-        else
-            # Basic URL encoding for common special characters
-            local encoded_password=$(echo -n "$db_password" | sed 's/%/%25/g; s/ /%20/g; s/!/%21/g; s/"/%22/g; s/#/%23/g; s/\$/%24/g; s/&/%26/g; s/'\''/%27/g; s/(/%28/g; s/)/%29/g; s/\*/%2A/g; s/+/%2B/g; s/,/%2C/g; s/-/%2D/g; s/\./%2E/g; s/\//%2F/g; s/:/%3A/g; s/;/%3B/g; s/</%3C/g; s/=/%3D/g; s/>/%3E/g; s/?/%3F/g; s/@/%40/g; s/\[/%5B/g; s/\\/%5C/g; s/\]/%5D/g; s/\^/%5E/g; s/_/%5F/g; s/`/%60/g; s/{/%7B/g; s/|/%7C/g; s/}/%7D/g; s/~/%7E/g')
-        fi
+        # Use a robust bash-native approach that doesn't require Perl
+        local encoded_password=""
+        local char
+        for (( i=0; i<${#db_password}; i++ )); do
+            char="${db_password:$i:1}"
+            case "$char" in
+                [a-zA-Z0-9._~-]) 
+                    encoded_password+="$char" ;;
+                ' ') 
+                    encoded_password+="%20" ;;
+                '!') 
+                    encoded_password+="%21" ;;
+                '"') 
+                    encoded_password+="%22" ;;
+                '#') 
+                    encoded_password+="%23" ;;
+                '$') 
+                    encoded_password+="%24" ;;
+                '%') 
+                    encoded_password+="%25" ;;
+                '&') 
+                    encoded_password+="%26" ;;
+                "'") 
+                    encoded_password+="%27" ;;
+                '(') 
+                    encoded_password+="%28" ;;
+                ')') 
+                    encoded_password+="%29" ;;
+                '*') 
+                    encoded_password+="%2A" ;;
+                '+') 
+                    encoded_password+="%2B" ;;
+                ',') 
+                    encoded_password+="%2C" ;;
+                '/') 
+                    encoded_password+="%2F" ;;
+                ':') 
+                    encoded_password+="%3A" ;;
+                ';') 
+                    encoded_password+="%3B" ;;
+                '<') 
+                    encoded_password+="%3C" ;;
+                '=') 
+                    encoded_password+="%3D" ;;
+                '>') 
+                    encoded_password+="%3E" ;;
+                '?') 
+                    encoded_password+="%3F" ;;
+                '@') 
+                    encoded_password+="%40" ;;
+                '[') 
+                    encoded_password+="%5B" ;;
+                '\') 
+                    encoded_password+="%5C" ;;
+                ']') 
+                    encoded_password+="%5D" ;;
+                '^') 
+                    encoded_password+="%5E" ;;
+                '`') 
+                    encoded_password+="%60" ;;
+                '{') 
+                    encoded_password+="%7B" ;;
+                '|') 
+                    encoded_password+="%7C" ;;
+                '}') 
+                    encoded_password+="%7D" ;;
+                '~') 
+                    encoded_password+="%7E" ;;
+                *) 
+                    # For any other character, use printf to get hex value
+                    encoded_password+=$(printf "%%%02X" "'$char")
+                    ;;
+            esac
+        done
         
         # Save database URL for application
         export PROFOLIO_DB_URL="postgresql://profolio:${encoded_password}@localhost:5432/profolio"
@@ -656,27 +734,24 @@ show_installation_summary() {
 cleanup_failed_installation() {
     warn "Cleaning up failed installation..."
     
-    # Stop services if they exist
+    # Stop services if they're running
     systemctl stop profolio-backend profolio-frontend 2>/dev/null || true
+    systemctl disable profolio-backend profolio-frontend 2>/dev/null || true
     
     # Remove service files
     rm -f /etc/systemd/system/profolio-backend.service
     rm -f /etc/systemd/system/profolio-frontend.service
+    
+    # Reload systemd
     systemctl daemon-reload
     
-    # Remove installation directory
-    rm -rf "$PROFOLIO_DIR"
-    
-    # Remove temp files
+    # Clean up temporary files
     rm -f /tmp/profolio-db.env
     
-    info "Cleanup completed"
+    warn "Cleanup completed"
 }
 
-# Export main function for use by platforms
-export -f install_profolio_application
-export -f cleanup_failed_installation
-
-# Module metadata
-PROFOLIO_INSTALLER_VERSION="1.0.0"
-PROFOLIO_INSTALLER_DEPENDENCIES="utils/logging.sh utils/ui.sh utils/validation.sh" 
+# Signal handlers for graceful cleanup
+trap cleanup_failed_installation ERR
+trap cleanup_failed_installation INT
+trap cleanup_failed_installation TERM
