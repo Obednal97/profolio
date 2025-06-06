@@ -1720,3 +1720,82 @@ All **production-critical** files have been comprehensively updated:
 ---
 
 **🚨 ENTERPRISE SECURITY REQUIREMENT**: Any changes affecting authentication, encryption, data privacy, or external APIs MUST pass enterprise security auditing before deployment.
+
+## ✅ **v1.11.18 PRODUCTION FIXES DEPLOYED**
+
+**Date**: 6th January 2025  
+**Severity**: RESOLVED - Production Environment Errors Fixed  
+**Status**: 🟢 **PRODUCTION READY - ALL ISSUES RESOLVED**
+
+### **✅ PRODUCTION ENVIRONMENT ISSUES RESOLVED**
+
+**🔧 Authentication Configuration Fixed:**
+
+- ✅ Enhanced auth mode detection for production environments
+- ✅ Added proper fallback for disabled Firebase configs
+- ✅ Improved environment variable priority handling
+- ✅ Default to local auth for production domains
+
+**🛡️ Security Headers Optimized:**
+
+- ✅ Updated Content Security Policy for script compatibility
+- ✅ Changed X-Frame-Options from DENY to SAMEORIGIN
+- ✅ Added development/production specific CSP rules
+- ✅ Maintained security while fixing script execution issues
+
+**📁 Missing File Resolution:**
+
+- ✅ Added automatic firebase-config.json creation in installer
+- ✅ Created placeholder config for self-hosted installations
+- ✅ Proper file permissions and ownership settings
+- ✅ Prevents 404 errors while maintaining local auth mode
+
+**🚀 Production Compatibility:**
+
+- ✅ Fixed strict MIME type checking blocking legitimate scripts
+- ✅ Enhanced auth mode detection reliability
+- ✅ Improved environment variable handling
+- ✅ Better production environment defaults
+
+### **🔄 APPLYING FIXES TO EXISTING INSTALLATIONS**
+
+For existing Profolio installations experiencing production errors, run these commands:
+
+```bash
+# 1. Navigate to installation directory
+cd /opt/profolio
+
+# 2. Pull the latest fixes
+sudo -u profolio git pull origin main
+
+# 3. Create missing firebase-config.json
+sudo tee frontend/public/firebase-config.json > /dev/null <<EOF
+{
+  "apiKey": "",
+  "authDomain": "",
+  "projectId": "",
+  "storageBucket": "",
+  "messagingSenderId": "",
+  "appId": "",
+  "disabled": true,
+  "note": "This is a placeholder config for self-hosted installations using local authentication"
+}
+EOF
+
+# 4. Ensure proper environment variable
+echo 'NEXT_PUBLIC_AUTH_MODE=local' | sudo tee -a frontend/.env.production
+
+# 5. Rebuild with new configurations
+cd frontend
+sudo -u profolio pnpm run build
+
+# 6. Restart services to apply changes
+sudo systemctl restart profolio-frontend profolio-backend
+```
+
+**Verification Steps:**
+
+1. Check browser console - should show "Auth mode: local" message
+2. Verify no 404 errors for firebase-config.json
+3. Confirm no MIME type blocking errors
+4. Test login functionality works properly
