@@ -11,7 +11,7 @@
 set -eo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
-INSTALLER_VERSION="1.11.14"
+INSTALLER_VERSION="1.11.15"
 REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
@@ -190,92 +190,77 @@ download_all_modules() {
 
 # Load essential functions without complex validation
 load_essential_functions() {
-    echo -ne "${BLUE}Loading installer functions${NC} "
+    printf "${BLUE}Loading installer functions${NC} "
     
-    # Start spinner
-    local spin='-\|/'
-    local i=0
+    # CRITICAL: Source common definitions FIRST in main shell (no background process)
+    if [[ -f "common/definitions.sh" ]]; then
+        source "common/definitions.sh" 2>/dev/null || return 1
+    else
+        error "Critical: common/definitions.sh not found"
+        return 1
+    fi
     
-    {
-        # CRITICAL: Source common definitions FIRST!
-        if [[ -f "common/definitions.sh" ]]; then
-            source "common/definitions.sh" 2>/dev/null || return 1
+    # Priority utility modules (load these first for best experience)
+    local priority_utils=(
+        "utils/logging.sh"           # Professional logging system
+        "utils/platform-detection.sh" # Comprehensive platform detection
+        "utils/validation.sh"        # Enterprise validation
+        "utils/ui.sh"               # Enhanced UI components
+    )
+    
+    for util in "${priority_utils[@]}"; do
+        if [[ -f "$util" ]]; then
+            source "$util" 2>/dev/null || true
         fi
-        
-        # Priority utility modules (load these first for best experience)
-        local priority_utils=(
-            "utils/logging.sh"           # Professional logging system
-            "utils/platform-detection.sh" # Comprehensive platform detection
-            "utils/validation.sh"        # Enterprise validation
-            "utils/ui.sh"               # Enhanced UI components
-        )
-        
-        for util in "${priority_utils[@]}"; do
-            if [[ -f "$util" ]]; then
-                source "$util" 2>/dev/null || true
-            fi
-        done
-        
-        # Load remaining utility modules
-        for util in utils/*.sh; do
-            if [[ -f "$util" ]]; then
-                source "$util" 2>/dev/null || true
-            fi
-        done
-        
-        # Priority feature modules (excellent professional features)
-        local priority_features=(
-            "features/configuration-wizard.sh" # Outstanding user experience
-            "features/backup-management.sh"    # Enterprise backup system
-            "features/installation-reporting.sh" # Professional reporting
-        )
-        
-        for feature in "${priority_features[@]}"; do
-            if [[ -f "$feature" ]]; then
-                source "$feature" 2>/dev/null || true
-            fi
-        done
-        
-        # Source core installer (the main application installer)
-        if [[ -f "core/profolio-installer.sh" ]]; then
-            source "core/profolio-installer.sh" 2>/dev/null || true
-        fi
-        
-        # Source additional core modules
-        for core in core/*.sh; do
-            if [[ -f "$core" && "$core" != "core/profolio-installer.sh" ]]; then
-                source "$core" 2>/dev/null || true
-            fi
-        done
-        
-        # Load remaining feature modules
-        for feature in features/*.sh; do
-            if [[ -f "$feature" ]]; then
-                source "$feature" 2>/dev/null || true
-            fi
-        done
-        
-        # Source platform modules (including emergency)
-        for platform in platforms/*.sh; do
-            if [[ -f "$platform" ]]; then
-                source "$platform" 2>/dev/null || true
-            fi
-        done
-        
-        echo "LOADED" > /tmp/loading_complete
-    } &
-    
-    local load_pid=$!
-    
-    # Show spinner while loading
-    while ! [[ -f /tmp/loading_complete ]]; do
-        i=$(((i+1) % 4))
-        printf "\r${BLUE}Loading installer functions${NC} ${YELLOW}${spin:$i:1}${NC}"
-        sleep 0.1
     done
     
-    printf "\r${BLUE}Loading installer functions${NC} ${GREEN}✓${NC}\n"
-    rm -f /tmp/loading_complete
+    # Load remaining utility modules
+    for util in utils/*.sh; do
+        if [[ -f "$util" ]]; then
+            source "$util" 2>/dev/null || true
+        fi
+    done
+    
+    # Priority feature modules (excellent professional features)
+    local priority_features=(
+        "features/configuration-wizard.sh" # Outstanding user experience
+        "features/backup-management.sh"    # Enterprise backup system
+        "features/installation-reporting.sh" # Professional reporting
+    )
+    
+    for feature in "${priority_features[@]}"; do
+        if [[ -f "$feature" ]]; then
+            source "$feature" 2>/dev/null || true
+        fi
+    done
+    
+    # Source core installer (the main application installer)
+    if [[ -f "core/profolio-installer.sh" ]]; then
+        source "core/profolio-installer.sh" 2>/dev/null || true
+    fi
+    
+    # Source additional core modules
+    for core in core/*.sh; do
+        if [[ -f "$core" && "$core" != "core/profolio-installer.sh" ]]; then
+            source "$core" 2>/dev/null || true
+        fi
+    done
+    
+    # Load remaining feature modules
+    for feature in features/*.sh; do
+        if [[ -f "$feature" ]]; then
+            source "$feature" 2>/dev/null || true
+        fi
+    done
+    
+    # Source platform modules (including emergency)
+    for platform in platforms/*.sh; do
+        if [[ -f "$platform" ]]; then
+            source "$platform" 2>/dev/null || true
+        fi
+    done
+    
+    printf "${GREEN}✓${NC}\n"
     
     # Export critical functions after loading with verification
     local critical_functions=(
