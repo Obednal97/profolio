@@ -41,22 +41,19 @@ function detectAuthMode(): AuthConfig['mode'] {
     return 'firebase';
   }
   
-  // Priority 3: Check if Firebase config file is available
-  const hasFirebaseConfigFile = typeof window !== 'undefined' && 
-    localStorage.getItem('firebase-config-available') === 'true';
-  
-  if (hasFirebaseConfigFile) {
-    console.log('☁️ Auth mode: firebase (config file available)');
-    return 'firebase';
+  // Priority 3: For production, default to local unless explicitly configured
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    console.log('🏭 Auth mode: local (production environment default)');
+    return 'local';
   }
   
-  // Priority 4: Check if we're on localhost (self-hosted) - ONLY if no explicit config
-  const isLocalhost = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  
-  if (isLocalhost) {
-    console.log('🏠 Auth mode: local (localhost detected, no Firebase config)');
-    return 'local';
+  // Priority 4: Check if Firebase config file is available and not disabled
+  if (typeof window !== 'undefined') {
+    const hasFirebaseConfigFile = localStorage.getItem('firebase-config-available') === 'true';
+    if (hasFirebaseConfigFile) {
+      console.log('☁️ Auth mode: firebase (config file available)');
+      return 'firebase';
+    }
   }
   
   // Priority 5: Default fallback to local mode
@@ -79,16 +76,30 @@ async function checkFirebaseAvailability(): Promise<boolean> {
   // Fallback to config file check
   try {
     const response = await fetch('/firebase-config.json');
-    const isAvailable = response.ok;
-    
-    if (isAvailable) {
-      console.log('✅ Firebase config available via config file');
+    if (response.ok) {
+      const config = await response.json();
+      
+      // Check if it's a valid, non-disabled Firebase config
+      const isValidConfig = config && 
+        config.apiKey && 
+        config.projectId && 
+        !config.disabled && 
+        config.apiKey.trim() !== '';
+      
+      if (isValidConfig) {
+        console.log('✅ Firebase config available via config file');
+        localStorage.setItem('firebase-config-available', 'true');
+        return true;
+      } else {
+        console.log('ℹ️ Firebase config file exists but is disabled or empty (self-hosted mode)');
+        localStorage.setItem('firebase-config-available', 'false');
+        return false;
+      }
     } else {
       console.log('❌ No Firebase config file found');
+      localStorage.setItem('firebase-config-available', 'false');
+      return false;
     }
-    
-    localStorage.setItem('firebase-config-available', isAvailable.toString());
-    return isAvailable;
   } catch (error) {
     console.log('❌ Firebase config file check failed:', error);
     localStorage.setItem('firebase-config-available', 'false');
@@ -150,13 +161,14 @@ export function getAuthModeSync(): AuthConfig['mode'] {
   const envConfig = getFirebaseConfigFromEnv();
   if (envConfig) return 'firebase';
   
-  // Priority 3: Config file availability
+  // Priority 3: For production, default to local unless explicitly configured
+  if (window.location.hostname !== 'localhost') {
+    return 'local';
+  }
+  
+  // Priority 4: Config file availability for localhost only
   const hasFirebaseConfigFile = localStorage.getItem('firebase-config-available') === 'true';
   if (hasFirebaseConfigFile) return 'firebase';
-  
-  // Priority 4: Localhost detection - ONLY if no explicit config
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isLocalhost) return 'local';
   
   // Priority 5: Default to local
   return 'local';

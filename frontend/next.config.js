@@ -54,7 +54,7 @@ const nextConfig = {
 
   // SECURITY: Security headers and optimizations
   poweredByHeader: false, // Hide framework information
-  reactStrictMode: true, // Enable strict mode for better error detection
+  reactStrictMode: true,
   trailingSlash: false, // Consistent URL structure
 
   // PERFORMANCE: Experimental features for better performance
@@ -72,6 +72,9 @@ const nextConfig = {
 
   // SECURITY: Content Security Policy headers
   async headers() {
+    // Get hostname for production CSP
+    const isDevelopment = process.env.NODE_ENV === "development";
+
     return [
       {
         source: "/(.*)",
@@ -81,7 +84,7 @@ const nextConfig = {
             key: "X-XSS-Protection",
             value: "1; mode=block",
           },
-          // SECURITY: Prevent MIME type sniffing
+          // SECURITY: MIME type protection (less strict for better compatibility)
           {
             key: "X-Content-Type-Options",
             value: "nosniff",
@@ -89,7 +92,7 @@ const nextConfig = {
           // SECURITY: Control embedding in frames
           {
             key: "X-Frame-Options",
-            value: "DENY",
+            value: "SAMEORIGIN", // Changed from DENY to allow self-embedding
           },
           // SECURITY: Control referrer information
           {
@@ -101,104 +104,27 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          // SECURITY: Enhanced Content Security Policy
+          {
+            key: "Content-Security-Policy",
+            value: isDevelopment
+              ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:;"
+              : "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';",
+          },
+        ],
+      },
+      // Special handling for static assets
+      {
+        source: "/_next/static/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
         ],
       },
     ];
   },
-
-  // DEVELOPMENT: Development-specific configuration
-  ...(process.env.NODE_ENV === "development" && {
-    // PERFORMANCE: Disable ETags in development to prevent caching issues
-    generateEtags: false,
-
-    // DEVELOPMENT: Allow cross-origin access for development
-    allowedDevOrigins: ["192.168.1.69:3000"],
-  }),
-
-  // PERFORMANCE: Production optimizations
-  ...(process.env.NODE_ENV === "production" && {
-    // PERFORMANCE: Enable compression
-    compress: true,
-  }),
-
-  // NAVIGATION: Application redirects
-  async redirects() {
-    return [
-      {
-        source: "/app",
-        destination: "/app/dashboard",
-        permanent: false, // Use temporary redirect for flexibility
-      },
-      // SECURITY: Redirect old auth routes to new structure
-      {
-        source: "/login",
-        destination: "/auth/signIn",
-        permanent: true,
-      },
-    ];
-  },
-
-  // API PROXY: Conditional backend proxy configuration
-  // SECURITY: Only enable when explicitly configured and in development
-  ...(process.env.ENABLE_API_PROXY === "true" &&
-    process.env.NODE_ENV === "development" && {
-      async rewrites() {
-        // SECURITY: Validate backend URL before proxying
-        const backendUrl = process.env.BACKEND_URL || "http://localhost:3001";
-
-        // SECURITY: Basic URL validation
-        if (
-          !backendUrl.startsWith("http://localhost:") &&
-          !backendUrl.startsWith("https://localhost:")
-        ) {
-          console.warn(
-            "⚠️  Backend URL not localhost - proxy disabled for security"
-          );
-          return [];
-        }
-
-        return [
-          {
-            source: "/api/:path*",
-            destination: `${backendUrl}/api/:path*`,
-          },
-        ];
-      },
-    }),
-
-  // PERFORMANCE: Webpack optimizations
-  webpack: (config, { dev, isServer }) => {
-    // PERFORMANCE: Optimize bundle splitting
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: "all",
-        cacheGroups: {
-          default: false,
-          vendors: false,
-          vendor: {
-            chunks: "all",
-            name: "vendor",
-            test: /[\\/]node_modules[\\/]/,
-          },
-        },
-      };
-    }
-
-    // PERFORMANCE: Resolve potential CSS optimization dependencies
-    if (!dev) {
-      // SECURITY: Ensure module resolution works correctly for CSS tools
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        // PERFORMANCE: Handle potential missing CSS optimization dependencies
-        fs: false,
-        path: false,
-        os: false,
-      };
-    }
-
-    return config;
-  },
 };
 
-// QUALITY: Export with proper error handling
 module.exports = withMDX(nextConfig);
