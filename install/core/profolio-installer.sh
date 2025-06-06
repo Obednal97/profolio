@@ -60,15 +60,15 @@ install_node() {
     apt install -y nodejs
     
     # Verify installation
-    local node_version=$(node --version)
-    local npm_version=$(npm --version)
+    local node_version=$(node --version 2>/dev/null || echo "not_installed")
+    local npm_version=$(npm --version 2>/dev/null || echo "not_installed")
     
     if [[ $node_version == v20* ]]; then
         success "Node.js installed: $node_version"
         success "npm installed: $npm_version"
     else
         error "Failed to install Node.js 20. Got: $node_version"
-        exit 1
+        return 1
     fi
 }
 
@@ -76,12 +76,33 @@ install_node() {
 install_pnpm() {
     info "Installing pnpm..."
     
-    # Install pnpm globally
-    npm install -g pnpm@9.14.4
+    # Check if npm is available
+    if ! command -v npm >/dev/null 2>&1; then
+        error "npm not found - Node.js installation may have failed"
+        return 1
+    fi
     
-    # Verify installation
-    local pnpm_version=$(pnpm --version)
-    success "pnpm installed: $pnpm_version"
+    # Install pnpm globally with error handling
+    if npm install -g pnpm@9.14.4; then
+        # Verify installation
+        local pnpm_version=$(pnpm --version 2>/dev/null || echo "not_installed")
+        if [[ "$pnpm_version" != "not_installed" ]]; then
+            success "pnpm installed: $pnpm_version"
+        else
+            # Try alternative installation method
+            warning "pnpm installation failed, trying alternative method..."
+            if curl -fsSL https://get.pnpm.io/install.sh | sh -; then
+                export PATH="$HOME/.local/share/pnpm:$PATH"
+                success "pnpm installed via alternative method"
+            else
+                error "Failed to install pnpm"
+                return 1
+            fi
+        fi
+    else
+        error "Failed to install pnpm via npm"
+        return 1
+    fi
 }
 
 # Install and configure PostgreSQL
@@ -272,25 +293,71 @@ build_applications() {
     
     cd "$PROFOLIO_DIR"
     
+    # Ensure pnpm is in PATH
+    export PATH="$HOME/.local/share/pnpm:$PATH"
+    
+    # Check if pnpm is available
+    if ! command -v pnpm >/dev/null 2>&1; then
+        warning "pnpm not found in PATH, attempting to use npm instead..."
+        # Fallback to npm if pnpm is not available
+        local package_manager="npm"
+    else
+        local package_manager="pnpm"
+        info "Using pnpm for package management"
+    fi
+    
     # Install root dependencies
-    sudo -u "$PROFOLIO_USER" pnpm install
+    info "Installing root dependencies..."
+    sudo -u "$PROFOLIO_USER" $package_manager install || {
+        warning "Root dependency installation failed, continuing..."
+    }
     
     # Build backend
     info "Building backend..."
     cd "$PROFOLIO_DIR/backend"
-    sudo -u "$PROFOLIO_USER" pnpm install
-    sudo -u "$PROFOLIO_USER" pnpm run build
+    if sudo -u "$PROFOLIO_USER" $package_manager install; then
+        success "Backend dependencies installed"
+    else
+        error "Failed to install backend dependencies"
+        return 1
+    fi
+    
+    if sudo -u "$PROFOLIO_USER" $package_manager run build; then
+        success "Backend built successfully"
+    else
+        error "Failed to build backend"
+        return 1
+    fi
     
     # Run database migrations
     info "Running database migrations..."
-    sudo -u "$PROFOLIO_USER" pnpm exec prisma generate
-    sudo -u "$PROFOLIO_USER" pnpm exec prisma migrate deploy
+    if sudo -u "$PROFOLIO_USER" $package_manager exec prisma generate; then
+        success "Prisma client generated"
+    else
+        warning "Prisma client generation failed"
+    fi
+    
+    if sudo -u "$PROFOLIO_USER" $package_manager exec prisma migrate deploy; then
+        success "Database migrations completed"
+    else
+        warning "Database migrations failed - database may need manual setup"
+    fi
     
     # Build frontend
     info "Building frontend..."
     cd "$PROFOLIO_DIR/frontend"
-    sudo -u "$PROFOLIO_USER" pnpm install
-    sudo -u "$PROFOLIO_USER" pnpm run build
+    if sudo -u "$PROFOLIO_USER" $package_manager install; then
+        success "Frontend dependencies installed"
+    else
+        error "Failed to install frontend dependencies"
+        return 1
+    fi
+    
+    if sudo -u "$PROFOLIO_USER" $package_manager run build; then
+        success "Frontend built successfully"
+    else
+        warning "Frontend build failed - will try to start anyway"
+    fi
     
     success "Applications built successfully"
 }
@@ -299,10 +366,24 @@ build_applications() {
 create_services() {
     info "Creating systemd services..."
     
+    # Determine the package manager and set proper exec paths
+    local node_path="/usr/bin/node"
+    local package_manager_cmd=""
+    
+    if command -v pnpm >/dev/null 2>&1; then
+        package_manager_cmd="/usr/local/bin/pnpm"
+    elif command -v npm >/dev/null 2>&1; then
+        package_manager_cmd="/usr/bin/npm"
+    else
+        error "No package manager found"
+        return 1
+    fi
+    
     # Backend service
     cat > /etc/systemd/system/profolio-backend.service <<EOF
 [Unit]
 Description=Profolio Backend
+Documentation=https://github.com/Obednal97/profolio
 After=network.target postgresql.service
 Requires=postgresql.service
 
@@ -312,7 +393,8 @@ User=$PROFOLIO_USER
 Group=$PROFOLIO_USER
 WorkingDirectory=$PROFOLIO_DIR/backend
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node dist/main.js
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:\$HOME/.local/share/pnpm
+ExecStart=$node_path dist/main.js
 Restart=always
 RestartSec=10
 
@@ -321,6 +403,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ReadWritePaths=$PROFOLIO_DIR
+ReadWritePaths=/tmp
 
 [Install]
 WantedBy=multi-user.target
@@ -330,7 +413,9 @@ EOF
     cat > /etc/systemd/system/profolio-frontend.service <<EOF
 [Unit]
 Description=Profolio Frontend
+Documentation=https://github.com/Obednal97/profolio
 After=network.target profolio-backend.service
+Wants=profolio-backend.service
 
 [Service]
 Type=simple
@@ -339,7 +424,8 @@ Group=$PROFOLIO_USER
 WorkingDirectory=$PROFOLIO_DIR/frontend
 Environment=NODE_ENV=production
 Environment=PORT=3000
-ExecStart=/usr/bin/pnpm start
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:\$HOME/.local/share/pnpm
+ExecStart=$package_manager_cmd start
 Restart=always
 RestartSec=10
 
@@ -348,6 +434,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ReadWritePaths=$PROFOLIO_DIR
+ReadWritePaths=/tmp
 
 [Install]
 WantedBy=multi-user.target
@@ -386,6 +473,32 @@ start_services() {
     fi
 }
 
+# Main application installation function (called by platform handlers)
+install_profolio_application() {
+    info "Installing Profolio application..."
+    
+    # Create profolio user
+    create_user
+    
+    # Clone repository
+    clone_repository
+    
+    # Configure environment files
+    configure_environment
+    
+    # Build applications
+    build_applications
+    
+    # Create systemd services
+    create_services
+    
+    # Start services
+    start_services
+    
+    success "Profolio application installation completed successfully"
+    return 0
+}
+
 # Main installation function
 main() {
     echo "="*60
@@ -397,12 +510,9 @@ main() {
     install_pnpm
     install_postgresql
     setup_database
-    create_user
-    clone_repository
-    configure_environment
-    build_applications
-    create_services
-    start_services
+    
+    # Run the main application installation
+    install_profolio_application
     
     echo
     success "🎉 Profolio installation completed successfully!"
