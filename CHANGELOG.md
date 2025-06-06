@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.11.15] - 2025-06-06
+
+### 🚨 **Critical Production Environment Fixes**
+
+#### **Authentication Configuration Resolution**
+
+- **🔧 FIXED: Production Auth Mode Detection**: Enhanced authentication mode detection for production environments with proper fallback
+- **📁 FIXED: Missing Firebase Config**: Added automatic firebase-config.json creation in installer to prevent 404 errors
+- **🔧 FIXED: Environment Variable Priority**: Improved NEXT_PUBLIC_AUTH_MODE handling with production-first defaults
+- **🔄 FIXED: Auth Mode Fallback**: Added proper fallback for disabled Firebase configs in self-hosted installations
+
+#### **Security Headers Optimization**
+
+- **🛡️ FIXED: MIME Type Script Blocking**: Resolved strict Content Security Policy blocking legitimate Next.js scripts
+- **🔧 UPDATED: Security Headers**: Changed X-Frame-Options from DENY to SAMEORIGIN for better compatibility
+- **🎯 OPTIMIZED: CSP Rules**: Added development/production specific Content Security Policy configurations
+- **⚖️ BALANCED: Security vs Functionality**: Maintained enterprise security while fixing script execution issues
+
+#### **Production Compatibility Enhancements**
+
+- **🌐 ENHANCED: Production Defaults**: Added smart production environment detection with local auth defaults
+- **📋 FIXED: Missing File Creation**: Automatic creation of placeholder firebase-config.json in installer
+- **🔧 IMPROVED: Environment Handling**: Better environment variable detection and fallback mechanisms
+- **🚀 STREAMLINED: Production Deployment**: Simplified production deployment with fewer configuration requirements
+
+### 🛠️ **Installation & Upgrade Improvements**
+
+#### **Installer Enhancements**
+
+- **📁 AUTO-CREATION: Firebase Config**: Installer now creates placeholder firebase-config.json automatically
+- **🔐 PROPER PERMISSIONS**: Added correct file permissions and ownership for new configuration files
+- **📝 CLEAR DOCUMENTATION**: Added upgrade instructions for existing installations experiencing production errors
+
+### 📊 **Impact & Results**
+
+- **✅ RESOLVED: MIME Type Errors**: Eliminated script execution blocking in production
+- **✅ RESOLVED: Firebase 404 Errors**: No more missing configuration file errors
+- **✅ RESOLVED: Auth Mode Issues**: Proper authentication mode detection and fallback
+- **✅ IMPROVED: User Experience**: Smooth production deployment without console errors
+
+**🎉 PRODUCTION READY**: This release resolves all critical production environment errors while maintaining enterprise-grade security and functionality.
+
 ## [v1.11.14] - 2025-06-06
 
 ### 🚀 **Enterprise-Grade Installer Transformation**
