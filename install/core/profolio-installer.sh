@@ -430,18 +430,50 @@ build_applications() {
 create_services() {
     info "Creating systemd services..."
     
-    # Determine the package manager and set proper exec paths
-    local node_path="/usr/bin/node"
-    local package_manager_cmd=""
+    # Determine actual executable paths
+    local node_path=$(which node 2>/dev/null || echo "/usr/bin/node")
+    local pnpm_path=""
+    local npm_path=""
     
+    # Find pnpm with multiple fallback locations
     if command -v pnpm >/dev/null 2>&1; then
-        package_manager_cmd="/usr/local/bin/pnpm"
-    elif command -v npm >/dev/null 2>&1; then
-        package_manager_cmd="/usr/bin/npm"
+        pnpm_path=$(which pnpm 2>/dev/null)
+        info "Found pnpm at: $pnpm_path"
+    elif [[ -f "/root/.local/share/pnpm/pnpm" ]]; then
+        pnpm_path="/root/.local/share/pnpm/pnpm"
+        info "Found pnpm at: $pnpm_path"
+    elif [[ -f "/usr/local/bin/pnpm" ]]; then
+        pnpm_path="/usr/local/bin/pnpm"
+        info "Found pnpm at: $pnpm_path"
+    fi
+    
+    # Find npm as fallback
+    if command -v npm >/dev/null 2>&1; then
+        npm_path=$(which npm 2>/dev/null || echo "/usr/bin/npm")
+        info "Found npm at: $npm_path"
+    fi
+    
+    # Determine what to use for frontend
+    local frontend_cmd=""
+    if [[ -n "$pnpm_path" && -x "$pnpm_path" ]]; then
+        frontend_cmd="$pnpm_path start"
+        info "Frontend will use pnpm: $frontend_cmd"
+    elif [[ -n "$npm_path" && -x "$npm_path" ]]; then
+        frontend_cmd="$npm_path start"
+        info "Frontend will use npm: $frontend_cmd"
     else
-        error "No package manager found"
+        error "No package manager found for frontend service"
         return 1
     fi
+    
+    # Verify node path
+    if [[ ! -x "$node_path" ]]; then
+        error "Node.js not found at: $node_path"
+        return 1
+    fi
+    
+    info "Node.js path: $node_path"
+    info "Frontend command: $frontend_cmd"
     
     # Backend service
     cat > /etc/systemd/system/profolio-backend.service <<EOF
@@ -457,7 +489,7 @@ User=$PROFOLIO_USER
 Group=$PROFOLIO_USER
 WorkingDirectory=$PROFOLIO_DIR/backend
 Environment=NODE_ENV=production
-Environment=PATH=/usr/local/bin:/usr/bin:/bin:\$HOME/.local/share/pnpm
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/root/.local/share/pnpm
 ExecStart=$node_path dist/main.js
 Restart=always
 RestartSec=10
@@ -488,8 +520,8 @@ Group=$PROFOLIO_USER
 WorkingDirectory=$PROFOLIO_DIR/frontend
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=PATH=/usr/local/bin:/usr/bin:/bin:\$HOME/.local/share/pnpm
-ExecStart=$package_manager_cmd start
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/root/.local/share/pnpm
+ExecStart=/bin/bash -c '$frontend_cmd'
 Restart=always
 RestartSec=10
 

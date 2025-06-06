@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# PROFOLIO INSTALLER v1.11.20
+# PROFOLIO INSTALLER v1.11.21
 # =============================================================================
 # Modular installer with centralized definitions for reliable execution
 # Uses common/definitions.sh to prevent variable scoping issues
@@ -9,12 +9,13 @@
 # Fixed: Missing install_profolio_application function in core installer
 # Fixed: Readonly variable conflicts preventing module loading
 # Fixed: Node.js installation and PATH issues, database password handling
+# Fixed: systemd service executable path detection and configuration
 # =============================================================================
 
 set -eo pipefail
 
 # Configuration (these will be loaded from common/definitions.sh)
-INSTALLER_VERSION="1.11.20"
+INSTALLER_VERSION="1.11.21"
 REPO_URL="https://raw.githubusercontent.com/Obednal97/profolio/main"
 readonly TEMP_DIR="/tmp/profolio-installer-$$"
 readonly LOG_FILE="/tmp/profolio-install.log"
