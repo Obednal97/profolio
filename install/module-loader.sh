@@ -112,7 +112,7 @@ load_selective_modules() {
     
     # Load platform-specific module
     case "$platform" in
-        ubuntu|debian|lxc-container)
+        ubuntu|debian|lxc_container)
             load_module "platforms/ubuntu.sh" || return 1
             ;;
         proxmox)

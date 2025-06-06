@@ -51,7 +51,7 @@ if [[ -z "${PROFOLIO_DEFINITIONS_LOADED:-}" ]]; then
 fi
 
 # LXC container platform handler
-handle_lxc-container_platform() {
+handle_lxc_container_platform() {
     # Minimal output for clean UI
     
     # Export color variables and functions to ensure they're available in sourced modules
@@ -78,7 +78,7 @@ handle_lxc-container_platform() {
 }
 
 # Export the handler function
-export -f handle_lxc-container_platform
+export -f handle_lxc_container_platform
 
 # Module metadata
 LXC_CONTAINER_VERSION="1.0.0"

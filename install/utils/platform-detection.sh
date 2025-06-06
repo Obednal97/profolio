@@ -96,7 +96,7 @@ get_platform_type() {
     elif detect_unraid; then
         echo "unraid"
     elif detect_lxc_container; then
-        echo "lxc-container"
+        echo "lxc_container"
     elif detect_docker_container; then
         echo "docker-container"
     elif detect_wsl; then
@@ -122,7 +122,7 @@ get_platform_info() {
             echo "Recommendation: Use Docker installation via Unraid's Docker management"
             echo "Features: Docker container management, plugin system, web interface"
             ;;
-        "lxc-container")
+        "lxc_container")
             echo "Platform: LXC Container"
             echo "Recommendation: Optimal for Profolio deployment"
             echo "Features: Lightweight virtualization, resource isolation"
@@ -164,7 +164,7 @@ check_platform_compatibility() {
             echo "COMPATIBLE: Unraid detected - use Docker container installation"
             return 0
             ;;
-        "lxc-container")
+        "lxc_container")
             echo "OPTIMAL: LXC container is ideal for Profolio deployment"
             return 0
             ;;
