@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.12.2] - 2025-06-10
+
+### 🐛 **Bug Fixes**
+
+- **FIXED: Production Server Update Failures**: Resolved installer git fetch commands missing `--tags` flag causing version checkout failures
+- **FIXED: Git Tag Availability**: Added `--tags` flag to all `git fetch` commands in installer for proper tag synchronization
+- **FIXED: Automatic Rollback Triggers**: Eliminated false rollback triggers caused by missing git tags during version switching
+- **FIXED: Version Pathspec Errors**: Resolved `error: pathspec 'tags/vX.X.X' did not match any file(s) known to git` causing update failures
+
+### 🔧 **Technical Details**
+
+- **Installer Enhancement**: Modified all `git fetch origin` commands to `git fetch origin --tags` in install-or-update.sh
+- **Tag Synchronization**: Ensures production servers can access all release tags for successful version checkout
+- **Update Reliability**: Eliminates installer failures and automatic rollbacks during legitimate updates
+- **Consistent Fetching**: Applied `--tags` flag to all git fetch operations for comprehensive tag availability
+
+### 📊 **Impact**
+
+- **Production Updates**: Production servers can now successfully update to latest releases
+- **Update Reliability**: Eliminated false failure scenarios and automatic rollbacks
+- **Tag Synchronization**: All release tags properly available for version switching
+- **Installer Stability**: Robust installer behavior across all deployment environments
+
 ## [v1.12.1] - 2025-06-10
 
 ### 🐛 **Bug Fixes**
