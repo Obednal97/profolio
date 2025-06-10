@@ -510,6 +510,59 @@ BACKUP_SIZE=""
 DOWNLOAD_SIZE=""
 APP_SIZE=""
 
+# Enhanced database migration handler with P3005 baseline support
+run_database_migrations() {
+    cd /opt/profolio/backend
+    
+    info "Attempting database migration deployment..."
+    
+    # Try normal migration first
+    if sudo -u profolio pnpm prisma migrate deploy; then
+        success "Database migrations completed successfully"
+        return 0
+    fi
+    
+    # Check if we got P3005 error (baseline required)
+    local migration_output
+    migration_output=$(sudo -u profolio pnpm prisma migrate deploy 2>&1)
+    
+    if echo "$migration_output" | grep -q "P3005"; then
+        info "Database baseline required - marking existing migrations as applied..."
+        info "This is normal for existing production databases"
+        
+        # Get all migrations that need to be baselined
+        local migrations_dir="/opt/profolio/backend/prisma/migrations"
+        if [ -d "$migrations_dir" ]; then
+            # Mark all existing migrations as applied
+            for migration in $(ls "$migrations_dir" | sort); do
+                if [ -d "$migrations_dir/$migration" ]; then
+                    info "Marking migration as applied: $migration"
+                    if ! sudo -u profolio pnpm prisma migrate resolve --applied "$migration"; then
+                        warn "Failed to mark migration $migration as applied"
+                    fi
+                fi
+            done
+            
+            # Retry migration deployment
+            info "Retrying migration deployment after baseline..."
+            if sudo -u profolio pnpm prisma migrate deploy; then
+                success "Database migrations completed successfully after baseline"
+                return 0
+            else
+                error "Database migrations failed even after baseline"
+                return 1
+            fi
+        else
+            error "Migrations directory not found: $migrations_dir"
+            return 1
+        fi
+    else
+        error "Database migration failed with unexpected error:"
+        echo "$migration_output"
+        return 1
+    fi
+}
+
 # UX Flow Variables (set by wizard)
 USER_ACTION_CHOICE=""
 SKIP_ENV_PRESERVATION=false
@@ -1639,7 +1692,7 @@ build_application() {
     local steps=(
         "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio pnpm install"
         "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma generate"
-        "Running database migrations" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma migrate deploy"
+                        "Running database migrations" "run_database_migrations"
         "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio pnpm run build"
         "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio pnpm install"
         "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio pnpm run build"
