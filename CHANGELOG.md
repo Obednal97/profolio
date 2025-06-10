@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.12.5] - 2025-06-10
+
+### 🛡️ **Critical Authentication Fix**
+
+- **FIXED: Firebase Authentication Production Block**: Removed hard-coded production check that was preventing Firebase authentication in cloud deployment mode
+- **FIXED: Environment Variable Loading**: Added explicit dotenv configuration loading in main.ts to ensure environment variables are read correctly
+- **FIXED: Production Cloud Mode**: Enabled Firebase authentication for cloud deployment while maintaining proper security validation
+- **FIXED: Authentication Configuration**: Replaced hard-coded production rejection with proper environment variable validation
+
+### 🔧 **Technical Details**
+
+- **Enhanced Auth Controller**: Replaced `if (process.env.NODE_ENV === "production")` production block with proper Firebase environment variable validation
+- **Environment Configuration**: Added `import { config } from "dotenv"; config();` to ensure reliable environment variable loading
+- **Security Validation**: Maintained security checks while enabling proper Firebase authentication for configured cloud deployments
+- **Systemd Service Enhancement**: Updated service configuration to properly load environment variables from .env files
+
+### 📊 **Impact**
+
+- **Cloud Deployment**: Firebase authentication now works properly in production cloud deployment mode
+- **Configuration Flexibility**: Supports both self-hosted and cloud deployment modes with appropriate authentication
+- **Production Reliability**: Eliminates authentication failures in properly configured cloud environments
+- **Security Maintained**: Preserves all security validations while enabling cloud functionality
+
 ## [v1.12.4] - 2025-06-10
 
 ### 🐛 **Bug Fixes**
