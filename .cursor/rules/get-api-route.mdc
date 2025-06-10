@@ -1,0 +1,143 @@
+---
+description: 
+globs: frontend/src/app/api/**/route.ts, frontend/src/app/api/**/route.js, frontend/src/app/api/**/*
+alwaysApply: false
+---
+---
+description: Guidelines for implementing GET API routes in Next.js App Router
+ruleType: autoAttached
+globs: ["frontend/src/app/api/**/route.ts", "frontend/src/app/api/**/route.js", "frontend/src/app/api/**/*"]
+alwaysApply: false
+---
+
+# GET API Route Guidelines
+
+Guidelines for implementing GET API routes in Next.js App Router:
+
+## Basic Structure
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+
+// Auto-generate response type for client use
+export type GetPortfolioResponse = Awaited<ReturnType<typeof getPortfolioData>>;
+
+export async function GET(request: NextRequest) {
+  try {
+    // Extract query parameters
+    const { searchParams } = new URL(request.url);
+    const portfolioId = searchParams.get('portfolioId');
+    
+    if (!portfolioId) {
+      return NextResponse.json(
+        { error: 'Portfolio ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const result = await getPortfolioData({ portfolioId });
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('Error fetching portfolio data:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+async function getPortfolioData({ portfolioId }: { portfolioId: string }) {
+  // Call backend API or database
+  const response = await fetch(`http://localhost:3001/api/portfolio/${portfolioId}`);
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch portfolio data');
+  }
+  
+  const data = await response.json();
+  return { portfolio: data };
+}
+```
+
+## With Authentication
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+
+export async function GET(request: NextRequest) {
+  try {
+    // Check authentication
+    const session = await getServerSession();
+    
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const result = await getProtectedData({ userId: session.user.id });
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Dynamic Routes
+
+For routes like `app/api/portfolio/[id]/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const portfolioId = params.id;
+    
+    const result = await getPortfolioById({ portfolioId });
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Portfolio not found' },
+      { status: 404 }
+    );
+  }
+}
+```
+
+## Key Requirements
+
+- Always wrap handlers in try/catch for error handling
+- Extract and export response types for client-side use
+- Use proper HTTP status codes (200, 400, 401, 404, 500)
+- Validate required parameters before processing
+- Use NextAuth for authentication when needed
+- Call backend APIs or use direct database connections as appropriate
+- Return responses using `NextResponse.json()`
+
+## Client Usage
+
+Use with TanStack Query as shown in [ui-components.mdc](mdc:.cursor/rules/ui-components.mdc):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import type { GetPortfolioResponse } from '@/app/api/portfolio/route';
+
+const { data, isLoading, error } = useQuery({
+  queryKey: ['portfolio', portfolioId],
+  queryFn: async (): Promise<GetPortfolioResponse> => {
+    const response = await fetch(`/api/portfolio?portfolioId=${portfolioId}`);
+    if (!response.ok) throw new Error('Failed to fetch');
+    return response.json();
+  }
+});
+```

@@ -1,0 +1,75 @@
+---
+description: 
+globs: frontend/src/hooks/**/*, frontend/src/**/*hook*.ts, frontend/src/**/*hook*.tsx, frontend/src/**/*use*.ts, frontend/src/**/*use*.tsx
+alwaysApply: false
+---
+---
+description: Guidelines for creating custom React hooks with TanStack Query patterns
+ruleType: autoAttached
+globs: ["frontend/src/hooks/**/*", "frontend/src/**/*hook*.ts", "frontend/src/**/*hook*.tsx", "frontend/src/**/*use*.ts", "frontend/src/**/*use*.tsx"]
+alwaysApply: false
+---
+
+# Custom Hook Guidelines
+
+This rule outlines the guidelines for creating custom React hooks within this project.
+
+## Custom Hooks
+
+-   **Purpose:** Encapsulate reusable stateful logic, especially for data fetching or complex UI interactions.
+-   **Location:** Place custom hooks in the `frontend/src/hooks/` directory.
+-   **Naming:** Use the `use` prefix (e.g., `usePortfolio.ts`, `useTransactions.ts`).
+-   **Data Fetching:** For fetching data from API endpoints, prefer using TanStack Query. Follow the data fetching patterns outlined in [ui-components.mdc](mdc:.cursor/rules/ui-components.mdc).
+    -   Create dedicated hooks for specific data types (e.g., `usePortfolioData`, `useTransactionHistory`).
+    -   The hook should typically wrap `useQuery` or `useMutation`, handle the API endpoint URL, and return the data, loading state, error state, and potentially refetch functions.
+-   **Simplicity:** Keep hooks focused on a single responsibility.
+
+## Example Data Fetching Hook
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+
+export function usePortfolioData(portfolioId: string) {
+  return useQuery({
+    queryKey: ['portfolio', portfolioId],
+    queryFn: async () => {
+      const response = await fetch(`/api/portfolio/${portfolioId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch portfolio data');
+      }
+      return response.json();
+    },
+    enabled: !!portfolioId,
+  });
+}
+```
+
+## Example Mutation Hook
+
+```typescript
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+export function useUpdatePortfolio() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: UpdatePortfolioData) => {
+      const response = await fetch(`/api/portfolio/${data.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update portfolio');
+      }
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch portfolio data
+      queryClient.invalidateQueries({ queryKey: ['portfolio', variables.id] });
+    },
+  });
+}
+```
+
+By adhering to these guidelines, we ensure a consistent approach to reusable logic and data fetching throughout the application.

@@ -1,0 +1,103 @@
+---
+description: 
+globs: **/*logger*.ts, **/*logger*.tsx, **/*logging*.ts, **/*logging*.tsx, backend/src/**/*service*.ts, backend/src/**/*controller*.ts, backend/src/**/*middleware*.ts, backend/src/**/*interceptor*.ts
+alwaysApply: false
+---
+---
+description: Logging best practices for frontend console logging and NestJS backend logging
+ruleType: autoAttached
+globs: ["**/*logger*.ts", "**/*logger*.tsx", "**/*logging*.ts", "**/*logging*.tsx", "backend/src/**/*service*.ts", "backend/src/**/*controller*.ts", "backend/src/**/*middleware*.ts", "backend/src/**/*interceptor*.ts"]
+alwaysApply: false
+---
+
+# Logging
+
+## Frontend Logging
+
+For frontend logging, use console methods with appropriate levels:
+
+```typescript
+// Development logging
+console.log("Portfolio data loaded", { portfolioId, count: portfolios.length });
+console.warn("API response slower than expected", { responseTime });
+console.error("Failed to fetch portfolio data", { error, portfolioId });
+
+// Production-safe logging
+if (process.env.NODE_ENV === 'development') {
+  console.log("Debug info", { data });
+}
+```
+
+## Backend Logging (NestJS)
+
+Use NestJS Logger for backend logging:
+
+```typescript
+import { Logger } from '@nestjs/common';
+
+@Injectable()
+export class PortfolioService {
+  private readonly logger = new Logger(PortfolioService.name);
+
+  async createPortfolio(createPortfolioDto: CreatePortfolioDto) {
+    this.logger.log(`Creating portfolio for user ${createPortfolioDto.userId}`);
+    
+    try {
+      const portfolio = await this.portfolioRepository.create(createPortfolioDto);
+      this.logger.log(`Portfolio created successfully`, { portfolioId: portfolio.id });
+      return portfolio;
+    } catch (error) {
+      this.logger.error(`Failed to create portfolio`, {
+        error: error.message,
+        userId: createPortfolioDto.userId,
+      });
+      throw error;
+    }
+  }
+}
+```
+
+## Log Levels
+
+Use appropriate log levels:
+
+- `logger.log()` - General information (INFO level)
+- `logger.warn()` - Warning conditions that don't stop operation
+- `logger.error()` - Error conditions that need attention
+- `logger.debug()` - Detailed information for debugging
+- `logger.verbose()` - Very detailed information
+
+## Structured Logging
+
+Include relevant context in log messages:
+
+```typescript
+// Good: Include relevant context
+this.logger.log('Portfolio updated', {
+  portfolioId,
+  userId,
+  changedFields: ['name', 'description'],
+  timestamp: new Date().toISOString(),
+});
+
+// Bad: Minimal context
+this.logger.log('Portfolio updated');
+```
+
+## Error Logging
+
+Always log errors with context:
+
+```typescript
+try {
+  await this.portfolioService.updatePortfolio(id, updateData);
+} catch (error) {
+  this.logger.error('Portfolio update failed', {
+    portfolioId: id,
+    error: error.message,
+    stack: error.stack,
+    updateData,
+  });
+  throw error;
+}
+```

@@ -1,0 +1,251 @@
+---
+description: 
+globs: frontend/src/lib/actions/**/*, frontend/src/**/*action*.ts, frontend/src/**/*action*.tsx, frontend/src/lib/validations/**/*, **/*server*.ts, **/*server*.tsx
+alwaysApply: false
+---
+---
+description: Guidelines for implementing Next.js server actions with proper validation and error handling
+ruleType: autoAttached
+globs: ["frontend/src/lib/actions/**/*", "frontend/src/**/*action*.ts", "frontend/src/**/*action*.tsx", "frontend/src/lib/validations/**/*", "**/*server*.ts", "**/*server*.tsx"]
+alwaysApply: false
+---
+
+# Server Actions
+
+## Basic Structure
+
+Server actions should be placed in appropriate directories:
+- Frontend actions: `frontend/src/lib/actions/`
+- Shared utilities: `frontend/src/lib/`
+
+## Simple Server Action Example
+
+```typescript
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+export async function updatePortfolioAction(formData: FormData) {
+  try {
+    const name = formData.get("name") as string;
+    const portfolioId = formData.get("portfolioId") as string;
+
+    if (!name || !portfolioId) {
+      throw new Error("Name and portfolio ID are required");
+    }
+
+    // Call backend API
+    const response = await fetch(`http://localhost:3001/api/portfolio/${portfolioId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update portfolio");
+    }
+
+    // Revalidate the page to show updated data
+    revalidatePath("/portfolio");
+    
+    return { success: true };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error" 
+    };
+  }
+}
+```
+
+## With Input Validation
+
+For more complex actions, create validation schemas:
+
+```typescript
+// frontend/src/lib/validations/portfolio.ts
+import { z } from "zod";
+
+export const updatePortfolioSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  portfolioId: z.string().uuid("Invalid portfolio ID"),
+});
+
+export type UpdatePortfolioInput = z.infer<typeof updatePortfolioSchema>;
+```
+
+```typescript
+// frontend/src/lib/actions/portfolio.ts
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { updatePortfolioSchema } from "@/lib/validations/portfolio";
+
+export async function updatePortfolioAction(input: unknown) {
+  try {
+    // Validate input
+    const validated = updatePortfolioSchema.parse(input);
+    
+    // Call backend API
+    const response = await fetch(
+      `http://localhost:3001/api/portfolio/${validated.portfolioId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: validated.name,
+          description: validated.description,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to update portfolio");
+    }
+
+    revalidatePath("/portfolio");
+    return { success: true };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: "Invalid input data",
+        fieldErrors: error.flatten().fieldErrors,
+      };
+    }
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+```
+
+## With Authentication
+
+```typescript
+"use server";
+
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+
+export async function createPortfolioAction(formData: FormData) {
+  // Check authentication
+  const session = await getServerSession();
+  
+  if (!session) {
+    redirect("/login");
+  }
+
+  try {
+    const name = formData.get("name") as string;
+    
+    const response = await fetch("http://localhost:3001/api/portfolio", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.accessToken}`,
+      },
+      body: JSON.stringify({
+        name,
+        userId: session.user.id,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to create portfolio");
+    }
+
+    revalidatePath("/portfolio");
+    redirect("/portfolio");
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+```
+
+## Client Usage
+
+### In Forms
+
+```tsx
+"use client";
+
+import { updatePortfolioAction } from "@/lib/actions/portfolio";
+import { useState } from "react";
+
+export function PortfolioForm({ portfolio }: { portfolio: Portfolio }) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(formData: FormData) {
+    setIsLoading(true);
+    
+    const result = await updatePortfolioAction({
+      name: formData.get("name"),
+      portfolioId: portfolio.id,
+    });
+    
+    if (!result.success) {
+      alert(result.error);
+    }
+    
+    setIsLoading(false);
+  }
+
+  return (
+    <form action={handleSubmit}>
+      <input name="name" defaultValue={portfolio.name} required />
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? "Saving..." : "Save"}
+      </button>
+    </form>
+  );
+}
+```
+
+### With useFormStatus
+
+```tsx
+"use client";
+
+import { useFormStatus } from "react-dom";
+import { updatePortfolioAction } from "@/lib/actions/portfolio";
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  
+  return (
+    <button type="submit" disabled={pending}>
+      {pending ? "Saving..." : "Save"}
+    </button>
+  );
+}
+
+export function PortfolioForm() {
+  return (
+    <form action={updatePortfolioAction}>
+      <input name="name" required />
+      <SubmitButton />
+    </form>
+  );
+}
+```
+
+## Guidelines
+
+- **File Location**: Place server actions in `frontend/src/lib/actions/`
+- **File Naming**: Use descriptive names like `portfolio.ts`, `transactions.ts`
+- **Validation**: Use Zod for input validation in complex actions
+- **Error Handling**: Always wrap in try/catch and return structured results
+- **Authentication**: Use NextAuth session for protected actions
+- **Revalidation**: Use `revalidatePath()` or `revalidateTag()` to update cached data
+- **Backend Communication**: Call NestJS backend APIs via HTTP requests
+- **Loading States**: Use `useFormStatus()` hook for form submission states

@@ -1,0 +1,151 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Project structure and file organization guidelines for the Profolio monorepo
+ruleType: always
+alwaysApply: true
+---
+
+# Project Structure
+
+## Main Structure
+
+- We use a frontend/backend monorepo structure with pnpm workspaces
+- Frontend is a Next.js application in `frontend/`
+- Backend is a NestJS application in `backend/`
+- Root level contains deployment and setup scripts
+
+```tree
+.
+├── frontend/                # Next.js application
+│   ├── src/                 # Source code
+│   │   ├── app/            # Next.js App Router
+│   │   │   ├── (auth)/     # Authentication routes
+│   │   │   ├── (dashboard)/ # Main dashboard routes
+│   │   │   ├── api/        # API Routes
+│   │   │   ├── globals.css # Global styles
+│   │   │   ├── layout.tsx  # Root layout
+│   │   │   ├── page.tsx    # Homepage
+│   │   │   └── loading.tsx # Loading UI
+│   │   ├── components/     # React components
+│   │   │   ├── ui/         # Radix UI components
+│   │   │   ├── charts/     # Chart components
+│   │   │   ├── forms/      # Form components
+│   │   │   └── ...         # Other reusable components
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── lib/           # Utility functions
+│   │   ├── types/         # TypeScript type definitions
+│   │   ├── styles/        # Additional CSS files
+│   │   └── providers/     # React Context providers
+│   ├── e2e/               # Playwright E2E tests
+│   │   ├── auth.spec.ts   # Authentication & security tests
+│   │   ├── portfolio.spec.ts # Portfolio management tests
+│   │   └── performance.spec.ts # Performance & accessibility tests
+│   ├── public/            # Static assets
+│   ├── .next/             # Next.js build output
+│   ├── package.json       # Frontend dependencies
+│   ├── next.config.js     # Next.js configuration
+│   ├── playwright.config.ts # Playwright E2E configuration
+│   ├── vitest.config.ts   # Vitest unit test configuration
+│   ├── tailwind.config.ts # Tailwind configuration
+│   ├── tsconfig.json      # TypeScript configuration
+│   └── components.json    # Radix UI configuration
+├── backend/               # NestJS application
+│   ├── src/              # Source code
+│   │   ├── modules/      # Feature modules
+│   │   ├── common/       # Shared utilities
+│   │   ├── config/       # Configuration files
+│   │   ├── decorators/   # Custom decorators
+│   │   ├── guards/       # Authentication guards
+│   │   ├── interceptors/ # Request/response interceptors
+│   │   ├── middleware/   # Custom middleware
+│   │   ├── pipes/        # Validation pipes
+│   │   ├── app.module.ts # Root module
+│   │   └── main.ts       # Application entry point
+│   ├── prisma/           # Prisma schema and migrations
+│   │   ├── schema.prisma # Database schema
+│   │   └── migrations/   # Database migrations
+│   ├── dist/             # Build output
+│   ├── package.json      # Backend dependencies
+│   ├── tsconfig.json     # TypeScript configuration
+│   └── nest-cli.json     # NestJS CLI configuration
+├── scripts/              # Deployment and utility scripts
+├── docs/                 # Documentation
+│   ├── testing/          # Testing documentation
+│   │   └── TESTING_SETUP_GUIDE.md # Comprehensive testing setup
+│   └── processes/        # Development processes
+├── .github/              # GitHub Actions workflows
+│   └── workflows/        # CI/CD pipelines
+│       ├── ci.yml        # Continuous integration
+│       ├── e2e-tests.yml # E2E testing workflow
+│       └── pre-release-validation.yml # Pre-release testing
+├── package.json          # Root package.json
+├── docker-compose.prod.yml # Production Docker setup
+├── Dockerfile           # Docker configuration
+└── ... (config files)
+```
+
+## File Naming and Organization
+
+- Use kebab-case for route directories (e.g., `app/portfolio-analysis/page.tsx`)
+- Use PascalCase for components (e.g. `components/PortfolioChart.tsx`)
+- Radix UI components are in `components/ui/`
+- All other components are in `components/` with feature-based subdirectories
+- Colocate files in the folder where they're used unless they can be reused across the app
+- If a component can be used in many places, place it in the `components/` folder
+
+## New Pages
+
+- Create new pages at: `frontend/src/app/PAGE_NAME/page.tsx`
+- Components for the page are either in `page.tsx` or in the `frontend/src/app/PAGE_NAME/` folder
+- Pages are Server components for direct data loading when possible
+- Use TanStack Query for data fetching in client components
+- Components with `onClick` or other interactions must be client components with `"use client"` directive
+- Server action files must start with `"use server"`
+
+## API Routes
+
+- Frontend API routes are in `frontend/src/app/api/`
+- Backend API endpoints are in `backend/src/modules/`
+- Use Next.js API routes for frontend-specific logic and authentication
+- Use NestJS backend for main business logic and database operations
+
+## Utility Functions
+
+- Create utility functions in `frontend/src/lib/` folder for reusable logic
+- Use lodash utilities for common operations (arrays, objects, strings)
+- Import specific lodash functions to minimize bundle size:
+  ```ts
+  import groupBy from "lodash/groupBy";
+  ```
+
+## Backend Structure
+
+- Use NestJS modules for feature organization
+- Database operations use Prisma ORM
+- Authentication and authorization handled by guards
+- Validation handled by pipes and DTOs
+
+## Testing Structure
+
+### **Required Test Organization**
+- **Unit Tests**: Colocated with source files (`*.test.ts` next to `*.ts`)
+- **E2E Tests**: In `frontend/e2e/` directory with Playwright
+- **Security Tests**: Tagged with `@security` in E2E tests
+- **Performance Tests**: Lighthouse CI integration and k6 load testing
+
+### **Data-TestID Requirements**
+- All interactive components MUST have `data-testid` attributes
+- Use descriptive names: `data-testid="add-asset-button"`
+- Required for all buttons, forms, navigation elements
+
+### **Mandatory Tests For:**
+- 🛡️ **Authentication flows** - Security and bypass testing
+- 💰 **Financial calculations** - Accuracy and precision testing
+- 🔐 **Security features** - Input validation and injection testing
+- 📊 **Critical business logic** - Portfolio operations
+- 🔌 **API endpoints** - Integration and security testing
+- 💳 **Payment/transaction logic** - Financial accuracy testing

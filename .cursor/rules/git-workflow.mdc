@@ -1,0 +1,184 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Git workflow automation and commit patterns for consistent project standards
+ruleType: agentRequested
+alwaysApply: false
+---
+
+# Git Workflow Automation
+
+Automated assistance for consistent git workflows, commit patterns, and version management.
+
+## Commit Message Patterns
+
+When creating commits, use this format:
+```bash
+git commit -m "type: brief description - details about what was changed - additional context if needed"
+```
+
+### Commit Types
+- `feat`: New feature
+- `fix`: Bug fix  
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, semicolons, etc)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Test additions or corrections
+- `chore`: Maintenance tasks
+- `build`: Build system changes
+- `ci`: CI/CD changes
+
+### Example Patterns
+```bash
+# Feature commit
+git commit -m "feat: add notification badge to user menu - shows unread count on avatar, works across all deployment modes"
+
+# Bug fix commit  
+git commit -m "fix: resolve Next.js 15+ dynamic route params - await params object before accessing properties in API routes"
+
+# Release commit
+git commit -m "feat: v1.3.0 - notification badges, demo banner, auto-updates toggle, and critical fixes"
+```
+
+## Pre-Commit Verification
+
+Before any commit, ensure:
+
+### Build Verification
+```bash
+# Frontend build check
+cd frontend && pnpm run build
+
+# Backend build check  
+cd backend && pnpm run build
+
+# Type checking
+pnpm run type-check
+
+# Linting
+pnpm run lint
+
+# Unit tests
+pnpm run test
+
+# E2E tests (critical paths)
+cd frontend && pnpm run test:e2e --grep "Authentication|Portfolio"
+```
+
+### Version Management (for releases)
+```bash
+# Set new version across all package.json files
+NEW_VERSION="1.3.0"
+sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json backend/package.json frontend/package.json
+
+# Verify updates
+grep -h '"version"' package.json backend/package.json frontend/package.json
+```
+
+### Critical File Management
+**MUST be tracked in git:**
+- ✅ `scripts/prepare-release.mjs` - Release automation
+- ✅ `frontend/scripts/update-sw-version.mjs` - PWA version sync
+- ✅ `frontend/public/sw.js` - Service worker (modified during builds)
+- ✅ All build scripts and configuration files
+
+**MUST be ignored (.gitignore):**
+- ❌ `node_modules/` directories
+- ❌ `.next/` build output
+- ❌ `dist/` build output  
+- ❌ `.env*` environment files
+- ❌ `package-lock.json` (use `pnpm-lock.yaml` only)
+
+## Automated Release Workflow
+
+When implementing releases:
+
+### 1. Use Automated Script (Recommended)
+```bash
+# Comprehensive release preparation
+npm run prepare-release 1.3.0
+```
+
+### 2. Manual Alternative
+```bash
+# Update versions
+NEW_VERSION="1.3.0"
+sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json backend/package.json frontend/package.json
+
+# Update CHANGELOG.md with current date
+CURRENT_DATE=$(date +%Y-%m-%d)
+
+# Create release notes directory structure
+mkdir -p docs/releases/v1/v1.3
+```
+
+### 3. Verification Commands
+```bash
+# Review staged changes
+git diff --staged
+
+# Check for sensitive data
+git grep -i "password\|secret\|key\|token" --cached
+
+# Verify builds pass
+cd frontend && pnpm run build && cd ../backend && pnpm run build && cd ..
+```
+
+## Branch and Push Patterns
+
+### Standard Development
+```bash
+# Review, stage, commit, and push
+git status
+git add -A
+git commit -m "feat: your feature description"
+git push origin main
+```
+
+### Release Push
+```bash
+# Push release with tags
+git push origin main --tags
+```
+
+## Common Anti-Patterns to Avoid
+
+- ❌ Forgetting to update package.json versions for releases
+- ❌ Multi-line commit messages that cause tool issues
+- ❌ Committing `node_modules` or build artifacts
+- ❌ Leaving debug code in production
+- ❌ Not testing builds before committing
+- ❌ Using `npm` instead of `pnpm` commands
+- ❌ Committing `package-lock.json` (use `pnpm-lock.yaml` only)
+
+## PWA Service Worker Management
+
+The PWA service worker is automatically managed:
+- **Automated Update**: Service worker version matches `package.json` version automatically
+- **Build Integration**: `prebuild` script handles version sync transparently  
+- **Cache Invalidation**: New versions force clear all user caches automatically
+
+Look for: `📦 Updating service worker to version X.X.X` in build output.
+
+## Quality Gates
+
+Before pushing any commit:
+- [ ] All builds pass without errors
+- [ ] All unit tests pass
+- [ ] Critical E2E tests pass (auth, portfolio operations)
+- [ ] No console.log or debug statements in production code
+- [ ] TypeScript errors resolved
+- [ ] No sensitive data in commit
+- [ ] Version numbers updated (for releases)
+- [ ] CHANGELOG.md updated (for significant changes)
+
+### **Mandatory Testing Requirements**
+- [ ] **Authentication changes**: Security tests added
+- [ ] **Financial calculations**: Accuracy tests added  
+- [ ] **New components**: data-testid attributes added
+- [ ] **API endpoints**: Integration tests added
+- [ ] **Security features**: Injection/XSS tests added

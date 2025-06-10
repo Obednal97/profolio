@@ -56,6 +56,12 @@ coverage/
 .nyc_output
 /coverage
 
+# Playwright E2E Testing
+test-results/
+playwright-report/
+frontend/test-results/
+frontend/playwright-report/
+
 # ===============================================
 # DEVELOPMENT & RUNTIME
 # ===============================================

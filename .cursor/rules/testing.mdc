@@ -1,0 +1,404 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Comprehensive testing guidelines including E2E, unit, security, and performance testing
+ruleType: autoAttached
+globs: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/tests/**/*", "**/e2e/**/*", "**/playwright.config.ts", "**/vitest.config.ts", "**/.github/workflows/*test*.yml", "**/.github/workflows/*e2e*.yml"]
+alwaysApply: false
+---
+
+# Comprehensive Testing Guidelines
+
+## Testing Framework Overview
+
+### **Core Testing Stack**
+- **E2E Testing**: Playwright (multi-browser, mobile, accessibility)
+- **Unit Testing**: Vitest (frontend & backend)
+- **Security Testing**: OWASP ZAP, Semgrep, custom security tests
+- **Performance Testing**: Lighthouse CI, k6 load testing
+- **Component Testing**: React Testing Library
+
+### **Test Organization**
+```tree
+frontend/
+├── e2e/                    # Playwright E2E tests
+│   ├── auth.spec.ts       # Authentication & security tests
+│   ├── portfolio.spec.ts  # Portfolio management workflows
+│   └── performance.spec.ts # Performance & accessibility tests
+├── src/
+│   └── **/*.test.ts       # Unit tests colocated with components
+└── vitest.config.ts       # Vitest configuration
+
+backend/
+├── src/
+│   └── **/*.test.ts       # Unit tests colocated with modules
+└── vitest.config.ts       # Vitest configuration
+```
+
+## 🚨 When to Add New Tests (MANDATORY)
+
+### **Always Add Tests For:**
+- **🛡️ Authentication Changes**: Any auth flow, session management, or user verification
+- **💰 Financial Calculations**: Asset values, returns, portfolio calculations
+- **🔐 Security Features**: Input validation, authorization, data access controls
+- **📊 Critical Business Logic**: Portfolio management, asset operations, reporting
+- **🔌 API Endpoints**: All new REST endpoints and external integrations
+- **💳 Payment/Transaction Logic**: Any financial transaction handling
+
+### **Required Test Types by Change:**
+
+#### **Frontend Component Changes**
+```typescript
+// Always add when modifying components with user interaction
+describe('AssetCard', () => {
+  it('displays asset information correctly', () => {
+    // Component rendering test
+  });
+  
+  it('handles edit action securely', () => {
+    // User interaction test
+  });
+});
+```
+
+#### **Backend API Changes**
+```typescript
+// Always add for new endpoints
+describe('PortfolioController', () => {
+  it('should validate user authorization', () => {
+    // Security test
+  });
+  
+  it('should handle invalid input gracefully', () => {
+    // Error handling test
+  });
+});
+```
+
+#### **Database Schema Changes**
+```typescript
+// Always add for new database operations
+describe('AssetService', () => {
+  it('should prevent SQL injection in asset queries', () => {
+    // Security test for database operations
+  });
+});
+```
+
+## 🎯 E2E Testing with Playwright
+
+### **Test Categories & Data-TestID Requirements**
+
+#### **Authentication Tests** (`frontend/e2e/auth.spec.ts`)
+```typescript
+// MANDATORY: Test all authentication flows
+test('should prevent SQL injection in login form @security', async ({ page }) => {
+  await page.goto('/auth/signIn');
+  
+  // Ensure form is expanded (cloud vs self-hosted mode)
+  const loginButton = page.locator('[data-testid="login-button"]');
+  if (await loginButton.isVisible()) {
+    await loginButton.click();
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+  }
+
+  // Attempt SQL injection
+  await page.fill('input[type="email"]', "admin'; DROP TABLE users; --");
+  await page.fill('input[type="password"]', 'password');
+  await page.click('[data-testid="submit-login"]');
+
+  // Should show invalid credentials, not database error
+  await expect(page.locator('[data-testid="error-message"]')).toContainText(
+    /invalid.*credentials/i
+  );
+});
+```
+
+#### **Portfolio Management Tests** (`frontend/e2e/portfolio.spec.ts`)
+```typescript
+// MANDATORY: Test all portfolio CRUD operations
+test('should add new asset with validation', async ({ page }) => {
+  await page.goto('/app/portfolio');
+  await page.click('[data-testid="add-asset-button"]');
+  
+  // Fill asset form
+  await page.fill('[data-testid="asset-name-input"]', 'Apple Stock');
+  await page.selectOption('[data-testid="asset-type-select"]', 'stock');
+  await page.fill('[data-testid="asset-symbol-input"]', 'AAPL');
+  await page.fill('[data-testid="asset-quantity-input"]', '10');
+  await page.fill('[data-testid="asset-current_value-input"]', '1500.00');
+  
+  await page.click('[data-testid="submit-asset"]');
+  
+  // Verify asset appears in portfolio
+  await expect(page.locator('text=Apple Stock')).toBeVisible();
+});
+```
+
+### **Required Data-TestID Attributes**
+
+**MANDATORY: All interactive elements must have data-testid attributes:**
+
+```typescript
+// Authentication
+data-testid="demo-button"
+data-testid="login-button"
+data-testid="submit-login"
+data-testid="error-message"
+data-testid="user-menu"
+data-testid="logout-button"
+
+// Portfolio Management
+data-testid="add-asset-button"
+data-testid="asset-name-input"
+data-testid="asset-type-select"
+data-testid="asset-symbol-input"
+data-testid="asset-quantity-input"
+data-testid="asset-current_value-input"
+data-testid="submit-asset"
+data-testid="edit-asset-{symbol}"
+data-testid="delete-asset-{symbol}"
+
+// Navigation
+data-testid="portfolio-dashboard-link"
+```
+
+## 🔒 Security Testing
+
+### **Security Test Categories (MANDATORY)**
+
+#### **Input Validation Tests**
+```typescript
+// Test all user inputs for injection attacks
+test('should prevent XSS in asset description', async ({ page }) => {
+  const xssPayload = '<script>alert("XSS")</script>';
+  await page.fill('[data-testid="asset-name-input"]', xssPayload);
+  
+  // Should be sanitized, not executed
+  await expect(page.locator('script')).toHaveCount(0);
+});
+```
+
+#### **Authentication Security Tests**
+```typescript
+// Test authentication bypass attempts
+test('should protect authenticated routes @security', async ({ page }) => {
+  await page.goto('/app/dashboard');
+  
+  // Should redirect to login or show unauthorized
+  await expect(page).toHaveURL(/.*\/(login|auth|signIn)/);
+});
+```
+
+#### **Rate Limiting Tests**
+```typescript
+// Test API rate limiting
+test('should rate limit login attempts @security', async ({ page }) => {
+  // Make multiple failed attempts
+  for (let i = 0; i < 6; i++) {
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'wrongpassword');
+    await page.click('[data-testid="submit-login"]');
+    await page.waitForTimeout(1000);
+  }
+  
+  // Should show rate limiting message
+  await expect(page.locator('[data-testid="error-message"]')).toContainText(
+    /too many.*attempts/i
+  );
+});
+```
+
+## ⚡ Performance Testing
+
+### **Performance Budgets (MANDATORY)**
+```typescript
+// Frontend performance requirements
+test('should load homepage within performance budget', async ({ page }) => {
+  const startTime = Date.now();
+  await page.goto('/');
+  const loadTime = Date.now() - startTime;
+  
+  expect(loadTime).toBeLessThan(2000); // 2 second budget
+});
+
+// Lighthouse CI integration
+test('should pass Core Web Vitals metrics', async ({ page }) => {
+  // This runs automatically via Lighthouse CI
+  // Thresholds: LCP < 2.5s, FID < 100ms, CLS < 0.1
+});
+```
+
+### **Load Testing with k6**
+```javascript
+// Load testing scenarios
+export default function() {
+  // Realistic user journey
+  let response = http.get(`${BASE_URL}/`);
+  check(response, {
+    'Homepage load time < 2s': (r) => r.timings.duration < 2000,
+  });
+  
+  // API endpoint testing
+  response = http.get(`${BASE_URL}/api/market-data/cached-price/AAPL`);
+  check(response, {
+    'API response < 500ms': (r) => r.timings.duration < 500,
+  });
+}
+```
+
+## 🧪 Unit Testing
+
+### **Frontend Unit Tests**
+```typescript
+// Component testing with React Testing Library
+import { render, screen } from '@testing-library/react';
+import { AssetCard } from './AssetCard';
+
+describe('AssetCard', () => {
+  it('displays asset information correctly', () => {
+    const asset = {
+      id: '1',
+      name: 'Apple Stock',
+      symbol: 'AAPL',
+      current_value: 1500,
+      quantity: 10
+    };
+
+    render(<AssetCard asset={asset} onEdit={() => {}} onDelete={() => {}} />);
+    
+    expect(screen.getByText('Apple Stock')).toBeInTheDocument();
+    expect(screen.getByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('$1,500.00')).toBeInTheDocument();
+  });
+
+  it('handles edit action correctly', async () => {
+    const onEdit = vi.fn();
+    const asset = { id: '1', name: 'Test Asset' };
+
+    render(<AssetCard asset={asset} onEdit={onEdit} onDelete={() => {}} />);
+    
+    await userEvent.click(screen.getByLabelText('Edit asset'));
+    expect(onEdit).toHaveBeenCalledWith(asset);
+  });
+});
+```
+
+### **Backend Unit Tests**
+```typescript
+// Service testing with NestJS testing utilities
+import { Test, TestingModule } from '@nestjs/testing';
+import { PortfolioService } from './portfolio.service';
+
+describe('PortfolioService', () => {
+  let service: PortfolioService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [PortfolioService],
+    }).compile();
+
+    service = module.get<PortfolioService>(PortfolioService);
+  });
+
+  it('should calculate portfolio return correctly', () => {
+    const result = service.calculateReturn(11000, 10000);
+    expect(result.percentReturn).toBeCloseTo(0.1);
+    expect(result.absoluteReturn).toBe(1000);
+  });
+
+  it('should validate asset input for security', () => {
+    const maliciousInput = "'; DROP TABLE assets; --";
+    expect(() => service.validateAssetName(maliciousInput)).toThrow();
+  });
+});
+```
+
+## 🎯 Test Commands
+
+### **Development Commands**
+```bash
+# Unit tests
+pnpm run test                    # Run all unit tests
+pnpm run test:watch             # Watch mode for development
+pnpm run test:ui                # Visual test interface
+
+# E2E tests
+pnpm run test:e2e               # All E2E tests
+pnpm run test:e2e:ui            # Visual E2E interface for debugging
+pnpm run test:e2e:debug         # Debug mode with browser open
+
+# Specific test categories
+pnpm run test:e2e --grep "@security"        # Security tests only
+pnpm run test:e2e --grep "Performance"      # Performance tests only
+pnpm run test:e2e --grep "Accessibility"    # Accessibility tests only
+
+# Cross-browser testing
+pnpm run test:e2e --project="Mobile Chrome" # Mobile testing
+pnpm run test:e2e --project="firefox"       # Firefox testing
+```
+
+### **CI/CD Integration**
+```bash
+# Pre-commit validation
+pnpm run test:all              # All tests (unit + E2E + performance)
+
+# Pre-release validation (GitHub Actions)
+# - Comprehensive security scanning
+# - Load testing with 100 concurrent users
+# - Cross-browser E2E validation
+# - Performance audit with Lighthouse CI
+```
+
+## 🔄 GitHub Workflows Integration
+
+### **Automated Test Execution**
+- **PR Tests**: Smart test selection based on changed files
+- **Security Scans**: OWASP ZAP, Semgrep on all security-related changes
+- **Performance Tests**: Lighthouse CI on all frontend changes
+- **Pre-Release**: Comprehensive validation before any release
+
+### **Quality Gates**
+Tests that **MUST PASS** before merge:
+- ✅ All unit tests
+- ✅ E2E critical path tests
+- ✅ Security vulnerability scan
+- ✅ Performance regression check
+
+## 🚨 Critical Testing Rules
+
+### **NEVER Skip Tests For:**
+1. **Authentication changes** - Always add security tests
+2. **Financial calculations** - Always add accuracy tests
+3. **Database operations** - Always add validation and security tests
+4. **API endpoints** - Always add integration and security tests
+5. **User input handling** - Always add injection and XSS tests
+
+### **Test Coverage Requirements**
+- **Minimum 80%** code coverage for new features
+- **100%** coverage for financial calculation functions
+- **Security tests required** for all user input handling
+- **Performance tests required** for all new pages/components
+
+### **Data-TestID Requirements**
+- **All clickable elements** must have data-testid attributes
+- **All form inputs** must have data-testid attributes
+- **All navigation elements** must have data-testid attributes
+- **Use descriptive names**: `data-testid="add-asset-button"` not `data-testid="button1"`
+
+## 📊 Monitoring & Reporting
+
+- **Test Results**: Automatically posted to PR comments
+- **Performance Metrics**: Lighthouse CI reports
+- **Security Scan Results**: SARIF files uploaded to GitHub Security tab
+- **Coverage Reports**: Generated automatically with each test run
+
+## 🔗 Related Documentation
+
+- **Setup Guide**: `docs/testing/TESTING_SETUP_GUIDE.md`
+- **Security Testing**: Focus on `@security` tagged tests
+- **Performance Testing**: Lighthouse CI and k6 integration
+- **GitHub Workflows**: `.github/workflows/e2e-tests.yml`

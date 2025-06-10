@@ -1,0 +1,259 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Best practices for optimizing cursor rules based on community patterns and performance considerations
+ruleType: agentRequested
+alwaysApply: false
+---
+
+# Rule Optimization Guide
+
+Comprehensive guide for writing efficient, effective cursor rules based on community best practices and performance analysis.
+
+## Rule Performance Principles
+
+### 1. Context Token Management
+**Problem**: Every rule consumes valuable context tokens
+**Solution**: Optimise for relevance and conciseness
+
+```markdown
+❌ Bad: Verbose, redundant instructions
+"Always make sure to carefully consider and thoroughly implement proper error handling in every single function you write, including comprehensive try-catch blocks with detailed logging..."
+
+✅ Good: Concise, actionable guidance
+"Use try-catch blocks with specific error types. Log errors with context."
+```
+
+### 2. Glob Pattern Efficiency
+**Problem**: Overly broad glob patterns trigger rules unnecessarily
+**Solution**: Use specific, targeted patterns
+
+```yaml
+❌ Bad: Too broad
+globs: ["**/*"]
+
+✅ Good: Targeted
+globs: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**/*"]
+```
+
+### 3. Rule Hierarchy Optimization
+**Problem**: Conflicting or overlapping rule instructions
+**Solution**: Clear rule prioritisation and composition
+
+## Community-Proven Rule Patterns
+
+### 1. Framework-Specific Rules
+Based on cursor.directory analysis, successful projects use targeted framework rules:
+
+```markdown
+# Next.js App Router Pattern
+---
+description: Next.js 15 App Router conventions
+globs: ["**/app/**/*.tsx", "**/app/**/*.ts"]
+alwaysApply: false
+---
+
+- Use App Router structure: app/page.tsx for pages
+- Server Components by default, 'use client' only when needed
+- Group routes with (groupName) for organisation
+```
+
+### 2. Technology Stack Integration
+```markdown
+# Database + ORM Pattern
+---
+description: Database operations with Prisma and PostgreSQL
+globs: ["**/prisma/**/*", "**/*.prisma", "**/database/**/*"]
+alwaysApply: false
+---
+
+- Use Prisma for type-safe database operations
+- Create transactions for multi-table operations
+- Use connection pooling for production environments
+```
+
+### 3. Development Workflow Rules
+```markdown
+# Git Workflow Pattern
+---
+description: Standardised git workflow automation
+alwaysApply: false
+---
+
+When creating commits:
+1. Use conventional commit format: type(scope): description
+2. Include relevant file changes in staging
+3. Create descriptive branch names: feature/description
+```
+
+## Rule Categories and Optimization
+
+### 1. Always Applied Rules (Use Sparingly)
+**Best for**: Core project standards, critical conventions
+**Limit**: Maximum 2-3 rules to avoid context pollution
+
+```yaml
+---
+description: Core project architecture standards
+alwaysApply: true
+---
+```
+
+### 2. Auto-Attached Rules (Most Common)
+**Best for**: Technology-specific guidance, file-type conventions
+**Optimization**: Use precise glob patterns
+
+```yaml
+---
+description: React component standards
+globs: ["**/components/**/*.tsx", "**/*.component.tsx"]
+alwaysApply: false
+---
+```
+
+### 3. Agent-Requested Rules (Contextual)
+**Best for**: Specialised workflows, complex operations
+**Requirement**: Clear, descriptive descriptions
+
+```yaml
+---
+description: Complex database migration patterns for schema changes"
+alwaysApply: false
+---
+```
+
+### 4. Manual Rules (On-Demand)
+**Best for**: Experimental patterns, debugging workflows
+**Usage**: Invoked with @rule-name
+
+```yaml
+---
+description: Advanced debugging and performance analysis
+alwaysApply: false
+---
+```
+
+## Performance Optimization Strategies
+
+### 1. Rule Size Management
+```markdown
+✅ Target: Under 500 lines per rule
+✅ Strategy: Break complex rules into focused, composable rules
+✅ Technique: Use @file-reference.ts for examples rather than embedding
+```
+
+### 2. Context Relevance
+```markdown
+✅ Include: Actionable, specific instructions
+❌ Exclude: General programming advice available in base models
+❌ Exclude: Redundant information across multiple rules
+```
+
+### 3. File Reference Optimization
+```markdown
+✅ Reference specific example files: @component-template.tsx
+✅ Use project-specific examples: @src/lib/portfolio-calculations.ts
+❌ Reference large files that don't add specific value
+```
+
+## Advanced Rule Patterns
+
+### 1. Conditional Logic Rules
+```markdown
+# Smart Rule Application
+When working with:
+- API routes: Follow REST conventions with proper status codes
+- Components: Use TypeScript with proper prop interfaces
+- Database: Use transactions for multi-table operations
+```
+
+### 2. Template-Driven Rules
+```markdown
+# Boilerplate Generation
+When creating new [component|service|test]:
+1. Use established project template
+2. Include proper TypeScript types
+3. Add relevant documentation
+4. Include error handling
+
+@templates/component-template.tsx
+@templates/service-template.ts
+```
+
+### 3. Workflow Automation Rules
+```markdown
+# Multi-Step Process Automation
+When implementing a new feature:
+1. Create feature branch: feature/description
+2. Implement core functionality with tests
+3. Add documentation and examples
+4. Create pull request with proper description
+```
+
+## Community Best Practices Integration
+
+### 1. Learn from Popular Rules
+Monitor cursor.directory for highly-used rules:
+- **Next.js + TypeScript**: Consistent App Router patterns
+- **React + Tailwind**: Component styling conventions
+- **Testing patterns**: Vitest and Jest configurations
+- **API design**: REST and GraphQL standards
+
+### 2. Contribute to Community
+- Share successful rule patterns
+- Document rule performance impacts
+- Provide feedback on community rules
+- Maintain rule quality standards
+
+### 3. Stay Updated
+- Follow cursor.directory for emerging patterns
+- Monitor official Cursor documentation updates
+- Participate in community discussions
+- Test new rule features and patterns
+
+## Rule Maintenance Workflow
+
+### 1. Regular Review Process
+```bash
+# Monthly rule audit
+1. Test rule effectiveness in recent projects
+2. Update rules based on technology changes
+3. Remove or consolidate underused rules
+```
+
+### 2. Performance Monitoring
+```markdown
+Track rule impact:
+- Context token usage per session
+- Rule application frequency
+- Development workflow efficiency
+- Error reduction metrics
+```
+
+### 3. Continuous Improvement
+```markdown
+Iterative optimization:
+- A/B test rule variations
+- Gather team feedback on rule effectiveness
+- Update rules based on technology evolution
+- Share learnings with community
+```
+
+## Troubleshooting Rule Issues
+
+### 1. Common Problems
+- **High context usage**: Too many verbose rules applied simultaneously
+- **Rule conflicts**: Contradictory instructions between rules
+- **Poor performance**: Rules triggering unnecessarily or inefficiently
+- **Low adoption**: Rules not providing clear value to workflow
+
+### 2. Debugging Strategies
+- **Isolation testing**: Test individual rules in controlled scenarios
+- **Context analysis**: Monitor total context token usage
+- **Direct observation**: Monitor rule effectiveness during development
+- **Feedback collection**: Gather team input on rule effectiveness
+
+This optimization guide ensures your cursor rules provide maximum value whilst maintaining optimal performance and usability.

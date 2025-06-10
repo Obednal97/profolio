@@ -1,0 +1,239 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Guidelines for managing global cursor rules across multiple projects
+ruleType: agentRequested
+alwaysApply: false
+---
+
+# Global Rules Management
+
+System for sharing cursor rules across multiple projects whilst maintaining project-specific customisations.
+
+## Problem Statement
+
+Based on community feedback, developers need:
+- **Personal rules** that apply across all projects without polluting project repositories
+- **Team rules** that can be shared across an organisation
+- **Template rules** for starting new projects with established patterns
+- **Version control** for rule evolution and synchronisation
+
+## Implementation Strategy
+
+### 1. Global Rules Directory Structure
+
+Create a global rules library outside your project:
+```
+~/cursor-rules-library/
+├── personal/           # Personal workflow rules
+│   ├── git-workflow.mdc
+│   ├── debugging.mdc
+│   └── code-review.mdc
+├── team/              # Organisation-wide rules
+│   ├── security.mdc
+│   ├── testing.mdc
+│   └── deployment.mdc
+├── templates/         # Project starter templates
+│   ├── nextjs-setup.mdc
+│   ├── api-design.mdc
+│   └── database-schema.mdc
+└── experimental/      # Testing new rule concepts
+    ├── ai-pair-programming.mdc
+    └── performance-optimization.mdc
+```
+
+### 2. Project Integration Methods
+
+#### Method A: Symlink Approach (Recommended)
+```bash
+# In your project's .cursor/rules directory
+ln -s ~/cursor-rules-library/personal ./global-personal
+ln -s ~/cursor-rules-library/team ./global-team
+
+# Restart Cursor IDE to recognise symlinked rules
+```
+
+#### Method B: Import References
+```markdown
+# In project-specific rule files
+@~/cursor-rules-library/personal/git-workflow.mdc
+@~/cursor-rules-library/team/security.mdc
+```
+
+#### Method C: Rule Composition
+```markdown
+---
+description: Project-specific rules with global imports
+alwaysApply: true
+---
+
+# Project Rules
+
+## Global Security Standards
+@global-security.mdc
+
+## Project-Specific Patterns
+[Project-specific content here]
+```
+
+## Rule Categories and Usage
+
+### Personal Rules (`~/cursor-rules-library/personal/`)
+
+**Git Workflow Rule** (`git-workflow.mdc`):
+```markdown
+---
+description: Personal Git workflow automation
+---
+
+# Git Workflow Automation
+
+When I ask to create a branch, commit, and push:
+1. Create feature branch from current branch
+2. Stage relevant changes
+3. Create descriptive commit message
+4. Push branch to origin
+5. Optionally create pull request
+
+Use conventional commit format: type(scope): description
+```
+
+**Debugging Rule** (`debugging.mdc`):
+```markdown
+---
+description: Systematic debugging approach
+---
+
+# Debugging Guidelines
+
+When troubleshooting issues:
+1. Reproduce the problem consistently
+2. Check recent changes and logs
+3. Add strategic console.log statements
+4. Use breakpoints for complex logic
+5. Document findings in comments
+```
+
+### Team Rules (`~/cursor-rules-library/team/`)
+
+**Security Standards** (`security.mdc`):
+```markdown
+---
+description: Organisation security requirements
+---
+
+# Security Standards
+
+All code must follow these security practices:
+- No hardcoded secrets or API keys
+- Input validation for all user data
+- Proper error handling without information leakage
+- Authentication checks for protected endpoints
+- HTTPS-only for production environments
+```
+
+### Template Rules (`~/cursor-rules-library/templates/`)
+
+**Next.js Setup** (`nextjs-setup.mdc`):
+```markdown
+---
+description: Standard Next.js project configuration
+---
+
+# Next.js Project Setup
+
+When setting up a new Next.js project:
+- Use App Router (not Pages Router)
+- Configure TypeScript with strict mode
+- Set up ESLint and Prettier
+- Install and configure Tailwind CSS
+- Set up environment variable structure
+```
+
+## Management Commands
+
+### Rule Synchronisation
+```bash
+# Update global rules from repository
+cd ~/cursor-rules-library
+git pull origin main
+
+# Push local rule updates
+git add . && git commit -m "Update rules" && git push
+```
+
+### Project Setup
+```bash
+# Set up global rules in new project
+mkdir -p .cursor/rules
+cd .cursor/rules
+ln -s ~/cursor-rules-library/personal ./global-personal
+ln -s ~/cursor-rules-library/team ./global-team
+```
+
+### Rule Testing
+```bash
+# Test new rules in experimental directory first
+cp ~/cursor-rules-library/experimental/new-rule.mdc .cursor/rules/
+# Test thoroughly, then promote:
+mv .cursor/rules/new-rule.mdc ~/cursor-rules-library/personal/
+```
+
+## Version Control Strategy
+
+### Global Rules Repository
+```bash
+# Initialise global rules repository
+cd ~/cursor-rules-library
+git init
+git remote add origin https://github.com/your-org/cursor-rules-library.git
+
+# Maintain changelog
+echo "# Rule Changes\n\n## $(date +%Y-%m-%d)\n- Added new rule: description" >> CHANGELOG.md
+```
+
+### Project .gitignore
+```gitignore
+# In project .gitignore
+.cursor/rules/global-*
+.cursor/rules/experimental/
+```
+
+## Best Practices
+
+### 1. Rule Hygiene
+- **Review regularly**: Audit global rules quarterly
+- **Test thoroughly**: Validate rules across different projects
+- **Document changes**: Maintain clear changelogs
+- **Avoid conflicts**: Ensure global and project rules don't contradict
+
+### 2. Team Collaboration
+- **Shared repository**: Use git for team rule synchronisation
+- **Code review**: Review rule changes like code changes
+- **Gradual rollout**: Test rules individually before team deployment
+- **Feedback loop**: Collect team feedback on rule effectiveness
+
+### 3. Performance Considerations
+- **Selective inclusion**: Only link relevant global rules per project
+- **Rule efficiency**: Keep global rules concise and focused
+- **Context awareness**: Use appropriate glob patterns for auto-attachment
+- **Memory management**: Monitor total rule context size
+
+## Troubleshooting
+
+### Common Issues
+- **Symlinks not recognised**: Restart Cursor IDE after creating symlinks
+- **Rule conflicts**: Check for contradictory instructions between global and project rules
+- **Path resolution**: Ensure file references use correct relative or absolute paths
+- **Permission errors**: Verify read/write permissions on global rules directory
+
+### Debugging Steps
+1. Check Cursor Settings > Rules for recognised rules
+2. Verify symlink targets exist and are readable
+3. Test individual rules in isolation
+4. Review Cursor logs for rule loading errors
+
+This system provides the flexibility of global rules whilst maintaining project-specific control and team collaboration capabilities.

@@ -1,0 +1,63 @@
+---
+description: 
+globs: frontend/src/app/**/page.tsx, frontend/src/app/**/layout.tsx, frontend/src/app/**/loading.tsx, frontend/src/app/**/error.tsx, frontend/src/app/**/not-found.tsx, frontend/src/app/**/template.tsx
+alwaysApply: false
+---
+---
+description: Next.js page structure guidelines and patterns for the App Router
+ruleType: autoAttached
+globs: ["frontend/src/app/**/page.tsx", "frontend/src/app/**/layout.tsx", "frontend/src/app/**/loading.tsx", "frontend/src/app/**/error.tsx", "frontend/src/app/**/not-found.tsx", "frontend/src/app/**/template.tsx"]
+alwaysApply: false
+---
+
+# Page Structure
+
+- Create new pages at: `frontend/src/app/PAGE_NAME/page.tsx`
+- Components for the page are either put in `page.tsx`, or in the `frontend/src/app/PAGE_NAME/` folder
+- Pages are Server components so you can load data into them directly when possible
+- For client-side data fetching use TanStack Query in client components
+- If you need to use `onClick` or other interactions in a component, that component is a client component and file must start with `"use client"`
+
+## Example Page Structure
+
+```typescript
+// frontend/src/app/portfolio/page.tsx
+import { PortfolioList } from './PortfolioList';
+
+export default async function PortfolioPage() {
+  // Server-side data loading
+  const initialData = await fetch('http://localhost:3001/api/portfolio');
+  const portfolios = await initialData.json();
+
+  return (
+    <div>
+      <h1>My Portfolios</h1>
+      <PortfolioList initialData={portfolios} />
+    </div>
+  );
+}
+```
+
+```typescript
+// frontend/src/app/portfolio/PortfolioList.tsx
+"use client";
+
+import { useQuery } from '@tanstack/react-query';
+
+export function PortfolioList({ initialData }: { initialData: Portfolio[] }) {
+  const { data: portfolios } = useQuery({
+    queryKey: ['portfolios'],
+    queryFn: () => fetch('/api/portfolio').then(res => res.json()),
+    initialData,
+  });
+
+  return (
+    <div>
+      {portfolios.map(portfolio => (
+        <div key={portfolio.id} onClick={() => handleClick(portfolio.id)}>
+          {portfolio.name}
+        </div>
+      ))}
+    </div>
+  );
+} 

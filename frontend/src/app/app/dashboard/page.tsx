@@ -462,7 +462,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        data-testid="portfolio-summary"
+      >
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -566,6 +569,7 @@ export default function DashboardPage() {
               <Link
                 href="/app/portfolio"
                 className="flex items-center justify-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                data-testid="add-asset-button"
               >
                 <i className="fas fa-plus-circle text-xl"></i>
                 <span className="font-medium">Add Asset</span>
@@ -598,7 +602,10 @@ export default function DashboardPage() {
         {/* Right Column - Activity Feed */}
         <div className="space-y-6">
           {/* Recent Transactions */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
+            data-testid="assets-table"
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Recent Activity

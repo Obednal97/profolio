@@ -38,8 +38,14 @@ type MenuItem = MenuItemWithPath | MenuItemWithAction;
 
 // Safe console methods for environments where console might not exist
 const safeConsole = {
-  log: typeof console !== 'undefined' && console.log ? console.log.bind(console) : () => {},
-  error: typeof console !== 'undefined' && console.error ? console.error.bind(console) : () => {},
+  log:
+    typeof console !== "undefined" && console.log
+      ? console.log.bind(console)
+      : () => {},
+  error:
+    typeof console !== "undefined" && console.error
+      ? console.error.bind(console)
+      : () => {},
 };
 
 export default function UserMenu({ user: propUser }: UserMenuProps) {
@@ -56,15 +62,17 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
   const processedUserData = useMemo(() => {
     const safeName = sanitizeText(user?.name);
     const safeEmail = sanitizeText(user?.email);
-    
+
     // Create UserData-compatible object for getUserInitials
-    const userData = user ? {
-      id: '', // Not needed for initials
-      email: user.email || null,
-      name: user.name || null,
-      displayName: user.name || null,
-    } : null;
-    
+    const userData = user
+      ? {
+          id: "", // Not needed for initials
+          email: user.email || null,
+          name: user.name || null,
+          displayName: user.name || null,
+        }
+      : null;
+
     const safeInitials = getUserInitials(userData);
 
     return {
@@ -75,10 +83,14 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
   }, [user]);
 
   // Memoized theme utilities
-  const themeUtils = useMemo(() => ({
-    icon: theme === "light" ? "fa-moon" : "fa-sun",
-    tooltip: theme === "light" ? "Switch to dark mode" : "Switch to light mode",
-  }), [theme]);
+  const themeUtils = useMemo(
+    () => ({
+      icon: theme === "light" ? "fa-moon" : "fa-sun",
+      tooltip:
+        theme === "light" ? "Switch to dark mode" : "Switch to light mode",
+    }),
+    [theme]
+  );
 
   // Optimized event handlers with useCallback
   const handleSignOut = useCallback(async () => {
@@ -86,14 +98,14 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
       setIsProfileOpen(false);
       await signOut();
     } catch (error) {
-      safeConsole.error('Sign out error:', error);
+      safeConsole.error("Sign out error:", error);
       // Use Next.js router for secure navigation
-      router.push('/auth/signIn');
+      router.push("/auth/signIn");
     }
   }, [signOut, router]);
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    setTheme(theme === "light" ? "dark" : "light");
   }, [theme, setTheme]);
 
   const closeMenu = useCallback(() => {
@@ -101,22 +113,45 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
   }, []);
 
   const toggleMenu = useCallback(() => {
-    setIsProfileOpen(prev => !prev);
+    setIsProfileOpen((prev) => !prev);
   }, []);
 
   // Memoized profile menu items to prevent array recreation
-  const profileMenuItems = useMemo((): MenuItem[] => [
-    { label: "Account Settings", path: "/app/settings", icon: "fa-cog", action: null },
-    { label: "System Updates", path: "/app/updates", icon: "fa-download", action: null },
-    { label: "Notifications", path: "/app/notifications", icon: "fa-bell", action: null },
-    { 
-      label: `Switch to ${theme === 'light' ? 'dark' : 'light'} mode`, 
-      path: null, 
-      icon: themeUtils.icon, 
-      action: toggleTheme 
-    },
-    { label: "Sign Out", path: null, icon: "fa-sign-out-alt", action: handleSignOut },
-  ], [theme, themeUtils.icon, toggleTheme, handleSignOut]);
+  const profileMenuItems = useMemo(
+    (): MenuItem[] => [
+      {
+        label: "Account Settings",
+        path: "/app/settings",
+        icon: "fa-cog",
+        action: null,
+      },
+      {
+        label: "System Updates",
+        path: "/app/updates",
+        icon: "fa-download",
+        action: null,
+      },
+      {
+        label: "Notifications",
+        path: "/app/notifications",
+        icon: "fa-bell",
+        action: null,
+      },
+      {
+        label: `Switch to ${theme === "light" ? "dark" : "light"} mode`,
+        path: null,
+        icon: themeUtils.icon,
+        action: toggleTheme,
+      },
+      {
+        label: "Sign Out",
+        path: null,
+        icon: "fa-sign-out-alt",
+        action: handleSignOut,
+      },
+    ],
+    [theme, themeUtils.icon, toggleTheme, handleSignOut]
+  );
 
   return (
     <div className="relative flex items-center gap-3">
@@ -140,6 +175,7 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
               aria-label="User menu"
               aria-expanded={isProfileOpen}
               aria-haspopup="true"
+              data-testid="user-menu"
             >
               {/* Avatar */}
               <div className="relative w-8 h-8 flex-shrink-0 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold shadow-lg">
@@ -148,16 +184,16 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
                 {unreadCount > 0 && (
                   <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                     <span className="text-xs text-white font-bold">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   </div>
                 )}
               </div>
-              
+
               {/* User info (hidden on mobile and small tablets) */}
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
-                  {processedUserData.safeName || 'User'}
+                  {processedUserData.safeName || "User"}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[150px]">
                   {processedUserData.safeEmail}
@@ -165,21 +201,25 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
               </div>
 
               {/* Dropdown arrow */}
-              <i className={`fas fa-chevron-down text-xs text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}></i>
+              <i
+                className={`fas fa-chevron-down text-xs text-gray-500 dark:text-gray-400 transition-transform duration-200 ${
+                  isProfileOpen ? "rotate-180" : ""
+                }`}
+              ></i>
             </button>
 
             {/* Dropdown Menu with enhanced glass effect */}
             {isProfileOpen && (
               <>
                 {/* Backdrop */}
-                <div 
+                <div
                   className="fixed inset-0 z-40"
                   onClick={closeMenu}
                   aria-hidden="true"
                 />
-                
+
                 {/* Menu */}
-                <div 
+                <div
                   className="absolute right-0 top-full mt-2 w-56 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/30 dark:border-white/20 rounded-2xl shadow-2xl z-50 py-2"
                   role="menu"
                   aria-orientation="vertical"
@@ -191,8 +231,12 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
                         {processedUserData.safeInitials}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{processedUserData.safeName || 'User'}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{processedUserData.safeEmail}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {processedUserData.safeName || "User"}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {processedUserData.safeEmail}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -200,7 +244,12 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
                   {/* Menu items */}
                   <div className="py-1">
                     {profileMenuItems.map((item, index) => (
-                      <div key={`${item.label}-${index}`} className={`${item.label.includes('mode') ? 'md:hidden' : ''}`}>
+                      <div
+                        key={`${item.label}-${index}`}
+                        className={`${
+                          item.label.includes("mode") ? "md:hidden" : ""
+                        }`}
+                      >
                         {item.path ? (
                           <Link
                             href={item.path}
@@ -208,28 +257,41 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
                             onClick={closeMenu}
                             role="menuitem"
                           >
-                            <i className={`fas ${item.icon} w-4 text-center`} aria-hidden="true"></i>
+                            <i
+                              className={`fas ${item.icon} w-4 text-center`}
+                              aria-hidden="true"
+                            ></i>
                             <span className="flex-1">{item.label}</span>
-                            {item.label === "Notifications" && unreadCount > 0 && (
-                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full" aria-label={`${unreadCount} unread notifications`}>
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                              </span>
-                            )}
+                            {item.label === "Notifications" &&
+                              unreadCount > 0 && (
+                                <span
+                                  className="bg-red-500 text-white text-xs px-2 py-1 rounded-full"
+                                  aria-label={`${unreadCount} unread notifications`}
+                                >
+                                  {unreadCount > 9 ? "9+" : unreadCount}
+                                </span>
+                              )}
                           </Link>
                         ) : (
                           <button
                             onClick={item.action || undefined}
                             className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-all duration-200 ${
-                              item.label === 'Sign Out'
-                                ? 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                                : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-700/60'
+                              item.label === "Sign Out"
+                                ? "text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-700/60"
                             }`}
                             role="menuitem"
+                            data-testid={
+                              item.label === "Sign Out"
+                                ? "logout-button"
+                                : undefined
+                            }
                           >
-                            <i className={`fas ${item.icon} w-4 text-center`} aria-hidden="true"></i>
-                            <span className="flex-1">
-                              {item.label}
-                            </span>
+                            <i
+                              className={`fas ${item.icon} w-4 text-center`}
+                              aria-hidden="true"
+                            ></i>
+                            <span className="flex-1">{item.label}</span>
                           </button>
                         )}
                       </div>

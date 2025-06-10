@@ -1,0 +1,107 @@
+---
+description: 
+globs: frontend/src/**/*.tsx, frontend/src/**/*.jsx, frontend/src/components/**/*, **/tailwind.config.*, **/components.json, **/*.css, **/globals.css, **/layout.tsx, **/page.tsx
+alwaysApply: false
+---
+---
+description: UI component and styling guidelines using Radix UI primitives and Tailwind CSS
+ruleType: autoAttached
+globs: ["frontend/src/**/*.tsx", "frontend/src/**/*.jsx", "frontend/src/components/**/*", "**/tailwind.config.*", "**/components.json", "**/*.css", "**/globals.css", "**/layout.tsx", "**/page.tsx"]
+alwaysApply: false
+---
+
+# UI Components and Styling
+
+## UI Framework
+- Use Radix UI primitives and Tailwind CSS for components and styling
+- Implement responsive design with Tailwind CSS using a mobile-first approach
+- Use `next/image` package for images
+- Use class-variance-authority for component variants
+
+## Radix UI Components
+
+Install Radix UI components as needed:
+
+```sh
+pnpm add @radix-ui/react-COMPONENT
+```
+
+Example:
+
+```sh
+pnpm add @radix-ui/react-dialog @radix-ui/react-slot
+```
+
+## Data Fetching with TanStack Query
+For API requests use TanStack Query (React Query):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+
+const { data, isLoading, error } = useQuery({
+  queryKey: ['portfolio-data', portfolioId],
+  queryFn: () => fetch(`/api/portfolio/${portfolioId}`).then(res => res.json())
+});
+```
+
+## Loading Components
+Handle loading states with conditional rendering:
+
+```tsx
+<Card>
+  {isLoading ? (
+    <div className="animate-pulse">Loading...</div>
+  ) : error ? (
+    <div className="text-red-500">Error: {error.message}</div>
+  ) : (
+    data && <MyComponent data={data} />
+  )}
+</Card>
+```
+
+## Component Styling
+Use Tailwind CSS classes with proper responsive design:
+
+```tsx
+<div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+  <Card className="flex-1 p-6">
+    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+      Portfolio Overview
+    </h2>
+  </Card>
+</div>
+```
+
+## Icon Usage
+Use Lucide React for consistent iconography:
+
+```tsx
+import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+
+<TrendingUp className="h-4 w-4 text-green-500" />
+```
+
+## Form Components
+### Text Inputs
+```tsx
+<Input
+  type="email"
+  name="email"
+  label="Email"
+  registerProps={register("email", { required: true })}
+  error={errors.email}
+/>
+```
+
+### Text Area
+```tsx
+<Input
+  type="text"
+  autosizeTextarea
+  rows={3}
+  name="message"
+  placeholder="Paste in email content"
+  registerProps={register("message", { required: true })}
+  error={errors.message}
+/>
+``` 

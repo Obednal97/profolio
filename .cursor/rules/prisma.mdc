@@ -1,0 +1,99 @@
+---
+description: 
+globs: backend/prisma/**/*, backend/src/**/*prisma*, backend/src/**/*database*, **/*schema.prisma, **/migrations/**/*, backend/src/**/*service*.ts, backend/src/**/*repository*.ts
+alwaysApply: false
+---
+---
+description: Prisma ORM usage patterns and best practices for PostgreSQL database operations
+ruleType: autoAttached
+globs: ["backend/prisma/**/*", "backend/src/**/*prisma*", "backend/src/**/*database*", "**/*schema.prisma", "**/migrations/**/*", "backend/src/**/*service*.ts", "backend/src/**/*repository*.ts"]
+alwaysApply: false
+---
+
+# Prisma Usage
+
+We use PostgreSQL as our database.
+
+## Database Connection
+
+This is how we import prisma in the backend:
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+```
+
+Or using a singleton pattern for better performance:
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
+const prisma = globalThis.prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma;
+}
+
+export default prisma;
+```
+
+## File Locations
+
+- The prisma schema file is located at: `backend/prisma/schema.prisma`
+- Database migrations are in: `backend/prisma/migrations/`
+- Generated Prisma client is used in NestJS services
+
+## Common Patterns
+
+### Basic CRUD Operations
+
+```typescript
+// Create
+const portfolio = await prisma.portfolio.create({
+  data: {
+    name: 'My Portfolio',
+    userId: user.id,
+  },
+});
+
+// Read with relations
+const portfolio = await prisma.portfolio.findUnique({
+  where: { id: portfolioId },
+  include: {
+    transactions: true,
+    holdings: true,
+  },
+});
+
+// Update
+const updatedPortfolio = await prisma.portfolio.update({
+  where: { id: portfolioId },
+  data: { name: 'Updated Portfolio Name' },
+});
+
+// Delete
+await prisma.portfolio.delete({
+  where: { id: portfolioId },
+});
+```
+
+### Transactions for Data Consistency
+
+```typescript
+await prisma.$transaction(async (tx) => {
+  await tx.transaction.create({
+    data: transactionData,
+  });
+  
+  await tx.holding.upsert({
+    where: { portfolioId_symbol: { portfolioId, symbol } },
+    update: { quantity: { increment: quantity } },
+    create: { portfolioId, symbol, quantity },
+  });
+});
+```

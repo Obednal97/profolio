@@ -1,0 +1,289 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Essential code quality and security standards focusing on patterns AI can help enforce
+ruleType: always
+alwaysApply: false
+---
+
+# Code Quality Standards
+
+Essential security and quality patterns for enterprise-grade development.
+
+## Security Fundamentals
+
+### Never Build These Yourself
+❌ **NEVER build custom authentication** - Use NextAuth.js, Auth0, Supabase Auth, or Clerk  
+❌ **NEVER build custom encryption** - Use AES-256-GCM via crypto libraries  
+❌ **NEVER build custom password hashing** - Use bcrypt, scrypt, or Argon2 libraries  
+❌ **NEVER build custom JWT handling** - Use well-maintained JWT libraries  
+
+### Critical Security Checks
+```typescript
+// ✅ Good: Secure patterns
+import { hash } from 'bcrypt';
+import { randomBytes } from 'crypto';
+
+// ❌ Bad: Insecure patterns  
+const password = 'hardcoded-password'; // Never hardcode secrets
+const random = Math.random(); // Never use for security
+```
+
+### Input Validation
+```typescript
+// ✅ Good: Proper validation
+import { z } from 'zod';
+
+const userSchema = z.object({
+  email: z.string().email(),
+  age: z.number().min(0).max(120),
+});
+
+// ❌ Bad: No validation
+const user = req.body; // Direct use without validation
+```
+
+## Package Manager Standards
+
+### pnpm Requirements (MANDATORY)
+- ✅ Use `pnpm` for all package operations (not npm/yarn)
+- ✅ Include `"packageManager": "pnpm@9.14.4"` in package.json
+- ✅ Only `pnpm-lock.yaml` present (no `package-lock.json`)
+- ✅ No `npm` commands in scripts or documentation
+
+### API Architecture Standards  
+- ✅ **No direct backend calls** from frontend - use Next.js proxy routes (`/api/*`)
+- ✅ **Proxy routes configured** - Backend URL via environment variable (`BACKEND_URL`)
+- ✅ **Authentication forwarded** - Authorization headers passed through proxies
+
+## TypeScript Standards
+
+### Strict Typing
+```typescript
+// ✅ Good: Strict types
+interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+function getUser(id: string): Promise<User | null> {
+  return userService.findById(id);
+}
+
+// ❌ Bad: Loose typing
+function getUser(id: any): any {
+  return userService.findById(id);
+}
+```
+
+### Required Practices
+- ✅ No `any` types unless absolutely necessary (with comment explaining why)
+- ✅ Proper interface/type definitions for all data structures
+- ✅ Optional chaining (`?.`) for potentially undefined properties
+- ✅ Nullish coalescing (`??`) used appropriately
+- ✅ All exports properly typed
+
+## Performance Optimization
+
+### React Patterns
+```typescript
+// ✅ Good: Performance optimized
+import { memo, useCallback, useMemo } from 'react';
+
+const ExpensiveComponent = memo(({ data, onUpdate }) => {
+  const processedData = useMemo(() => 
+    data.map(item => expensiveCalculation(item)), [data]
+  );
+  
+  const handleUpdate = useCallback((id: string) => 
+    onUpdate(id), [onUpdate]
+  );
+  
+  return <div>{/* component */}</div>;
+});
+
+// ❌ Bad: No optimization
+const ExpensiveComponent = ({ data, onUpdate }) => {
+  const processedData = data.map(item => expensiveCalculation(item)); // Recalculates every render
+  return <div>{/* component */}</div>;
+};
+```
+
+### Database Optimization
+```typescript
+// ✅ Good: Optimized queries
+const users = await prisma.user.findMany({
+  include: { profile: true }, // Include related data
+  take: 20, // Pagination
+  skip: page * 20,
+});
+
+// ❌ Bad: N+1 queries and no pagination
+const users = await prisma.user.findMany();
+for (const user of users) {
+  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+}
+```
+
+## Common Anti-Patterns
+
+### Security Issues
+- ❌ Hardcoded secrets: `const API_KEY = 'sk-1234567890abcdef'`
+- ❌ SQL injection: `query = "SELECT * FROM users WHERE id = " + userId`
+- ❌ XSS vulnerabilities: `dangerouslySetInnerHTML={{ __html: userInput }}`
+- ❌ Eval usage: `eval(userCode)` or `new Function(userCode)()`
+
+### Package Management
+- ❌ Using npm instead of pnpm: `npm install`, `npm run build`
+- ❌ Committing wrong lock files: `package-lock.json` in git
+- ❌ Missing packageManager field in package.json
+
+### TypeScript Issues
+- ❌ Unnecessary `any` types: `const data: any = response.json()`
+- ❌ Unused variables: Variables imported but never used
+- ❌ Implicit returns: Functions without explicit return types
+
+### Performance Problems
+- ❌ Missing React optimizations: No `memo`, `useCallback`, `useMemo`
+- ❌ Database inefficiencies: N+1 queries, no pagination
+- ❌ Memory leaks: Event listeners not cleaned up
+
+## AI-Generated Code Review
+
+### Extra Vigilance Required
+When reviewing AI-generated code, pay special attention to:
+
+- 🔍 **Authentication logic** - AI often implements insecure patterns
+- 🔍 **Input validation** - AI may miss edge cases
+- 🔍 **Error handling** - AI can create information disclosure vulnerabilities
+- 🔍 **Business logic** - AI may implement incorrect rules
+- 🔍 **Resource cleanup** - AI often forgets to clean up connections
+
+### Common AI Issues
+```typescript
+// ❌ AI often creates overly complex conditions
+if (user && user.isActive && user.permissions && user.permissions.includes('admin') && !user.suspended) {
+  // Hard to audit and understand
+}
+
+// ✅ Better: Simple, auditable logic
+const isActiveAdmin = user?.isActive && user?.permissions?.includes('admin') && !user?.suspended;
+if (isActiveAdmin) {
+  // Clear and testable
+}
+```
+
+## E2E Testing Standards
+
+### Component Testing Requirements (MANDATORY)
+- ✅ **All interactive components** must have `data-testid` attributes
+- ✅ **Descriptive test IDs** - Use `data-testid="add-asset-button"` not `data-testid="button1"`
+- ✅ **Critical user flows** covered by E2E tests (auth, portfolio operations)
+- ✅ **Security testing** included for auth components
+
+### E2E Testing Commands
+```bash
+# Run all E2E tests
+pnpm run test:e2e
+
+# Security-focused testing
+pnpm run test:e2e:security
+
+# Performance testing
+pnpm run test:performance
+
+# Cross-browser testing
+pnpm run test:e2e --project="chrome,firefox,safari"
+```
+
+### Required Test Categories
+```typescript
+// ✅ Good: Comprehensive test coverage
+test.describe("Authentication Security @security", () => {
+  test("should prevent SQL injection", async ({ page }) => {
+    await page.fill('[data-testid="email-input"]', "'; DROP TABLE users; --");
+    await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
+  });
+});
+
+// ❌ Bad: No test coverage for security
+// No tests for authentication or critical business logic
+```
+
+### Component Data-TestID Standards
+```tsx
+// ✅ Good: Properly testable component
+const AssetForm = () => (
+  <form data-testid="asset-form">
+    <input data-testid="asset-symbol" />
+    <button data-testid="submit-asset">Add Asset</button>
+  </form>
+);
+
+// ❌ Bad: Not testable
+const AssetForm = () => (
+  <form>
+    <input />
+    <button>Add Asset</button>
+  </form>
+);
+```
+
+## Security Testing Automation
+
+### Required Security Tests
+- ✅ **SQL injection prevention** - Automated injection testing on all forms
+- ✅ **XSS protection** - Script injection prevention validation
+- ✅ **Rate limiting** - Brute force protection testing (5-attempt lockout)
+- ✅ **Authentication bypass** - Protected route access testing
+- ✅ **Session management** - Token expiration and invalidation testing
+
+### Performance Testing Standards
+- ✅ **Core Web Vitals** - LCP < 2.5s, CLS < 0.1, FCP < 2s
+- ✅ **Bundle size monitoring** - JS bundles < 1MB total
+- ✅ **Load testing** - 1000+ portfolio items rendering efficiently
+- ✅ **Memory leak detection** - Component lifecycle validation
+
+### Accessibility Testing Requirements
+- ✅ **WCAG 2.1 AA compliance** - Automated accessibility validation
+- ✅ **Keyboard navigation** - All interactive elements accessible via Tab
+- ✅ **Screen reader support** - Proper ARIA labels and descriptions
+- ✅ **Color contrast** - Minimum 4.5:1 contrast ratio validation
+
+## Pre-Commit Checklist
+
+Before any commit:
+- [ ] `pnpm run build` succeeds without errors
+- [ ] `pnpm run type-check` passes  
+- [ ] `pnpm run lint` passes without warnings
+- [ ] **`pnpm run test:e2e` passes** for affected components
+- [ ] **Component has `data-testid` attributes** for interactive elements
+- [ ] **Security tests pass** if auth/forms modified
+- [ ] **Performance tests pass** if UI components modified
+- [ ] No console.log or debug statements in production code
+- [ ] No hardcoded secrets or API keys
+- [ ] All new endpoints have proper authentication/authorization
+- [ ] Input validation added for all user inputs
+- [ ] TypeScript errors resolved (no `any` types)
+- [ ] Performance impact assessed
+- [ ] Database queries optimized
+- [ ] Memory leaks prevented (cleanup functions added)
+
+## Build Verification
+
+```bash
+# MANDATORY: All must pass before commit
+pnpm run build          # Frontend/backend builds
+pnpm run type-check     # TypeScript validation  
+pnpm run lint           # Code quality checks
+pnpm prisma generate    # Database client generation (if applicable)
+
+# Security check
+git grep -E "(password|secret|key|token).*=.*['\"][^'\"]{8,}" --cached
+```
+
+Remember: These standards prevent security vulnerabilities and maintain code quality for enterprise deployment.

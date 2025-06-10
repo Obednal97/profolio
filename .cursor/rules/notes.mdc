@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: General development guidelines and project context for AI assistants
+ruleType: always
+alwaysApply: true
+---
+
+# Development Notes
+
+General guidelines and reminders for AI assistants working on this project.
+
+## Command Execution
+
+- Do not try and run the project via `dev` or `build` command unless I explicitly ask you to.
+- Always ask before running any commands that might affect the production environment
+- Prefer reading code and documentation over running commands to understand the project
+
+## Project Context
+
+- This is a self-hosted portfolio management system called "Profolio"
+- Frontend uses Next.js 15 with React 18 and TypeScript
+- Backend uses NestJS with Prisma ORM and PostgreSQL
+- Focus on financial data privacy and security
+- Uses TanStack Query for data fetching (not SWR)
+- Uses Radix UI primitives (not Shadcn/ui)
+
+## Development Approach
+
+- Always check existing patterns before creating new components
+- Prefer server components in Next.js when possible
+- Use client components only when needed for interactivity
+- Follow the established project structure in frontend/ and backend/ directories

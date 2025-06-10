@@ -1,0 +1,44 @@
+---
+description: How to install packages
+globs: 
+alwaysApply: false
+---
+---
+description: Package management guidelines for the frontend/backend monorepo using pnpm
+ruleType: agentRequested
+alwaysApply: false
+---
+
+# Installing Packages
+
+- Use `pnpm` as the package manager
+- Install packages in the appropriate directory:
+
+## Frontend packages:
+```sh
+cd frontend
+pnpm add package-name
+```
+
+## Backend packages:
+```sh
+cd backend
+pnpm add package-name
+```
+
+## Development dependencies:
+```sh
+# Frontend dev dependencies
+cd frontend
+pnpm add -D package-name
+
+# Backend dev dependencies  
+cd backend
+pnpm add -D package-name
+```
+
+## Root level packages (rare):
+Only install at root level for scripts or tools that affect the entire monorepo:
+```sh
+pnpm add -w package-name
+```

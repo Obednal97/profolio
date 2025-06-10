@@ -2270,22 +2270,42 @@ EOF
         
         # For new configurations, prefer .env.production for production environments
         cat > /opt/profolio/frontend/.env.production << EOF
-# Authentication mode
-NEXT_PUBLIC_AUTH_MODE=local
+# Profolio Production Frontend Configuration
+# Created by installer for production deployments
 
-# Backend API URL (your server's URL)
-NEXT_PUBLIC_API_URL=http://$current_ip:3001
-
-# Node environment
+# === Application Information ===
+NEXT_PUBLIC_APP_NAME=Profolio
 NODE_ENV=production
 
-# Firebase configuration (add your Firebase project details here)
-# Uncomment and configure these lines if using Firebase authentication:
-# NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+# === Deployment Configuration ===
+NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted
+NEXT_PUBLIC_AUTH_MODE=local
+
+# === API Configuration ===
+NEXT_PUBLIC_API_URL=http://$current_ip:3001
+NEXT_PUBLIC_ENABLE_API_PROXY=false
+
+# === Feature Flags ===
+NEXT_PUBLIC_USE_MOCK_API=false
+NEXT_PUBLIC_ENABLE_DEMO_MODE=false
+NEXT_PUBLIC_SHOW_LANDING_PAGE=true
+NEXT_PUBLIC_ALLOW_REGISTRATION=true
+NEXT_PUBLIC_SHOW_BRANDING=true
+
+# === Production Settings ===
+NEXT_PUBLIC_ENABLE_DEBUG=false
+NEXT_PUBLIC_LOG_LEVEL=warn
+
+# === External API Keys ===
+# NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=your_google_places_api_key
+
+# === Firebase Configuration (Optional) ===
+# Uncomment and configure for Firebase authentication:
+# NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
 # NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 # NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 # NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-# NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
+# NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 # NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 EOF
         

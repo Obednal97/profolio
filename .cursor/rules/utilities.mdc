@@ -1,0 +1,90 @@
+---
+description: 
+globs: **/utils/**/*, **/lib/**/*, **/utilities/**/*, **/helpers/**/*, **/common/**/*, **/*util*.ts, **/*util*.tsx, **/*helper*.ts, **/*helper*.tsx
+alwaysApply: false
+---
+---
+description: Guidelines for creating and organizing utility functions in frontend and backend codebases
+ruleType: autoAttached
+globs: ["**/utils/**/*", "**/lib/**/*", "**/utilities/**/*", "**/helpers/**/*", "**/common/**/*", "**/*util*.ts", "**/*util*.tsx", "**/*helper*.ts", "**/*helper*.tsx"]
+alwaysApply: false
+---
+
+# Utility Functions
+
+## Frontend Utilities
+
+- Use lodash utilities for common operations (arrays, objects, strings)
+- Import specific lodash functions to minimize bundle size:
+  ```typescript
+  import groupBy from "lodash/groupBy";
+  import isEmpty from "lodash/isEmpty";
+  import debounce from "lodash/debounce";
+  ```
+- Create utility functions in `frontend/src/lib/` folder for reusable logic
+- Common utilities include: data formatting, validation helpers, API clients
+
+## Backend Utilities
+
+- Create shared utilities in `backend/src/common/` folder
+- Use for database helpers, validation, transforms, and business logic
+- Examples: date calculations, portfolio calculations, transaction processing
+
+## Example Utility Functions
+
+### Frontend Utilities
+
+```typescript
+// frontend/src/lib/formatters.ts
+export function formatCurrency(amount: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(amount);
+}
+
+export function formatPercentage(value: number): string {
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+export function calculatePortfolioValue(holdings: Holding[]): number {
+  return holdings.reduce((total, holding) => {
+    return total + (holding.quantity * holding.currentPrice);
+  }, 0);
+}
+```
+
+### Backend Utilities
+
+```typescript
+// backend/src/common/calculations.ts
+export function calculatePortfolioReturn(
+  currentValue: number,
+  costBasis: number,
+): { absoluteReturn: number; percentReturn: number } {
+  const absoluteReturn = currentValue - costBasis;
+  const percentReturn = costBasis > 0 ? absoluteReturn / costBasis : 0;
+  
+  return {
+    absoluteReturn,
+    percentReturn,
+  };
+}
+
+export function calculateWeightedAverage(
+  transactions: Transaction[],
+): number {
+  const totalValue = transactions.reduce((sum, t) => sum + (t.quantity * t.price), 0);
+  const totalQuantity = transactions.reduce((sum, t) => sum + t.quantity, 0);
+  
+  return totalQuantity > 0 ? totalValue / totalQuantity : 0;
+}
+```
+
+## Organization Guidelines
+
+- Group related utilities together in the same file
+- Use descriptive file names: `formatters.ts`, `calculations.ts`, `validators.ts`
+- Export functions as named exports for better tree-shaking
+- Add JSDoc comments for complex utility functions
+- Write unit tests for utility functions in co-located `.test.ts` files

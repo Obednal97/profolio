@@ -1,0 +1,56 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Project-specific knowledge, conventions, and user preferences learned by the AI assistant
+ruleType: agentRequested
+alwaysApply: false
+---
+
+# Project Memory
+
+This file stores project-specific knowledge, conventions, and user preferences learned by the AI assistant.
+
+## Technical Decisions
+
+* **Frontend Framework:** Next.js 15 with React 18 and TypeScript
+* **Backend Framework:** NestJS with PostgreSQL database
+* **ORM:** Prisma for database operations
+* **CSS Framework:** Tailwind CSS v4 
+* **UI Components:** Radix UI primitives (not Shadcn/ui)
+* **Data Fetching:** TanStack Query (not SWR)
+* **Authentication:** NextAuth
+* **Testing:** Vitest for unit and integration tests
+* **Documentation:** MDX for documentation files
+* **Animation:** Framer Motion for UI animations
+
+## Project Conventions
+
+* **Project Structure:** Frontend/backend monorepo (not Turborepo)
+* **Date Formats:** Use UK date formats (DD-MM-YYYY) and UK grammar
+* **Week Start:** Weeks start on Monday
+* **Timestamps:** Use ISO format or UK date/time formats
+* **File Organisation:** Frontend code in `frontend/` directory, backend in `backend/`
+* **Naming:** Use kebab-case for directories, PascalCase for components
+
+## User Preferences
+
+* **Grammar:** Always use UK grammar and spelling
+* **Date Formats:** UK date formats (DD-MM-YYYY, 1st January 2025)
+* **Command Execution:** Don't run dev/build commands unless explicitly requested
+* **Development Approach:** Focus on privacy and security for financial data
+* **Documentation Strategy:** Convert process docs to cursor rules when they contain automation patterns, keep complex manual processes as documentation
+
+## Business Logic
+
+* **Domain:** Self-hosted portfolio management system called "Profolio"
+* **Focus:** Financial data privacy and security
+* **Target Users:** Individuals managing investment portfolios
+* **Key Features:** Portfolio tracking, performance analysis, secure data storage
+
+## Known Issues & Workarounds
+
+* **Development Notes:** Check existing patterns before creating new components
+* **Security:** Prioritise financial data privacy in all implementations

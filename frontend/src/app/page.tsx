@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { motion, useAnimationFrame } from 'framer-motion';
-import { Button } from '@/components/ui/button/button';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { getAuthModeSync } from '@/lib/authConfig';
-import ProfolioLogo from '@/components/ui/logo/ProfolioLogo';
+import { useState, useEffect, useMemo } from "react";
+import { motion, useAnimationFrame } from "framer-motion";
+import { Button } from "@/components/ui/button/button";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getAuthModeSync } from "@/lib/authConfig";
+import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 
 const container = {
   hidden: {},
@@ -35,7 +35,7 @@ const fadeIn = {
     opacity: 1,
     transition: {
       duration: 1,
-      ease: 'easeOut',
+      ease: "easeOut",
     },
   },
 };
@@ -49,7 +49,10 @@ const getLiveNetWorth = () => {
 };
 
 const formatCompactNumber = (num: number) =>
-  Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
+  Intl.NumberFormat("en", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(num);
 
 export default function LandingPage() {
   const [liveNetWorth, setLiveNetWorth] = useState(getLiveNetWorth());
@@ -61,39 +64,49 @@ export default function LandingPage() {
 
   useEffect(() => {
     const authMode = getAuthModeSync();
-    if (authMode === 'local') {
-      router.push('/auth/signIn');
+    if (authMode === "local") {
+      router.push("/auth/signIn");
     }
   }, [router]);
 
-  const features = useMemo(() => [
-    {
-      icon: "fa-chart-line",
-      title: "Smart Portfolio Tracking",
-      description: "Track all your assets in one place. From stocks and crypto to real estate and savings accounts.",
-      gradient: "from-blue-500 to-blue-600"
-    },
-    {
-      icon: "fa-chart-pie",
-      title: "Beautiful Analytics",
-      description: "Visualise your wealth with stunning charts and insights powered by real-time data.",
-      gradient: "from-purple-500 to-purple-600",
-      isLogo: true
-    },
-    {
-      icon: "fa-shield-alt",
-      title: "Bank-Grade Security",
-      description: "Your financial data is encrypted and secured with the same standards used by major banks.",
-      gradient: "from-green-500 to-green-600"
-    }
-  ], []);
+  const features = useMemo(
+    () => [
+      {
+        icon: "fa-chart-line",
+        title: "Smart Portfolio Tracking",
+        description:
+          "Track all your assets in one place. From stocks and crypto to real estate and savings accounts.",
+        gradient: "from-blue-500 to-blue-600",
+      },
+      {
+        icon: "fa-chart-pie",
+        title: "Beautiful Analytics",
+        description:
+          "Visualise your wealth with stunning charts and insights powered by real-time data.",
+        gradient: "from-purple-500 to-purple-600",
+        isLogo: true,
+      },
+      {
+        icon: "fa-shield-alt",
+        title: "Bank-Grade Security",
+        description:
+          "Your financial data is encrypted and secured with the same standards used by major banks.",
+        gradient: "from-green-500 to-green-600",
+      },
+    ],
+    []
+  );
 
   return (
-    <div className="relative min-h-screen scroll-smooth lg:scroll-auto" style={{ scrollSnapType: 'y mandatory' }}>
+    <div
+      className="relative min-h-screen scroll-smooth lg:scroll-auto"
+      style={{ scrollSnapType: "y mandatory" }}
+      data-testid="main-content"
+    >
       <div className="absolute inset-0 bg-gradient-to-b from-transparent from-20% via-slate-50/40 to-indigo-100/60 dark:from-transparent dark:from-20% dark:via-slate-800/20 dark:to-indigo-900/30"></div>
 
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <motion.div 
+        <motion.div
           className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400 to-cyan-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
           animate={{
             x: [0, 50, -30, 0],
@@ -106,7 +119,7 @@ export default function LandingPage() {
             repeat: Infinity,
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-1/4 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400 to-pink-300 rounded-full opacity-30 dark:opacity-20 filter blur-3xl"
           animate={{
             x: [0, -50, 30, 0],
@@ -120,7 +133,7 @@ export default function LandingPage() {
             delay: 2,
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-indigo-400 to-blue-300 rounded-full opacity-20 dark:opacity-15 filter blur-3xl"
           animate={{
             x: [0, 40, -40, 0],
@@ -134,7 +147,7 @@ export default function LandingPage() {
             delay: 4,
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-3/4 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-400 to-teal-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
           animate={{
             x: [0, 60, -40, 0],
@@ -148,7 +161,7 @@ export default function LandingPage() {
             delay: 6,
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute bottom-10 left-1/4 w-80 h-80 bg-gradient-to-tr from-pink-400 to-purple-300 rounded-full opacity-25 dark:opacity-18 filter blur-3xl"
           animate={{
             x: [0, -30, 45, 0],
@@ -165,14 +178,17 @@ export default function LandingPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section
+        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        style={{ scrollSnapAlign: "start" }}
+      >
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto text-center"
           initial="hidden"
           animate="visible"
           variants={container}
         >
-          <motion.div 
+          <motion.div
             className="inline-flex items-center gap-3 px-6 py-3 rounded-full glass-tile mb-4 sm:mb-6 lg:mb-8 shadow-xl"
             variants={fadeUp}
           >
@@ -185,7 +201,7 @@ export default function LandingPage() {
             </span>
           </motion.div>
 
-          <motion.h1 
+          <motion.h1
             className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8 tracking-tight leading-none"
             variants={fadeUp}
           >
@@ -195,25 +211,40 @@ export default function LandingPage() {
               Unified
             </span>
           </motion.h1>
-          
+
           <motion.p
             className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-8 sm:mb-10 lg:mb-12 leading-relaxed font-medium"
             variants={fadeUp}
           >
-            The modern financial operating system for tracking your entire portfolio. 
+            The modern financial operating system for tracking your entire
+            portfolio.
             <br className="hidden sm:block" />
-            Assets, crypto, stocks, and properties — all in one beautiful interface.
+            Assets, crypto, stocks, and properties — all in one beautiful
+            interface.
           </motion.p>
 
-          <motion.div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8 sm:mb-12 lg:mb-16" variants={fadeUp}>
-            <Button asChild size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 border-0">
+          <motion.div
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8 sm:mb-12 lg:mb-16"
+            variants={fadeUp}
+          >
+            <Button
+              asChild
+              size="lg"
+              className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 border-0"
+              data-testid="login-button"
+            >
               <Link href="/auth/signUp">
                 <i className="fas fa-rocket mr-3" />
                 Start Free Trial
                 <i className="fas fa-arrow-right ml-3" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10 backdrop-blur-xl shadow-xl hover:scale-105 transition-all duration-300">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10 backdrop-blur-xl shadow-xl hover:scale-105 transition-all duration-300"
+            >
               <Link href="/app/assetManager">
                 <i className="fas fa-play-circle mr-3" />
                 Try Demo
@@ -221,7 +252,7 @@ export default function LandingPage() {
             </Button>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="flex flex-wrap justify-center items-center gap-8 text-sm text-gray-600 dark:text-gray-400"
             variants={fadeIn}
           >
@@ -242,7 +273,10 @@ export default function LandingPage() {
       </section>
 
       {/* Live Portfolio Section */}
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section
+        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        style={{ scrollSnapAlign: "start" }}
+      >
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-6xl mx-auto"
           initial="hidden"
@@ -253,27 +287,33 @@ export default function LandingPage() {
           <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-8">
               Watch Your Wealth
-              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent"> Grow</span>
+              <span className="bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400 bg-clip-text text-transparent">
+                {" "}
+                Grow
+              </span>
             </h2>
             <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-              Experience real-time portfolio tracking that updates as markets move.
+              Experience real-time portfolio tracking that updates as markets
+              move.
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="relative group max-w-4xl mx-auto"
             variants={fadeUp}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 rounded-3xl blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
-            
+
             <div className="relative glass-tile p-12 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
               <div className="flex items-center justify-center gap-4 mb-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-xl">
                   <i className="fas fa-chart-line text-3xl text-white" />
                 </div>
-                <h3 className="text-3xl font-bold text-gray-900 dark:text-white">Live Portfolio Value</h3>
+                <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Live Portfolio Value
+                </h3>
               </div>
-              
+
               <div className="text-center">
                 <p className="text-6xl sm:text-7xl font-black text-gray-900 dark:text-white mb-4 font-mono">
                   ${formatCompactNumber(liveNetWorth)}
@@ -283,19 +323,23 @@ export default function LandingPage() {
                     <i className="fas fa-arrow-up" />
                     +12.5%
                   </span>
-                  <span className="text-gray-600 dark:text-gray-400">this month</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    this month
+                  </span>
                   <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                   <span className="text-gray-600 dark:text-gray-400">Live</span>
                 </div>
               </div>
-              
+
               <div className="mt-8 flex justify-center gap-2">
                 {[...Array(7)].map((_, i) => (
                   <motion.div
                     key={i}
                     className="w-2 bg-gradient-to-t from-blue-500 to-purple-500 rounded-full"
                     animate={{
-                      height: [20, 40, 25, 35, 30][i % 5] + Math.sin(Date.now() / 1000 + i) * 5,
+                      height:
+                        [20, 40, 25, 35, 30][i % 5] +
+                        Math.sin(Date.now() / 1000 + i) * 5,
                     }}
                     transition={{
                       duration: 2,
@@ -312,7 +356,10 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section
+        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        style={{ scrollSnapAlign: "start" }}
+      >
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto"
           initial="hidden"
@@ -323,10 +370,14 @@ export default function LandingPage() {
           <motion.div variants={fadeUp} className="text-center mb-12 sm:mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-8">
               Everything You Need,
-              <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent"> Beautifully Simple</span>
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+                {" "}
+                Beautifully Simple
+              </span>
             </h2>
             <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-              Powerful features designed for modern wealth management, without the complexity.
+              Powerful features designed for modern wealth management, without
+              the complexity.
             </p>
           </motion.div>
 
@@ -340,11 +391,18 @@ export default function LandingPage() {
                 <div className="glass-tile p-8 rounded-2xl border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105 h-full">
                   {feature.isLogo ? (
                     <div className="mb-6">
-                      <ProfolioLogo size="lg" className="group-hover:scale-110 transition-transform duration-300" />
+                      <ProfolioLogo
+                        size="lg"
+                        className="group-hover:scale-110 transition-transform duration-300"
+                      />
                     </div>
                   ) : (
-                    <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <i className={`fas ${feature.icon} text-2xl text-white`} />
+                    <div
+                      className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                    >
+                      <i
+                        className={`fas ${feature.icon} text-2xl text-white`}
+                      />
                     </div>
                   )}
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
@@ -361,7 +419,10 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section
+        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        style={{ scrollSnapAlign: "start" }}
+      >
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-5xl mx-auto text-center"
           initial="hidden"
@@ -372,23 +433,33 @@ export default function LandingPage() {
           <div className="glass-tile p-12 sm:p-16 lg:p-20 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl">
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-8">
               Ready to Transform Your
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"> Financial Future?</span>
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                {" "}
+                Financial Future?
+              </span>
             </h2>
             <p className="text-xl text-gray-700 dark:text-gray-300 mb-12 max-w-3xl mx-auto">
-              Join thousands who&apos;ve taken control of their wealth with Profolio. 
-              Start free, upgrade when you&apos;re ready.
+              Join thousands who&apos;ve taken control of their wealth with
+              Profolio. Start free, upgrade when you&apos;re ready.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <Button asChild size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105">
+              <Button
+                asChild
+                size="lg"
+                className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
+              >
                 <Link href="/auth/signUp">
                   Start Free Trial
                   <i className="fas fa-arrow-right ml-3" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10">
-                <Link href="/pricing">
-                  View Pricing
-                </Link>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10"
+              >
+                <Link href="/pricing">View Pricing</Link>
               </Button>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-500 mt-10">
