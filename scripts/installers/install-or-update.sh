@@ -419,16 +419,16 @@ checkout_version() {
     
     cd /opt/profolio
     
-    # Fetch latest refs
-    if ! sudo -u profolio git fetch origin; then
+    # Fetch latest refs and tags
+    if ! sudo -u profolio git fetch origin --tags; then
         error "Failed to fetch latest updates from repository"
         return 1
     fi
     
     # Checkout the specified version
     if [ "$version" = "main" ]; then
-        # Fetch latest changes first
-        if ! sudo -u profolio git fetch origin main; then
+        # Fetch latest changes and tags first
+        if ! sudo -u profolio git fetch origin main --tags; then
             error "Failed to fetch latest main branch"
             return 1
         fi
@@ -2723,7 +2723,7 @@ update_installation() {
         fi
     else
         # Fetch latest changes first
-        if ! sudo -u profolio git fetch origin main; then
+        if ! sudo -u profolio git fetch origin main --tags; then
             error "Failed to fetch updates"
             if [ "$ROLLBACK_ENABLED" = true ]; then
                 execute_rollback
@@ -3351,7 +3351,7 @@ download_profolio_incremental() {
         
         # Fetch only the changes (incremental!) and capture the output to estimate download size
         info "Fetching incremental changes from repository..."
-        local fetch_output=$(sudo -u profolio git fetch origin main --progress 2>&1)
+        local fetch_output=$(sudo -u profolio git fetch origin main --tags --progress 2>&1)
         local actual_download_size="~3-5 KiB"  # Default estimate
         
         # Try to extract download size from git fetch output
