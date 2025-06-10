@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.12.3] - 2025-06-10
+
+### 🐛 **Bug Fixes**
+
+- **FIXED: Launcher Script File Detection**: Enhanced install.sh launcher to check for local installer files before attempting execution
+- **FIXED: Missing Directory Errors**: Added intelligent fallback to download latest installer when local scripts/installers/ directory doesn't exist
+- **FIXED: Fresh Installation Support**: Enabled successful installations on systems without existing Profolio directory structure
+- **FIXED: Older Version Compatibility**: Resolved "No such file or directory" errors on v1.8.0+ servers missing updated file structure
+
+### 🔧 **Technical Details**
+
+- **Smart File Detection**: Added local file existence checks in install.sh launcher before execution
+- **Remote Fallback Logic**: Automatically downloads latest installer from repository when local files are missing
+- **Backward Compatibility**: Preserves existing behavior for installations with local installer files
+- **Error Prevention**: Eliminates bash execution errors for missing local script files
+
+### 📊 **Impact**
+
+- **Universal Installation**: Works on fresh systems, existing installations, and older versions
+- **Reduced Friction**: Automatic fallback eliminates manual troubleshooting for missing files
+- **Production Reliability**: Ensures installation process works regardless of local file state
+- **Update Accessibility**: Enables updates from any Profolio installation version
+
 ## [v1.12.2] - 2025-06-10
 
 ### 🐛 **Bug Fixes**
