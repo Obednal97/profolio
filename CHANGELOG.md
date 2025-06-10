@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.12.4] - 2025-06-10
+
+### 🐛 **Bug Fixes**
+
+- **FIXED: Production Database Migration Failures**: Added automatic Prisma P3005 baseline resolution for existing production databases
+- **FIXED: Migration Baseline Mismatch**: Enhanced installer to automatically mark existing migrations as applied when database schema exists
+- **FIXED: Manual Intervention Requirements**: Eliminated need for manual database baseline commands during production updates
+- **FIXED: v1.8.0+ Database Compatibility**: Resolved migration conflicts between older database schemas and current migration history
+
+### 🔧 **Technical Details**
+
+- **Enhanced Migration Handler**: Added `run_database_migrations()` function with intelligent P3005 error detection and resolution
+- **Automatic Baseline Resolution**: Installer automatically marks all existing migrations as applied for production databases
+- **Production Safety**: Maintains data integrity while resolving migration state mismatches
+- **Error Recovery**: Robust fallback handling for various database migration scenarios
+
+### 📊 **Impact**
+
+- **Production Server Compatibility**: Enables successful updates from v1.8.0+ with existing database schemas
+- **Automated Resolution**: No manual intervention required for P3005 baseline issues
+- **Data Safety**: Preserves all existing data while resolving migration state
+- **Update Reliability**: Eliminates database migration as a blocking factor for production updates
+
 ## [v1.12.3] - 2025-06-10
 
 ### 🐛 **Bug Fixes**

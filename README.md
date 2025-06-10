@@ -68,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/proxmox-ins
 **Standard installer options:**
 ```bash
 # Install specific version
-sudo ./install-or-update.sh --version v1.12.3
+sudo ./install-or-update.sh --version v1.12.4
 
 # Unattended installation for automation
 sudo ./install-or-update.sh --auto
@@ -246,7 +246,7 @@ sudo systemctl enable profolio-backend profolio-frontend
 sudo ./install-or-update.sh
 
 # Update to specific version
-sudo ./install-or-update.sh --version v1.12.3
+sudo ./install-or-update.sh --version v1.12.4
 
 # Check for updates
 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep tag_name
