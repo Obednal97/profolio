@@ -1,3 +1,4 @@
+@import "tailwindcss/preflight";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -173,13 +174,23 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @layer utilities {
@@ -266,7 +277,7 @@ NEXT STEPS: Research iOS PWA backdrop-filter limitations or alternative approach
     padding-top: env(safe-area-inset-top, 44px) !important;
     margin: 0 !important;
   }
-  
+
   /* DISABLED: Status bar blur attempt
   body::before {
     content: '';
@@ -286,12 +297,14 @@ NEXT STEPS: Research iOS PWA backdrop-filter limitations or alternative approach
     background: rgba(17, 24, 40, 0.5);
   }
   */
-  
+
   /* PWA-ONLY Mobile Navigation Padding */
   .pwa-mobile-nav,
   .mobile-bottom-nav nav,
   nav.pwa-mobile-nav {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px) + 16px) !important;
+    padding-bottom: calc(
+      12px + env(safe-area-inset-bottom, 0px) + 16px
+    ) !important;
   }
 }
 
@@ -341,14 +354,16 @@ NEXT STEPS: Research iOS PWA backdrop-filter limitations or alternative approach
   }
 
   /* Touch optimization */
-  button, a, [role="button"] {
+  button,
+  a,
+  [role="button"] {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
 
   /* Optimize transitions for 60fps */
   * {
-    transition-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
   }
 }
@@ -364,4 +379,3 @@ NEXT STEPS: Research iOS PWA backdrop-filter limitations or alternative approach
 }
 
 /* End of PWA CSS */
-
