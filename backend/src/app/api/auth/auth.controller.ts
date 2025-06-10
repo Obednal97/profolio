@@ -280,12 +280,17 @@ export class AuthController {
 
       // SECURITY FIX: Proper Firebase token verification
       // Note: For production, implement proper Firebase Admin SDK verification
-      if (process.env.NODE_ENV === "production") {
+      // Check if Firebase configuration is available
+      if (
+        !process.env.FIREBASE_PROJECT_ID ||
+        !process.env.FIREBASE_CLIENT_EMAIL ||
+        !process.env.FIREBASE_PRIVATE_KEY
+      ) {
         this.logger.error(
-          "Firebase token exchange: Production Firebase verification not implemented"
+          "Firebase token exchange: Firebase configuration not found. Please configure Firebase environment variables."
         );
         throw new HttpException(
-          "Firebase authentication not available in production. Please use local authentication.",
+          "Firebase authentication not configured. Please configure Firebase environment variables.",
           HttpStatus.SERVICE_UNAVAILABLE
         );
       }

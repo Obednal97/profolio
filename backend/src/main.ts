@@ -5,6 +5,8 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { PrismaService } from "@/common/prisma.service";
 import { ValidationPipe } from "@nestjs/common";
 import helmet from "helmet";
+import { config } from "dotenv";
+config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
