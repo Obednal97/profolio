@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import LineChart from '@/components/charts/line';
-import PieChart from '@/components/charts/pie';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import { motion } from "framer-motion";
+import LineChart from "@/components/charts/line";
+import PieChart from "@/components/charts/pie";
+import { useAuth } from "@/lib/unifiedAuth";
 
 interface ChartHistoryItem {
   date: string;
@@ -27,23 +34,34 @@ interface PerformanceMetrics {
   totalInvested: number;
   totalGainLoss: number;
   percentageChange: number;
-  assetsByType: Record<string, { count: number; value: number; allocation: number }>;
+  assetsByType: Record<
+    string,
+    { count: number; value: number; allocation: number }
+  >;
   topPerformers: Asset[];
   lastUpdated: Date;
 }
 
 interface PerformanceDashboardProps {
-  userId?: string;
   formatCurrency: (amount: number) => string;
 }
 
-export default function PerformanceDashboard({ userId, formatCurrency }: PerformanceDashboardProps) {
-  const [timeframe, setTimeframe] = useState('30');
+export default function PerformanceDashboard({
+  formatCurrency,
+}: PerformanceDashboardProps) {
+  // Move useAuth to top level to follow React Hook rules
+  const { token } = useAuth();
+
+  const [timeframe, setTimeframe] = useState("30");
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-  const [chartData, setChartData] = useState<Array<{ date: string; value: number }>>([]);
+  const [chartData, setChartData] = useState<
+    Array<{ date: string; value: number }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState<'overview' | 'detailed' | 'allocation'>('overview');
+  const [viewMode, setViewMode] = useState<
+    "overview" | "detailed" | "allocation"
+  >("overview");
 
   // Use refs to track abort controllers for cleanup
   const metricsAbortControllerRef = useRef<AbortController | null>(null);
@@ -73,56 +91,79 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
       metricsAbortControllerRef.current = metricsController;
       chartAbortControllerRef.current = chartController;
 
-      // Load performance metrics with cleanup
-      const metricsResponse = await fetch('/api/assets/summary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId || 'demo-user-id' }),
+      // 🚀 FIX: Convert to proper REST API calls with authentication
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      // Add authentication header if available
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      // Load performance metrics - converted from POST to GET
+      const metricsResponse = await fetch("/api/assets/summary", {
+        method: "GET", // ✅ Changed from POST to GET
+        headers,
         signal: metricsController.signal,
       });
-      
+
       if (metricsController.signal.aborted) return;
-      
+
+      if (!metricsResponse.ok) {
+        throw new Error(`Assets summary API error: ${metricsResponse.status}`);
+      }
+
       const metricsData = await metricsResponse.json();
-      
+
       if (!metricsController.signal.aborted) {
         setMetrics(metricsData);
       }
 
-      // Load chart data with cleanup
-      const chartResponse = await fetch('/api/assets/history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: userId || 'demo-user-id',
-          days: timeframe === 'max' ? null : parseInt(timeframe)
-        }),
+      // Load chart data - converted from POST to GET with query params
+      const historyUrl = `/api/assets/history${
+        timeframe !== "max" ? `?days=${timeframe}` : ""
+      }`;
+      const chartResponse = await fetch(historyUrl, {
+        method: "GET", // ✅ Changed from POST to GET with query params
+        headers,
         signal: chartController.signal,
       });
-      
+
       if (chartController.signal.aborted) return;
-      
+
+      if (!chartResponse.ok) {
+        throw new Error(`Assets history API error: ${chartResponse.status}`);
+      }
+
       const chartData = await chartResponse.json();
-      
+
       if (chartData.history && !chartController.signal.aborted) {
-        setChartData(chartData.history.map((item: ChartHistoryItem) => ({
-          date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          value: item.totalValue
-        })));
+        setChartData(
+          chartData.history.map((item: ChartHistoryItem) => ({
+            date: new Date(item.date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+            value: item.totalValue,
+          }))
+        );
       }
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         // Request was aborted, this is expected
         return;
       }
-      console.error('Failed to load performance data:', error);
+      console.error("Failed to load performance data:", error);
     } finally {
-      if (!metricsAbortControllerRef.current?.signal.aborted && 
-          !chartAbortControllerRef.current?.signal.aborted) {
+      if (
+        !metricsAbortControllerRef.current?.signal.aborted &&
+        !chartAbortControllerRef.current?.signal.aborted
+      ) {
         setLoading(false);
       }
     }
-  }, [userId, timeframe, cleanup]);
+  }, [timeframe, cleanup]); // ✅ Removed userId dependency as it's handled by authentication
 
   useEffect(() => {
     loadPerformanceData();
@@ -140,31 +181,34 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
   }, [loadPerformanceData]);
 
   // Memoized timeframe options to prevent recreation
-  const timeFrameOptions = useMemo(() => [
-    { value: '7', label: '7D' },
-    { value: '30', label: '30D' },
-    { value: '90', label: '3M' },
-    { value: '180', label: '6M' },
-    { value: '365', label: '1Y' },
-    { value: 'max', label: 'All' },
-  ], []);
+  const timeFrameOptions = useMemo(
+    () => [
+      { value: "7", label: "7D" },
+      { value: "30", label: "30D" },
+      { value: "90", label: "3M" },
+      { value: "180", label: "6M" },
+      { value: "365", label: "1Y" },
+      { value: "max", label: "All" },
+    ],
+    []
+  );
 
   // Memoized color function to prevent recreation
   const getTypeColor = useCallback((type: string): string => {
     const colors: Record<string, string> = {
-      STOCK: '#3B82F6',
-      CRYPTO: '#F59E0B',
-      PROPERTY: '#10B981',
-      SAVINGS: '#8B5CF6',
-      BOND: '#EF4444',
-      OTHER: '#6B7280',
+      STOCK: "#3B82F6",
+      CRYPTO: "#F59E0B",
+      PROPERTY: "#10B981",
+      SAVINGS: "#8B5CF6",
+      BOND: "#EF4444",
+      OTHER: "#6B7280",
     };
-    return colors[type] || '#6B7280';
+    return colors[type] || "#6B7280";
   }, []);
 
   const allocationData = useMemo(() => {
     if (!metrics?.assetsByType) return [];
-    
+
     return Object.entries(metrics.assetsByType).map(([type, data]) => ({
       name: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase(),
       value: data.value,
@@ -181,9 +225,12 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
   }, [metrics?.topPerformers]);
 
   // Memoized view mode handlers
-  const handleViewModeChange = useCallback((mode: 'overview' | 'detailed' | 'allocation') => {
-    setViewMode(mode);
-  }, []);
+  const handleViewModeChange = useCallback(
+    (mode: "overview" | "detailed" | "allocation") => {
+      setViewMode(mode);
+    },
+    []
+  );
 
   const handleTimeframeChange = useCallback((newTimeframe: string) => {
     setTimeframe(newTimeframe);
@@ -210,19 +257,25 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Portfolio Performance</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Portfolio Performance
+          </h2>
           <p className="text-sm text-gray-600">
             Track your asset performance and allocation over time
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <button
             onClick={refreshData}
             disabled={refreshing}
             className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
-            <i className={`fas fa-sync-alt mr-2 ${refreshing ? 'animate-spin' : ''}`}></i>
+            <i
+              className={`fas fa-sync-alt mr-2 ${
+                refreshing ? "animate-spin" : ""
+              }`}
+            ></i>
             Refresh
           </button>
         </div>
@@ -231,17 +284,21 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
       {/* View Mode Selector */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
         {[
-          { key: 'overview', label: 'Overview', icon: 'fa-chart-line' },
-          { key: 'detailed', label: 'Detailed', icon: 'fa-list' },
-          { key: 'allocation', label: 'Allocation', icon: 'fa-chart-pie' },
+          { key: "overview", label: "Overview", icon: "fa-chart-line" },
+          { key: "detailed", label: "Detailed", icon: "fa-list" },
+          { key: "allocation", label: "Allocation", icon: "fa-chart-pie" },
         ].map((mode) => (
           <button
             key={mode.key}
-            onClick={() => handleViewModeChange(mode.key as 'overview' | 'detailed' | 'allocation')}
+            onClick={() =>
+              handleViewModeChange(
+                mode.key as "overview" | "detailed" | "allocation"
+              )
+            }
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               viewMode === mode.key
-                ? 'bg-white text-gray-900 shadow'
-                : 'text-gray-600 hover:text-gray-900'
+                ? "bg-white text-gray-900 shadow"
+                : "text-gray-600 hover:text-gray-900"
             }`}
           >
             <i className={`fas ${mode.icon} mr-2`}></i>
@@ -278,7 +335,9 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Invested</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Invested
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {formatCurrency(metrics?.totalInvested || 0)}
               </p>
@@ -298,18 +357,30 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Gain/Loss</p>
-              <p className={`text-2xl font-bold ${
-                (metrics?.totalGainLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
+              <p
+                className={`text-2xl font-bold ${
+                  (metrics?.totalGainLoss || 0) >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
                 {formatCurrency(metrics?.totalGainLoss || 0)}
               </p>
             </div>
-            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-              (metrics?.totalGainLoss || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
-            }`}>
-              <i className={`fas ${
-                (metrics?.totalGainLoss || 0) >= 0 ? 'fa-arrow-up text-green-600' : 'fa-arrow-down text-red-600'
-              }`}></i>
+            <div
+              className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+                (metrics?.totalGainLoss || 0) >= 0
+                  ? "bg-green-100"
+                  : "bg-red-100"
+              }`}
+            >
+              <i
+                className={`fas ${
+                  (metrics?.totalGainLoss || 0) >= 0
+                    ? "fa-arrow-up text-green-600"
+                    : "fa-arrow-down text-red-600"
+                }`}
+              ></i>
             </div>
           </div>
         </motion.div>
@@ -322,31 +393,47 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Percentage Change</p>
-              <p className={`text-2xl font-bold ${
-                (metrics?.percentageChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
+              <p className="text-sm font-medium text-gray-600">
+                Percentage Change
+              </p>
+              <p
+                className={`text-2xl font-bold ${
+                  (metrics?.percentageChange || 0) >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
                 {(metrics?.percentageChange || 0).toFixed(2)}%
               </p>
             </div>
-            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-              (metrics?.percentageChange || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
-            }`}>
-              <i className={`fas fa-percentage ${
-                (metrics?.percentageChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}></i>
+            <div
+              className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+                (metrics?.percentageChange || 0) >= 0
+                  ? "bg-green-100"
+                  : "bg-red-100"
+              }`}
+            >
+              <i
+                className={`fas fa-percentage ${
+                  (metrics?.percentageChange || 0) >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              ></i>
             </div>
           </div>
         </motion.div>
       </div>
 
       {/* Main Content Area */}
-      {viewMode === 'overview' && (
+      {viewMode === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Portfolio Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Portfolio Growth</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Portfolio Growth
+              </h3>
               <div className="flex space-x-1">
                 {timeFrameOptions.map((option) => (
                   <button
@@ -354,8 +441,8 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
                     onClick={() => handleTimeframeChange(option.value)}
                     className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                       timeframe === option.value
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     }`}
                   >
                     {option.label}
@@ -372,23 +459,28 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
 
           {/* Asset Allocation */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Asset Allocation</h3>
-            <PieChart
-              data={allocationData}
-              nameKey="name"
-              dataKey="value"
-            />
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              Asset Allocation
+            </h3>
+            <PieChart data={allocationData} nameKey="name" dataKey="value" />
             <div className="mt-4 space-y-2">
               {allocationData.map((item) => (
-                <div key={item.name} className="flex items-center justify-between text-sm">
+                <div
+                  key={item.name}
+                  className="flex items-center justify-between text-sm"
+                >
                   <div className="flex items-center space-x-2">
                     <div
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: item.color }}
                     ></div>
-                    <span>{item.name} ({item.count})</span>
+                    <span>
+                      {item.name} ({item.count})
+                    </span>
                   </div>
-                  <span className="font-medium">{item.percentage.toFixed(1)}%</span>
+                  <span className="font-medium">
+                    {item.percentage.toFixed(1)}%
+                  </span>
                 </div>
               ))}
             </div>
@@ -397,18 +489,29 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
       )}
 
       {/* Top Performers */}
-      {viewMode === 'detailed' && (
+      {viewMode === "detailed" && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Performers</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            Top Performers
+          </h3>
           <div className="space-y-4">
             {topPerformers.map((asset, index) => (
-              <div key={asset.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div
+                key={asset.id}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+              >
                 <div className="flex items-center space-x-4">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                    index === 0 ? 'bg-yellow-500' :
-                    index === 1 ? 'bg-gray-400' :
-                    index === 2 ? 'bg-yellow-600' : 'bg-gray-300'
-                  }`}>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                      index === 0
+                        ? "bg-yellow-500"
+                        : index === 1
+                        ? "bg-gray-400"
+                        : index === 2
+                        ? "bg-yellow-600"
+                        : "bg-gray-300"
+                    }`}
+                  >
                     {index + 1}
                   </div>
                   <div>
@@ -422,10 +525,14 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
                   <p className="font-medium text-gray-900">
                     {formatCurrency(asset.current_value)}
                   </p>
-                  <p className={`text-sm ${
-                    (asset.gainLossPercent || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {(asset.gainLossPercent || 0) >= 0 ? '+' : ''}
+                  <p
+                    className={`text-sm ${
+                      (asset.gainLossPercent || 0) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {(asset.gainLossPercent || 0) >= 0 ? "+" : ""}
                     {(asset.gainLossPercent || 0).toFixed(2)}%
                   </p>
                 </div>
@@ -437,8 +544,11 @@ export default function PerformanceDashboard({ userId, formatCurrency }: Perform
 
       {/* Last Updated */}
       <div className="text-center text-sm text-gray-500">
-        Last updated: {metrics?.lastUpdated ? new Date(metrics.lastUpdated).toLocaleString() : 'Never'}
+        Last updated:{" "}
+        {metrics?.lastUpdated
+          ? new Date(metrics.lastUpdated).toLocaleString()
+          : "Never"}
       </div>
     </div>
   );
-} 
+}

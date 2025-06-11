@@ -14,10 +14,55 @@ import { AssetApiConfigModal } from "@/components/modals/AssetApiConfigModal";
 import { AssetCard } from "@/components/cards/AssetCard";
 import { Button } from "@/components/ui/button/button";
 import type { Asset } from "@/types/global";
-import { motion, AnimatePresence } from "framer-motion";
-import LineChart from "@/components/charts/line";
-import PieChart from "@/components/charts/pie";
+import dynamic from "next/dynamic";
 import { FinancialCalculator } from "@/lib/financial";
+import {
+  ChartLoadingSkeleton,
+  AssetManagerSkeleton,
+} from "@/components/ui/skeleton";
+
+// 🚀 PERFORMANCE: Dynamic imports for heavy components to reduce initial bundle size
+const MotionDiv = dynamic(
+  () => import("framer-motion").then((mod) => ({ default: mod.motion.div })),
+  {
+    ssr: false,
+    loading: () => <div style={{ minHeight: "200px" }} />,
+  }
+);
+
+const AnimatePresence = dynamic(
+  () =>
+    import("framer-motion").then((mod) => ({ default: mod.AnimatePresence })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
+// 🚀 PERFORMANCE: Dynamic chart components to reduce initial page load
+const LineChart = dynamic(() => import("@/components/charts/line"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-center">
+        <i className="fas fa-chart-line text-3xl mb-2 opacity-50"></i>
+        <p className="text-sm">Loading chart...</p>
+      </div>
+    </div>
+  ),
+});
+
+const PieChart = dynamic(() => import("@/components/charts/pie"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-center">
+        <i className="fas fa-chart-pie text-3xl mb-2 opacity-50"></i>
+        <p className="text-sm">Loading chart...</p>
+      </div>
+    </div>
+  ),
+});
 
 // Asset type configuration
 const assetTypeConfig = {
@@ -689,18 +734,14 @@ export default function AssetManager() {
   ); // Empty dependencies since we're passing data as props
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#101828]">
-        <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <AssetManagerSkeleton />;
   }
 
   return (
     <div className="min-h-screen text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 sm:mb-8"
@@ -732,10 +773,10 @@ export default function AssetManager() {
               </Button>
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
 
         {error && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-red-900/20 backdrop-blur-sm border border-red-800 rounded-xl p-4 mb-6"
@@ -744,11 +785,11 @@ export default function AssetManager() {
               <i className="fas fa-exclamation-circle mr-2"></i>
               {error}
             </p>
-          </motion.div>
+          </MotionDiv>
         )}
 
         {/* Summary Cards */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -858,10 +899,10 @@ export default function AssetManager() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
 
         {/* Charts Section */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -889,9 +930,7 @@ export default function AssetManager() {
               </div>
             </div>
             {chartLoading ? (
-              <div className="h-48 sm:h-64 flex items-center justify-center">
-                <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              </div>
+              <ChartLoadingSkeleton height="h-48 sm:h-64" />
             ) : (
               <div className="h-48 sm:h-64">
                 <LineChart
@@ -921,10 +960,10 @@ export default function AssetManager() {
               />
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
 
         {/* Filter and View Controls */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -992,12 +1031,12 @@ export default function AssetManager() {
               <i className="fas fa-table text-sm sm:text-base"></i>
             </button>
           </div>
-        </motion.div>
+        </MotionDiv>
 
         {/* Assets Grid/List */}
         <AnimatePresence mode="wait">
           {filteredAssets.length === 0 ? (
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1023,9 +1062,9 @@ export default function AssetManager() {
                 <i className="fas fa-plus mr-2"></i>
                 Add Your First Asset
               </Button>
-            </motion.div>
+            </MotionDiv>
           ) : (
-            <motion.div
+            <MotionDiv
               layout
               className={
                 viewMode === "grid"
@@ -1072,7 +1111,7 @@ export default function AssetManager() {
                   onDelete={handleDelete}
                 />
               )}
-            </motion.div>
+            </MotionDiv>
           )}
         </AnimatePresence>
       </div>

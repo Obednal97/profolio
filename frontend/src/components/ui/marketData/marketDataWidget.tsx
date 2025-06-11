@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/lib/unifiedAuth";
+import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
 
 interface MarketData {
   symbol: string;
@@ -30,13 +30,19 @@ interface Asset {
 }
 
 export function MarketDataWidget() {
-  const { user, token } = useAuth();
+  // 🚀 PERFORMANCE: Use stable user hooks to prevent unnecessary re-renders
+  const userId = useStableUserId();
+  const authToken = useStableAuthToken();
+
   const [marketData, setMarketData] = useState<MarketData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Use ref to track abort controller for cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 🚀 FIX: Use ref for debouncing to prevent rapid successive calls
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Global cache to prevent duplicate requests
   const cacheRef = useRef(
@@ -48,31 +54,44 @@ export function MarketDataWidget() {
       }
     >()
   );
-  const CACHE_DURATION = 60000; // 1 minute cache
+  const CACHE_DURATION = 300000; // 5 minutes cache instead of 1 minute
 
-  // Check if user is in demo mode
-  const isDemoMode =
-    typeof window !== "undefined" &&
-    localStorage.getItem("demo-mode") === "true";
+  // Check if user is in demo mode - memoized for stability
+  const isDemoMode = useMemo(() => {
+    return (
+      typeof window !== "undefined" &&
+      localStorage.getItem("demo-mode") === "true"
+    );
+  }, []);
 
-  // Use Firebase user data or demo user data - memoized
-  const currentUser = useMemo(() => {
-    if (user) {
-      return {
-        id: user.id,
-        name:
-          user.displayName || user.name || user.email?.split("@")[0] || "User",
-        email: user.email || "",
-      };
-    } else if (isDemoMode) {
-      return {
-        id: "demo-user-id",
-        name: "Demo User",
-        email: "demo@profolio.com",
-      };
-    }
-    return null;
-  }, [user, isDemoMode]);
+  // 🚀 FIX: Move stable values to refs to avoid unnecessary re-renders
+  const defaultSymbolsRef = useRef([
+    { symbol: "SPY", name: "S&P 500 ETF" },
+    { symbol: "QQQ", name: "NASDAQ 100 ETF" },
+    { symbol: "VTI", name: "Total Stock Market ETF" },
+  ]);
+
+  const demoMockPricesRef = useRef<
+    Record<string, { basePrice: number; name: string }>
+  >({
+    SPY: { basePrice: 589.75, name: "S&P 500 ETF" },
+    QQQ: { basePrice: 429.88, name: "NASDAQ 100 ETF" },
+    VTI: { basePrice: 278.92, name: "Total Stock Market ETF" },
+    VOO: { basePrice: 521.34, name: "Vanguard S&P 500 ETF" },
+    VEA: { basePrice: 52.87, name: "Vanguard FTSE Developed ETF" },
+    AAPL: { basePrice: 245.18, name: "Apple Inc." },
+    GOOGL: { basePrice: 175.37, name: "Alphabet Inc." },
+    MSFT: { basePrice: 415.26, name: "Microsoft Corporation" },
+    AMZN: { basePrice: 186.51, name: "Amazon.com Inc." },
+    TSLA: { basePrice: 248.42, name: "Tesla Inc." },
+    META: { basePrice: 558.79, name: "Meta Platforms Inc." },
+    NVDA: { basePrice: 138.07, name: "NVIDIA Corporation" },
+    NFLX: { basePrice: 755.28, name: "Netflix Inc." },
+    JPM: { basePrice: 223.16, name: "JPMorgan Chase & Co." },
+    V: { basePrice: 311.83, name: "Visa Inc." },
+    "BTC-USD": { basePrice: 95847.23, name: "Bitcoin USD" },
+    "ETH-USD": { basePrice: 3456.78, name: "Ethereum USD" },
+  });
 
   // Cleanup function for abort controller
   const cleanup = useCallback(() => {
@@ -80,45 +99,15 @@ export function MarketDataWidget() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
   }, []);
-
-  // Default top index funds for new users - moved outside to be stable
-  const defaultSymbols = useMemo(
-    () => [
-      { symbol: "SPY", name: "S&P 500 ETF" },
-      { symbol: "QQQ", name: "NASDAQ 100 ETF" },
-      { symbol: "VTI", name: "Total Stock Market ETF" },
-    ],
-    []
-  );
-
-  // Enhanced demo price data with more realistic mock prices - moved outside to be stable
-  const demoMockPrices = useMemo(
-    (): Record<string, { basePrice: number; name: string }> => ({
-      SPY: { basePrice: 589.75, name: "S&P 500 ETF" },
-      QQQ: { basePrice: 429.88, name: "NASDAQ 100 ETF" },
-      VTI: { basePrice: 278.92, name: "Total Stock Market ETF" },
-      VOO: { basePrice: 521.34, name: "Vanguard S&P 500 ETF" },
-      VEA: { basePrice: 52.87, name: "Vanguard FTSE Developed ETF" },
-      AAPL: { basePrice: 245.18, name: "Apple Inc." },
-      GOOGL: { basePrice: 175.37, name: "Alphabet Inc." },
-      MSFT: { basePrice: 415.26, name: "Microsoft Corporation" },
-      AMZN: { basePrice: 186.51, name: "Amazon.com Inc." },
-      TSLA: { basePrice: 248.42, name: "Tesla Inc." },
-      META: { basePrice: 558.79, name: "Meta Platforms Inc." },
-      NVDA: { basePrice: 138.07, name: "NVIDIA Corporation" },
-      NFLX: { basePrice: 755.28, name: "Netflix Inc." },
-      JPM: { basePrice: 223.16, name: "JPMorgan Chase & Co." },
-      V: { basePrice: 311.83, name: "Visa Inc." },
-      "BTC-USD": { basePrice: 95847.23, name: "Bitcoin USD" },
-      "ETH-USD": { basePrice: 3456.78, name: "Ethereum USD" },
-    }),
-    []
-  );
 
   const generateRealisticMockData = useCallback((symbol: string) => {
     // Streamlined mock data generation for demo purposes
-    const mockData = demoMockPrices[symbol];
+    const mockData = demoMockPricesRef.current[symbol];
     const basePrice = mockData?.basePrice || Math.random() * 500 + 50;
 
     // Simplified price variation for demo mode
@@ -157,8 +146,8 @@ export function MarketDataWidget() {
         };
 
         // Add authorization header for authenticated requests
-        if (token && !isDemoMode) {
-          headers["Authorization"] = `Bearer ${token}`;
+        if (authToken && !isDemoMode) {
+          headers["Authorization"] = `Bearer ${authToken}`;
         } else if (isDemoMode) {
           // Use the correct demo token for demo mode
           headers["Authorization"] = "Bearer demo-token-secure-123";
@@ -212,12 +201,12 @@ export function MarketDataWidget() {
         return generateRealisticMockData(symbol);
       }
     },
-    [token, isDemoMode, generateRealisticMockData]
+    [authToken, isDemoMode, generateRealisticMockData]
   );
 
   useEffect(() => {
     const fetchMarketData = async () => {
-      if (!currentUser?.id) {
+      if (!userId) {
         setLoading(false);
         return;
       }
@@ -244,7 +233,7 @@ export function MarketDataWidget() {
 
         // Skip asset fetching for demo mode to improve performance
         if (isDemoMode) {
-          symbolsToFetch = defaultSymbols.map((def) => ({
+          symbolsToFetch = defaultSymbolsRef.current.map((def) => ({
             ...def,
             isUserAsset: false,
           }));
@@ -254,8 +243,8 @@ export function MarketDataWidget() {
             "Content-Type": "application/json",
           };
 
-          if (token) {
-            headers["Authorization"] = `Bearer ${token}`;
+          if (authToken) {
+            headers["Authorization"] = `Bearer ${authToken}`;
           }
 
           const response = await fetch("/api/assets", {
@@ -291,7 +280,7 @@ export function MarketDataWidget() {
               // Fill remaining slots with default symbols if needed
               const remainingSlots = 3 - symbolsToFetch.length;
               if (remainingSlots > 0) {
-                const defaultToAdd = defaultSymbols
+                const defaultToAdd = defaultSymbolsRef.current
                   .filter(
                     (def) =>
                       !symbolsToFetch.some((s) => s.symbol === def.symbol)
@@ -302,18 +291,21 @@ export function MarketDataWidget() {
               }
             } else {
               // Use default index funds for new users
-              symbolsToFetch = defaultSymbols.map((def) => ({
+              symbolsToFetch = defaultSymbolsRef.current.map((def) => ({
                 ...def,
                 isUserAsset: false,
               }));
             }
           } else {
-            console.error(
-              "❌ [MarketData] Failed to fetch assets:",
-              response.status
-            );
+            // 🚀 PERFORMANCE: Only log significant errors to reduce console noise
+            if (response.status !== 401 && response.status !== 404) {
+              console.error(
+                "❌ [MarketData] Failed to fetch assets:",
+                response.status
+              );
+            }
             // Use default symbols as fallback
-            symbolsToFetch = defaultSymbols.map((def) => ({
+            symbolsToFetch = defaultSymbolsRef.current.map((def) => ({
               ...def,
               isUserAsset: false,
             }));
@@ -331,7 +323,7 @@ export function MarketDataWidget() {
           if (priceData) {
             return {
               symbol: item.symbol,
-              name: demoMockPrices[item.symbol]?.name || item.name,
+              name: demoMockPricesRef.current[item.symbol]?.name || item.name,
               price: priceData.price,
               change: priceData.change,
               changePercent: priceData.changePercent,
@@ -343,7 +335,7 @@ export function MarketDataWidget() {
             const mockData = generateRealisticMockData(item.symbol);
             return {
               symbol: item.symbol,
-              name: demoMockPrices[item.symbol]?.name || item.name,
+              name: demoMockPricesRef.current[item.symbol]?.name || item.name,
               price: mockData.price,
               change: mockData.change,
               changePercent: mockData.changePercent,
@@ -370,11 +362,11 @@ export function MarketDataWidget() {
         }
 
         // Always provide fallback data
-        const fallbackData = defaultSymbols.map((item) => {
+        const fallbackData = defaultSymbolsRef.current.map((item) => {
           const mockData = generateRealisticMockData(item.symbol);
           return {
             symbol: item.symbol,
-            name: demoMockPrices[item.symbol]?.name || item.name,
+            name: demoMockPricesRef.current[item.symbol]?.name || item.name,
             price: mockData.price,
             change: mockData.change,
             changePercent: mockData.changePercent,
@@ -390,17 +382,19 @@ export function MarketDataWidget() {
       }
     };
 
-    fetchMarketData();
+    // 🚀 FIX: Add debouncing to prevent rapid successive calls
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      fetchMarketData();
+    }, 100); // 100ms debounce
   }, [
-    currentUser?.id,
-    isDemoMode,
-    cleanup,
-    defaultSymbols,
-    demoMockPrices,
-    fetchLivePrice,
-    generateRealisticMockData,
-    token,
-  ]);
+    userId, // ✅ Essential - triggers when user changes
+    isDemoMode, // ✅ Essential - triggers when demo mode changes
+    authToken, // ✅ Essential - triggers when auth token changes
+  ]); // 🚀 FIX: Removed function dependencies to prevent race conditions
 
   // Cleanup on unmount
   useEffect(() => {

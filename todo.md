@@ -55,9 +55,30 @@
   - Updated AuthLoadingState component to use consistent animated gradient background
   - Now matches site-wide pattern with proper blob animations (animate-blob vs animate-pulse)
   - Consistent visual experience during auth transitions and page loading
+- [x] ✅ **COMPLETED** - **FIX** - Preloading ineffective - still 1-4 second delays when navigating between pages (Impact Score: 8)
+  - ✅ **Dynamic imports implemented** for heavy components (framer-motion, recharts, react-confetti)
+  - ✅ **Enhanced preloading strategy** - now preloads component chunks and critical assets, not just routes
+  - ✅ **Optimized webpack configuration** with targeted chunk splitting for heavy libraries
+  - ✅ **Improved bundle organization** - separate chunks for framer-motion, recharts, firebase, and react
+  - ✅ **Better loading states** with route-specific skeletons during transitions
+  - ✅ **Comprehensive resource preloading** including static assets and JavaScript bundles
+  - ✅ **Result**: Eliminated 1-4 second delays through bundle optimization and enhanced preloading
+- [x] ✅ **COMPLETED** - **FIX** - Market data error fetching price on dashboard (Impact Score: 7)
+  - ✅ Fixed PropertyManager and ExpenseManager legacy API format causing 401/400 errors
+  - ✅ Converted POST+method to proper REST API calls (GET, POST, PATCH, DELETE)
+  - ✅ Eliminated JSON parsing errors and authentication issues
+  - ✅ Created missing `/api/expenses/[id]` route for PATCH/DELETE operations
+  - ✅ All components now use proper authentication headers and request formats
 - [ ] **NEW** - Google auth users should be able to set password for email auth (Impact Score: 8)
   - Currently asks for current password but none exists for Google auth users
   - Allow setting initial password for account security
+- [x] ✅ **COMPLETED** - **FIX** - Google auth with PWA doesn't work - refreshes and stays on login page (Impact Score: 8)
+  - ✅ **PWA Detection implemented** - Added isPWAStandalone() function to detect PWA standalone mode across multiple contexts
+  - ✅ **Redirect-based auth for PWA** - Using signInWithRedirect instead of signInWithPopup in PWA mode to bypass popup restrictions
+  - ✅ **Redirect result handling** - Added handleGoogleRedirectResult() function to process auth redirects on page load
+  - ✅ **Error handling enhanced** - Special handling for "REDIRECT_INITIATED" error to prevent false error messages
+  - ✅ **Type safety improved** - Added NavigatorWithStandalone interface for iOS Safari standalone detection
+  - ✅ **Result**: Google authentication now works in both browser and PWA standalone mode with proper redirect flow
 - [ ] **NEW** - Add 2FA properly using otplib (Impact Score: 8)
   - Implement TOTP-based two-factor authentication
   - QR code generation for authenticator apps
@@ -77,9 +98,6 @@
 - [ ] **FIX** - Animation stutter on mobile and PWA (Impact Score: 6)
   - Optimize animations for mobile performance
   - Reduce frame drops and improve smoothness
-- [ ] **UPDATE** - Complete ApiKeysService integration in setup service (Impact Score: 6)
-  - Finish backend integration for API key management
-  - Enable proper setup flow for external services
 
 ## 🟢 **MEDIUM PRIORITY** (Features & Improvements)
 
@@ -92,8 +110,35 @@
 - [ ] **NEW** - Stripe integration (Impact Score: 8)
   - Payment processing for premium features
   - Subscription management
-- [ ] **UPDATE** - Complete market data type migration (Impact Score: 7)
-  - Finish backend market data service migration (`backend/src/app/api/market-data/market-data.service.ts`)
+- [ ] **FIX** - 404 error page background display issue (Impact Score: 6)
+  - Hard solid colour visible behind header at top of background
+  - Background may not extend high enough or header transparency issue
+  - Affects visual consistency on error pages
+- [x] ✅ **COMPLETED** - **FIX** - Loading spinner appears instead of skeleton loading during page transitions (Impact Score: 5)
+  - ✅ **Settings page spinner replaced** - Converted basic spinner to SettingsSkeleton with proper profile form skeleton structure
+  - ✅ **PropertyManager skeleton implemented** - Replaced loading spinner with PropertyManagerSkeleton showing realistic content layout
+  - ✅ **AssetManager chart loading** - Replaced chart spinner with ChartLoadingSkeleton for better visual feedback during data loading
+  - ✅ **Skeleton components enhanced** - Added comprehensive SettingsSkeleton, PropertyManagerSkeleton, and ChartLoadingSkeleton components
+  - ✅ **Consistent loading patterns** - All page transitions now use proper skeleton loading instead of generic spinners
+  - ✅ **Result**: Eliminated loading spinner inconsistencies - all pages now show skeleton loading for better perceived performance
+- [x] ✅ **COMPLETED** - **FIX** - Duplicate API calls with cancelled requests (Impact Score: 8)
+  - ✅ Fixed unstable dependency arrays in useEffect and useCallback hooks causing rapid re-renders
+  - ✅ Created useStableUser hook to provide stable user references that only change when essential fields change
+  - ✅ Updated PropertyManager, ExpenseManager, and MarketDataWidget to use stable dependencies
+  - ✅ Eliminated object reference changes in currentUser useMemo that were triggering excessive API calls
+  - ✅ Reduced useEffect dependency arrays to only essential primitive values (userId, authToken, isDemoMode)
+  - ✅ Added proper request debouncing (100ms) to prevent rapid successive calls
+  - ✅ **Result**: Eliminated duplicate cancelled→successful request pattern visible in network tab
+- [x] ✅ **COMPLETED** - **FIX** - Duplicate assets calls from MarketDataWidget with cancellation (Impact Score: 6)
+  - ✅ Fixed race condition in useEffect dependency array that was causing duplicate API requests
+  - ✅ Moved stable values (defaultSymbols, demoMockPrices) to refs to prevent unnecessary re-renders
+  - ✅ Added 100ms debouncing to prevent rapid successive calls
+  - ✅ Simplified dependency array to only essential values (currentUser?.id, isDemoMode, token)
+  - ✅ Eliminated cancelled requests visible in network tab - now only one successful request per trigger
+- [ ] **NEW** - Apple Liquid Glass Design Language Exploration (Impact Score: 5)
+  - Research and prototype modern glass morphism UI patterns
+  - Evaluate integration with existing Tailwind/Radix design system
+  - Enhanced visual appeal and modern aesthetic
 - [ ] **NEW** - Reports page (Impact Score: 7)
   - Generate and export portfolio reports
   - PDF/CSV export functionality
@@ -173,6 +218,17 @@
   - ✅ Assessed market data generators - confirmed they serve legitimate demo mode purpose
   - ✅ Streamlined mock data generation logic
   - ✅ Maintained necessary functionality for development and demo environments
+- [x] ✅ **COMPLETED** - **UPDATE** - Complete market data type migration (Impact Score: 7)
+  - ✅ Migrated backend market data service to use proper Prisma-generated `ApiProvider` enum
+  - ✅ Removed temporary type definitions and established consistent type usage
+  - ✅ Enhanced type safety and database schema consistency
+  - ✅ All market data API calls now use standardized provider enums
+- [x] ✅ **COMPLETED** - **UPDATE** - Complete ApiKeysService integration in setup service (Impact Score: 6)
+  - ✅ Integrated ApiKeysService into SetupService with proper dependency injection
+  - ✅ Created SetupModule to manage dependencies and exports
+  - ✅ Replaced TODO comment with fully functional API key creation during setup
+  - ✅ Added provider validation, error handling, and default permissions mapping
+  - ✅ Enhanced setup flow to properly store and manage external service API keys
 
 ## 📝 Notes
 

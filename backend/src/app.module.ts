@@ -13,6 +13,7 @@ import { NotificationsModule } from "@/app/api/notifications/notifications.modul
 import { PropertiesModule } from "@/app/api/properties/properties.module";
 import { ExpensesModule } from "@/app/api/expenses/expenses.module";
 import { RbacModule } from "@/common/rbac/rbac.module";
+import { SetupModule } from "@/setup/setup.module";
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RbacModule } from "@/common/rbac/rbac.module";
     NotificationsModule,
     PropertiesModule,
     ExpensesModule,
+    SetupModule,
   ],
   providers: [PrismaService],
   exports: [PrismaService],

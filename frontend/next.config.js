@@ -9,6 +9,11 @@ const withMDX = require("@next/mdx")({
   },
 });
 
+// 🚀 PERFORMANCE: Bundle analyzer available when needed
+// const withBundleAnalyzer = require('@next/bundle-analyzer')({
+//   enabled: process.env.ANALYZE === 'true',
+// });
+
 // SECURITY: Safe package.json version reading with validation
 let appVersion = "unknown";
 try {
@@ -168,17 +173,50 @@ const nextConfig = {
 
   // PERFORMANCE: Webpack optimizations
   webpack: (config, { dev, isServer }) => {
-    // PERFORMANCE: Optimize bundle splitting
+    // 🚀 PERFORMANCE: Enhanced bundle splitting for better loading performance
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
         chunks: "all",
         cacheGroups: {
           default: false,
           vendors: false,
+
+          // 🚀 PERFORMANCE: Separate vendor chunks for better caching
           vendor: {
             chunks: "all",
             name: "vendor",
             test: /[\\/]node_modules[\\/]/,
+            priority: 10,
+          },
+
+          // 🚀 PERFORMANCE: Heavy libraries get their own chunks for better preloading
+          framerMotion: {
+            name: "framer-motion",
+            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+            chunks: "all",
+            priority: 30,
+          },
+
+          recharts: {
+            name: "recharts",
+            test: /[\\/]node_modules[\\/]recharts[\\/]/,
+            chunks: "all",
+            priority: 30,
+          },
+
+          firebase: {
+            name: "firebase",
+            test: /[\\/]node_modules[\\/]firebase[\\/]/,
+            chunks: "all",
+            priority: 30,
+          },
+
+          // 🚀 PERFORMANCE: React libraries together for better loading
+          react: {
+            name: "react",
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            chunks: "all",
+            priority: 20,
           },
         },
       };

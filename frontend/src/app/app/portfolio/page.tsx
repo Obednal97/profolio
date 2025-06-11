@@ -19,7 +19,17 @@ import {
   SkeletonStat,
   SkeletonButton,
 } from "@/components/ui/skeleton";
-import { AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
+
+// 🚀 PERFORMANCE: Dynamic import for animations to reduce initial bundle size
+const AnimatePresence = dynamic(
+  () =>
+    import("framer-motion").then((mod) => ({ default: mod.AnimatePresence })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 // Asset type configuration
 const assetTypeConfig = {

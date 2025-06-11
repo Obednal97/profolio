@@ -8,12 +8,13 @@ import React, {
 } from "react";
 import type { Property } from "@/types/global";
 import { BaseModal as Modal } from "@/components/modals/modal";
-import { useAuth } from "@/lib/unifiedAuth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
 import PieChart from "@/components/charts/pie";
 import { PropertyModal } from "@/components/modals/PropertyModal";
+import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
+import { PropertyManagerSkeleton } from "@/components/ui/skeleton";
 
 const propertyTypeConfig = {
   residential: {
@@ -56,35 +57,14 @@ export default function PropertyManager() {
   const [sortOrder, setSortOrder] = useState<
     "value_desc" | "value_asc" | "rental_desc" | "rental_asc"
   >("value_desc");
-  const { user } = useAuth();
   const { formatCurrency } = useAppContext();
+
+  // 🚀 PERFORMANCE: Use stable user hooks to prevent unnecessary re-renders
+  const userId = useStableUserId();
+  const authToken = useStableAuthToken();
 
   // Use ref to track abort controller for cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Check if user is in demo mode
-  const isDemoMode =
-    typeof window !== "undefined" &&
-    localStorage.getItem("demo-mode") === "true";
-
-  // Use Firebase user data or demo user data - memoized
-  const currentUser = useMemo(() => {
-    if (user) {
-      return {
-        id: user.id,
-        name:
-          user.displayName || user.name || user.email?.split("@")[0] || "User",
-        email: user.email || "",
-      };
-    } else if (isDemoMode) {
-      return {
-        id: "demo-user-id",
-        name: "Demo User",
-        email: "demo@profolio.com",
-      };
-    }
-    return null;
-  }, [user, isDemoMode]);
 
   // Cleanup function for abort controller
   const cleanup = useCallback(() => {
@@ -95,7 +75,7 @@ export default function PropertyManager() {
   }, []);
 
   const fetchProperties = useCallback(async () => {
-    if (!currentUser?.id) return;
+    if (!userId) return;
 
     // Cancel any ongoing request
     cleanup();
@@ -106,16 +86,19 @@ export default function PropertyManager() {
 
     setLoading(true);
     try {
-      // Use the proxy endpoint with authentication
-      const authToken = (isDemoMode ? "demo-token" : user?.token) || null;
+      // 🚀 FIX: Convert from legacy POST+method format to proper REST API calls
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      // Add authentication header
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
 
       const response = await fetch("/api/properties", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ method: "READ", userId: currentUser.id }),
+        method: "GET", // ✅ Changed from POST to GET
+        headers,
         signal: controller.signal,
       });
 
@@ -146,7 +129,7 @@ export default function PropertyManager() {
         setLoading(false);
       }
     }
-  }, [currentUser?.id, cleanup, isDemoMode, user?.token]);
+  }, [userId, cleanup, authToken]);
 
   useEffect(() => {
     fetchProperties();
@@ -158,33 +141,48 @@ export default function PropertyManager() {
   }, [cleanup]);
 
   const handleSubmit = async (propertyData: Property) => {
-    if (!currentUser) return;
+    if (!userId) return;
 
     try {
-      // Use the proxy endpoint with authentication
-      const authToken = (isDemoMode ? "demo-token" : user?.token) || null;
+      // 🚀 FIX: Convert to proper REST API calls
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
 
-      const method = editingProperty ? "UPDATE" : "CREATE";
-      const response = await fetch("/api/properties", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          method,
-          userId: currentUser.id,
-          ...propertyData,
-          ...(editingProperty?.id ? { id: editingProperty.id } : {}),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // Add authentication header
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
       }
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      if (editingProperty) {
+        // UPDATE: Use PATCH with ID in URL
+        const response = await fetch(`/api/properties/${editingProperty.id}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify(propertyData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+      } else {
+        // CREATE: Use POST without method parameter
+        const response = await fetch("/api/properties", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(propertyData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+      }
 
       setShowModal(false);
       setEditingProperty(null);
@@ -196,24 +194,24 @@ export default function PropertyManager() {
   };
 
   const handleDelete = async (propertyId: string) => {
-    if (!currentUser) return;
+    if (!userId) return;
     if (!confirm("Are you sure you want to delete this property?")) return;
 
     try {
-      // Use the proxy endpoint with authentication
-      const authToken = (isDemoMode ? "demo-token" : user?.token) || null;
+      // 🚀 FIX: Convert to proper REST API calls
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
 
-      const response = await fetch("/api/properties", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          method: "DELETE",
-          userId: currentUser.id,
-          id: propertyId,
-        }),
+      // Add authentication header
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
+
+      // DELETE: Use DELETE with ID in URL
+      const response = await fetch(`/api/properties/${propertyId}`, {
+        method: "DELETE",
+        headers,
       });
 
       if (!response.ok) {
@@ -547,11 +545,7 @@ export default function PropertyManager() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#101828]">
-        <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <PropertyManagerSkeleton />;
   }
 
   return (
@@ -886,7 +880,7 @@ export default function PropertyManager() {
             onSubmit={handleSubmit}
             initialData={editingProperty}
             error={modalError}
-            currentUserId={currentUser?.id}
+            currentUserId={userId || undefined}
           />
         </Modal>
       )}

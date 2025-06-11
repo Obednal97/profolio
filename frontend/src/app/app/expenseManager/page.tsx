@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { useAuth } from "@/lib/unifiedAuth";
+import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { ExpenseModal } from "@/components/modals/ExpenseModal";
 import { Button } from "@/components/ui/button/button";
@@ -30,7 +30,10 @@ import {
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
-  const { user, token } = useAuth();
+
+  // 🚀 PERFORMANCE: Use stable user hooks to prevent unnecessary re-renders
+  const userId = useStableUserId();
+  const authToken = useStableAuthToken();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,30 +71,6 @@ function ExpenseManager() {
   const deleteAbortControllerRef = useRef<AbortController | null>(null);
   const bulkDeleteAbortControllerRef = useRef<AbortController | null>(null);
 
-  // Check if user is in demo mode
-  const isDemoMode =
-    typeof window !== "undefined" &&
-    localStorage.getItem("demo-mode") === "true";
-
-  // Use Firebase user data or demo user data - memoized
-  const currentUser = useMemo(() => {
-    if (user) {
-      return {
-        id: user.id,
-        name:
-          user.displayName || user.name || user.email?.split("@")[0] || "User",
-        email: user.email || "",
-      };
-    } else if (isDemoMode) {
-      return {
-        id: "demo-user-id",
-        name: "Demo User",
-        email: "demo@profolio.com",
-      };
-    }
-    return null;
-  }, [user, isDemoMode]);
-
   // Cleanup function for all abort controllers
   const cleanup = useCallback(() => {
     if (fetchAbortControllerRef.current) {
@@ -113,7 +92,7 @@ function ExpenseManager() {
   }, []);
 
   const fetchExpenses = useCallback(async () => {
-    if (!currentUser?.id) return;
+    if (!userId) return;
 
     // Cancel any ongoing request
     cleanup();
@@ -124,20 +103,21 @@ function ExpenseManager() {
 
     setLoading(true);
     try {
-      // Use the proxy endpoint with authentication
-      const authToken = token || (isDemoMode ? "demo-token" : null);
+      // 🚀 FIX: Convert from legacy POST+method format to proper REST API calls
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
 
-      const response = await fetch("/api/expenses", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          method: "READ",
-          userId: currentUser.id,
-          days: parseInt(timeRange),
-        }),
+      // Add authentication header
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
+
+      // Use GET with query parameters instead of POST with body
+      const queryParams = timeRange ? `?days=${timeRange}` : "";
+      const response = await fetch(`/api/expenses${queryParams}`, {
+        method: "GET", // ✅ Changed from POST to GET
+        headers,
         signal: controller.signal,
       });
 
@@ -168,11 +148,11 @@ function ExpenseManager() {
         setLoading(false);
       }
     }
-  }, [currentUser?.id, timeRange, token, isDemoMode, cleanup]);
+  }, [userId, timeRange, cleanup, authToken]);
 
   useEffect(() => {
-    if (currentUser?.id) fetchExpenses();
-  }, [currentUser?.id, fetchExpenses]);
+    if (userId) fetchExpenses();
+  }, [userId, fetchExpenses]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -207,7 +187,7 @@ function ExpenseManager() {
 
   const handleSubmit = useCallback(
     async (expenseData: Omit<Expense, "id"> & { id?: string }) => {
-      if (!currentUser) return;
+      if (!userId) return;
 
       // Cancel any ongoing submit request
       if (submitAbortControllerRef.current) {
@@ -219,40 +199,58 @@ function ExpenseManager() {
       submitAbortControllerRef.current = controller;
 
       try {
-        // Use the proxy endpoint with authentication
-        const authToken = token || (isDemoMode ? "demo-token" : null);
+        // 🚀 FIX: Convert to proper REST API calls
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
 
-        const method = editingExpense ? "UPDATE" : "CREATE";
+        // Add authentication header
+        if (authToken) {
+          headers["Authorization"] = `Bearer ${authToken}`;
+        }
 
         // For new expenses, we need to add an id if it doesn't exist
         const expenseWithId: Expense = {
           ...expenseData,
           id: expenseData.id || Date.now().toString(),
-          userId: currentUser.id,
+          userId: userId,
         };
 
-        const response = await fetch("/api/expenses", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            method,
-            ...expenseWithId,
-            ...(editingExpense?.id ? { id: editingExpense.id } : {}),
-          }),
-          signal: controller.signal,
-        });
+        if (editingExpense) {
+          // UPDATE: Use PATCH with ID in URL
+          const response = await fetch(`/api/expenses/${editingExpense.id}`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify(expenseWithId),
+            signal: controller.signal,
+          });
 
-        if (controller.signal.aborted) return;
+          if (controller.signal.aborted) return;
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          if (data.error) throw new Error(data.error);
+        } else {
+          // CREATE: Use POST without method parameter
+          const response = await fetch("/api/expenses", {
+            method: "POST",
+            headers,
+            body: JSON.stringify(expenseWithId),
+            signal: controller.signal,
+          });
+
+          if (controller.signal.aborted) return;
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          if (data.error) throw new Error(data.error);
         }
-
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
 
         if (!controller.signal.aborted) {
           setShowModal(false);
@@ -270,12 +268,12 @@ function ExpenseManager() {
         }
       }
     },
-    [editingExpense, currentUser, fetchExpenses, token, isDemoMode]
+    [editingExpense, userId, fetchExpenses, authToken]
   );
 
   const handleDelete = useCallback(
     async (expenseId: string) => {
-      if (!currentUser) return;
+      if (!userId) return;
       if (!confirm("Are you sure you want to delete this expense?")) return;
 
       // Cancel any ongoing delete request
@@ -288,20 +286,20 @@ function ExpenseManager() {
       deleteAbortControllerRef.current = controller;
 
       try {
-        // Use the proxy endpoint with authentication
-        const authToken = token || (isDemoMode ? "demo-token" : null);
+        // 🚀 FIX: Convert to proper REST API calls
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
 
-        const response = await fetch("/api/expenses", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            method: "DELETE",
-            userId: currentUser.id,
-            id: expenseId,
-          }),
+        // Add authentication header
+        if (authToken) {
+          headers["Authorization"] = `Bearer ${authToken}`;
+        }
+
+        // DELETE: Use DELETE with ID in URL
+        const response = await fetch(`/api/expenses/${expenseId}`, {
+          method: "DELETE",
+          headers,
           signal: controller.signal,
         });
 
@@ -328,7 +326,7 @@ function ExpenseManager() {
         }
       }
     },
-    [currentUser, fetchExpenses, token, isDemoMode]
+    [userId, fetchExpenses, authToken]
   );
 
   const handleOpenModal = useCallback(() => {
@@ -695,29 +693,28 @@ function ExpenseManager() {
   }, [filteredExpenses, selectedExpenses.size]);
 
   const handleBulkDelete = useCallback(async () => {
-    if (!currentUser || selectedExpenses.size === 0) return;
+    if (!userId || selectedExpenses.size === 0) return;
 
     const count = selectedExpenses.size;
     if (!confirm(`Are you sure you want to delete ${count} selected expenses?`))
       return;
 
     try {
-      // Use the proxy endpoint with authentication
-      const authToken = token || (isDemoMode ? "demo-token" : null);
+      // 🚀 FIX: Convert to proper REST API calls
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
 
-      // Delete each selected expense
+      // Add authentication header
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
+
+      // Delete each selected expense using proper REST API
       for (const expenseId of selectedExpenses) {
-        await fetch("/api/expenses", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            method: "DELETE",
-            userId: currentUser.id,
-            id: expenseId,
-          }),
+        await fetch(`/api/expenses/${expenseId}`, {
+          method: "DELETE",
+          headers,
         });
       }
 
@@ -730,35 +727,37 @@ function ExpenseManager() {
       setError("Failed to delete selected expenses");
     }
   }, [
-    currentUser,
+    userId,
     selectedExpenses,
     fetchExpenses,
     setSuccess,
     setError,
-    token,
-    isDemoMode,
+    authToken,
   ]);
 
   const handleBulkCategoryUpdate = useCallback(
     async (newCategory: string) => {
-      if (!currentUser || selectedExpenses.size === 0) return;
+      if (!userId || selectedExpenses.size === 0) return;
 
       try {
-        // Use the proxy endpoint with authentication
-        const authToken = token || (isDemoMode ? "demo-token" : null);
+        // 🚀 FIX: Convert to proper REST API calls
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
 
-        // Update each selected expense
+        // Add authentication header
+        if (authToken) {
+          headers["Authorization"] = `Bearer ${authToken}`;
+        }
+
+        // Update each selected expense using proper REST API
         for (const expenseId of selectedExpenses) {
           const expense = expenses.find((e) => e.id === expenseId);
           if (expense) {
-            await fetch("/api/expenses", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-                "Content-Type": "application/json",
-              },
+            await fetch(`/api/expenses/${expenseId}`, {
+              method: "PATCH",
+              headers,
               body: JSON.stringify({
-                method: "UPDATE",
                 ...expense,
                 category: newCategory,
               }),
@@ -776,14 +775,13 @@ function ExpenseManager() {
       }
     },
     [
-      currentUser,
+      userId,
       selectedExpenses,
       expenses,
       fetchExpenses,
       setSuccess,
       setError,
-      token,
-      isDemoMode,
+      authToken,
     ]
   );
 
@@ -1714,7 +1712,7 @@ function ExpenseManager() {
             onClose={handleCloseModal}
             onSubmit={handleSubmit}
             initialData={editingExpense}
-            currentUserId={currentUser?.id}
+            currentUserId={userId || undefined}
             categories={allCategories}
           />
         )}

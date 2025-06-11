@@ -17,7 +17,7 @@ import {
   SkeletonButton,
 } from "@/components/ui/skeleton";
 
-// IMPROVEMENT: Dynamic import of Confetti to prevent hydration issues
+// 🚀 PERFORMANCE: Dynamic import of Confetti to reduce initial bundle size and prevent hydration issues
 const Confetti = dynamic(() => import("react-confetti"), {
   ssr: false,
   loading: () => null,

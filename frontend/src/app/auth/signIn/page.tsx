@@ -8,15 +8,15 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 import { logger } from "@/lib/logger";
+import { handleGoogleRedirectResult } from "@/lib/firebase";
 
 function SignInPage() {
   const {
-    user,
-    loading: authLoading,
     signIn,
     signInWithGoogleProvider,
+    user,
+    loading: authLoading,
     authMode,
-    config,
   } = useAuth();
   const { signInWithDemo } = useAuthHook();
 
@@ -29,22 +29,16 @@ function SignInPage() {
   const isFormValid =
     formData.email.trim() !== "" && formData.password.trim() !== "";
 
-  // Check if user is in demo mode
-  const isDemoMode =
-    typeof window !== "undefined" &&
-    localStorage.getItem("demo-mode") === "true";
-
   // Redirect if already authenticated (unified user or demo mode)
   useEffect(() => {
     logger.auth("Auth state check:", {
       user: user?.id,
       authLoading,
-      isDemoMode,
       authMode,
     });
 
     // Only redirect if we have a valid user AND we're not in a loading state
-    if (!authLoading && ((user && user.id) || isDemoMode)) {
+    if (!authLoading && user && user.id) {
       logger.auth("Redirecting to dashboard...");
 
       // Use a small delay to ensure the auth state is fully settled
@@ -54,7 +48,28 @@ function SignInPage() {
 
       return () => clearTimeout(redirectTimer);
     }
-  }, [user, authLoading, isDemoMode, authMode]);
+  }, [user, authLoading, authMode]);
+
+  // 🔧 PWA FIX: Check for Google auth redirect result on page load
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        const result = await handleGoogleRedirectResult();
+        if (result) {
+          logger.auth(
+            "Google auth redirect successful, redirecting to dashboard"
+          );
+          window.location.href = "/app/dashboard?auth-action=signing-in";
+        }
+      } catch (error) {
+        logger.auth("Failed to handle redirect result:", error);
+        // Don't show error to user unless it's critical
+      }
+    };
+
+    // Only check on mount, not on every render
+    checkRedirectResult();
+  }, []); // Empty dependency array - only run once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +114,15 @@ function SignInPage() {
       }, 1000);
     } catch (err: unknown) {
       logger.auth("Google sign in error:", err);
+
+      // 🔧 PWA FIX: Handle redirect-based auth for PWA mode
+      if (err instanceof Error && err.message === "REDIRECT_INITIATED") {
+        logger.auth("Google auth redirect initiated for PWA mode");
+        // Don't show error - redirect is in progress
+        // Page will reload with auth result
+        return;
+      }
+
       const errorMessage =
         err instanceof Error ? err.message : "Failed to sign in with Google";
       setError(errorMessage);
@@ -134,7 +158,7 @@ function SignInPage() {
   }
 
   // Don't render if user is already authenticated or in demo mode
-  if (!authLoading && ((user && user.id) || isDemoMode)) return null;
+  if (!authLoading && user && user.id) return null;
 
   return (
     <AuthLayout>
@@ -211,7 +235,7 @@ function SignInPage() {
         </motion.div>
 
         {/* Google Sign-in (show first in Firebase mode) */}
-        {config?.enableGoogleAuth && signInWithGoogleProvider && (
+        {signInWithGoogleProvider && (
           <div className="mb-6">
             <button
               onClick={handleGoogleSignIn}
@@ -242,7 +266,7 @@ function SignInPage() {
         )}
 
         {/* Divider (only show when both Google and email are available) */}
-        {config?.enableGoogleAuth && signInWithGoogleProvider && (
+        {signInWithGoogleProvider && (
           <div className="mb-6">
             <div className="relative flex items-center">
               <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
@@ -431,7 +455,7 @@ function SignInPage() {
           </div>
 
           {/* Only show forgot password for Firebase mode */}
-          {config?.enableGoogleAuth && (
+          {signInWithGoogleProvider && (
             <div>
               <Link
                 href="/auth/forgotPassword"
