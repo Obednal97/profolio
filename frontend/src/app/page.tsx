@@ -8,6 +8,9 @@ import { useRouter } from "next/navigation";
 import { getAuthModeSync } from "@/lib/authConfig";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 
+// Import liquid glass styles
+import "../styles/liquid-glass.css";
+
 const container = {
   hidden: {},
   visible: {
@@ -189,7 +192,13 @@ export default function LandingPage() {
           variants={container}
         >
           <motion.div
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-full glass-tile mb-4 sm:mb-6 lg:mb-8 shadow-xl"
+            className="inline-flex items-center gap-3 px-6 py-3 rounded-full liquid-glass--subtle backdrop-blur-md border border-white/25 dark:border-white/15 shadow-xl mb-4 sm:mb-6 lg:mb-8"
+            style={{
+              background: "rgba(255, 255, 255, 0.12)",
+              backdropFilter: "blur(12px) saturate(150%)",
+              boxShadow:
+                "0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+            }}
             variants={fadeUp}
           >
             <div className="relative flex h-3 w-3">
@@ -457,7 +466,13 @@ export default function LandingPage() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10"
+                className="text-lg px-10 py-6 liquid-glass--standard rounded-xl border border-white/25 dark:border-white/15 hover:scale-105 transition-all duration-300"
+                style={{
+                  background: "rgba(255, 255, 255, 0.15)",
+                  backdropFilter: "blur(12px) saturate(150%)",
+                  boxShadow:
+                    "0 8px 24px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25)",
+                }}
               >
                 <Link href="/pricing">View Pricing</Link>
               </Button>
