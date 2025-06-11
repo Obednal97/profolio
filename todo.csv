@@ -34,7 +34,7 @@ Task,Type,Area,Priority,Impact Score,Status
 "NextAuth migration",UPDATE,Authentication & Security,High,7,
 "Animation stutter on mobile and pwa",FIX,Frontend Performance,High,6,
 "Complete ApiKeysService integration in setup service",UPDATE,Backend API,High,6,✅ COMPLETED
-"Separate app performance from user actions",NEW,Backend Performance,Medium,9,
+"Separate app performance from user actions",NEW,Backend Performance,Medium,9,📋 PLANNED - Technical specification completed
 "Complete market data type migration",UPDATE,Backend API,High,7,✅ COMPLETED
 "User management",NEW,Backend Features,Medium,8,
 "Stripe integration",NEW,Backend Features,Medium,8,
@@ -64,7 +64,7 @@ Task,Type,Area,Priority,Impact Score,Status
 "Clean up temporary market data generation",UPDATE,Backend Cleanup,Technical Debt,3,✅ COMPLETED
 "Preloading ineffective - still 1-4 second delays when navigating between pages",FIX,Frontend Performance,High,8,✅ COMPLETED
 "Market data error fetching price on dashboard with cancelled API calls",FIX,Frontend API,High,7,✅ COMPLETED
-"404 error page background display issue",FIX,Frontend UI/UX,Medium,6,
+"404 error page background display issue",FIX,Frontend UI/UX,Medium,6,✅ COMPLETED
 "Loading spinner appears instead of skeleton loading during page transitions",FIX,Frontend UI/UX,Medium,5,✅ COMPLETED
 "Duplicate assets calls from MarketDataWidget with cancellation",FIX,Frontend Performance,Medium,6,✅ COMPLETED
 "Apple Liquid Glass Design Language Exploration",NEW,Frontend UI/UX,Medium,5,

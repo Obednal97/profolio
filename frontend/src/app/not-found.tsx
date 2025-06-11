@@ -1,19 +1,59 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import React from 'react';
-import { motion } from 'framer-motion';
-import ProfolioLogo from '@/components/ui/logo/ProfolioLogo';
+import Link from "next/link";
+import React from "react";
+import { motion } from "framer-motion";
+import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 
-// Beautiful animated 404 page with modern design
+// Beautiful animated 404 page that integrates with the layout system
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900 flex items-center justify-center p-4">
-      {/* Background decoration */}
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      {/* 
+        ✅ BACKGROUND FIX: Add compatible background for header blur effects
+        Uses same pattern as other public pages (pricing, how-it-works)
+        Transparent at top to work with header, gradient below
+      */}
+
+      {/* Main background - transparent at top for header compatibility */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent from-20% via-blue-50/30 to-purple-50/50 dark:from-transparent dark:from-20% dark:via-gray-800/20 dark:to-gray-900/40"></div>
+
+      {/* Animated background orbs for visual interest */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <motion.div
+          className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-300 rounded-full opacity-25 dark:opacity-15 filter blur-3xl"
+          animate={{
+            x: [0, 40, -20, 0],
+            y: [0, -20, 40, 0],
+            scale: [1, 1.1, 0.9, 1],
+          }}
+          transition={{
+            duration: 22,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+        />
+        <motion.div
+          className="absolute bottom-20 -left-40 w-96 h-96 bg-gradient-to-tr from-pink-400 to-purple-300 rounded-full opacity-25 dark:opacity-15 filter blur-3xl"
+          animate={{
+            x: [0, -30, 40, 0],
+            y: [0, 40, -30, 0],
+            scale: [1, 0.9, 1.1, 1],
+          }}
+          transition={{
+            duration: 26,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: 3,
+          }}
+        />
+      </div>
+
+      {/* Background decoration - lighter accent elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-200 dark:bg-blue-800 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-        <div className="absolute top-3/4 right-1/4 w-32 h-32 bg-purple-200 dark:bg-purple-800 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse delay-1000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-32 h-32 bg-pink-200 dark:bg-pink-800 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse delay-500"></div>
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-200 dark:bg-blue-800 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+        <div className="absolute top-3/4 right-1/4 w-32 h-32 bg-purple-200 dark:bg-purple-800 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-1000"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-32 h-32 bg-pink-200 dark:bg-pink-800 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-500"></div>
       </div>
 
       <div className="relative z-10 text-center max-w-2xl mx-auto">
@@ -55,7 +95,11 @@ export default function NotFound() {
             </motion.div>
             <motion.div
               animate={{ y: [-5, 15, -5] }}
-              transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+              transition={{
+                repeat: Infinity,
+                duration: 3.5,
+                ease: "easeInOut",
+              }}
               className="absolute -bottom-4 left-1/4 text-2xl opacity-20"
             >
               💰
@@ -74,7 +118,8 @@ export default function NotFound() {
             Oops! Page not found
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-            Looks like your portfolio wandered off! The page you&apos;re looking for doesn&apos;t exist or has been moved.
+            Looks like your portfolio wandered off! The page you&apos;re looking
+            for doesn&apos;t exist or has been moved.
           </p>
         </motion.div>
 
@@ -96,7 +141,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/"
-            className="group px-8 py-4 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold border-2 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-400 transition-all duration-300 hover:scale-105"
+            className="group px-8 py-4 bg-white/10 dark:bg-gray-800/50 backdrop-blur-sm text-gray-700 dark:text-gray-300 rounded-xl font-semibold border border-gray-200/50 dark:border-gray-600/50 hover:border-blue-300 dark:hover:border-blue-400 transition-all duration-300 hover:scale-105"
           >
             <span className="flex items-center gap-2">
               <i className="fas fa-arrow-left"></i>
@@ -107,4 +152,4 @@ export default function NotFound() {
       </div>
     </div>
   );
-} 
+}

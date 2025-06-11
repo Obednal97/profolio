@@ -101,19 +101,26 @@
 
 ## 🟢 **MEDIUM PRIORITY** (Features & Improvements)
 
-- [ ] **NEW** - Separate app performance from user actions (Impact Score: 9)
-  - Prevent one user from taking down the app for all users
-  - Implement proper isolation and resource management
+- [ ] **NEW** - Separate app performance from user actions (Impact Score: 9) **📋 PLANNED**
+  - ✅ **Technical specification completed** - Comprehensive fault isolation architecture designed
+  - ✅ **Implementation roadmap ready** - 4-week development plan with specific code examples
+  - ✅ **Resource isolation strategy** - Database connections, memory, rate limiting, background jobs
+  - ✅ **Monitoring & alerting designed** - Real-time resource usage tracking and automatic response
+  - 🔄 **Ready for development** - All technical details, configuration, and deployment procedures documented
+  - **Specification**: `docs/architecture/APPLICATION_FAULT_ISOLATION_SPEC.md`
 - [ ] **NEW** - User management (Impact Score: 8)
   - Admin interface for managing users
   - User roles and permissions system
 - [ ] **NEW** - Stripe integration (Impact Score: 8)
   - Payment processing for premium features
   - Subscription management
-- [ ] **FIX** - 404 error page background display issue (Impact Score: 6)
-  - Hard solid colour visible behind header at top of background
-  - Background may not extend high enough or header transparency issue
-  - Affects visual consistency on error pages
+- [x] ✅ **COMPLETED** - **FIX** - 404 error page background display issue (Impact Score: 6)
+  - ✅ **Root cause diagnosed** - 404 page not in `/app` path so no layout animated background rendered
+  - ✅ **Header compatibility fixed** - Added proper background with transparent top (from-transparent from-20%)
+  - ✅ **Glass blur effects working** - Header backdrop-blur now has proper background to blur over
+  - ✅ **Visual consistency restored** - 404 page now integrates properly with layout system
+  - ✅ **Animated background added** - Motion orbs for visual interest matching site design patterns
+  - ✅ **Result**: Eliminated hard solid color behind header - now seamless header transparency
 - [x] ✅ **COMPLETED** - **FIX** - Loading spinner appears instead of skeleton loading during page transitions (Impact Score: 5)
   - ✅ **Settings page spinner replaced** - Converted basic spinner to SettingsSkeleton with proper profile form skeleton structure
   - ✅ **PropertyManager skeleton implemented** - Replaced loading spinner with PropertyManagerSkeleton showing realistic content layout
