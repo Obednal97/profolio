@@ -1,11 +1,16 @@
-import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut } from 'firebase/auth';
-import { getFirebase } from '../lib/firebase';
-import { useEffect, useState } from 'react';
-import { initializeDemoData } from '@/lib/demoData';
-import { DemoSessionManager } from '@/lib/demoSession';
+import {
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  signOut as firebaseSignOut,
+} from "firebase/auth";
+import { getFirebase } from "../lib/firebase";
+import { useEffect, useState } from "react";
+import { initializeDemoData } from "@/lib/demoData";
+import { DemoSessionManager } from "@/lib/demoSession";
 
-// Development bypass flag - set to false for proper authentication
-const BYPASS_AUTH = false;
+// Development bypass flag - environment-based for development testing
+const BYPASS_AUTH = process.env.NEXT_PUBLIC_BYPASS_AUTH === "true";
 
 interface SignUpParams {
   name: string;
@@ -25,36 +30,37 @@ interface User {
 // Generate secure demo session token
 function generateDemoSessionToken(): string {
   const timestamp = Date.now().toString();
-  const randomId = crypto.randomUUID?.() || Math.random().toString(36).substring(2, 15);
+  const randomId =
+    crypto.randomUUID?.() || Math.random().toString(36).substring(2, 15);
   return `demo-${timestamp}-${randomId}`;
 }
 
 // Demo user factory for secure dynamic generation
 function createDemoUser(): User {
   return {
-    id: 'demo-user-id',
-    email: 'demo@profolio.com',
+    id: "demo-user-id",
+    email: "demo@profolio.com",
     token: generateDemoSessionToken(),
-    name: 'Demo User'
+    name: "Demo User",
   };
 }
 
 // Secure demo data storage (sessionStorage for demo tokens)
 function storeDemoUserData(user: User): void {
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('demo-auth-token', user.token || '');
-    sessionStorage.setItem('demo-user-data', JSON.stringify(user));
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("demo-auth-token", user.token || "");
+    sessionStorage.setItem("demo-user-data", JSON.stringify(user));
   }
 }
 
 function getDemoUserData(): User | null {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     try {
-      const userData = sessionStorage.getItem('demo-user-data');
+      const userData = sessionStorage.getItem("demo-user-data");
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Error parsing demo user data:', error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error parsing demo user data:", error);
       }
       return null;
     }
@@ -63,29 +69,39 @@ function getDemoUserData(): User | null {
 }
 
 function clearDemoUserData(): void {
-  if (typeof window !== 'undefined') {
-    sessionStorage.removeItem('demo-auth-token');
-    sessionStorage.removeItem('demo-user-data');
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem("demo-auth-token");
+    sessionStorage.removeItem("demo-user-data");
   }
 }
 
 export function useAuth() {
   return {
-    signUpWithCredentials: async ({ name, email, password, callbackUrl, redirect }: SignUpParams) => {
+    signUpWithCredentials: async ({
+      name,
+      email,
+      password,
+      callbackUrl,
+      redirect,
+    }: SignUpParams) => {
       if (BYPASS_AUTH) {
         // Mock signup for development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Dev mode: Mock signup', { name, email });
+        if (process.env.NODE_ENV === "development") {
+          console.log("Dev mode: Mock signup", { name, email });
         }
         if (redirect && callbackUrl) {
           window.location.href = callbackUrl;
         }
         return;
       }
-      
+
       const firebase = await getFirebase();
       const auth = firebase.auth!;
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       await updateProfile(userCredential.user, { displayName: name });
       await new Promise((resolve) => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -97,136 +113,146 @@ export function useAuth() {
       });
       await new Promise((r) => setTimeout(r, 150));
     },
-    
+
     // Demo mode function with secure token generation
-    signInWithDemo: async ({ callbackUrl = '/app/dashboard', redirect = true } = {}) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Demo mode: Creating demo user session with 24-hour expiration');
+    signInWithDemo: async ({
+      callbackUrl = "/app/dashboard",
+      redirect = true,
+    } = {}) => {
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "Demo mode: Creating demo user session with 24-hour expiration"
+        );
       }
-      
+
       try {
         // Start demo session (now synchronous)
         const sessionStarted = DemoSessionManager.startDemoSession();
-        
+
         if (!sessionStarted) {
-          throw new Error('Failed to start demo session');
+          throw new Error("Failed to start demo session");
         }
-        
+
         // Create demo user with dynamic token
         const demoUser = createDemoUser();
-        
+
         // Store demo user data securely
         storeDemoUserData(demoUser);
-        
+
         // Populate demo data
         try {
           await initializeDemoData();
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Demo data populated successfully');
+          if (process.env.NODE_ENV === "development") {
+            console.log("Demo data populated successfully");
           }
         } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('Failed to populate demo data:', error);
+          if (process.env.NODE_ENV === "development") {
+            console.error("Failed to populate demo data:", error);
           }
           // Don't fail the demo login if data population fails
         }
-        
+
         if (redirect) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Demo mode setup complete, redirecting to:', callbackUrl);
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              "Demo mode setup complete, redirecting to:",
+              callbackUrl
+            );
           }
           window.location.href = callbackUrl;
         }
-        
+
         return { success: true, user: demoUser };
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Demo mode setup failed:', error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Demo mode setup failed:", error);
         }
         throw error;
       }
     },
-    
+
     signOut: async ({ callbackUrl = "/", redirect = true } = {}) => {
       if (BYPASS_AUTH) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Dev mode: Mock signout');
+        if (process.env.NODE_ENV === "development") {
+          console.log("Dev mode: Mock signout");
         }
         if (redirect) {
           window.location.href = callbackUrl;
         }
         return;
       }
-      
+
       // Check if we're in demo mode and handle it properly
       if (DemoSessionManager.isDemoMode()) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Demo mode: Ending demo session');
+        if (process.env.NODE_ENV === "development") {
+          console.log("Demo mode: Ending demo session");
         }
         DemoSessionManager.endDemoSession();
         // endDemoSession() handles redirect automatically
         return;
       }
-      
+
       // Clear secure authentication data
       clearDemoUserData();
-      document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
-      
+      document.cookie =
+        "auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict";
+
       // Clear legacy localStorage items (cleanup)
-      localStorage.removeItem('demo-mode');
-      localStorage.removeItem('user-data');
-      localStorage.removeItem('demo-api-keys');
-      localStorage.removeItem('userToken');
-      
+      localStorage.removeItem("demo-mode");
+      localStorage.removeItem("user-data");
+      localStorage.removeItem("demo-api-keys");
+      localStorage.removeItem("userToken");
+
       // Clear any Firebase auth cache
-      const firebaseKeys = Object.keys(localStorage).filter(key => 
-        key.startsWith('firebase:') || key.includes('authUser')
+      const firebaseKeys = Object.keys(localStorage).filter(
+        (key) => key.startsWith("firebase:") || key.includes("authUser")
       );
-      firebaseKeys.forEach(key => localStorage.removeItem(key));
-      
+      firebaseKeys.forEach((key) => localStorage.removeItem(key));
+
       // Sign out from Firebase if available
       try {
-        const { getFirebase } = await import('@/lib/firebase');
+        const { getFirebase } = await import("@/lib/firebase");
         const { auth } = await getFirebase();
         if (auth) {
           await firebaseSignOut(auth);
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Firebase sign out error:', error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Firebase sign out error:", error);
         }
       }
-      
+
       // Call backend signout endpoint
       try {
         await fetch("/api/signout", { method: "POST" });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Backend signout error:', error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Backend signout error:", error);
         }
       }
-      
+
       if (redirect) {
         // Use replace to prevent back button issues
         window.location.replace(callbackUrl);
       }
     },
-    
+
     forceLogout: async () => {
       if (BYPASS_AUTH) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Dev mode: Mock force logout');
+        if (process.env.NODE_ENV === "development") {
+          console.log("Dev mode: Mock force logout");
         }
         return;
       }
-      
+
       // Clear demo mode data securely
       clearDemoUserData();
-      document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
-      localStorage.removeItem('demo-mode');
-      localStorage.removeItem('user-data');
-      localStorage.removeItem('demo-api-keys');
-      
+      document.cookie =
+        "auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict";
+      localStorage.removeItem("demo-mode");
+      localStorage.removeItem("user-data");
+      localStorage.removeItem("demo-api-keys");
+
       const auth = (await getFirebase()).auth!;
       await firebaseSignOut(auth);
     },

@@ -1,13 +1,14 @@
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { PrismaService } from '@/common/prisma.service';
-import { AuthGuard } from './guards/auth.guard';
-import { JwtStrategy } from '@/common/auth/jwt.strategy';
-import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
+import { Module } from "@nestjs/common";
+import { JwtModule } from "@nestjs/jwt";
+import { PassportModule } from "@nestjs/passport";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { AuthController } from "./auth.controller";
+import { AuthService } from "./auth.service";
+import { FirebaseService } from "./firebase.service";
+import { PrismaService } from "@/common/prisma.service";
+import { AuthGuard } from "./guards/auth.guard";
+import { JwtStrategy } from "@/common/auth/jwt.strategy";
+import { JwtAuthGuard } from "@/common/auth/jwt-auth.guard";
 
 @Module({
   imports: [
@@ -15,8 +16,9 @@ import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'dev-jwt-secret-fallback',
-        signOptions: { expiresIn: '24h' },
+        secret:
+          configService.get<string>("JWT_SECRET") || "dev-jwt-secret-fallback",
+        signOptions: { expiresIn: "24h" },
       }),
       inject: [ConfigService],
     }),
@@ -24,11 +26,12 @@ import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
-    PrismaService, 
-    AuthGuard, 
-    JwtStrategy, 
-    JwtAuthGuard
+    FirebaseService,
+    PrismaService,
+    AuthGuard,
+    JwtStrategy,
+    JwtAuthGuard,
   ],
-  exports: [AuthService, JwtStrategy, JwtAuthGuard, JwtModule],
+  exports: [AuthService, FirebaseService, JwtStrategy, JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

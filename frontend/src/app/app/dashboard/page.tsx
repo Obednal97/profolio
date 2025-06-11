@@ -185,9 +185,40 @@ export default function DashboardPage() {
     return createUserContext(user, userProfile, isDemoMode);
   }, [user, userProfile, isDemoMode]);
 
-  // 🚀 Intelligent preloader - starts after dashboard loads successfully
+  // IMPROVEMENT: Detect post-authentication state more reliably
+  const isPostAuthentication = useMemo(() => {
+    if (typeof window === "undefined") return false;
+
+    // Check for specific URL parameters that indicate recent authentication
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasAuthAction = urlParams.get("auth-action") === "signing-in";
+    const hasAuthSuccess = urlParams.get("auth") === "success";
+    const hasUpdatedProfile = urlParams.get("updated") === "profile";
+
+    // Also check if this is the first dashboard visit in this session
+    const hasVisitedDashboardThisSession = sessionStorage.getItem(
+      "dashboard-visited-in-session"
+    );
+    const isFirstDashboardVisit = !hasVisitedDashboardThisSession;
+
+    // Mark that we've visited the dashboard this session
+    if (isFirstDashboardVisit) {
+      sessionStorage.setItem("dashboard-visited-in-session", "true");
+    }
+
+    // Preload if any auth-related condition is met OR it's the first dashboard visit
+    return (
+      hasAuthAction ||
+      hasAuthSuccess ||
+      hasUpdatedProfile ||
+      isFirstDashboardVisit
+    );
+  }, []);
+
+  // 🚀 Intelligent preloader - only runs after authentication, not on every dashboard visit
   useAppPagePreloader({
     delay: 2000, // Wait 2 seconds after dashboard loads
+    isPostAuthentication, // Only preload when user has just authenticated
   });
 
   // IMPROVEMENT: Safe window resize handling for Confetti

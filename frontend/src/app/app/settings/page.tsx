@@ -7,6 +7,8 @@ import { BaseModal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/providers/theme-provider";
+import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 interface Tab {
   id: string;
@@ -383,9 +385,17 @@ function setSecurePreferences(prefs: { tokenExpiration?: string }): void {
 const SecurityTab = ({
   handlePasswordUpdate,
   loading,
+  userProfile,
+  isDemoMode,
 }: {
-  handlePasswordUpdate: (e: React.FormEvent) => Promise<void>;
+  handlePasswordUpdate: (data: {
+    currentPassword?: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<void>;
   loading: boolean;
+  userProfile?: { provider?: string; email?: string };
+  isDemoMode: boolean;
 }) => {
   const [tokenExpiration, setTokenExpiration] = useState(() => {
     if (typeof window !== "undefined") {
@@ -394,6 +404,59 @@ const SecurityTab = ({
     }
     return "30days";
   });
+
+  // Password form state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  // Determine if user is a Google/Firebase user
+  const isGoogleUser =
+    userProfile?.provider === "firebase" || userProfile?.email?.includes("@");
+  const hasPassword = !isGoogleUser; // For now, assume non-Google users have passwords
+
+  // Password validation
+  const validatePassword = (password: string) => {
+    const requirements = [
+      { test: /.{8,}/, text: "At least 8 characters" },
+      { test: /[A-Z]/, text: "One uppercase letter" },
+      { test: /[a-z]/, text: "One lowercase letter" },
+      { test: /[0-9]/, text: "One number" },
+      { test: /[^A-Za-z0-9]/, text: "One special character" },
+    ];
+    return requirements.map((req) => ({
+      ...req,
+      met: req.test.test(password),
+    }));
+  };
+
+  const passwordRequirements = validatePassword(passwordData.newPassword);
+  const passwordsMatch =
+    passwordData.newPassword === passwordData.confirmPassword;
+  const isFormValid = () => {
+    // For Google users (setting password), no current password needed
+    // For existing users (changing password), current password required
+    const currentPasswordValid =
+      isGoogleUser || passwordData.currentPassword.length > 0;
+    const newPasswordValid = passwordRequirements.every((req) => req.met);
+    const confirmPasswordValid =
+      passwordsMatch && passwordData.confirmPassword.length > 0;
+
+    return currentPasswordValid && newPasswordValid && confirmPasswordValid;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid()) return;
+
+    await handlePasswordUpdate({
+      currentPassword: isGoogleUser ? undefined : passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+      confirmPassword: passwordData.confirmPassword,
+    });
+  };
 
   // Check if we're in cloud mode
   const isCloudMode =
@@ -422,47 +485,183 @@ const SecurityTab = ({
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      <form onSubmit={handlePasswordUpdate} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Current Password
-          </label>
-          <input
-            type="password"
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            required
-          />
+      {/* Authentication Methods Status */}
+      <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Authentication Methods
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <i className="fab fa-google text-xl text-red-500"></i>
+              <span className="text-gray-700 dark:text-gray-300">
+                Google Sign-In
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isGoogleUser ? (
+                <span className="text-green-500 text-sm">✓ Connected</span>
+              ) : (
+                <span className="text-gray-400 text-sm">○ Not Connected</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <i className="fas fa-lock text-xl text-blue-500"></i>
+              <span className="text-gray-700 dark:text-gray-300">
+                Password Authentication
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {hasPassword ? (
+                <span className="text-green-500 text-sm">✓ Set</span>
+              ) : (
+                <span className="text-gray-400 text-sm">○ Not Set</span>
+              )}
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            New Password
-          </label>
-          <input
-            type="password"
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            required
-          />
+      {/* Password Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {isGoogleUser ? "Set Password" : "Change Password"}
+          </h3>
+
+          {isGoogleUser && (
+            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-blue-700 dark:text-blue-300 text-sm">
+                <i className="fas fa-info-circle mr-2"></i>
+                You&apos;re signed in with Google. Set a password to enable
+                email authentication as an additional sign-in option.
+              </p>
+            </div>
+          )}
+
+          {!isGoogleUser && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    currentPassword: e.target.value,
+                  })
+                }
+                className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+                required={!isGoogleUser}
+                disabled={isDemoMode}
+                placeholder={
+                  isDemoMode
+                    ? "Not available in demo mode"
+                    : "Enter current password"
+                }
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={passwordData.newPassword}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  newPassword: e.target.value,
+                })
+              }
+              className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+              required
+              disabled={isDemoMode}
+              placeholder={
+                isDemoMode ? "Not available in demo mode" : "Enter new password"
+              }
+            />
+            {/* Password Requirements */}
+            {passwordData.newPassword && (
+              <div className="mt-3 space-y-2">
+                {passwordRequirements.map((req, index) => (
+                  <div
+                    key={index}
+                    className={`text-sm flex items-center gap-2 transition-colors ${
+                      req.met
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  >
+                    <i
+                      className={`fas fa-${
+                        req.met ? "check-circle" : "circle"
+                      } text-xs`}
+                    ></i>
+                    {req.text}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  confirmPassword: e.target.value,
+                })
+              }
+              className={`w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                passwordData.confirmPassword && !passwordsMatch
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-300 dark:border-white/10 focus:ring-blue-500"
+              }`}
+              required
+              disabled={isDemoMode}
+              placeholder={
+                isDemoMode
+                  ? "Not available in demo mode"
+                  : "Confirm new password"
+              }
+            />
+            {passwordData.confirmPassword && !passwordsMatch && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                Passwords do not match
+              </p>
+            )}
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading || !isFormValid() || isDemoMode}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium px-6 py-3"
+          >
+            {loading
+              ? "Updating..."
+              : isGoogleUser
+              ? "Set Password"
+              : "Update Password"}
+          </Button>
+
+          {isDemoMode && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              Password changes are not available in demo mode
+            </p>
+          )}
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Confirm New Password
-          </label>
-          <input
-            type="password"
-            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-            required
-          />
-        </div>
-
-        <Button
-          type="submit"
-          disabled={loading}
-          className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 py-3"
-        >
-          {loading ? "Updating..." : "Update Password"}
-        </Button>
       </form>
 
       {/* Session Management */}
@@ -699,8 +898,10 @@ const PreferencesTab = ({
 // Account Tab component
 const AccountTab = ({
   setShowDeleteModal,
+  isDemoMode,
 }: {
   setShowDeleteModal: (value: boolean) => void;
+  isDemoMode: boolean;
 }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -709,15 +910,33 @@ const AccountTab = ({
   >
     <div className="bg-red-900/20 backdrop-blur-sm border border-red-800 rounded-xl p-6">
       <h3 className="text-lg font-semibold text-red-400 mb-4">Danger Zone</h3>
-      <p className="text-gray-300 mb-4">
-        Once you delete your account, there is no going back. Please be certain.
-      </p>
-      <Button
-        onClick={() => setShowDeleteModal(true)}
-        className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3"
-      >
-        Delete Account
-      </Button>
+      {isDemoMode ? (
+        <div>
+          <p className="text-gray-300 mb-4">
+            Account deletion is not available in demo mode. Sign up for a real
+            account to manage account settings.
+          </p>
+          <Button
+            disabled
+            className="bg-gray-600 text-gray-400 font-medium px-6 py-3 cursor-not-allowed"
+          >
+            Delete Account (Demo Mode)
+          </Button>
+        </div>
+      ) : (
+        <div>
+          <p className="text-gray-300 mb-4">
+            Once you delete your account, there is no going back. Please be
+            certain.
+          </p>
+          <Button
+            onClick={() => setShowDeleteModal(true)}
+            className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3"
+          >
+            Delete Account
+          </Button>
+        </div>
+      )}
     </div>
   </motion.div>
 );
@@ -728,9 +947,7 @@ const clearAuthData = () => {
     // Clear any remaining localStorage items (legacy cleanup)
     localStorage.removeItem("userToken");
     localStorage.removeItem("firebase-token");
-    if (process.env.NODE_ENV === "development") {
-      console.log("🧹 [Settings] Cleared corrupted authentication data");
-    }
+    logger.auth("Cleared corrupted authentication data");
   }
 };
 
@@ -742,13 +959,13 @@ const getFreshAuthToken = async (): Promise<string | null> => {
     const user = auth.currentUser;
 
     if (!user) {
-      console.error("❌ [Settings] No Firebase user found");
+      logger.auth("No Firebase user found");
       return null;
     }
 
     // Get fresh Firebase token
     const firebaseToken = await user.getIdToken(true);
-    console.log("✅ [Settings] Got fresh Firebase token");
+    logger.auth("Got fresh Firebase token");
 
     // Exchange for backend JWT
     const response = await fetch("/api/auth/firebase-exchange", {
@@ -759,42 +976,34 @@ const getFreshAuthToken = async (): Promise<string | null> => {
       body: JSON.stringify({ firebaseToken }),
     });
 
-    console.log(
-      "🔄 [Settings] Firebase token exchange response status:",
-      response.status
-    );
+    logger.auth("Firebase token exchange response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(
-        "❌ [Settings] Token exchange failed:",
-        response.status,
-        errorText
-      );
+      logger.auth("Token exchange failed:", response.status, errorText);
       return null;
     }
 
     const data = await response.json();
-    console.log("📄 [Settings] Token exchange response:", data);
+    logger.auth("Token exchange response:", data);
 
     if (data.success && data.token) {
       return data.token;
     } else {
-      console.error(
-        "❌ [Settings] Token exchange successful but no token in response"
-      );
+      logger.auth("Token exchange successful but no token in response");
       return null;
     }
   } catch (error) {
-    console.error("❌ [Settings] Error getting fresh auth token:", error);
+    logger.auth("Error getting fresh auth token:", error);
     return null;
   }
 };
 
 function SettingsPage() {
   const { user, refreshUserProfile } = useAuth(); // Use Firebase authentication and get refreshUserProfile
-  const { theme } = useTheme(); // Get theme from theme provider
+  const { theme, setTheme } = useTheme(); // Get theme and setTheme from theme provider
   const { currency, setCurrency } = useAppContext();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab["id"]>("profile");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -850,7 +1059,7 @@ function SettingsPage() {
       }
 
       try {
-        console.log("Loading profile from database for user:", currentUser.id);
+        logger.auth("Loading profile from database for user:", currentUser.id);
 
         if (isDemoMode) {
           // For demo mode, load from localStorage
@@ -876,7 +1085,7 @@ function SettingsPage() {
           }
         } else {
           // Handle real user - use the backend API endpoint
-          console.log("🔄 [Settings] Starting profile load...");
+          logger.auth("Starting profile load...");
 
           // Clear any corrupted authentication data first
           clearAuthData();
@@ -908,7 +1117,7 @@ function SettingsPage() {
           const data = await response.json();
 
           if (data.success && data.user) {
-            console.log("Profile loaded from database:", data.user);
+            logger.auth("Profile loaded from database:", data.user);
             setProfileData({
               name: data.user.name || currentUser.name || "",
               email: data.user.email || currentUser.email || "",
@@ -918,7 +1127,7 @@ function SettingsPage() {
             });
           } else {
             // No profile in database yet, use auth data as initial values
-            console.log("No profile in database, using auth data");
+            logger.auth("No profile in database, using auth data");
             setProfileData({
               name: currentUser.name || "",
               email: currentUser.email || "",
@@ -929,7 +1138,7 @@ function SettingsPage() {
           }
         }
       } catch (error) {
-        console.error("Failed to load profile from database:", error);
+        logger.auth("Failed to load profile from database:", error);
         // Fallback to auth data
         setProfileData({
           name: currentUser.name || "",
@@ -999,8 +1208,8 @@ function SettingsPage() {
         throw new Error("User not authenticated");
       }
 
-      console.log(
-        "🔄 [Settings] Updating profile for:",
+      logger.auth(
+        "Updating profile for:",
         currentUser.id,
         "isDemoMode:",
         isDemoMode
@@ -1017,10 +1226,7 @@ function SettingsPage() {
         };
 
         localStorage.setItem("user-data", JSON.stringify(demoUserData));
-        console.log(
-          "✅ [Settings] Demo profile saved to localStorage:",
-          profileData.name
-        );
+        logger.auth("Demo profile saved to localStorage:", profileData.name);
 
         setSuccess("Profile updated successfully!");
 
@@ -1028,7 +1234,7 @@ function SettingsPage() {
         setTimeout(() => setSuccess(null), 3000);
       } else {
         // Handle real user - use the backend API endpoint
-        console.log("🔄 [Settings] Starting profile update...");
+        logger.auth("Starting profile update...");
 
         // Clear any corrupted authentication data first
         clearAuthData();
@@ -1071,20 +1277,30 @@ function SettingsPage() {
           throw new Error(data.message || "Failed to update profile");
         }
 
-        console.log("✅ [Settings] Profile saved, refreshing...");
-
-        // Refresh the user profile in auth context to update header/dashboard
-        if (refreshUserProfile) {
-          await refreshUserProfile();
-        }
+        logger.auth("Profile saved, refreshing...");
 
         setSuccess("Profile updated successfully!");
 
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(null), 3000);
+        // Refresh the user profile in auth context to update header/dashboard
+        if (refreshUserProfile) {
+          logger.auth("Waiting for profile refresh to complete...");
+          await refreshUserProfile();
+          logger.auth("Profile refresh completed");
+
+          // Small delay for state propagation, then navigate
+          setTimeout(() => {
+            logger.auth("Navigating to dashboard with updated state");
+            router.push("/app/dashboard?updated=profile");
+          }, 1000); // Reduced delay since we fixed the auth race condition
+        } else {
+          // Fallback: if no refresh function, just redirect
+          setTimeout(() => {
+            router.push("/app/dashboard?updated=profile");
+          }, 1500);
+        }
       }
     } catch (error) {
-      console.error("❌ [Settings] Profile update error:", error);
+      logger.auth("Profile update error:", error);
       setError(
         error instanceof Error ? error.message : "Failed to update profile"
       );
@@ -1093,19 +1309,73 @@ function SettingsPage() {
     }
   };
 
-  const handlePasswordUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePasswordUpdate = async (data: {
+    currentPassword?: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setSuccess("Password updated successfully");
+      if (!currentUser?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      // Validate passwords match
+      if (data.newPassword !== data.confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      if (isDemoMode) {
+        // For demo mode, just show success
+        setSuccess("Password updated successfully (demo mode)");
+        return;
+      }
+
+      // Get fresh authentication token
+      const backendToken = await getFreshAuthToken();
+
+      if (!backendToken) {
+        throw new Error(
+          "Failed to obtain authentication token. Please sign out and sign in again."
+        );
+      }
+
+      // Call the password change API
+      const response = await fetch("/api/auth/password", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${backendToken}`,
+        },
+        body: JSON.stringify({
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `HTTP ${response.status}: ${response.statusText}`
+        );
+      }
+
+      const responseData = await response.json();
+
+      if (!responseData.success) {
+        throw new Error(responseData.message || "Failed to update password");
+      }
+
+      logger.auth("Password updated successfully");
+      setSuccess(responseData.message || "Password updated successfully");
     } catch (err) {
-      console.error("Password update error:", err);
-      setError("Failed to update password");
+      logger.auth("Password update error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to update password"
+      );
     } finally {
       setLoading(false);
     }
@@ -1117,14 +1387,17 @@ function SettingsPage() {
     setSuccess(null);
 
     try {
+      // Update theme setting - this was missing!
+      setTheme(preferences.theme);
+
       // Update global currency setting
       await setCurrency(preferences.currency);
 
-      // Simulate API call for other preferences
+      // Simulate API call for other preferences (notifications, privacy, etc.)
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setSuccess("Preferences updated successfully");
     } catch (err) {
-      console.error("Preferences update error:", err);
+      logger.auth("Preferences update error:", err);
       setError("Failed to update preferences");
     } finally {
       setLoading(false);
@@ -1132,16 +1405,44 @@ function SettingsPage() {
   };
 
   const handleAccountDeletion = async () => {
+    // Prevent account deletion in demo mode
+    if (isDemoMode) {
+      setError(
+        "Account deletion is not available in demo mode. Please sign up for a real account to manage account settings."
+      );
+      setShowDeleteModal(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // For real users, call the account deletion API
+      const backendToken = await getFreshAuthToken();
+
+      if (!backendToken) {
+        throw new Error("Authentication required to delete account");
+      }
+
+      const response = await fetch("/api/auth/delete-account", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${backendToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to delete account");
+      }
+
+      // Account deleted successfully - redirect to homepage
       window.location.href = "/";
     } catch (err) {
-      console.error("Account deletion error:", err);
-      setError("Failed to delete account");
+      logger.auth("Account deletion error:", err);
+      setError(err instanceof Error ? err.message : "Failed to delete account");
     } finally {
       setLoading(false);
       setShowDeleteModal(false);
@@ -1243,6 +1544,8 @@ function SettingsPage() {
                 key="security"
                 handlePasswordUpdate={handlePasswordUpdate}
                 loading={loading}
+                userProfile={currentUser}
+                isDemoMode={isDemoMode}
               />
             )}
             {activeTab === "preferences" && (
@@ -1258,6 +1561,7 @@ function SettingsPage() {
               <AccountTab
                 key="account"
                 setShowDeleteModal={setShowDeleteModal}
+                isDemoMode={isDemoMode}
               />
             )}
           </AnimatePresence>

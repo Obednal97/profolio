@@ -1,18 +1,19 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '@/common/prisma.service';
-import { hash, compare } from 'bcrypt';
-import { SignUpDto } from './dto/signup.dto';
-import { SignInDto } from './dto/signin.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { PrismaService } from "@/common/prisma.service";
+import { hash, compare } from "bcrypt";
+import { SignUpDto } from "./dto/signup.dto";
+import { SignInDto } from "./dto/signin.dto";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
+    private readonly jwtService: JwtService
   ) {}
 
   /**
@@ -25,7 +26,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new Error('User with this email already exists');
+      throw new Error("User with this email already exists");
     }
 
     // Hash password
@@ -37,7 +38,7 @@ export class AuthService {
         email: dto.email.toLowerCase(),
         password: hashedPassword,
         name: dto.name || null,
-        provider: 'local',
+        provider: "local",
         emailVerified: false,
         lastSignIn: new Date(),
       },
@@ -81,10 +82,12 @@ export class AuthService {
     });
 
     // Verify password
-    const hasValidPassword = user ? await compare(dto.password, user.password) : false;
+    const hasValidPassword = user
+      ? await compare(dto.password, user.password)
+      : false;
 
     if (!user || !hasValidPassword) {
-      throw new Error('Invalid email or password');
+      throw new Error("Invalid email or password");
     }
 
     // Update last sign in
@@ -124,7 +127,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     return {
@@ -163,7 +166,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     return {
@@ -186,7 +189,7 @@ export class AuthService {
       });
 
       if (existingUser) {
-        throw new Error('Email already exists');
+        throw new Error("Email already exists");
       }
     }
 
@@ -230,9 +233,74 @@ export class AuthService {
   }
 
   /**
+   * Change or set user password
+   */
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    // Get user with current password
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        provider: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Check if user has an existing password
+    const hasExistingPassword = user.password && user.password.trim() !== "";
+
+    if (hasExistingPassword) {
+      // User has existing password - require current password
+      if (!dto.currentPassword) {
+        throw new Error("Current password is required");
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await compare(
+        dto.currentPassword,
+        user.password
+      );
+      if (!isCurrentPasswordValid) {
+        throw new Error("Current password is incorrect");
+      }
+    }
+    // For Google users or users without passwords, no current password verification needed
+
+    // Hash the new password
+    const hashedNewPassword = await hash(dto.newPassword, 12);
+
+    // Update password in database
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedNewPassword,
+        updatedAt: new Date(),
+      },
+    });
+
+    this.logger.log(`Password updated for user: ${user.email}`);
+
+    return {
+      success: true,
+      message: hasExistingPassword
+        ? "Password changed successfully"
+        : "Password set successfully",
+    };
+  }
+
+  /**
    * Generate JWT token
    */
-  private generateToken(user: { id: string; email: string; name?: string | null }) {
+  private generateToken(user: {
+    id: string;
+    email: string;
+    name?: string | null;
+  }) {
     return this.jwtService.sign({
       sub: user.id,
       email: user.email,

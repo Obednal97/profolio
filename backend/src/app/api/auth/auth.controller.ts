@@ -20,6 +20,7 @@ import { PrismaService } from "@/common/prisma.service";
 import { AuthGuard } from "./guards/auth.guard";
 import { AuthUser } from "@/common/auth/jwt.strategy";
 import { JwtAuthGuard } from "@/common/auth/jwt-auth.guard";
+import { FirebaseService } from "./firebase.service";
 import {
   ApiTags,
   ApiOperation,
@@ -37,6 +38,7 @@ import { AuthService } from "./auth.service";
 import { SignUpDto } from "./dto/signup.dto";
 import { SignInDto } from "./dto/signin.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -59,7 +61,8 @@ export class AuthController {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly firebaseService: FirebaseService
   ) {}
 
   /**
@@ -244,6 +247,48 @@ export class AuthController {
     }
   }
 
+  @Patch("password")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Change or set user password" })
+  @ApiResponse({ status: 200, description: "Password updated successfully" })
+  @ApiResponse({
+    status: 400,
+    description: "Invalid input data or current password incorrect",
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  async changePassword(
+    @Body(ValidationPipe) dto: ChangePasswordDto,
+    @Req() req: { user: AuthUser }
+  ) {
+    try {
+      return await this.authService.changePassword(req.user.id, dto);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Current password is incorrect")
+      ) {
+        throw new HttpException(
+          "Current password is incorrect",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      if (
+        error instanceof Error &&
+        error.message.includes("Current password is required")
+      ) {
+        throw new HttpException(
+          "Current password is required for existing password users",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      throw new HttpException(
+        "Failed to change password",
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
   @Post("firebase-exchange")
   @ApiOperation({ summary: "Exchange Firebase token for backend JWT" })
   @ApiResponse({ status: 200, description: "Token exchange successful" })
@@ -267,122 +312,47 @@ export class AuthController {
       const clientIP = this.getClientIP();
       this.checkRateLimit(`firebase_exchange_${clientIP}`);
 
-      // Check if token has the expected JWT structure (3 parts separated by dots)
-      const tokenParts = body.firebaseToken.split(".");
-      if (tokenParts.length !== 3) {
-        this.logger.warn("Firebase token exchange: Invalid token format");
-        this.updateRateLimit(`firebase_exchange_${clientIP}`, false);
-        throw new HttpException(
-          "Invalid Firebase token format",
-          HttpStatus.UNAUTHORIZED
-        );
-      }
-
-      // SECURITY FIX: Proper Firebase token verification
-      // Note: For production, implement proper Firebase Admin SDK verification
-      // Check if Firebase configuration is available
-      if (
-        !process.env.FIREBASE_PROJECT_ID ||
-        !process.env.FIREBASE_CLIENT_EMAIL ||
-        !process.env.FIREBASE_PRIVATE_KEY
-      ) {
-        this.logger.error(
-          "Firebase token exchange: Firebase configuration not found. Please configure Firebase environment variables."
-        );
-        throw new HttpException(
-          "Firebase authentication not configured. Please configure Firebase environment variables.",
-          HttpStatus.SERVICE_UNAVAILABLE
-        );
-      }
-
-      // Development/Demo mode: Basic validation with security checks
-      let payload: any;
+      // SECURITY: Use Firebase Admin SDK for proper token verification
+      let firebaseUserInfo;
       try {
-        payload = JSON.parse(Buffer.from(tokenParts[1], "base64").toString());
-      } catch (decodeError) {
-        this.logger.warn(
-          "Firebase token exchange: Failed to decode token payload"
+        firebaseUserInfo = await this.firebaseService.verifyIdToken(
+          body.firebaseToken
         );
+      } catch (verificationError) {
         this.updateRateLimit(`firebase_exchange_${clientIP}`, false);
-        throw new HttpException(
-          "Invalid Firebase token payload",
-          HttpStatus.UNAUTHORIZED
-        );
-      }
 
-      // Validate token structure and required fields
-      const email = payload.email;
-      const uid = payload.user_id || payload.uid;
-      const name = payload.name || email?.split("@")[0] || "User";
-      const issuer = payload.iss;
-      const audience = payload.aud;
-      const expiry = payload.exp;
-
-      if (!email || !uid || !issuer || !audience || !expiry) {
-        this.logger.warn(
-          "Firebase token exchange: Missing required fields in token payload"
-        );
-        this.updateRateLimit(`firebase_exchange_${clientIP}`, false);
-        throw new HttpException(
-          "Invalid Firebase token payload",
-          HttpStatus.UNAUTHORIZED
-        );
-      }
-
-      // Validate token hasn't expired
-      const currentTime = Math.floor(Date.now() / 1000);
-      if (expiry < currentTime) {
-        this.logger.warn("Firebase token exchange: Token has expired");
-        this.updateRateLimit(`firebase_exchange_${clientIP}`, false);
-        throw new HttpException(
-          "Firebase token has expired",
-          HttpStatus.UNAUTHORIZED
-        );
-      }
-
-      // Validate issuer (basic security check)
-      if (!issuer.includes("firebase") && !issuer.includes("google")) {
-        this.logger.warn(`Firebase token exchange: Invalid issuer: ${issuer}`);
-        this.updateRateLimit(`firebase_exchange_${clientIP}`, false);
-        throw new HttpException(
-          "Invalid Firebase token issuer",
-          HttpStatus.UNAUTHORIZED
-        );
-      }
-
-      // Email validation
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        this.logger.warn(
-          `Firebase token exchange: Invalid email format: ${email}`
-        );
-        this.updateRateLimit(`firebase_exchange_${clientIP}`, false);
-        throw new HttpException("Invalid email format", HttpStatus.BAD_REQUEST);
+        // Firebase service already provides proper error handling
+        throw verificationError;
       }
 
       // Find or create user
       let user = await this.prisma.user.findUnique({
-        where: { email: email.toLowerCase() },
+        where: { email: firebaseUserInfo.email.toLowerCase() },
       });
 
       if (!user) {
         // Create new user for Firebase sign-in
         user = await this.prisma.user.create({
           data: {
-            id: uid,
-            email: email.toLowerCase(),
-            name: name,
+            id: firebaseUserInfo.uid,
+            email: firebaseUserInfo.email.toLowerCase(),
+            name: firebaseUserInfo.name,
             password: "", // Empty for Firebase users
             provider: "firebase",
-            emailVerified: payload.email_verified || false,
+            emailVerified: firebaseUserInfo.emailVerified,
             lastSignIn: new Date(),
           },
         });
-        this.logger.log(`New Firebase user created: ${user.email}`);
+        this.logger.log(`✅ New Firebase user created: ${user.email}`);
       } else {
-        // Update last sign in
+        // Update last sign in and provider info
         await this.prisma.user.update({
           where: { id: user.id },
-          data: { lastSignIn: new Date() },
+          data: {
+            lastSignIn: new Date(),
+            provider: "firebase",
+            emailVerified: firebaseUserInfo.emailVerified,
+          },
         });
       }
 
@@ -391,6 +361,10 @@ export class AuthController {
 
       // Success: Clear rate limiting
       this.updateRateLimit(`firebase_exchange_${clientIP}`, true);
+
+      this.logger.log(
+        `✅ Firebase token exchange successful for user: ${user.email}`
+      );
 
       return {
         success: true,
@@ -404,14 +378,15 @@ export class AuthController {
     } catch (error) {
       this.logger.error("Firebase token exchange failed:", error);
 
-      // More specific error responses
+      // Re-throw HttpExceptions (already handled by FirebaseService)
       if (error instanceof HttpException) {
         throw error;
       }
 
+      // Generic fallback for unexpected errors
       throw new HttpException(
-        "Invalid Firebase token",
-        HttpStatus.UNAUTHORIZED
+        "Token exchange failed",
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useUnifiedAuth } from '@/lib/unifiedAuth';
-import { mockReleases } from '@/config/mockReleases';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useUnifiedAuth } from "@/lib/unifiedAuth";
+import { mockReleases } from "@/config/mockReleases";
 
 export interface UpdateInfo {
   currentVersion: string;
@@ -13,7 +13,13 @@ export interface UpdateInfo {
 }
 
 export interface UpdateProgress {
-  stage: 'checking' | 'downloading' | 'installing' | 'restarting' | 'complete' | 'error';
+  stage:
+    | "checking"
+    | "downloading"
+    | "installing"
+    | "restarting"
+    | "complete"
+    | "error";
   message: string;
   progress: number; // 0-100
   error?: string;
@@ -35,7 +41,10 @@ export interface UseUpdatesReturn {
   isChecking: boolean;
   isUpdating: boolean;
   hasUpdate: boolean;
-  checkForUpdates: (force?: boolean, includeAllReleases?: boolean) => Promise<void>;
+  checkForUpdates: (
+    force?: boolean,
+    includeAllReleases?: boolean
+  ) => Promise<void>;
   startUpdate: (version?: string) => Promise<void>;
   cancelUpdate: () => Promise<void>;
   clearUpdateStatus: () => void;
@@ -46,7 +55,9 @@ export interface UseUpdatesReturn {
 export function useUpdates(): UseUpdatesReturn {
   const { token } = useUnifiedAuth();
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null);
+  const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(
+    null
+  );
   const [isChecking, setIsChecking] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
@@ -57,29 +68,56 @@ export function useUpdates(): UseUpdatesReturn {
   const backendAbortControllerRef = useRef<AbortController | null>(null);
   const statusAbortControllerRef = useRef<AbortController | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const getApiBase = () => {
+    // Use environment variable if available
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+
+    // Auto-detect protocol and host for production
+    if (typeof window !== "undefined") {
+      const protocol = window.location.protocol;
+      const hostname = window.location.hostname;
+
+      // In production, use same protocol as frontend
+      if (protocol === "https:") {
+        // For HTTPS, assume backend is on port 3001 with HTTPS
+        return `https://${hostname}:3001`;
+      }
+    }
+
+    // Development fallback
+    return "http://localhost:3001";
+  };
+
+  const API_BASE = getApiBase();
 
   // Check if we're in self-hosted mode or development (for testing)
   const isSelfHosted = useCallback(() => {
     // Allow in development mode for testing
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       return true;
     }
-    
-    return process.env.NEXT_PUBLIC_DEPLOYMENT_MODE !== 'cloud' && 
-           !process.env.NEXT_PUBLIC_DISABLE_UPDATES;
+
+    return (
+      process.env.NEXT_PUBLIC_DEPLOYMENT_MODE !== "cloud" &&
+      !process.env.NEXT_PUBLIC_DISABLE_UPDATES
+    );
   }, []);
 
   // Check if we're in demo mode (no actual updates allowed)
   const isDemoMode = useCallback(() => {
-    return process.env.NODE_ENV === 'development' || !token;
+    return process.env.NODE_ENV === "development" || !token;
   }, [token]);
 
   // API headers with auth - memoized
-  const getHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  }), [token]);
+  const getHeaders = useCallback(
+    () => ({
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    }),
+    [token]
+  );
 
   // Cleanup function for all abort controllers
   const cleanup = useCallback(() => {
@@ -114,14 +152,17 @@ export function useUpdates(): UseUpdatesReturn {
 
     try {
       // Increase limit to get more releases and ensure we capture the latest ones
-      const response = await fetch('https://api.github.com/repos/Obednal97/profolio/releases?per_page=30', {
-        signal: controller.signal,
-      });
-      
+      const response = await fetch(
+        "https://api.github.com/repos/Obednal97/profolio/releases?per_page=30",
+        {
+          signal: controller.signal,
+        }
+      );
+
       if (controller.signal.aborted) return null;
-      
+
       if (response.ok) {
-        const releases = await response.json() as Array<{
+        const releases = (await response.json()) as Array<{
           tag_name: string;
           name?: string;
           body?: string;
@@ -130,141 +171,156 @@ export function useUpdates(): UseUpdatesReturn {
           prerelease: boolean;
           draft: boolean;
         }>;
-        
+
         if (controller.signal.aborted) return null;
-        
+
         // Filter out prereleases and drafts, then sort by published date (newest first)
         const stableReleases = releases
-          .filter(release => !release.prerelease && !release.draft)
-          .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+          .filter((release) => !release.prerelease && !release.draft)
+          .sort(
+            (a, b) =>
+              new Date(b.published_at).getTime() -
+              new Date(a.published_at).getTime()
+          )
           .map((release, index) => ({
-            version: release.tag_name.replace(/^v/, ''), // Remove 'v' prefix if present
+            version: release.tag_name.replace(/^v/, ""), // Remove 'v' prefix if present
             name: release.name || `Release ${release.tag_name}`,
-            body: release.body || 'No release notes available.',
+            body: release.body || "No release notes available.",
             publishedAt: release.published_at,
             downloadUrl: release.html_url,
-            isLatest: index === 0 // First release after sorting is latest
+            isLatest: index === 0, // First release after sorting is latest
           }));
-          
+
         // Debug log to help troubleshoot if still having issues
-        if (process.env.NODE_ENV === 'development') {
-          console.log('GitHub Releases fetched:', stableReleases.map(r => `v${r.version} (${r.publishedAt})`));
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "GitHub Releases fetched:",
+            stableReleases.map((r) => `v${r.version} (${r.publishedAt})`)
+          );
         }
-          
+
         return stableReleases;
       } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('GitHub API response not ok:', response.status, response.statusText);
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "GitHub API response not ok:",
+            response.status,
+            response.statusText
+          );
         }
       }
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         // Request was aborted, this is expected
         return null;
       }
-      if (process.env.NODE_ENV === 'development') {
-        console.log('GitHub API error:', error);
-        console.log('GitHub API not available, using mock data for demo');
+      if (process.env.NODE_ENV === "development") {
+        console.log("GitHub API error:", error);
+        console.log("GitHub API not available, using mock data for demo");
       }
     }
     return null;
   }, []);
 
   // Check for updates - optimized with proper cleanup
-  const checkForUpdates = useCallback(async (force = false, includeAllReleases = false) => {
-    setIsChecking(true);
-    
-    try {
-      // Always try to fetch from GitHub first (works for all installation types including demo)
-      const githubReleases = await fetchGitHubReleases();
-      
-      if (githubReleases && githubReleases.length > 0) {
-        // Use real GitHub data
-        const latestRelease = githubReleases[0];
-        // Get current version from environment variable set at build time or fallback
-        const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.3.0';
-        
-        const updateInfo: UpdateInfo = {
-          currentVersion,
-          latestVersion: latestRelease.version,
-          hasUpdate: latestRelease.version !== currentVersion,
-          releaseNotes: latestRelease.body,
-          publishedAt: latestRelease.publishedAt,
-          downloadUrl: latestRelease.downloadUrl,
-          allReleases: githubReleases
-        };
-        
-        setUpdateInfo(updateInfo);
-        setLastChecked(new Date());
-        setIsChecking(false);
-        return;
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        // Request was aborted, this is expected
-        return;
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Failed to fetch from GitHub, using mock data');
-      }
-    }
-    
-    // Fallback to backend API only for self-hosted installations with auth
-    if (isSelfHosted() && token) {
-      // Cancel any ongoing backend request
-      if (backendAbortControllerRef.current) {
-        backendAbortControllerRef.current.abort();
-      }
-
-      // Create new AbortController for this request
-      const controller = new AbortController();
-      backendAbortControllerRef.current = controller;
+  const checkForUpdates = useCallback(
+    async (force = false, includeAllReleases = false) => {
+      setIsChecking(true);
 
       try {
-        const endpoint = force ? '/api/api/updates/check' : '/api/api/updates/check';
-        const method = force ? 'POST' : 'GET';
-        
-        const params = new URLSearchParams();
-        if (includeAllReleases) {
-          params.append('includeAllReleases', 'true');
-        }
-        
-        const url = `${API_BASE}${endpoint}${params.toString() ? `?${params}` : ''}`;
-        
-        const response = await fetch(url, {
-          method,
-          headers: getHeaders(),
-          signal: controller.signal,
-        });
+        // Always try to fetch from GitHub first (works for all installation types including demo)
+        const githubReleases = await fetchGitHubReleases();
 
-        if (controller.signal.aborted) return;
+        if (githubReleases && githubReleases.length > 0) {
+          // Use real GitHub data
+          const latestRelease = githubReleases[0];
+          // Get current version from environment variable set at build time or fallback
+          const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || "1.3.0";
 
-        if (response.ok) {
-          const data: UpdateInfo | null = await response.json();
-          if (!controller.signal.aborted) {
-            setUpdateInfo(data);
-            setLastChecked(new Date());
-            setIsChecking(false);
-          }
+          const updateInfo: UpdateInfo = {
+            currentVersion,
+            latestVersion: latestRelease.version,
+            hasUpdate: latestRelease.version !== currentVersion,
+            releaseNotes: latestRelease.body,
+            publishedAt: latestRelease.publishedAt,
+            downloadUrl: latestRelease.downloadUrl,
+            allReleases: githubReleases,
+          };
+
+          setUpdateInfo(updateInfo);
+          setLastChecked(new Date());
+          setIsChecking(false);
           return;
         }
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
+        if (error instanceof Error && error.name === "AbortError") {
           // Request was aborted, this is expected
           return;
         }
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Backend API failed, falling back to mock data');
+        if (process.env.NODE_ENV === "development") {
+          console.log("Failed to fetch from GitHub, using mock data");
         }
       }
-    }
-    
-    // Final fallback to mock data for development/demo
-    const mockUpdateInfo: UpdateInfo = {
-      currentVersion: '1.7.1',
-      latestVersion: '1.7.1',
-      hasUpdate: false,
-      releaseNotes: `## 🚀 New Features
+
+      // Fallback to backend API only for self-hosted installations with auth
+      if (isSelfHosted() && token) {
+        // Cancel any ongoing backend request
+        if (backendAbortControllerRef.current) {
+          backendAbortControllerRef.current.abort();
+        }
+
+        // Create new AbortController for this request
+        const controller = new AbortController();
+        backendAbortControllerRef.current = controller;
+
+        try {
+          const endpoint = force ? "/api/updates/check" : "/api/updates/check";
+          const method = force ? "POST" : "GET";
+
+          const params = new URLSearchParams();
+          if (includeAllReleases) {
+            params.append("includeAllReleases", "true");
+          }
+
+          const url = `${API_BASE}${endpoint}${
+            params.toString() ? `?${params}` : ""
+          }`;
+
+          const response = await fetch(url, {
+            method,
+            headers: getHeaders(),
+            signal: controller.signal,
+          });
+
+          if (controller.signal.aborted) return;
+
+          if (response.ok) {
+            const data: UpdateInfo | null = await response.json();
+            if (!controller.signal.aborted) {
+              setUpdateInfo(data);
+              setLastChecked(new Date());
+              setIsChecking(false);
+            }
+            return;
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") {
+            // Request was aborted, this is expected
+            return;
+          }
+          if (process.env.NODE_ENV === "development") {
+            console.log("Backend API failed, falling back to mock data");
+          }
+        }
+      }
+
+      // Final fallback to mock data for development/demo
+      const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || "1.12.5";
+      const mockUpdateInfo: UpdateInfo = {
+        currentVersion,
+        latestVersion: currentVersion,
+        hasUpdate: false,
+        releaseNotes: `## 🚀 New Features
 - Mobile navigation bar for seamless app navigation
 - Enhanced authentication flow with Google OAuth priority
 - Responsive pricing page with feature comparison tables
@@ -284,91 +340,98 @@ export function useUpdates(): UseUpdatesReturn {
 - Fixed apostrophe rendering in UI text
 - Corrected pricing card height alignment
 - Fixed release sorting and filtering issues`,
-      publishedAt: '2025-01-06T14:00:00Z',
-      downloadUrl: 'https://github.com/Obednal97/profolio/releases/latest',
-      allReleases: mockReleases
-    };
-    
-    setUpdateInfo(mockUpdateInfo);
-    setLastChecked(new Date());
-    setIsChecking(false);
-  }, [token, API_BASE, fetchGitHubReleases, getHeaders, isSelfHosted]);
+        publishedAt: "2025-01-06T14:00:00Z",
+        downloadUrl: "https://github.com/Obednal97/profolio/releases/latest",
+        allReleases: mockReleases,
+      };
+
+      setUpdateInfo(mockUpdateInfo);
+      setLastChecked(new Date());
+      setIsChecking(false);
+    },
+    [token, API_BASE, fetchGitHubReleases, getHeaders, isSelfHosted]
+  );
 
   // Start update process - optimized
-  const startUpdate = useCallback(async (version?: string) => {
-    // Prevent updates in demo mode
-    if (isDemoMode()) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Updates disabled in demo mode');
-      }
-      return;
-    }
-
-    if (!isSelfHosted() || !token) return;
-
-    setIsUpdating(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/api/updates/start`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ version })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      // Set up Server-Sent Events for progress tracking
-      const sse = new EventSource(`${API_BASE}/api/api/updates/progress`, {
-        withCredentials: true
-      });
-
-      sse.onmessage = (event) => {
-        try {
-          const progress: UpdateProgress = JSON.parse(event.data);
-          setUpdateProgress(progress);
-          
-          // Stop listening when update is complete or failed
-          if (progress && ['complete', 'error'].includes(progress.stage)) {
-            sse.close();
-            setEventSource(null);
-            setIsUpdating(false);
-            
-            // If successful, refresh update info
-            if (progress.stage === 'complete') {
-              setTimeout(() => {
-                checkForUpdates(true);
-              }, 2000);
-            }
-          }
-        } catch {
-          // Error parsing handled silently
+  const startUpdate = useCallback(
+    async (version?: string) => {
+      // Prevent updates in demo mode
+      if (isDemoMode()) {
+        if (process.env.NODE_ENV === "development") {
+          console.log("Updates disabled in demo mode");
         }
-      };
+        return;
+      }
 
-      sse.onerror = () => {
-        sse.close();
-        setEventSource(null);
+      if (!isSelfHosted() || !token) return;
+
+      setIsUpdating(true);
+      try {
+        const response = await fetch(`${API_BASE}/api/updates/start`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({ version }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.message ||
+              `HTTP ${response.status}: ${response.statusText}`
+          );
+        }
+
+        // Set up Server-Sent Events for progress tracking
+        const sse = new EventSource(`${API_BASE}/api/updates/progress`, {
+          withCredentials: true,
+        });
+
+        sse.onmessage = (event) => {
+          try {
+            const progress: UpdateProgress = JSON.parse(event.data);
+            setUpdateProgress(progress);
+
+            // Stop listening when update is complete or failed
+            if (progress && ["complete", "error"].includes(progress.stage)) {
+              sse.close();
+              setEventSource(null);
+              setIsUpdating(false);
+
+              // If successful, refresh update info
+              if (progress.stage === "complete") {
+                setTimeout(() => {
+                  checkForUpdates(true);
+                }, 2000);
+              }
+            }
+          } catch {
+            // Error parsing handled silently
+          }
+        };
+
+        sse.onerror = () => {
+          sse.close();
+          setEventSource(null);
+          setIsUpdating(false);
+        };
+
+        setEventSource(sse);
+      } catch {
         setIsUpdating(false);
-      };
-
-      setEventSource(sse);
-
-    } catch {
-      setIsUpdating(false);
-      throw new Error('Failed to start update');
-    }
-  }, [token, API_BASE, checkForUpdates, isDemoMode, getHeaders, isSelfHosted]);
+        throw new Error("Failed to start update");
+      }
+    },
+    [token, API_BASE, checkForUpdates, isDemoMode, getHeaders, isSelfHosted]
+  );
 
   // Cancel ongoing update - optimized
   const cancelUpdate = useCallback(async () => {
     if (!isSelfHosted() || !token) return;
 
     try {
-      await fetch(`${API_BASE}/api/api/updates/cancel`, {
-        method: 'POST',
-        headers: getHeaders()
+      await fetch(`${API_BASE}/api/updates/cancel`, {
+        method: "POST",
+        headers: getHeaders(),
       });
 
       // Close SSE connection
@@ -387,12 +450,12 @@ export function useUpdates(): UseUpdatesReturn {
   // Clear update status - optimized
   const clearUpdateStatus = useCallback(() => {
     setUpdateProgress(null);
-    
+
     if (eventSource) {
       eventSource.close();
       setEventSource(null);
     }
-    
+
     setIsUpdating(false);
   }, [eventSource]);
 
@@ -433,7 +496,7 @@ export function useUpdates(): UseUpdatesReturn {
       statusAbortControllerRef.current = controller;
 
       try {
-        const response = await fetch(`${API_BASE}/api/api/updates/status`, {
+        const response = await fetch(`${API_BASE}/api/updates/status`, {
           headers: getHeaders(),
           signal: controller.signal,
         });
@@ -444,11 +507,11 @@ export function useUpdates(): UseUpdatesReturn {
           const progress: UpdateProgress | null = await response.json();
           if (progress && !controller.signal.aborted) {
             setUpdateProgress(progress);
-            setIsUpdating(!['complete', 'error'].includes(progress.stage));
+            setIsUpdating(!["complete", "error"].includes(progress.stage));
           }
         }
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
+        if (error instanceof Error && error.name === "AbortError") {
           // Request was aborted, this is expected
           return;
         }
@@ -475,6 +538,6 @@ export function useUpdates(): UseUpdatesReturn {
     cancelUpdate,
     clearUpdateStatus,
     lastChecked,
-    isDemoMode: isDemoMode() // Expose demo mode status to UI
+    isDemoMode: isDemoMode(), // Expose demo mode status to UI
   };
-} 
+}

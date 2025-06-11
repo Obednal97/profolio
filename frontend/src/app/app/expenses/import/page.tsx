@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/lib/unifiedAuth';
-import dynamic from 'next/dynamic';
+import React, { useState, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/lib/unifiedAuth";
+import dynamic from "next/dynamic";
 
 // Dynamically import components that use browser-only APIs
-const FileUploader = dynamic(() => import('@/components/pdf/PdfUploader'), {
+const FileUploader = dynamic(() => import("@/components/pdf/PdfUploader"), {
   ssr: false,
   loading: () => (
     <div className="animate-pulse">
@@ -16,119 +16,146 @@ const FileUploader = dynamic(() => import('@/components/pdf/PdfUploader'), {
         <div className="h-3 bg-gray-200 rounded w-1/3 mx-auto"></div>
       </div>
     </div>
-  )
+  ),
 });
 
-const TransactionReview = dynamic(() => import('@/components/pdf/TransactionReview'), {
-  ssr: false,
-  loading: () => (
-    <div className="animate-pulse">
-      <div className="bg-white rounded-xl p-6 border">
-        <div className="h-6 bg-gray-200 rounded mb-4"></div>
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 bg-gray-200 rounded"></div>
-          ))}
+const TransactionReview = dynamic(
+  () => import("@/components/pdf/TransactionReview"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse">
+        <div className="bg-white rounded-xl p-6 border">
+          <div className="h-6 bg-gray-200 rounded mb-4"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-gray-200 rounded"></div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  )
-});
+    ),
+  }
+);
 
 // Types need to be imported separately to avoid SSR issues
-import type { ParseResult, ParsedTransaction } from '@/lib/pdfParser';
+import type { ParseResult, ParsedTransaction } from "@/lib/pdfParser";
 
-type ImportStep = 'upload' | 'review' | 'success';
+type ImportStep = "upload" | "review" | "success";
 
 export default function ExpenseImportPage() {
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
+  const [currentStep, setCurrentStep] = useState<ImportStep>("upload");
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState(0);
 
   // Check if user is in demo mode
-  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
-  
+  const isDemoMode =
+    typeof window !== "undefined" &&
+    localStorage.getItem("demo-mode") === "true";
+
   // Memoize currentUser to prevent useCallback dependency changes
   const currentUser = useMemo(() => {
-    return user || (isDemoMode ? { id: 'demo-user-id' } : null);
+    return user || (isDemoMode ? { id: "demo-user-id" } : null);
   }, [user, isDemoMode]);
 
   const handleParsed = (result: ParseResult) => {
-    console.log('Parse result:', result);
-    
+    console.log("Parse result:", result);
+
     // Show warning if very few transactions found
     if (result.transactions.length < 5 && result.transactions.length > 0) {
-      result.errors.push(`Only ${result.transactions.length} transactions found. The PDF might not be fully parsed.`);
+      result.errors.push(
+        `Only ${result.transactions.length} transactions found. The PDF might not be fully parsed.`
+      );
     }
-    
+
     setParseResult(result);
-    setCurrentStep('review');
+    setCurrentStep("review");
     setError(null);
   };
 
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
     setParseResult(null);
-    
+
     // Log error for debugging
-    console.error('Import error:', errorMessage);
+    console.error("Import error:", errorMessage);
   };
 
-  const handleSave = useCallback(async (selectedTransactions: ParsedTransaction[]) => {
-    if (!currentUser?.id) return;
+  const handleSave = useCallback(
+    async (selectedTransactions: ParsedTransaction[]) => {
+      if (!currentUser?.id) return;
 
-    try {
-      const { apiCall } = await import('@/lib/mockApi');
-      
-      // Convert transactions to expenses
-      const expenses = selectedTransactions.map(transaction => ({
-        id: `imported_${transaction.id}`,
-        userId: currentUser.id,
-        category: transaction.category,
-        amount: transaction.amount, // Already in cents
-        date: transaction.date,
-        description: transaction.description,
-        recurrence: 'one-time' as const,
-        // Add a note to indicate this was imported and whether it's income or expense
-        notes: `Imported from bank statement - ${transaction.type === 'credit' ? 'Income' : 'Expense'}`,
-      }));
+      try {
+        // Use the proxy endpoint with authentication
+        const authToken = (isDemoMode ? "demo-token" : user?.token) || null;
 
-      // Save each expense
-      for (const expense of expenses) {
-        const response = await apiCall('/api/expenses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            method: 'CREATE',
-            ...expense,
-          }),
-        });
+        // Convert transactions to expenses
+        const expenses = selectedTransactions.map((transaction) => ({
+          id: `imported_${transaction.id}`,
+          userId: currentUser.id,
+          category: transaction.category,
+          amount: transaction.amount, // Already in cents
+          date: transaction.date,
+          description: transaction.description,
+          recurrence: "one-time" as const,
+          // Add a note to indicate this was imported and whether it's income or expense
+          notes: `Imported from bank statement - ${
+            transaction.type === "credit" ? "Income" : "Expense"
+          }`,
+        }));
 
-        const data = await response.json();
-        if (data.error) {
-          throw new Error(`Failed to save expense: ${data.error}`);
+        // Save each expense
+        for (const expense of expenses) {
+          const response = await fetch("/api/expenses", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              method: "CREATE",
+              ...expense,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          if (data.error) {
+            throw new Error(`Failed to save expense: ${data.error}`);
+          }
         }
-      }
 
-      setCurrentStep('success');
-      setSavedCount(expenses.length);
-      setParseResult(prev => prev ? {
-        ...prev,
-        savedCount: expenses.length,
-        totalAmount: selectedTransactions.reduce((sum, t) => 
-          sum + (t.type === 'debit' ? t.amount : -t.amount), 0
-        )
-      } : null);
-    } catch (error) {
-      console.error('Failed to save expenses:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save expenses');
-    }
-  }, [currentUser]);
+        setCurrentStep("success");
+        setSavedCount(expenses.length);
+        setParseResult((prev) =>
+          prev
+            ? {
+                ...prev,
+                savedCount: expenses.length,
+                totalAmount: selectedTransactions.reduce(
+                  (sum, t) => sum + (t.type === "debit" ? t.amount : -t.amount),
+                  0
+                ),
+              }
+            : null
+        );
+      } catch (error) {
+        console.error("Failed to save expenses:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to save expenses"
+        );
+      }
+    },
+    [currentUser, isDemoMode, user?.token]
+  );
 
   const handleStartOver = () => {
-    setCurrentStep('upload');
+    setCurrentStep("upload");
     setParseResult(null);
     setError(null);
     setSavedCount(0);
@@ -138,9 +165,25 @@ export default function ExpenseImportPage() {
     <div className="flex items-center justify-center mb-8">
       <div className="flex items-center space-x-4">
         {/* Step 1: Upload */}
-        <div className={`flex items-center space-x-2 ${currentStep === 'upload' ? 'text-blue-600 dark:text-blue-400' : currentStep === 'review' || currentStep === 'success' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'upload' ? 'bg-blue-100 dark:bg-blue-500/20' : currentStep === 'review' || currentStep === 'success' ? 'bg-green-100 dark:bg-green-500/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
-            {currentStep === 'review' || currentStep === 'success' ? (
+        <div
+          className={`flex items-center space-x-2 ${
+            currentStep === "upload"
+              ? "text-blue-600 dark:text-blue-400"
+              : currentStep === "review" || currentStep === "success"
+              ? "text-green-600 dark:text-green-400"
+              : "text-gray-400"
+          }`}
+        >
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              currentStep === "upload"
+                ? "bg-blue-100 dark:bg-blue-500/20"
+                : currentStep === "review" || currentStep === "success"
+                ? "bg-green-100 dark:bg-green-500/20"
+                : "bg-gray-100 dark:bg-gray-700"
+            }`}
+          >
+            {currentStep === "review" || currentStep === "success" ? (
               <i className="fas fa-check text-sm"></i>
             ) : (
               <span className="text-sm font-medium">1</span>
@@ -149,12 +192,34 @@ export default function ExpenseImportPage() {
           <span className="text-sm font-medium">Upload PDF</span>
         </div>
 
-        <div className={`w-8 h-px ${currentStep === 'review' || currentStep === 'success' ? 'bg-green-300 dark:bg-green-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+        <div
+          className={`w-8 h-px ${
+            currentStep === "review" || currentStep === "success"
+              ? "bg-green-300 dark:bg-green-600"
+              : "bg-gray-300 dark:bg-gray-600"
+          }`}
+        ></div>
 
         {/* Step 2: Review */}
-        <div className={`flex items-center space-x-2 ${currentStep === 'review' ? 'text-blue-600 dark:text-blue-400' : currentStep === 'success' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'review' ? 'bg-blue-100 dark:bg-blue-500/20' : currentStep === 'success' ? 'bg-green-100 dark:bg-green-500/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
-            {currentStep === 'success' ? (
+        <div
+          className={`flex items-center space-x-2 ${
+            currentStep === "review"
+              ? "text-blue-600 dark:text-blue-400"
+              : currentStep === "success"
+              ? "text-green-600 dark:text-green-400"
+              : "text-gray-400"
+          }`}
+        >
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              currentStep === "review"
+                ? "bg-blue-100 dark:bg-blue-500/20"
+                : currentStep === "success"
+                ? "bg-green-100 dark:bg-green-500/20"
+                : "bg-gray-100 dark:bg-gray-700"
+            }`}
+          >
+            {currentStep === "success" ? (
               <i className="fas fa-check text-sm"></i>
             ) : (
               <span className="text-sm font-medium">2</span>
@@ -163,12 +228,30 @@ export default function ExpenseImportPage() {
           <span className="text-sm font-medium">Review & Edit</span>
         </div>
 
-        <div className={`w-8 h-px ${currentStep === 'success' ? 'bg-green-300 dark:bg-green-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+        <div
+          className={`w-8 h-px ${
+            currentStep === "success"
+              ? "bg-green-300 dark:bg-green-600"
+              : "bg-gray-300 dark:bg-gray-600"
+          }`}
+        ></div>
 
         {/* Step 3: Success */}
-        <div className={`flex items-center space-x-2 ${currentStep === 'success' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'success' ? 'bg-green-100 dark:bg-green-500/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
-            {currentStep === 'success' ? (
+        <div
+          className={`flex items-center space-x-2 ${
+            currentStep === "success"
+              ? "text-green-600 dark:text-green-400"
+              : "text-gray-400"
+          }`}
+        >
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              currentStep === "success"
+                ? "bg-green-100 dark:bg-green-500/20"
+                : "bg-gray-100 dark:bg-gray-700"
+            }`}
+          >
+            {currentStep === "success" ? (
               <i className="fas fa-check text-sm"></i>
             ) : (
               <span className="text-sm font-medium">3</span>
@@ -198,7 +281,6 @@ export default function ExpenseImportPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#101828] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -209,7 +291,8 @@ export default function ExpenseImportPage() {
             Import Bank Statement
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Upload your bank statement PDF and we&apos;ll automatically extract and categorize your transactions
+            Upload your bank statement PDF and we&apos;ll automatically extract
+            and categorize your transactions
           </p>
         </motion.div>
 
@@ -229,8 +312,12 @@ export default function ExpenseImportPage() {
                 <div className="flex items-center">
                   <i className="fas fa-exclamation-circle text-red-500 mr-3"></i>
                   <div>
-                    <h3 className="font-medium text-red-800 dark:text-red-200">Upload Error</h3>
-                    <p className="text-red-700 dark:text-red-300 text-sm mt-1">{error}</p>
+                    <h3 className="font-medium text-red-800 dark:text-red-200">
+                      Upload Error
+                    </h3>
+                    <p className="text-red-700 dark:text-red-300 text-sm mt-1">
+                      {error}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -240,7 +327,7 @@ export default function ExpenseImportPage() {
 
         {/* Main Content */}
         <AnimatePresence mode="wait">
-          {currentStep === 'upload' && (
+          {currentStep === "upload" && (
             <motion.div
               key="upload"
               initial={{ opacity: 0, x: -20 }}
@@ -249,7 +336,7 @@ export default function ExpenseImportPage() {
               className="max-w-2xl mx-auto"
             >
               <FileUploader onParsed={handleParsed} onError={handleError} />
-              
+
               {/* Help Section */}
               <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -258,23 +345,38 @@ export default function ExpenseImportPage() {
                 </h3>
                 <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
                   <div className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">1</span>
-                    <p>Upload your bank statement (PDF: Chase, BofA, Wells Fargo, Citi, Capital One, RBS, Monzo | CSV: Monzo format)</p>
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">
+                      1
+                    </span>
+                    <p>
+                      Upload your bank statement (PDF: Chase, BofA, Wells Fargo,
+                      Citi, Capital One, RBS, Monzo | CSV: Monzo format)
+                    </p>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">2</span>
-                    <p>We&apos;ll extract transactions and automatically categorize them</p>
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">
+                      2
+                    </span>
+                    <p>
+                      We&apos;ll extract transactions and automatically
+                      categorize them
+                    </p>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">3</span>
-                    <p>Review and edit the transactions before saving them as expenses</p>
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-medium">
+                      3
+                    </span>
+                    <p>
+                      Review and edit the transactions before saving them as
+                      expenses
+                    </p>
                   </div>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {currentStep === 'review' && parseResult && (
+          {currentStep === "review" && parseResult && (
             <motion.div
               key="review"
               initial={{ opacity: 0, x: -20 }}
@@ -289,7 +391,7 @@ export default function ExpenseImportPage() {
             </motion.div>
           )}
 
-          {currentStep === 'success' && (
+          {currentStep === "success" && (
             <motion.div
               key="success"
               initial={{ opacity: 0, x: -20 }}
@@ -301,15 +403,19 @@ export default function ExpenseImportPage() {
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                   <i className="fas fa-check text-2xl text-green-600 dark:text-green-400"></i>
                 </div>
-                
+
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                   Import Complete!
                 </h2>
-                
+
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Successfully imported <span className="font-semibold text-green-600 dark:text-green-400">{savedCount} transactions</span> from your bank statement.
+                  Successfully imported{" "}
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    {savedCount} transactions
+                  </span>{" "}
+                  from your bank statement.
                 </p>
-                
+
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button
                     onClick={handleStartOver}
@@ -332,4 +438,4 @@ export default function ExpenseImportPage() {
       </div>
     </div>
   );
-} 
+}

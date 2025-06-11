@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/providers/theme-provider";
 import { useAuth } from "@/lib/unifiedAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { getUserInitials, sanitizeText } from "@/lib/userUtils";
+import { logger } from "@/lib/logger";
 
 interface UserMenuProps {
   user?: {
     name?: string;
     email?: string;
   };
+}
+
+interface UserData {
+  name?: string;
+  email?: string;
 }
 
 interface MenuItemBase {
@@ -55,8 +61,60 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
   const { signOut, userProfile } = useAuth();
   const { unreadCount } = useNotifications();
 
-  // Use auth context userProfile if available, fallback to prop user
-  const user = userProfile || propUser;
+  // Prefer prop user (from createUserContext) over raw userProfile for consistency
+  const user = propUser || userProfile;
+
+  // Debug logging to track profile updates (only in development and only on changes)
+  const prevUserData = useRef<{
+    propUser: UserData | null;
+    userProfile: UserData | null;
+    finalUser: UserData | null;
+  }>({
+    propUser: null,
+    userProfile: null,
+    finalUser: null,
+  });
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      const currentData = {
+        propUser: propUser
+          ? { name: propUser.name, email: propUser.email }
+          : null,
+        userProfile: userProfile
+          ? { name: userProfile.name, email: userProfile.email }
+          : null,
+        finalUser: user ? { name: user.name, email: user.email } : null,
+      };
+
+      // Only log if data actually changed
+      const hasChanged =
+        JSON.stringify(currentData.propUser) !==
+          JSON.stringify(prevUserData.current.propUser) ||
+        JSON.stringify(currentData.userProfile) !==
+          JSON.stringify(prevUserData.current.userProfile) ||
+        JSON.stringify(currentData.finalUser) !==
+          JSON.stringify(prevUserData.current.finalUser);
+
+      if (hasChanged) {
+        logger.auth("UserMenu data changed:", {
+          ...currentData,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Check for mismatch only when data changes
+        if (propUser && userProfile && propUser.name !== userProfile.name) {
+          logger.auth("Profile data mismatch detected:", {
+            propUser: propUser.name,
+            userProfile: userProfile.name,
+            using: user?.name,
+          });
+        }
+
+        prevUserData.current = currentData;
+      }
+    }
+  }, [propUser, userProfile, user]);
 
   // Memoized user data processing to prevent recreation
   const processedUserData = useMemo(() => {
@@ -155,16 +213,6 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
 
   return (
     <div className="relative flex items-center gap-3">
-      {/* Theme Toggle with glass effect - hidden on mobile, moved to user menu */}
-      <button
-        onClick={toggleTheme}
-        className="hidden md:flex h-11 w-11 flex-shrink-0 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105 items-center justify-center"
-        title={themeUtils.tooltip}
-        aria-label={themeUtils.tooltip}
-      >
-        <i className={`fas ${themeUtils.icon} text-sm`}></i>
-      </button>
-
       {user ? (
         <>
           {/* User Avatar with glass effect */}
@@ -244,12 +292,7 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
                   {/* Menu items */}
                   <div className="py-1">
                     {profileMenuItems.map((item, index) => (
-                      <div
-                        key={`${item.label}-${index}`}
-                        className={`${
-                          item.label.includes("mode") ? "md:hidden" : ""
-                        }`}
-                      >
+                      <div key={`${item.label}-${index}`}>
                         {item.path ? (
                           <Link
                             href={item.path}
@@ -303,21 +346,36 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
           </div>
         </>
       ) : (
-        /* Sign in and sign up buttons for non-authenticated users */
+        /* Theme toggle and sign in/sign up buttons for non-authenticated users */
         <div className="flex items-center gap-2">
+          {/* Theme Toggle for public pages */}
+          <button
+            onClick={toggleTheme}
+            className="h-11 w-11 flex-shrink-0 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-lg hover:scale-105 flex items-center justify-center"
+            title={themeUtils.tooltip}
+            aria-label={themeUtils.tooltip}
+            data-testid="theme-toggle"
+          >
+            <i className={`fas ${themeUtils.icon} text-sm`}></i>
+          </button>
+
           <Link
             href="/auth/signIn"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium hover:bg-white/80 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200 shadow-lg hover:scale-105"
+            className="h-11 w-11 flex-shrink-0 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium hover:bg-white/80 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200 shadow-lg hover:scale-105 flex items-center justify-center"
+            data-testid="sign-in-button"
+            title="Sign In"
+            aria-label="Sign In"
           >
             <i className="fas fa-sign-in-alt text-sm" aria-hidden="true"></i>
-            <span className="hidden sm:inline">Sign In</span>
           </Link>
           <Link
             href="/auth/signUp"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:scale-105"
+            className="h-11 w-11 flex-shrink-0 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:scale-105 flex items-center justify-center"
+            data-testid="sign-up-button"
+            title="Sign Up"
+            aria-label="Sign Up"
           >
             <i className="fas fa-user-plus text-sm" aria-hidden="true"></i>
-            <span className="hidden sm:inline">Sign Up</span>
           </Link>
         </div>
       )}

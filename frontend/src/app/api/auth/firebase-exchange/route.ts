@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
+// Auto-detect backend URL with proper protocol
+const getBackendUrl = () => {
+  // Use environment variable if available
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL;
+  }
+
+  // Development fallback - for API routes, we can't access window
+  // so we'll assume HTTP for localhost development
+  return "http://localhost:3001";
+};
+
+const BACKEND_URL = getBackendUrl();
 
 // SECURITY: Rate limiting for token exchange attempts
 const rateLimitMap = new Map<string, { attempts: number; resetTime: number }>();

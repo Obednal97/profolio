@@ -17,6 +17,7 @@ import {
   onAuthStateChange,
   getUserToken,
 } from "./firebase";
+import { logger } from "@/lib/logger";
 
 interface AuthContextType {
   user: User | null;
@@ -112,7 +113,7 @@ async function extractAndPersistGoogleProfile(user: User) {
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.log("🆕 Google sign-in detected, saving profile data");
+      logger.auth("Google sign-in detected, saving profile data");
     }
 
     const profileData = {
@@ -133,7 +134,7 @@ async function extractAndPersistGoogleProfile(user: User) {
 
     if (!backendToken) {
       if (process.env.NODE_ENV === "development") {
-        console.warn("Failed to exchange Firebase token for backend JWT");
+        logger.auth("Failed to exchange Firebase token for backend JWT");
       }
       return;
     }
@@ -152,7 +153,7 @@ async function extractAndPersistGoogleProfile(user: User) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       if (process.env.NODE_ENV === "development") {
-        console.warn(
+        logger.auth(
           "Failed to save Google profile to database:",
           errorData.message || response.statusText
         );
@@ -164,16 +165,16 @@ async function extractAndPersistGoogleProfile(user: User) {
 
     if (data.success) {
       if (process.env.NODE_ENV === "development") {
-        console.log("✅ Google profile data saved for user:", user.uid);
+        logger.auth("Google profile data saved for user:", user.uid);
       }
     } else {
       if (process.env.NODE_ENV === "development") {
-        console.warn("❌ Failed to save Google profile:", data.message);
+        logger.auth("❌ Failed to save Google profile:", data.message);
       }
     }
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
-      console.error("❌ Failed to persist Google profile data:", error);
+      logger.auth("❌ Failed to persist Google profile data:", error);
     }
     // Don't throw - this shouldn't break the auth flow
   }
@@ -185,7 +186,7 @@ async function exchangeFirebaseTokenForBackendJWT(
 ): Promise<string | null> {
   try {
     if (process.env.NODE_ENV === "development") {
-      console.log("🔄 Exchanging Firebase token for backend JWT...");
+      logger.auth("Exchanging Firebase token for backend JWT...");
     }
 
     // SECURITY: Server-side token exchange sets httpOnly cookies
@@ -201,7 +202,7 @@ async function exchangeFirebaseTokenForBackendJWT(
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       if (process.env.NODE_ENV === "development") {
-        console.error(
+        logger.auth(
           "Token exchange failed:",
           errorData.message || response.statusText
         );
@@ -213,8 +214,8 @@ async function exchangeFirebaseTokenForBackendJWT(
 
     if (data.success && data.token) {
       if (process.env.NODE_ENV === "development") {
-        console.log(
-          "✅ Firebase token exchanged for backend JWT (stored as httpOnly cookie)"
+        logger.auth(
+          "JWT token obtained and saved. Backend authentication ready."
         );
       }
       // SECURITY: Return token for immediate use, but don't store client-side
@@ -222,13 +223,13 @@ async function exchangeFirebaseTokenForBackendJWT(
       return data.token;
     } else {
       if (process.env.NODE_ENV === "development") {
-        console.error("Token exchange failed: No token in response");
+        logger.auth("Token exchange failed: No token in response");
       }
       return null;
     }
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
-      console.error("Token exchange error:", error);
+      logger.auth("Token exchange error:", error);
     }
     return null;
   }
@@ -249,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Handle automatic sign out on unauthorized responses
   const handleUnauthorized = useCallback(async () => {
     if (process.env.NODE_ENV === "development") {
-      console.warn("🔒 [Auth] Handling unauthorized access, signing out user");
+      logger.auth("🔒 [Auth] Handling unauthorized access, signing out user");
     }
     await signOut();
   }, []);
@@ -297,7 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Check if token has expired
           if (timeDiff > expirationTime) {
             if (process.env.NODE_ENV === "development") {
-              console.warn("🕐 [Auth] Token expired, signing out user");
+              logger.auth("🕐 [Auth] Token expired, signing out user");
             }
             await signOut();
             return false;
@@ -308,7 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Token expiration check error:", error);
+        logger.auth("Token expiration check error:", error);
       }
     }
 
@@ -336,9 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = useCallback(
     async (userId: string) => {
       try {
-        if (process.env.NODE_ENV === "development") {
-          console.log("🔄 [Auth] Fetching user profile for:", userId);
-        }
+        logger.auth("Fetching user profile for:", userId);
 
         // Get current user to obtain token
         const currentUser = user;
@@ -356,7 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!backendToken) {
           if (process.env.NODE_ENV === "development") {
-            console.warn("⚠️ [Auth] Failed to exchange Firebase token");
+            logger.auth("⚠️ [Auth] Failed to exchange Firebase token");
           }
           throw new Error("No authentication token available");
         }
@@ -374,7 +373,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // If token is invalid, try to get a fresh one
           if (response.status === 401) {
             if (process.env.NODE_ENV === "development") {
-              console.log("🔄 [Auth] Token expired, getting fresh token...");
+              logger.auth("🔄 [Auth] Token expired, getting fresh token...");
             }
             const freshFirebaseToken = await currentUser.getIdToken();
             const freshBackendToken = await exchangeFirebaseTokenForBackendJWT(
@@ -404,7 +403,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     photoURL: retryData.user.photoURL || "",
                   };
                   if (process.env.NODE_ENV === "development") {
-                    console.log(
+                    logger.auth(
                       "✅ [Auth] Profile updated with fresh token:",
                       newProfile.name
                     );
@@ -433,7 +432,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             photoURL: data.user.photoURL || "",
           };
           if (process.env.NODE_ENV === "development") {
-            console.log("✅ [Auth] Profile updated:", newProfile.name);
+            logger.auth("✅ [Auth] Profile updated:", newProfile.name);
           }
           setUserProfile(newProfile);
         } else {
@@ -450,7 +449,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         if (process.env.NODE_ENV === "development") {
-          console.error("❌ [Auth] Failed to fetch user profile:", error);
+          logger.auth("❌ [Auth] Failed to fetch user profile:", error);
         }
         // Fallback to Firebase user data
         if (user) {
@@ -482,14 +481,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         unsubscribe = await onAuthStateChange(async (user) => {
-          if (process.env.NODE_ENV === "development") {
-            console.log("🔄 [Auth] Firebase auth state changed:", {
-              hasUser: !!user,
-              userId: user?.uid,
-              email: user?.email,
-              displayName: user?.displayName,
-            });
-          }
+          logger.auth("Firebase auth state changed:", {
+            uid: user?.uid,
+            email: user?.email,
+            isDemo: false,
+          });
 
           setUser(user);
 
@@ -499,7 +495,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await extractAndPersistGoogleProfile(user);
             } catch (error) {
               if (process.env.NODE_ENV === "development") {
-                console.warn("Failed to extract Google profile:", error);
+                logger.auth("Failed to extract Google profile:", error);
               }
             }
 
@@ -508,7 +504,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await fetchUserProfile(user.uid);
             } catch (error) {
               if (process.env.NODE_ENV === "development") {
-                console.warn("Failed to fetch user profile:", error);
+                logger.auth("Failed to fetch user profile:", error);
               }
               // Fallback to Firebase user data
               setUserProfile({
@@ -526,13 +522,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               // SECURITY: No client-side token storage - server manages httpOnly cookies
             } catch (tokenError) {
               if (process.env.NODE_ENV === "development") {
-                console.warn("Failed to get user token:", tokenError);
+                logger.auth("Failed to get user token:", tokenError);
               }
               setToken(null);
             }
           } else {
             if (process.env.NODE_ENV === "development") {
-              console.log("❌ [Auth] No Firebase user, clearing profile");
+              logger.auth("❌ [Auth] No Firebase user, clearing profile");
             }
             setUserProfile(null);
             setToken(null);
@@ -545,7 +541,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setInitError(null);
       } catch (error) {
         if (process.env.NODE_ENV === "development") {
-          console.error("Error setting up auth listener:", error);
+          logger.auth("Error setting up auth listener:", error);
         }
         setInitError(
           error instanceof Error
@@ -564,7 +560,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           unsubscribe();
         } catch (error) {
           if (process.env.NODE_ENV === "development") {
-            console.warn("Error during auth cleanup:", error);
+            logger.auth("Error during auth cleanup:", error);
           }
         }
       }
@@ -575,7 +571,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user?.uid) {
       await fetchUserProfile(user.uid);
       if (process.env.NODE_ENV === "development") {
-        console.log("✅ [Auth] Profile refresh completed");
+        logger.auth("✅ [Auth] Profile refresh completed");
       }
     }
   };
@@ -583,7 +579,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // If there's an initialization error, provide a fallback context
   if (initError) {
     if (process.env.NODE_ENV === "development") {
-      console.warn(
+      logger.auth(
         "Auth initialization failed, providing fallback context:",
         initError
       );
@@ -679,14 +675,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (response.ok) {
             const data = await response.json();
             if (data.success) {
-              console.log(
+              logger.auth(
                 "✅ Initial profile created for email user:",
                 userCredential.user.uid
               );
             }
           }
         } catch (profileError) {
-          console.warn(
+          logger.auth(
             "Failed to save initial profile for email user:",
             profileError
           );
@@ -728,7 +724,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== "undefined") {
         const { DemoSessionManager } = await import("@/lib/demoSession");
         if (DemoSessionManager.isDemoMode()) {
-          console.log("Demo mode: Ending demo session");
+          logger.auth("Demo mode: Ending demo session");
           DemoSessionManager.endDemoSession();
           // endDemoSession() handles redirect automatically
           return;
@@ -743,7 +739,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       } catch (logoutError) {
         if (process.env.NODE_ENV === "development") {
-          console.warn("Server-side logout failed:", logoutError);
+          logger.auth("Server-side logout failed:", logoutError);
         }
       }
 
@@ -772,7 +768,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Force a complete page reload to clear any cached state
       window.location.replace("/auth/signIn");
     } catch (error: unknown) {
-      console.error("Sign out error:", error);
+      logger.auth("Sign out error:", error);
 
       // Even if Firebase sign out fails, clear local state and redirect
       setUser(null);

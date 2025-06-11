@@ -1,10 +1,10 @@
 "use client";
 
-import { useUser } from "@/lib/user";
+import { useAuth } from "@/lib/unifiedAuth";
 import React from "react";
 
 function AdminManager() {
-  const { data: user } = useUser();
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -13,7 +13,7 @@ function AdminManager() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">
             Admin Manager
           </h1>
-          
+
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -24,8 +24,10 @@ function AdminManager() {
                   Feature Coming Soon
                 </h3>
                 <p className="text-blue-700 dark:text-blue-300 mt-1">
-                  Admin management features are currently under development. This section will include user management, 
-                  group administration, permissions, and invitation management capabilities.
+                  Admin management features are currently under development.
+                  This section will include user management, group
+                  administration, permissions, and invitation management
+                  capabilities.
                 </p>
                 {user && (
                   <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">

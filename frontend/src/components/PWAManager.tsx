@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, memo, useRef } from "react";
 import { Button } from "@/components/ui/button/button";
 import { X, Download } from "lucide-react";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { logger } from "@/lib/logger";
 
 interface ServiceWorkerRegistrationWithUpdate
   extends ServiceWorkerRegistration {
@@ -49,7 +50,7 @@ const getPWADismissalStatus = (): {
     if (timeElapsed >= DISMISSAL_DURATION) {
       // Clear expired dismissal
       localStorage.removeItem(PWA_DISMISSAL_KEY);
-      console.log(
+      logger.pwa(
         "🔄 PWA install prompt dismissal expired after 7 days - prompt can be shown again"
       );
       return { isDismissed: false, daysRemaining: 0 };
@@ -60,7 +61,7 @@ const getPWADismissalStatus = (): {
       typeof data.dismissed !== "boolean" ||
       typeof data.timestamp !== "number"
     ) {
-      console.warn("Invalid PWA dismissal data structure, clearing...");
+      logger.warn("Invalid PWA dismissal data structure, clearing...");
       localStorage.removeItem(PWA_DISMISSAL_KEY);
       return { isDismissed: false, daysRemaining: 0 };
     }
@@ -73,7 +74,7 @@ const getPWADismissalStatus = (): {
       daysRemaining,
     };
   } catch (error) {
-    console.warn("Failed to read PWA dismissal status:", error);
+    logger.warn("Failed to read PWA dismissal status:", error);
     // Clear corrupted data
     try {
       localStorage.removeItem(PWA_DISMISSAL_KEY);
@@ -99,12 +100,12 @@ const setPWADismissalStatus = (dismissed: boolean): boolean => {
     localStorage.setItem(PWA_DISMISSAL_KEY, JSON.stringify(data));
 
     if (dismissed) {
-      console.log("🚫 PWA install prompt dismissed for 7 days");
+      logger.pwa("🚫 PWA install prompt dismissed for 7 days");
     }
 
     return true;
   } catch (error) {
-    console.warn("Failed to set PWA dismissal status:", error);
+    logger.warn("Failed to set PWA dismissal status:", error);
     return false;
   }
 };
@@ -115,7 +116,7 @@ const setPWADismissalStatus = (dismissed: boolean): boolean => {
  */
 export const clearAuthCache = async (): Promise<void> => {
   if (!("serviceWorker" in navigator)) {
-    console.warn("Service Worker not supported - cannot clear auth cache");
+    logger.warn("Service Worker not supported - cannot clear auth cache");
     return;
   }
 
@@ -125,7 +126,7 @@ export const clearAuthCache = async (): Promise<void> => {
       navigator.serviceWorker.controller.postMessage({
         type: "CLEAR_AUTH_CACHE",
       });
-      console.log("🧹 Requested service worker to clear auth cache");
+      logger.pwa("🧹 Requested service worker to clear auth cache");
     }
 
     // Also clear browser caches for auth/app routes
@@ -145,14 +146,14 @@ export const clearAuthCache = async (): Promise<void> => {
         await Promise.all(authKeys.map((key) => cache.delete(key)));
 
         if (authKeys.length > 0) {
-          console.log(
+          logger.pwa(
             `🧹 Cleared ${authKeys.length} auth-related entries from cache: ${cacheName}`
           );
         }
       })
     );
   } catch (error) {
-    console.error("Failed to clear auth cache:", error);
+    logger.error("Failed to clear auth cache:", error);
   }
 };
 
@@ -203,9 +204,7 @@ const PWAManager = memo(() => {
     if (sessionDismissed) {
       setDismissalStatus({ isDismissed: true, daysRemaining: 0 });
       setDismissalStatusLoaded(true);
-      if (process.env.NODE_ENV === "development") {
-        console.log("🚫 PWA install prompt dismissed for this session");
-      }
+      logger.pwa("🚫 PWA install prompt dismissed for this session");
       return;
     }
 
@@ -215,7 +214,7 @@ const PWAManager = memo(() => {
 
     // Debug logging in development
     if (process.env.NODE_ENV === "development" && status.isDismissed) {
-      console.log(
+      logger.pwa(
         `🔍 PWA install prompt dismissed, ${status.daysRemaining} days remaining`
       );
     }
@@ -223,12 +222,12 @@ const PWAManager = memo(() => {
 
   const registerServiceWorker = useCallback(async () => {
     if (!("serviceWorker" in navigator)) {
-      console.warn("Service Worker not supported in this browser");
+      logger.warn("Service Worker not supported in this browser");
       return;
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.log(
+      logger.pwa(
         "🔧 PWA: Skipping service worker registration in development mode"
       );
       return;
@@ -264,7 +263,7 @@ const PWAManager = memo(() => {
 
       registration.addEventListener("updatefound", handleUpdateFound);
     } catch (error) {
-      console.error("Service Worker registration failed:", error);
+      logger.error("Service Worker registration failed:", error);
     }
   }, []);
 
@@ -278,7 +277,7 @@ const PWAManager = memo(() => {
         sessionStorage.removeItem(PWA_SESSION_DISMISSED_KEY); // IMPROVEMENT: Clear session dismissal too
         setDismissalStatus({ isDismissed: false, daysRemaining: 0 });
       } catch (error) {
-        console.warn(
+        logger.warn(
           "Failed to clear PWA dismissal status after install:",
           error
         );
@@ -299,7 +298,7 @@ const PWAManager = memo(() => {
     try {
       sessionStorage.setItem(PWA_SESSION_DISMISSED_KEY, "true");
     } catch (error) {
-      console.warn("Failed to set session dismissal:", error);
+      logger.warn("Failed to set session dismissal:", error);
     }
 
     // Set 7-day dismissal preference
@@ -341,7 +340,7 @@ const PWAManager = memo(() => {
     ) {
       const now = Date.now();
       if (now - lastDebugLogRef.current > 5000) {
-        console.log("🔍 PWA Debug:", {
+        logger.pwa("🔍 PWA Debug:", {
           isClient,
           canInstall,
           isStandalone,
@@ -359,7 +358,7 @@ const PWAManager = memo(() => {
 
     if (isStandalone) {
       if (showBanner) {
-        console.log("📱 PWA already installed - hiding banner");
+        logger.pwa("📱 PWA already installed - hiding banner");
         setShowBanner(false);
       }
 
@@ -372,7 +371,7 @@ const PWAManager = memo(() => {
           sessionStorage.removeItem(PWA_SESSION_DISMISSED_KEY); // IMPROVEMENT: Clear session dismissal too
           setDismissalStatus({ isDismissed: false, daysRemaining: 0 });
         } catch (error) {
-          console.warn("Failed to clear dismissal storage:", error);
+          logger.warn("Failed to clear dismissal storage:", error);
         }
       }
       return;
@@ -380,7 +379,7 @@ const PWAManager = memo(() => {
 
     if (dismissalStatus.isDismissed) {
       if (showBanner) {
-        console.log(
+        logger.pwa(
           `📅 PWA install prompt dismissed, ${dismissalStatus.daysRemaining} days remaining`
         );
         setShowBanner(false);

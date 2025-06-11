@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { getAuthConfig, AuthConfig } from "./authConfig";
 import { LocalUser, localAuth } from "./localAuth";
+import { logger } from "@/lib/logger";
 
 // Firebase User type (minimal interface for what we need)
 interface FirebaseUser {
@@ -106,6 +107,7 @@ export function UnifiedAuthProvider({
   const mountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const profileFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const authClearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track component lifecycle
   useEffect(() => {
@@ -116,6 +118,9 @@ export function UnifiedAuthProvider({
       }
       if (profileFetchTimeoutRef.current) {
         clearTimeout(profileFetchTimeoutRef.current);
+      }
+      if (authClearTimeoutRef.current) {
+        clearTimeout(authClearTimeoutRef.current);
       }
     };
   }, []);
@@ -136,8 +141,8 @@ export function UnifiedAuthProvider({
         process.env.NODE_ENV === "development" &&
         process.env.NEXT_PUBLIC_ENABLE_API_PROXY === "false"
       ) {
-        console.log(
-          "🔧 [Auth] Development mode: Backend API calls explicitly disabled, using Firebase token directly"
+        logger.auth(
+          "Development mode: Backend API calls explicitly disabled, using Firebase token directly"
         );
 
         // Use Firebase token directly only when explicitly disabled
@@ -155,7 +160,7 @@ export function UnifiedAuthProvider({
       }
 
       // Default behavior: Always attempt JWT token exchange for proper authentication
-      console.log("🔄 [Auth] Attempting JWT token exchange...");
+      logger.auth("Attempting JWT token exchange...");
 
       // Get Firebase token
       const { getFirebaseAuth } = await import("./firebase");
@@ -185,8 +190,8 @@ export function UnifiedAuthProvider({
 
       const data = await exchangeResponse.json();
       if (data.success && data.token) {
-        console.log(
-          "✅ [Auth] JWT token exchange successful (stored as httpOnly cookie)"
+        logger.auth(
+          "JWT token exchange successful (stored as httpOnly cookie)"
         );
         // SECURITY: Return token for immediate use, but don't store client-side
         // Server has set httpOnly cookie for future requests
@@ -196,7 +201,7 @@ export function UnifiedAuthProvider({
       throw new Error("Invalid token exchange response");
     } catch (error) {
       if (error instanceof Error && error.name !== "AbortError") {
-        console.warn(
+        logger.auth(
           "Firebase token exchange failed, using Firebase token directly:",
           error
         );
@@ -209,11 +214,11 @@ export function UnifiedAuthProvider({
 
           if (currentUser) {
             const firebaseToken = await currentUser.getIdToken();
-            console.log("⚠️ [Auth] Using Firebase token as fallback");
+            logger.auth("Using Firebase token as fallback");
             return firebaseToken;
           }
         } catch (fallbackError) {
-          console.error("Firebase token fallback also failed:", fallbackError);
+          logger.auth("Firebase token fallback also failed:", fallbackError);
         }
       }
       return null;
@@ -229,8 +234,8 @@ export function UnifiedAuthProvider({
           process.env.NODE_ENV === "development" &&
           process.env.NEXT_PUBLIC_ENABLE_API_PROXY === "false"
         ) {
-          console.log(
-            "🔧 [Auth] Development mode: Backend API calls explicitly disabled, using Firebase profile data directly"
+          logger.auth(
+            "Development mode: Backend API calls explicitly disabled, using Firebase profile data directly"
           );
 
           const fallbackProfile: UserProfile = {
@@ -309,7 +314,7 @@ export function UnifiedAuthProvider({
             }
           } catch (error) {
             if (error instanceof Error && error.name !== "AbortError") {
-              console.warn("Profile fetch failed, using Firebase data:", error);
+              logger.auth("Profile fetch failed, using Firebase data:", error);
 
               const fallbackProfile: UserProfile = {
                 name:
@@ -328,7 +333,7 @@ export function UnifiedAuthProvider({
           }
         }, 500); // 500ms debounce
       } catch (error) {
-        console.error("Profile fetch setup failed:", error);
+        logger.auth("Profile fetch setup failed:", error);
       }
     },
     []
@@ -348,6 +353,9 @@ export function UnifiedAuthProvider({
         setAuthMode(authConfig.mode);
 
         if (authConfig.mode === "local") {
+          if (process.env.NODE_ENV === "development") {
+            logger.auth("Using LOCAL authentication mode");
+          }
           // Use local authentication
           unsubscribe = localAuth.onAuthStateChange((localUser) => {
             if (localUser) {
@@ -371,6 +379,9 @@ export function UnifiedAuthProvider({
             setLoading(false);
           });
         } else {
+          if (process.env.NODE_ENV === "development") {
+            logger.auth("Using FIREBASE authentication mode");
+          }
           // Use Firebase authentication (dynamic import to avoid errors when Firebase config is missing)
           try {
             const { onAuthStateChange, getUserToken } = await import(
@@ -388,7 +399,7 @@ export function UnifiedAuthProvider({
                     const userToken = await getUserToken();
                     setToken(userToken);
                   } catch (tokenError) {
-                    console.warn("Failed to get Firebase token:", tokenError);
+                    logger.auth("Failed to get Firebase token:", tokenError);
                   }
 
                   // SECURITY: Get backend token with secure server-side handling
@@ -416,9 +427,19 @@ export function UnifiedAuthProvider({
                     }
                   }
                 } else {
-                  setUser(null);
-                  setToken(null);
-                  setUserProfile(null);
+                  // Clear any existing timeout
+                  if (authClearTimeoutRef.current) {
+                    clearTimeout(authClearTimeoutRef.current);
+                  }
+
+                  // Debounce auth clearing to prevent clearing during navigation
+                  authClearTimeoutRef.current = setTimeout(() => {
+                    if (mountedRef.current) {
+                      setUser(null);
+                      setToken(null);
+                      setUserProfile(null);
+                    }
+                  }, 1000); // 1 second delay to allow for navigation-related temporary nulls
 
                   // SECURITY: No client-side cache clearing needed - server manages cookies
                 }
@@ -426,7 +447,7 @@ export function UnifiedAuthProvider({
               }
             );
           } catch (error) {
-            console.error(
+            logger.auth(
               "Firebase initialization failed, falling back to local auth:",
               error
             );
@@ -460,18 +481,24 @@ export function UnifiedAuthProvider({
           }
         }
       } catch (error) {
-        console.error("Auth initialization failed:", error);
+        logger.auth("Auth initialization failed:", error);
         setLoading(false);
       }
     };
 
-    initializeAuth();
+    try {
+      initializeAuth();
+    } catch (syncError) {
+      logger.auth("Auth initialization synchronous error:", syncError);
+      setLoading(false);
+    }
 
     return () => {
+      logger.auth("useEffect cleanup running");
       if (unsubscribe) unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchUserProfileOptimized]); // getBackendTokenFromFirebase intentionally excluded - stable with no params
+  }, []); // Remove problematic dependency that prevents useEffect from running // getBackendTokenFromFirebase intentionally excluded - stable with no params
 
   // Authentication methods
   const signIn = async (email: string, password: string) => {
@@ -543,7 +570,7 @@ export function UnifiedAuthProvider({
         });
       } catch (logoutError) {
         if (process.env.NODE_ENV === "development") {
-          console.warn("Server-side logout failed:", logoutError);
+          logger.auth("Server-side logout failed:", logoutError);
         }
       }
 
@@ -568,9 +595,9 @@ export function UnifiedAuthProvider({
       try {
         const { clearAuthCache } = await import("@/components/PWAManager");
         await clearAuthCache();
-        console.log("🧹 Cleared auth cache during sign out");
+        logger.auth("Cleared auth cache during sign out");
       } catch (cacheError) {
-        console.warn(
+        logger.auth(
           "⚠️ Failed to clear auth cache during sign out:",
           cacheError
         );
@@ -579,7 +606,7 @@ export function UnifiedAuthProvider({
       // Redirect with signing out indicator
       window.location.replace(signOutUrl);
     } catch (error) {
-      console.error("Sign out error:", error);
+      logger.auth("Sign out error:", error);
       // Force clear state even if sign out fails
       setUser(null);
       setToken(null);
@@ -590,7 +617,7 @@ export function UnifiedAuthProvider({
         const { clearAuthCache } = await import("@/components/PWAManager");
         await clearAuthCache();
       } catch (cacheError) {
-        console.warn(
+        logger.auth(
           "⚠️ Failed to clear auth cache after sign out error:",
           cacheError
         );
@@ -625,8 +652,8 @@ export function UnifiedAuthProvider({
           process.env.NODE_ENV === "development" &&
           process.env.NEXT_PUBLIC_ENABLE_API_PROXY === "false"
         ) {
-          console.log(
-            "🔧 [Auth] Development mode: Backend API calls explicitly disabled, refreshing Firebase profile data directly"
+          logger.auth(
+            "Development mode: Backend API calls explicitly disabled, refreshing Firebase profile data directly"
           );
 
           const { getFirebaseAuth } = await import("./firebase");
@@ -644,13 +671,13 @@ export function UnifiedAuthProvider({
               phone: currentUser.phoneNumber || "",
               photoURL: currentUser.photoURL || "",
             });
-            console.log("✅ [Auth] Profile refreshed from Firebase data");
+            logger.auth("Profile refreshed from Firebase data");
           }
           return;
         }
 
         // For Firebase users, fetch the updated profile from the backend
-        console.log("🔄 [Auth] Refreshing Firebase user profile...");
+        logger.auth("Refreshing Firebase user profile...");
 
         // Get Firebase token for backend authentication
         const { getFirebaseAuth } = await import("./firebase");
@@ -658,7 +685,7 @@ export function UnifiedAuthProvider({
         const currentUser = auth.currentUser;
 
         if (!currentUser) {
-          console.warn(
+          logger.auth(
             "⚠️ [Auth] No Firebase user found during profile refresh"
           );
           return;
@@ -678,15 +705,13 @@ export function UnifiedAuthProvider({
         });
 
         if (!response.ok) {
-          console.error(
-            "❌ [Auth] Token exchange failed during profile refresh"
-          );
+          logger.auth("❌ [Auth] Token exchange failed during profile refresh");
           return;
         }
 
         const data = await response.json();
         if (!data.success || !data.token) {
-          console.error("❌ [Auth] Invalid token exchange response");
+          logger.auth("❌ [Auth] Invalid token exchange response");
           return;
         }
 
@@ -701,7 +726,7 @@ export function UnifiedAuthProvider({
         });
 
         if (!profileResponse.ok) {
-          console.error(
+          logger.auth(
             "❌ [Auth] Failed to fetch profile:",
             profileResponse.status
           );
@@ -711,13 +736,13 @@ export function UnifiedAuthProvider({
         const profileData = await profileResponse.json();
 
         if (profileData.success && profileData.user) {
-          console.log(
+          logger.auth(
             "✅ [Auth] Profile refreshed successfully:",
             profileData.user.name
           );
 
           // Update userProfile state with fresh data from backend
-          setUserProfile({
+          const newProfile = {
             name:
               profileData.user.name ||
               currentUser.displayName ||
@@ -726,12 +751,18 @@ export function UnifiedAuthProvider({
             email: profileData.user.email || currentUser.email || "",
             phone: profileData.user.phone || currentUser.phoneNumber || "",
             photoURL: profileData.user.photoURL || currentUser.photoURL || "",
-          });
+          };
+
+          logger.auth("🔄 [Auth] Setting new profile state:", newProfile);
+          setUserProfile(newProfile);
 
           // SECURITY: No client-side token storage - server manages httpOnly cookies
           setToken(data.token);
+
+          // Add a small delay to ensure React state updates propagate
+          await new Promise((resolve) => setTimeout(resolve, 100));
         } else {
-          console.log(
+          logger.auth(
             "ℹ️ [Auth] No updated profile found in backend, using Firebase data"
           );
 
@@ -748,7 +779,7 @@ export function UnifiedAuthProvider({
         }
       }
     } catch (error) {
-      console.error("❌ [Auth] Failed to refresh user profile:", error);
+      logger.auth("❌ [Auth] Failed to refresh user profile:", error);
       // Don't throw error to avoid breaking the UI
     }
   };

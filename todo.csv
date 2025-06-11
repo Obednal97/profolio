@@ -1,0 +1,63 @@
+Task,Type,Area,Priority,Impact Score,Status
+"Production Firebase Admin SDK verification implementation",FIX,Authentication & Security,Critical,10,✅ COMPLETED
+"Role-based access control for admin endpoints",FIX,Authentication & Security,Critical,10,✅ COMPLETED
+"Replace in-memory API key storage with secure database storage",FIX,Authentication & Security,Critical,10,✅ COMPLETED
+"Mock API hardcoded to true, preventing real backend usage even with production env vars",FIX,Backend Configuration,Critical,10,✅ COMPLETED
+"Multiple hardcoded configurations preventing proper environment-based deployment",FIX,Full Stack Configuration,Critical,10,✅ COMPLETED
+"Missing API proxy routes causing 404 errors after mock API disable",FIX,Frontend API,Critical,10,✅ COMPLETED
+"API authentication and format mismatch after mock API disable",FIX,Full Stack API,Critical,10,✅ COMPLETED
+"Backend module registration and dependency injection errors",FIX,Backend API,Critical,10,✅ COMPLETED
+"Mixed Content Security Errors (HTTP resources over HTTPS)",FIX,Frontend Security,Critical,9,✅ COMPLETED
+"Missing static assets causing 404 errors (desktop-dashboard.png, mobile-dashboard.png)",FIX,Frontend Assets,Critical,9,✅ COMPLETED
+"Failed notification API calls (Failed to fetch notifications, Failed to refresh unread count)",FIX,Backend API,Critical,9,✅ COMPLETED
+"Delete account should be disabled in Demo mode - returns blank white page",FIX,Authentication & Security,Critical,9,✅ COMPLETED
+"Google Places API Calls Fail - CORS errors and postcode search limitations (created server-side proxy routes, smart postcode detection with guidance)",FIX,Frontend API Integration,Critical,10,✅ COMPLETED
+"Development-only logs showing in production (preloading, cache skip, PWA, auth state)",FIX,Frontend Performance,High,8,✅ COMPLETED
+"Excessive console logging impacting performance and exposing debug info",FIX,Frontend Performance,High,8,✅ COMPLETED
+"Authentication state logging exposing sensitive information in console",FIX,Frontend Security,High,8,✅ COMPLETED
+"Google auth users should be able to set password for email auth",NEW,Authentication & Security,High,8,
+"Updates page doesn't have latest release selected by default",FIX,Frontend Updates,High,7,✅ COMPLETED
+"Saving theme preference in settings doesn't have any effect",FIX,Frontend Settings,High,7,✅ COMPLETED
+"API config modal height should be limited between header and footer",FIX,Frontend UI/UX,High,7,✅ COMPLETED
+"Mobile login and signup buttons should be same size as logo and square",UPDATE,Frontend Mobile UI,High,7,✅ COMPLETED
+"Enable theme toggle in header on mobile before signup & signin buttons",UPDATE,Frontend Mobile UI,High,7,✅ COMPLETED
+"Updates page version detection incorrect - showing wrong current version",FIX,Frontend Updates,High,8,✅ COMPLETED
+"Preloading conditions not met after authentication",FIX,Frontend Performance,High,8,✅ COMPLETED
+"Updates API 404 errors due to double /api/api/ in URLs",FIX,Frontend API,High,8,✅ COMPLETED
+"Network requests taking multiple seconds due to API delays and dynamic imports",FIX,Frontend Performance,High,9,✅ COMPLETED
+"Excessive User Menu console logging causing performance impact",FIX,Frontend Performance,High,8,✅ COMPLETED
+"Loading page background should use site-wide animated color background",FIX,Frontend UI/UX,High,8,✅ COMPLETED
+"Add 2FA properly using otplib",NEW,Authentication & Security,High,8,
+"Implement failed password rate limiting",UPDATE,Authentication & Security,High,8,
+"Utilise bcrypt for password hashing and secure storage",UPDATE,Authentication & Security,High,7,
+"NextAuth migration",UPDATE,Authentication & Security,High,7,
+"Animation stutter on mobile and pwa",FIX,Frontend Performance,High,6,
+"Complete ApiKeysService integration in setup service",UPDATE,Backend API,High,6,
+"Separate app performance from user actions",NEW,Backend Performance,Medium,9,
+"Complete market data type migration",UPDATE,Backend API,Medium,7,
+"User management",NEW,Backend Features,Medium,8,
+"Stripe integration",NEW,Backend Features,Medium,8,
+"Reports page",NEW,Frontend Features,Medium,7,
+"Email notifications setup",NEW,Backend Features,Medium,7,
+"Guides documentation page",NEW,Frontend Features,Medium,6,
+"Captcha integration",NEW,Authentication & Security,Medium,6,
+"Billing menu in settings",NEW,Frontend Features,Medium,6,
+"Improved settings page",UPDATE,Frontend UI/UX,Medium,6,
+"Make account deletion more challenging",UPDATE,Authentication & Security,Medium,6,
+"Welcome notification 60s after signup",NEW,Backend Features,Medium,5,
+"Set PWA status bar to CSS blur effect",NEW,Frontend PWA,Medium,5,
+"Modals should have glass effect with blur",NEW,Frontend UI/UX,Medium,5,
+"Improved forgot password page",UPDATE,Frontend UI/UX,Medium,5,
+"Improved policy hub",UPDATE,Frontend UI/UX,Medium,4,
+"Enhanced dashboard performance optimizations",UPDATE,Frontend Performance,Low,5,
+"API security & validation improvements",UPDATE,Backend API,Low,6,
+"PWA management enhancements",UPDATE,Frontend PWA,Low,4,
+"Get feedback",NEW,User Research,Low,4,
+"Put screenshots in GitHub readme.md",UPDATE,Documentation,Low,3,
+"Adjust padding on public pages",UPDATE,Frontend UI/UX,Low,3,
+"Add back scroll snap to section on public pages",UPDATE,Frontend UI/UX,Low,3,
+"Remove links in footer",UPDATE,Frontend UI/UX,Low,2,
+"Phase out mock API usage where appropriate",UPDATE,Backend Cleanup,Technical Debt,4,✅ COMPLETED
+"Replace placeholder implementations with real ones",UPDATE,Backend Cleanup,Technical Debt,4,✅ COMPLETED
+"Remove development artifacts and improve maintainability",UPDATE,Code Quality,Technical Debt,4,✅ COMPLETED
+"Clean up temporary market data generation",UPDATE,Backend Cleanup,Technical Debt,3,✅ COMPLETED

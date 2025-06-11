@@ -15,29 +15,32 @@ export class ApiClient {
   private maxRetries: number = 3;
   private retryDelay: number = 1000;
 
-  constructor(baseURL: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000') {
+  constructor(
+    baseURL: string = process.env.NEXT_PUBLIC_API_URL ||
+      "http://localhost:3001/api"
+  ) {
     this.baseURL = baseURL;
   }
 
   private async getAuthHeaders(): Promise<HeadersInit> {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
     // Get auth token from secure httpOnly cookies
     try {
-      if (typeof window !== 'undefined' && window.isSecureContext) {
+      if (typeof window !== "undefined" && window.isSecureContext) {
         const token = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('auth-token='))
-          ?.split('=')[1];
-        
+          .split("; ")
+          .find((row) => row.startsWith("auth-token="))
+          ?.split("=")[1];
+
         if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
+          headers["Authorization"] = `Bearer ${token}`;
         }
       }
     } catch (error) {
-      console.warn('Failed to access auth token:', error);
+      console.warn("Failed to access auth token:", error);
     }
 
     return headers;
@@ -45,9 +48,9 @@ export class ApiClient {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const error = await response.json() as ApiError;
+      const error = (await response.json()) as ApiError;
       throw new ApiClientError(
-        error.message || 'An error occurred',
+        error.message || "An error occurred",
         error.statusCode || response.status,
         error
       );
@@ -88,30 +91,30 @@ export class ApiClient {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async get<T>(endpoint: string, params?: RequestParams): Promise<T> {
     const headers = await this.getAuthHeaders();
     const url = new URL(`${this.baseURL}${endpoint}`);
-    
+
     if (params) {
-      Object.entries(params).forEach(([key, value]) => 
+      Object.entries(params).forEach(([key, value]) =>
         url.searchParams.append(key, String(value))
       );
     }
 
     return this.fetchWithRetry<T>(url.toString(), {
-      method: 'GET',
+      method: "GET",
       headers,
     });
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
     const headers = await this.getAuthHeaders();
-    
+
     return this.fetchWithRetry<T>(`${this.baseURL}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -119,9 +122,9 @@ export class ApiClient {
 
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
     const headers = await this.getAuthHeaders();
-    
+
     return this.fetchWithRetry<T>(`${this.baseURL}${endpoint}`, {
-      method: 'PUT',
+      method: "PUT",
       headers,
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -129,9 +132,9 @@ export class ApiClient {
 
   async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     const headers = await this.getAuthHeaders();
-    
+
     return this.fetchWithRetry<T>(`${this.baseURL}${endpoint}`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers,
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -139,9 +142,9 @@ export class ApiClient {
 
   async delete<T>(endpoint: string): Promise<T> {
     const headers = await this.getAuthHeaders();
-    
+
     return this.fetchWithRetry<T>(`${this.baseURL}${endpoint}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers,
     });
   }
@@ -154,9 +157,9 @@ export class ApiClientError extends Error {
     public details?: ApiError
   ) {
     super(message);
-    this.name = 'ApiClientError';
+    this.name = "ApiClientError";
   }
 }
 
 // Singleton instance
-export const apiClient = new ApiClient(); 
+export const apiClient = new ApiClient();

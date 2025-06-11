@@ -8,78 +8,111 @@ datasource db {
 }
 
 model User {
-  id          String      @id @default(uuid())
-  email       String      @unique
-  taxCountry  String?
-  taxRate     Int?
-  createdAt   DateTime    @default(now())
-  password    String
-  updatedAt   DateTime    @default(now()) @updatedAt
-  name        String?
-  
-  // Additional profile fields
-  phone       String?     // Phone number
-  country     String?     // User's country (separate from tax country)
-  bio         String?     // User bio/description
-  photoURL    String?     // Profile photo URL
-  location    String?     // City/State/Region
-  
-  // User preferences
-  preferredCurrency String? @default("USD")
-  theme             String? @default("system")
-  timezone          String? @default("UTC")
-  language          String? @default("en")
-  
-  // Authentication metadata
-  provider          String? // 'firebase', 'local', 'demo'
-  emailVerified     Boolean @default(false)
-  lastSignIn        DateTime?
-  
-  // Relationships
-  apiKeys     ApiKey[]
-  assets      Asset[]
-  expenses    Expense[]
-  liabilities Liability[]
-  properties  Property[]
-  settings    Settings?
-  notifications Notification[]
+  id                  String         @id @default(uuid())
+  email               String         @unique
+  taxCountry          String?
+  taxRate             Int?
+  createdAt           DateTime       @default(now())
+  password            String
+  updatedAt           DateTime       @default(now()) @updatedAt
+  name                String?
+  bio                 String?
+  country             String?
+  emailVerified       Boolean        @default(false)
+  language            String?        @default("en")
+  lastSignIn          DateTime?
+  location            String?
+  phone               String?
+  photoURL            String?
+  preferredCurrency   String?        @default("USD")
+  provider            String?
+  theme               String?        @default("system")
+  timezone            String?        @default("UTC")
+  role                UserRole       @default(USER)
+  roleAssignedAt      DateTime?
+  roleAssignedBy      String?
+  apiKeys             ApiKey[]
+  assets              Asset[]
+  expenses            Expense[]
+  liabilities         Liability[]
+  notifications       Notification[]
+  properties          Property[]
+  assignedRoleChanges RoleChange[]   @relation("AdminRoleChanges")
+  roleChanges         RoleChange[]   @relation("UserRoleChanges")
+  settings            Settings?
+}
+
+model RoleChange {
+  id           String   @id @default(uuid())
+  userId       String
+  adminId      String
+  previousRole UserRole
+  newRole      UserRole
+  reason       String?
+  timestamp    DateTime @default(now())
+  admin        User     @relation("AdminRoleChanges", fields: [adminId], references: [id], onDelete: Cascade)
+  user         User     @relation("UserRoleChanges", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([adminId, timestamp])
+  @@index([timestamp])
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String
+  category        String
+  createdAt       DateTime         @default(now())
+  rolePermissions RolePermission[]
+
+  @@index([category])
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  role         UserRole
+  permissionId String
+  createdAt    DateTime   @default(now())
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
 }
 
 model Asset {
-  id               String             @id @default(uuid())
-  userId           String
-  name             String
-  quantity         Decimal            @default(0) @db.Decimal(18, 8)
-  source           String?
-  externalId       String?
-  current_value    Int?
-  valueOverride    Int?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @default(now()) @updatedAt
-  type             AssetType
-  currency         String?
-  symbol           String?
-  autoSync         Boolean            @default(false)
-  initialAmount    Int?
-  interestRate     Int?
-  interestType     InterestType?
-  lastSyncedAt     DateTime?
-  maturityDate     DateTime?
-  paymentFrequency PaymentFrequency?
-  purchaseDate     DateTime?
-  purchasePrice    Int?
-  termLength       Int?
-  user             User               @relation(fields: [userId], references: [id])
-  transactions     AssetTransaction[]
-  priceHistory     PriceHistory[]
-  
-  notes            String?
-  vesting_start_date DateTime?
+  id                 String             @id @default(uuid())
+  userId             String
+  name               String
+  quantity           Decimal            @default(0) @db.Decimal(18, 8)
+  source             String?
+  externalId         String?
+  valueOverride      Int?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @default(now()) @updatedAt
+  type               AssetType
+  currency           String?
+  symbol             String?
+  autoSync           Boolean            @default(false)
+  initialAmount      Int?
+  interestRate       Int?
+  interestType       InterestType?
+  lastSyncedAt       DateTime?
+  maturityDate       DateTime?
+  paymentFrequency   PaymentFrequency?
+  purchaseDate       DateTime?
+  purchasePrice      Int?
+  termLength         Int?
+  current_value      Int?
+  notes              String?
   vesting_end_date   DateTime?
   vesting_schedule   Json?
-  
-  symbolData       Symbol?            @relation("SymbolAssets", fields: [symbol], references: [symbol])
-  
+  vesting_start_date DateTime?
+  symbolData         Symbol?            @relation("SymbolAssets", fields: [symbol], references: [symbol])
+  user               User               @relation(fields: [userId], references: [id])
+  transactions       AssetTransaction[]
+  priceHistory       PriceHistory[]
+
   @@index([userId, type])
   @@index([symbol, type])
   @@index([userId, symbol])
@@ -87,15 +120,14 @@ model Asset {
 }
 
 model PriceHistory {
-  id        String   @id @default(uuid())
-  assetId   String
-  symbol    String
-  price     Int
-  timestamp DateTime
-  source    String
-  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  
-  symbolData Symbol? @relation("SymbolPriceHistory", fields: [symbol], references: [symbol])
+  id         String   @id @default(uuid())
+  assetId    String
+  symbol     String
+  price      Int
+  timestamp  DateTime
+  source     String
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  symbolData Symbol   @relation("SymbolPriceHistory", fields: [symbol], references: [symbol])
 
   @@unique([assetId, timestamp, source])
   @@index([assetId, timestamp])
@@ -172,14 +204,14 @@ model Liability {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @default(now()) @updatedAt
   user         User      @relation(fields: [userId], references: [id])
-  
+
   @@index([userId])
   @@index([dueDate])
 }
 
 model Expense {
   id        String   @id @default(uuid())
-  amount    Int      // Amount in cents for consistency
+  amount    Int
   category  String
   date      DateTime
   notes     String?
@@ -187,7 +219,7 @@ model Expense {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   user      User     @relation(fields: [userId], references: [id])
-  
+
   @@index([userId, date])
   @@index([userId, category])
   @@index([date])
@@ -204,61 +236,45 @@ model Settings {
 }
 
 model Property {
-  id                String   @id @default(uuid())
-  userId            String
-  
-  // Address components
-  address           String   // Full address for backward compatibility
-  street            String?  // Street address
-  city              String?  // City/Town
-  region            String?  // State/Region/County
-  postalCode        String?  // ZIP/Postal code
-  country           String?  // Country
-  
-  // Property details
-  propertyType      String?  // single_family, condo, townhouse, etc.
-  ownershipType     String?  // owned, rented
-  status            String?  // owned, rental, rented, sold
-  bedrooms          Int?
-  bathrooms         Decimal? @db.Decimal(3, 1) // Allow 2.5 bathrooms
-  squareFootage     Int?
-  yearBuilt         Int?
-  lotSize           Int?
-  
-  // Financial values (all stored in cents)
-  currentValue      Int?     // Current value in cents
-  purchasePrice     Int?     // Purchase price in cents  
-  rentalIncome      Int?     // Monthly rental income in cents
-  
-  // Mortgage details (amounts in cents, rates as decimal)
-  mortgageAmount    Int?     // Mortgage amount in cents
-  mortgageRate      Decimal? @db.Decimal(5, 2) // Interest rate percentage
-  mortgageTerm      Int?     // Term in years
-  monthlyPayment    Int?     // Monthly payment in cents
-  mortgageProvider  String?  // Lender name
-  mortgageStartDate DateTime?
-  
-  // Additional costs (monthly, in cents)
-  propertyTaxes     Int?     // Monthly property taxes in cents
-  insurance         Int?     // Monthly insurance in cents
-  maintenanceCosts  Int?     // Monthly maintenance in cents
-  hoa               Int?     // Monthly HOA fees in cents
-  
-  // Rental details
-  monthlyRent       Int?     // Monthly rent in cents
-  securityDeposit   Int?     // Security deposit in cents
-  rentalStartDate   DateTime?
-  rentalEndDate     DateTime?
-  
-  // Dates and metadata
+  id                String    @id @default(uuid())
+  address           String
   purchaseDate      DateTime?
   notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @default(now()) @updatedAt
-  
-  // Relationships
-  user              User     @relation(fields: [userId], references: [id])
-  
+  userId            String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
+  bathrooms         Decimal?  @db.Decimal(3, 1)
+  bedrooms          Int?
+  city              String?
+  country           String?
+  currentValue      Int?
+  hoa               Int?
+  insurance         Int?
+  lotSize           Int?
+  maintenanceCosts  Int?
+  monthlyPayment    Int?
+  monthlyRent       Int?
+  mortgageAmount    Int?
+  mortgageProvider  String?
+  mortgageRate      Decimal?  @db.Decimal(5, 2)
+  mortgageStartDate DateTime?
+  mortgageTerm      Int?
+  ownershipType     String?
+  postalCode        String?
+  propertyTaxes     Int?
+  propertyType      String?
+  purchasePrice     Int?
+  region            String?
+  rentalEndDate     DateTime?
+  rentalIncome      Int?
+  rentalStartDate   DateTime?
+  securityDeposit   Int?
+  squareFootage     Int?
+  status            String?
+  street            String?
+  yearBuilt         Int?
+  user              User      @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@index([propertyType])
   @@index([status])
@@ -266,19 +282,19 @@ model Property {
 }
 
 model Notification {
-  id        String           @id @default(uuid())
+  id        String               @id @default(uuid())
   userId    String
   type      NotificationType
   title     String
   message   String
-  data      Json?            // Additional metadata
-  isRead    Boolean          @default(false)
+  data      Json?
+  isRead    Boolean              @default(false)
   readAt    DateTime?
   priority  NotificationPriority @default(NORMAL)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @default(now()) @updatedAt
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @default(now()) @updatedAt
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@index([createdAt])
@@ -286,42 +302,57 @@ model Notification {
 }
 
 model Symbol {
-  id            String      @id @default(uuid())
-  symbol        String      @unique
-  name          String
-  type          AssetType   // STOCK, CRYPTO, etc.
-  exchange      String?     // NYSE, NASDAQ, etc.
-  sector        String?     // Technology, Healthcare, etc.
-  industry      String?     // Software, Pharmaceuticals, etc.
-  market_cap    BigInt?     // Market cap in cents
-  
-  // Price data
-  current_price Int?        // Current price in cents
-  previous_close Int?       // Previous close in cents
-  day_change    Int?        // Day change in cents
-  day_change_percent Decimal? @db.Decimal(10, 4) // Day change percentage
-  volume        BigInt?     // Trading volume
-  avg_volume    BigInt?     // Average volume
-  
-  // Metadata
-  last_updated  DateTime?   // When price was last updated
-  added_at      DateTime    @default(now())
-  is_active     Boolean     @default(true)
-  update_priority Int       @default(1) // 1=high, 2=medium, 3=low
-  
-  // Error tracking
-  error_count   Int         @default(0)
-  last_error    String?
-  last_error_at DateTime?
-  
-  // Relationships
-  assets        Asset[]     @relation("SymbolAssets")
-  priceHistory  PriceHistory[] @relation("SymbolPriceHistory")
-  
+  id                 String         @id @default(uuid())
+  symbol             String         @unique
+  name               String
+  type               AssetType
+  exchange           String?
+  sector             String?
+  industry           String?
+  market_cap         BigInt?
+  current_price      Int?
+  previous_close     Int?
+  day_change         Int?
+  day_change_percent Decimal?       @db.Decimal(10, 4)
+  volume             BigInt?
+  avg_volume         BigInt?
+  last_updated       DateTime?
+  added_at           DateTime       @default(now())
+  is_active          Boolean        @default(true)
+  update_priority    Int            @default(1)
+  error_count        Int            @default(0)
+  last_error         String?
+  last_error_at      DateTime?
+  assets             Asset[]        @relation("SymbolAssets")
+  priceHistory       PriceHistory[] @relation("SymbolPriceHistory")
+
   @@index([symbol, is_active])
   @@index([type, is_active])
   @@index([last_updated, update_priority])
   @@index([update_priority, is_active])
+}
+
+model SymbolQueue {
+  id            String     @id @default(uuid())
+  symbol        String     @unique
+  requested_by  String?
+  asset_type    AssetType?
+  priority      Int        @default(2)
+  status        String     @default("PENDING")
+  attempts      Int        @default(0)
+  last_attempt  DateTime?
+  error_message String?
+  created_at    DateTime   @default(now())
+  processed_at  DateTime?
+
+  @@index([status, priority])
+  @@index([created_at])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 enum AssetType {
@@ -353,24 +384,6 @@ enum ApiProvider {
   COINMARKETCAP
   BINANCE
   TRADING212
-}
-
-// Queue for processing new symbols that don't exist in our database
-model SymbolQueue {
-  id            String      @id @default(uuid())
-  symbol        String      @unique
-  requested_by  String?     // User ID who requested it
-  asset_type    AssetType?  // Guessed type
-  priority      Int         @default(2) // 1=urgent, 2=normal, 3=low
-  status        String      @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
-  attempts      Int         @default(0)
-  last_attempt  DateTime?
-  error_message String?
-  created_at    DateTime    @default(now())
-  processed_at  DateTime?
-  
-  @@index([status, priority])
-  @@index([created_at])
 }
 
 enum NotificationType {

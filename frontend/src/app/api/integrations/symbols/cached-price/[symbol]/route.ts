@@ -1,28 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 // Mark this route as dynamic to prevent static generation
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 function getUserFromToken(request: NextRequest) {
   // Check for demo mode first
-  const isDemoMode = request.headers.get('x-demo-mode') === 'true';
-  
+  const isDemoMode = request.headers.get("x-demo-mode") === "true";
+
   if (isDemoMode) {
     return {
-      id: 'demo-user-id',
-      name: 'Demo User',
-      email: 'demo@profolio.com',
-      isDemo: true
+      id: "demo-user-id",
+      name: "Demo User",
+      email: "demo@profolio.com",
+      isDemo: true,
     };
   }
 
   // For real users, would validate JWT token here
-  const authHeader = request.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Bearer ")) {
     // In production, validate the real JWT token
     return {
-      id: 'real-user-id',
-      isDemo: false
+      id: "real-user-id",
+      isDemo: false,
     };
   }
 
@@ -35,72 +36,86 @@ export async function GET(
 ) {
   try {
     const user = getUserFromToken(request);
-    
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const resolvedParams = await params;
     const symbol = resolvedParams.symbol?.toUpperCase();
 
     if (!symbol) {
-      return NextResponse.json({ 
-        error: 'Symbol parameter is required',
-        price: null
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Symbol parameter is required",
+          price: null,
+        },
+        { status: 400 }
+      );
     }
 
     // Determine API base URL
-    const apiBaseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api`
-      : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const apiBaseUrl =
+      process.env.NODE_ENV === "production"
+        ? process.env.NEXT_PUBLIC_API_URL ||
+          `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api`
+        : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
-    const backendUrl = `${apiBaseUrl}/market-data/cached-price/${encodeURIComponent(symbol)}`;
-    
+    const backendUrl = `${apiBaseUrl}/market-data/cached-price/${encodeURIComponent(
+      symbol
+    )}`;
+
     // Use demo token for demo users, real token for real users
-    const authToken = user.isDemo ? 'demo-token-secure-123' : 
-                     request.headers.get('authorization')?.slice(7) || 
-                     request.cookies.get('auth-token')?.value;
-    
+    const authToken = user.isDemo
+      ? "demo-token-secure-123"
+      : request.headers.get("authorization")?.slice(7) ||
+        request.cookies.get("auth-token")?.value;
+
     if (!authToken) {
-      return NextResponse.json({
-        symbol: symbol,
-        price: null,
-        error: 'No authentication token available'
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          symbol: symbol,
+          price: null,
+          error: "No authentication token available",
+        },
+        { status: 401 }
+      );
     }
-    
-    console.log(`Getting cached price for: ${symbol} (${user.isDemo ? 'demo' : 'real'} user)`);
-    
+
+    logger.cache(
+      `Getting cached price for: ${symbol} (${
+        user.isDemo ? "demo" : "real"
+      } user)`
+    );
+
     const response = await fetch(backendUrl, {
       headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-        'X-Demo-Mode': user.isDemo ? 'true' : 'false',
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        "X-Demo-Mode": user.isDemo ? "true" : "false",
       },
     });
 
     if (!response.ok) {
-      console.error(`Backend error: ${response.status} ${response.statusText}`);
-      
+      logger.error(`Backend error: ${response.status} ${response.statusText}`);
+
       return NextResponse.json({
         symbol: symbol,
         price: null,
-        message: 'Cached price not available'
+        message: "Cached price not available",
       });
     }
 
     const data = await response.json();
     return NextResponse.json(data);
-    
   } catch (error) {
-    console.error('Error fetching cached price:', error);
-    
+    logger.error("Error fetching cached price:", error);
+
     const resolvedParams = await params;
     return NextResponse.json({
-      symbol: resolvedParams.symbol?.toUpperCase() || 'UNKNOWN',
+      symbol: resolvedParams.symbol?.toUpperCase() || "UNKNOWN",
       price: null,
-      error: 'Failed to fetch cached price'
+      error: "Failed to fetch cached price",
     });
   }
-} 
+}

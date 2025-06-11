@@ -1,6 +1,6 @@
 {
   "name": "profolio-backend",
-  "version": "1.12.5",
+  "version": "1.13.0",
   "description": "Personal finance backend for Profolio",
   "main": "dist/main.js",
   "scripts": {
@@ -29,6 +29,7 @@
     "class-validator": "^0.14.2",
     "decimal.js": "^10.5.0",
     "dotenv": "^16.5.0",
+    "firebase-admin": "^13.4.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",

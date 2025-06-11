@@ -1,7 +1,13 @@
 "use client";
 import type { Expense } from "@/types/global";
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useAuth } from '@/lib/unifiedAuth';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import { useAuth } from "@/lib/unifiedAuth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { ExpenseModal } from "@/components/modals/ExpenseModal";
 import { Button } from "@/components/ui/button/button";
@@ -9,19 +15,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import LineChart from "@/components/charts/line";
 import PieChart from "@/components/charts/pie";
 import FinancialInsights from "@/components/insights/FinancialInsights";
-import { getAllCategories, getSubcategories, getCategoryInfo } from "@/lib/transactionClassifier";
+import {
+  getAllCategories,
+  getSubcategories,
+  getCategoryInfo,
+} from "@/lib/transactionClassifier";
 import {
   SkeletonCard,
   Skeleton,
   SkeletonStat,
   SkeletonButton,
-  SkeletonInput
-} from '@/components/ui/skeleton';
+  SkeletonInput,
+} from "@/components/ui/skeleton";
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
-  const { user } = useAuth();
-  
+  const { user, token } = useAuth();
+
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,18 +42,24 @@ function ExpenseManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("30");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
-  const [activeTab, setActiveTab] = useState<"expenses" | "insights">("expenses");
+  const [activeTab, setActiveTab] = useState<"expenses" | "insights">(
+    "expenses"
+  );
   const [showBulkActions, setShowBulkActions] = useState(false);
-  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
-  const [openCategoryDropdown, setOpenCategoryDropdown] = useState<string | null>(null);
-  
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(
+    new Set()
+  );
+  const [openCategoryDropdown, setOpenCategoryDropdown] = useState<
+    string | null
+  >(null);
+
   const [filters, setFilters] = useState({
-    type: 'all',
-    amountMin: '',
-    amountMax: '',
-    dateFrom: '',
-    dateTo: '',
-    subcategory: '',
+    type: "all",
+    amountMin: "",
+    amountMax: "",
+    dateFrom: "",
+    dateTo: "",
+    subcategory: "",
   });
 
   // Use refs to track abort controllers for cleanup
@@ -53,21 +69,24 @@ function ExpenseManager() {
   const bulkDeleteAbortControllerRef = useRef<AbortController | null>(null);
 
   // Check if user is in demo mode
-  const isDemoMode = typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true';
-  
+  const isDemoMode =
+    typeof window !== "undefined" &&
+    localStorage.getItem("demo-mode") === "true";
+
   // Use Firebase user data or demo user data - memoized
   const currentUser = useMemo(() => {
     if (user) {
       return {
         id: user.id,
-        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
-        email: user.email || '',
+        name:
+          user.displayName || user.name || user.email?.split("@")[0] || "User",
+        email: user.email || "",
       };
     } else if (isDemoMode) {
       return {
-        id: 'demo-user-id',
-        name: 'Demo User',
-        email: 'demo@profolio.com',
+        id: "demo-user-id",
+        name: "Demo User",
+        email: "demo@profolio.com",
       };
     }
     return null;
@@ -95,32 +114,38 @@ function ExpenseManager() {
 
   const fetchExpenses = useCallback(async () => {
     if (!currentUser?.id) return;
-    
-    // Cancel any ongoing fetch request
-    if (fetchAbortControllerRef.current) {
-      fetchAbortControllerRef.current.abort();
-    }
+
+    // Cancel any ongoing request
+    cleanup();
 
     // Create new AbortController for this request
     const controller = new AbortController();
     fetchAbortControllerRef.current = controller;
-    
+
     setLoading(true);
     try {
-      const { apiCall } = await import('@/lib/mockApi');
-      
-      const response = await apiCall('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          method: 'READ', 
+      // Use the proxy endpoint with authentication
+      const authToken = token || (isDemoMode ? "demo-token" : null);
+
+      const response = await fetch("/api/expenses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          method: "READ",
           userId: currentUser.id,
-          days: parseInt(timeRange)
+          days: parseInt(timeRange),
         }),
         signal: controller.signal,
       });
 
       if (controller.signal.aborted) return;
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
@@ -130,20 +155,20 @@ function ExpenseManager() {
         setError(null);
       }
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (err instanceof Error && err.name === "AbortError") {
         // Request was aborted, this is expected
         return;
       }
-      console.error('Error loading expenses:', err);
+      console.error("Error loading expenses:", err);
       if (!controller.signal.aborted) {
-        setError('Failed to load expenses');
+        setError("Failed to load expenses");
       }
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
       }
     }
-  }, [currentUser?.id, timeRange]);
+  }, [currentUser?.id, timeRange, token, isDemoMode, cleanup]);
 
   useEffect(() => {
     if (currentUser?.id) fetchExpenses();
@@ -169,120 +194,142 @@ function ExpenseManager() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (openCategoryDropdown && event.target instanceof Element) {
-        const closestDropdown = event.target.closest('[data-dropdown]');
+        const closestDropdown = event.target.closest("[data-dropdown]");
         if (!closestDropdown) {
           setOpenCategoryDropdown(null);
         }
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openCategoryDropdown]);
 
-  const handleSubmit = useCallback(async (expenseData: Omit<Expense, 'id'> & { id?: string }) => {
-    if (!currentUser) return;
-    
-    // Cancel any ongoing submit request
-    if (submitAbortControllerRef.current) {
-      submitAbortControllerRef.current.abort();
-    }
+  const handleSubmit = useCallback(
+    async (expenseData: Omit<Expense, "id"> & { id?: string }) => {
+      if (!currentUser) return;
 
-    // Create new AbortController for this request
-    const controller = new AbortController();
-    submitAbortControllerRef.current = controller;
-    
-    try {
-      const { apiCall } = await import('@/lib/mockApi');
-      
-      const method = editingExpense ? 'UPDATE' : 'CREATE';
-      
-      // For new expenses, we need to add an id if it doesn't exist
-      const expenseWithId: Expense = {
-        ...expenseData,
-        id: expenseData.id || Date.now().toString(),
-        userId: currentUser.id,
-      };
-      
-      const response = await apiCall('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method,
-          ...expenseWithId,
-          ...(editingExpense?.id ? { id: editingExpense.id } : {}),
-        }),
-        signal: controller.signal,
-      });
-
-      if (controller.signal.aborted) return;
-
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-
-      if (!controller.signal.aborted) {
-        setShowModal(false);
-        setEditingExpense(null);
-        fetchExpenses();
+      // Cancel any ongoing submit request
+      if (submitAbortControllerRef.current) {
+        submitAbortControllerRef.current.abort();
       }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        // Request was aborted, this is expected
-        return;
-      }
-      console.error('Expense save error:', err);
-      if (!controller.signal.aborted) {
-        setError('Failed to save expense');
-      }
-    }
-  }, [editingExpense, currentUser, fetchExpenses]);
 
-  const handleDelete = useCallback(async (expenseId: string) => {
-    if (!currentUser) return;
-    if (!confirm('Are you sure you want to delete this expense?')) return;
+      // Create new AbortController for this request
+      const controller = new AbortController();
+      submitAbortControllerRef.current = controller;
 
-    // Cancel any ongoing delete request
-    if (deleteAbortControllerRef.current) {
-      deleteAbortControllerRef.current.abort();
-    }
+      try {
+        // Use the proxy endpoint with authentication
+        const authToken = token || (isDemoMode ? "demo-token" : null);
 
-    // Create new AbortController for this request
-    const controller = new AbortController();
-    deleteAbortControllerRef.current = controller;
+        const method = editingExpense ? "UPDATE" : "CREATE";
 
-    try {
-      const { apiCall } = await import('@/lib/mockApi');
-      
-      const response = await apiCall('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: 'DELETE',
+        // For new expenses, we need to add an id if it doesn't exist
+        const expenseWithId: Expense = {
+          ...expenseData,
+          id: expenseData.id || Date.now().toString(),
           userId: currentUser.id,
-          id: expenseId,
-        }),
-        signal: controller.signal,
-      });
+        };
 
-      if (controller.signal.aborted) return;
+        const response = await fetch("/api/expenses", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            method,
+            ...expenseWithId,
+            ...(editingExpense?.id ? { id: editingExpense.id } : {}),
+          }),
+          signal: controller.signal,
+        });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+        if (controller.signal.aborted) return;
 
-      if (!controller.signal.aborted) {
-        fetchExpenses();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        if (!controller.signal.aborted) {
+          setShowModal(false);
+          setEditingExpense(null);
+          fetchExpenses();
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          // Request was aborted, this is expected
+          return;
+        }
+        console.error("Expense save error:", err);
+        if (!controller.signal.aborted) {
+          setError("Failed to save expense");
+        }
       }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        // Request was aborted, this is expected
-        return;
+    },
+    [editingExpense, currentUser, fetchExpenses, token, isDemoMode]
+  );
+
+  const handleDelete = useCallback(
+    async (expenseId: string) => {
+      if (!currentUser) return;
+      if (!confirm("Are you sure you want to delete this expense?")) return;
+
+      // Cancel any ongoing delete request
+      if (deleteAbortControllerRef.current) {
+        deleteAbortControllerRef.current.abort();
       }
-      console.error('Expense deletion error:', err);
-      if (!controller.signal.aborted) {
-        setError('Failed to delete expense');
+
+      // Create new AbortController for this request
+      const controller = new AbortController();
+      deleteAbortControllerRef.current = controller;
+
+      try {
+        // Use the proxy endpoint with authentication
+        const authToken = token || (isDemoMode ? "demo-token" : null);
+
+        const response = await fetch("/api/expenses", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            method: "DELETE",
+            userId: currentUser.id,
+            id: expenseId,
+          }),
+          signal: controller.signal,
+        });
+
+        if (controller.signal.aborted) return;
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        if (!controller.signal.aborted) {
+          fetchExpenses();
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          // Request was aborted, this is expected
+          return;
+        }
+        console.error("Expense deletion error:", err);
+        if (!controller.signal.aborted) {
+          setError("Failed to delete expense");
+        }
       }
-    }
-  }, [currentUser, fetchExpenses]);
+    },
+    [currentUser, fetchExpenses, token, isDemoMode]
+  );
 
   const handleOpenModal = useCallback(() => {
     setShowModal(true);
@@ -308,7 +355,7 @@ function ExpenseManager() {
 
   const expensesByCategory = useMemo(() => {
     return expenses.reduce((acc, expense) => {
-      const category = expense.category || 'other';
+      const category = expense.category || "other";
       if (!acc[category]) acc[category] = { count: 0, amount: 0 };
       acc[category].count++;
       acc[category].amount += expense.amount;
@@ -318,56 +365,66 @@ function ExpenseManager() {
 
   const filteredExpenses = useMemo(() => {
     let filtered = expenses;
-    
+
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(expense => 
-        expense.description.toLowerCase().includes(query) ||
-        getCategoryInfo(expense.category).name.toLowerCase().includes(query) ||
-        (expense.notes && expense.notes.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (expense) =>
+          expense.description.toLowerCase().includes(query) ||
+          getCategoryInfo(expense.category)
+            .name.toLowerCase()
+            .includes(query) ||
+          (expense.notes && expense.notes.toLowerCase().includes(query))
       );
     }
-    
+
     // Category filter
     if (filterCategory !== "all") {
-      filtered = filtered.filter(expense => {
+      filtered = filtered.filter((expense) => {
         if (filters.subcategory) {
           return expense.category === filters.subcategory;
         }
         // Check if expense category is the parent category or a subcategory of it
         const categoryInfo = getCategoryInfo(expense.category);
-        return expense.category === filterCategory || categoryInfo.parent === filterCategory;
+        return (
+          expense.category === filterCategory ||
+          categoryInfo.parent === filterCategory
+        );
       });
     }
-    
+
     // Type filter
-    if (filters.type !== 'all') {
-      if (filters.type === 'recurring') {
-        filtered = filtered.filter(expense => expense.recurrence === 'recurring');
-      } else if (filters.type === 'one-time') {
-        filtered = filtered.filter(expense => expense.recurrence !== 'recurring');
+    if (filters.type !== "all") {
+      if (filters.type === "recurring") {
+        filtered = filtered.filter(
+          (expense) => expense.recurrence === "recurring"
+        );
+      } else if (filters.type === "one-time") {
+        filtered = filtered.filter(
+          (expense) => expense.recurrence !== "recurring"
+        );
       }
     }
-    
+
     // Amount filters
     if (filters.amountMin) {
       const minAmount = parseFloat(filters.amountMin) * 100;
-      filtered = filtered.filter(expense => expense.amount >= minAmount);
+      filtered = filtered.filter((expense) => expense.amount >= minAmount);
     }
     if (filters.amountMax) {
       const maxAmount = parseFloat(filters.amountMax) * 100;
-      filtered = filtered.filter(expense => expense.amount <= maxAmount);
+      filtered = filtered.filter((expense) => expense.amount <= maxAmount);
     }
-    
+
     // Date filters
     if (filters.dateFrom) {
-      filtered = filtered.filter(expense => expense.date >= filters.dateFrom);
+      filtered = filtered.filter((expense) => expense.date >= filters.dateFrom);
     }
     if (filters.dateTo) {
-      filtered = filtered.filter(expense => expense.date <= filters.dateTo);
+      filtered = filtered.filter((expense) => expense.date <= filters.dateTo);
     }
-    
+
     return filtered;
   }, [expenses, filterCategory, filters, searchQuery]);
 
@@ -379,65 +436,71 @@ function ExpenseManager() {
       return date.toISOString().slice(0, 7);
     }).reverse();
 
-    return months.map(month => {
-      const monthExpenses = expenses.filter(exp => 
+    return months.map((month) => {
+      const monthExpenses = expenses.filter((exp) =>
         exp.date.startsWith(month)
       );
       const total = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       return {
-        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' }),
-        amount: total / 100
+        month: new Date(month + "-01").toLocaleDateString("en-US", {
+          month: "short",
+        }),
+        amount: total / 100,
       };
     });
   }, [expenses, timeRange]);
 
   // Count subscriptions
   const subscriptionCount = useMemo(() => {
-    return expenses.filter(e => e.recurrence === 'recurring' || e.frequency).length;
+    return expenses.filter((e) => e.recurrence === "recurring" || e.frequency)
+      .length;
   }, [expenses]);
 
   // CSV Export functionality - memoized for performance
   const exportToCSV = useCallback(() => {
     const headers = [
-      'Date',
-      'Description', 
-      'Category',
-      'Amount',
-      'Type',
-      'Frequency',
-      'Notes'
+      "Date",
+      "Description",
+      "Category",
+      "Amount",
+      "Type",
+      "Frequency",
+      "Notes",
     ];
 
-    const csvData = filteredExpenses.map(expense => {
+    const csvData = filteredExpenses.map((expense) => {
       const categoryInfo = getCategoryInfo(expense.category);
       return [
         expense.date,
         `"${expense.description}"`,
         `"${categoryInfo.name}"`,
         (expense.amount / 100).toFixed(2),
-        expense.recurrence === 'recurring' ? 'Recurring' : 'One-time',
-        expense.frequency || '',
-        `"${expense.notes || ''}"`
+        expense.recurrence === "recurring" ? "Recurring" : "One-time",
+        expense.frequency || "",
+        `"${expense.notes || ""}"`,
       ];
     });
 
     const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.join(','))
-    ].join('\n');
+      headers.join(","),
+      ...csvData.map((row) => row.join(",")),
+    ].join("\n");
 
     // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `expenses_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `expenses_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    setSuccess('Expenses exported successfully!');
+
+    setSuccess("Expenses exported successfully!");
   }, [filteredExpenses]);
 
   // Enhanced Filters Component
@@ -452,7 +515,7 @@ function ExpenseManager() {
         <i className="fas fa-filter mr-2"></i>
         Advanced Filters
       </h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Type Filter */}
         <div>
@@ -461,7 +524,9 @@ function ExpenseManager() {
           </label>
           <select
             value={filters.type}
-            onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, type: e.target.value }))
+            }
             className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
           >
             <option value="all">All Types</option>
@@ -480,14 +545,18 @@ function ExpenseManager() {
               type="number"
               placeholder="Min"
               value={filters.amountMin}
-              onChange={(e) => setFilters(prev => ({ ...prev, amountMin: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, amountMin: e.target.value }))
+              }
               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
             <input
               type="number"
               placeholder="Max"
               value={filters.amountMax}
-              onChange={(e) => setFilters(prev => ({ ...prev, amountMax: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, amountMax: e.target.value }))
+              }
               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
           </div>
@@ -502,13 +571,17 @@ function ExpenseManager() {
             <input
               type="date"
               value={filters.dateFrom}
-              onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
+              }
               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
             <input
               type="date"
               value={filters.dateTo}
-              onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, dateTo: e.target.value }))
+              }
               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
           </div>
@@ -518,14 +591,16 @@ function ExpenseManager() {
       {/* Clear Filters */}
       <div className="mt-4 flex justify-end">
         <button
-          onClick={() => setFilters({
-            type: 'all',
-            amountMin: '',
-            amountMax: '',
-            dateFrom: '',
-            dateTo: '',
-            subcategory: '',
-          })}
+          onClick={() =>
+            setFilters({
+              type: "all",
+              amountMin: "",
+              amountMax: "",
+              dateFrom: "",
+              dateTo: "",
+              subcategory: "",
+            })
+          }
           className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           Clear All Filters
@@ -548,11 +623,13 @@ function ExpenseManager() {
             <span className="text-sm font-medium text-gray-900 dark:text-white">
               {selectedExpenses.size} selected
             </span>
-            
+
             <div className="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
-            
+
             <select
-              onChange={(e) => e.target.value && handleBulkCategoryUpdate(e.target.value)}
+              onChange={(e) =>
+                e.target.value && handleBulkCategoryUpdate(e.target.value)
+              }
               className="text-sm bg-transparent border-none focus:outline-none text-gray-700 dark:text-gray-300"
               defaultValue=""
             >
@@ -560,7 +637,7 @@ function ExpenseManager() {
               {allCategories.map((category) => (
                 <optgroup key={category.id} label={category.name}>
                   <option value={category.id}>{category.name}</option>
-                  {getSubcategories(category.id).map(sub => (
+                  {getSubcategories(category.id).map((sub) => (
                     <option key={sub.id} value={sub.id}>
                       {sub.name}
                     </option>
@@ -568,7 +645,7 @@ function ExpenseManager() {
                 </optgroup>
               ))}
             </select>
-            
+
             <button
               onClick={handleBulkDelete}
               className="text-sm text-red-600 hover:text-red-700 transition-colors flex items-center"
@@ -576,7 +653,7 @@ function ExpenseManager() {
               <i className="fas fa-trash mr-1"></i>
               Delete
             </button>
-            
+
             <button
               onClick={() => {
                 setSelectedExpenses(new Set());
@@ -594,7 +671,7 @@ function ExpenseManager() {
 
   // Bulk selection functions
   const handleSelectExpense = useCallback((expenseId: string) => {
-    setSelectedExpenses(prev => {
+    setSelectedExpenses((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(expenseId)) {
         newSet.delete(expenseId);
@@ -611,7 +688,7 @@ function ExpenseManager() {
       setSelectedExpenses(new Set());
       setShowBulkActions(false);
     } else {
-      const allIds = new Set(filteredExpenses.map(e => e.id).filter(Boolean));
+      const allIds = new Set(filteredExpenses.map((e) => e.id).filter(Boolean));
       setSelectedExpenses(allIds);
       setShowBulkActions(allIds.size > 0);
     }
@@ -619,20 +696,25 @@ function ExpenseManager() {
 
   const handleBulkDelete = useCallback(async () => {
     if (!currentUser || selectedExpenses.size === 0) return;
-    
+
     const count = selectedExpenses.size;
-    if (!confirm(`Are you sure you want to delete ${count} selected expenses?`)) return;
+    if (!confirm(`Are you sure you want to delete ${count} selected expenses?`))
+      return;
 
     try {
-      const { apiCall } = await import('@/lib/mockApi');
-      
+      // Use the proxy endpoint with authentication
+      const authToken = token || (isDemoMode ? "demo-token" : null);
+
       // Delete each selected expense
       for (const expenseId of selectedExpenses) {
-        await apiCall('/api/expenses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        await fetch("/api/expenses", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
-            method: 'DELETE',
+            method: "DELETE",
             userId: currentUser.id,
             id: expenseId,
           }),
@@ -644,42 +726,66 @@ function ExpenseManager() {
       fetchExpenses();
       setSuccess(`Successfully deleted ${count} expenses`);
     } catch (err: unknown) {
-      console.error('Bulk deletion error:', err);
-      setError('Failed to delete selected expenses');
+      console.error("Bulk deletion error:", err);
+      setError("Failed to delete selected expenses");
     }
-  }, [currentUser, selectedExpenses, fetchExpenses, setSuccess, setError]);
+  }, [
+    currentUser,
+    selectedExpenses,
+    fetchExpenses,
+    setSuccess,
+    setError,
+    token,
+    isDemoMode,
+  ]);
 
-  const handleBulkCategoryUpdate = useCallback(async (newCategory: string) => {
-    if (!currentUser || selectedExpenses.size === 0) return;
+  const handleBulkCategoryUpdate = useCallback(
+    async (newCategory: string) => {
+      if (!currentUser || selectedExpenses.size === 0) return;
 
-    try {
-      const { apiCall } = await import('@/lib/mockApi');
-      
-      // Update each selected expense
-      for (const expenseId of selectedExpenses) {
-        const expense = expenses.find(e => e.id === expenseId);
-        if (expense) {
-          await apiCall('/api/expenses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              method: 'UPDATE',
-              ...expense,
-              category: newCategory,
-            }),
-          });
+      try {
+        // Use the proxy endpoint with authentication
+        const authToken = token || (isDemoMode ? "demo-token" : null);
+
+        // Update each selected expense
+        for (const expenseId of selectedExpenses) {
+          const expense = expenses.find((e) => e.id === expenseId);
+          if (expense) {
+            await fetch("/api/expenses", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                method: "UPDATE",
+                ...expense,
+                category: newCategory,
+              }),
+            });
+          }
         }
-      }
 
-      setSelectedExpenses(new Set());
-      setShowBulkActions(false);
-      fetchExpenses();
-      setSuccess(`Successfully updated ${selectedExpenses.size} expenses`);
-    } catch (err: unknown) {
-      console.error('Bulk update error:', err);
-      setError('Failed to update selected expenses');
-    }
-  }, [currentUser, selectedExpenses, expenses, fetchExpenses, setSuccess, setError]);
+        setSelectedExpenses(new Set());
+        setShowBulkActions(false);
+        fetchExpenses();
+        setSuccess(`Successfully updated ${selectedExpenses.size} expenses`);
+      } catch (err: unknown) {
+        console.error("Bulk update error:", err);
+        setError("Failed to update selected expenses");
+      }
+    },
+    [
+      currentUser,
+      selectedExpenses,
+      expenses,
+      fetchExpenses,
+      setSuccess,
+      setError,
+      token,
+      isDemoMode,
+    ]
+  );
 
   // Comprehensive Expense Manager Skeleton
   const ExpenseManagerSkeleton = () => (
@@ -720,7 +826,7 @@ function ExpenseManager() {
             <div className="flex-1 max-w-md">
               <SkeletonInput className="w-full" />
             </div>
-            
+
             {/* Filter controls skeleton */}
             <div className="flex flex-wrap gap-2">
               <Skeleton className="h-10 w-32 rounded-lg" />
@@ -745,7 +851,15 @@ function ExpenseManager() {
   }
 
   // Error Boundary Component
-  const ErrorBoundary = ({ children, error, retry }: { children: React.ReactNode; error?: string | null; retry?: () => void }) => {
+  const ErrorBoundary = ({
+    children,
+    error,
+    retry,
+  }: {
+    children: React.ReactNode;
+    error?: string | null;
+    retry?: () => void;
+  }) => {
     if (error) {
       return (
         <motion.div
@@ -756,7 +870,9 @@ function ExpenseManager() {
           <div className="text-red-500 text-6xl mb-4">
             <i className="fas fa-exclamation-triangle"></i>
           </div>
-          <h3 className="text-xl font-medium text-gray-400 mb-2">Something went wrong</h3>
+          <h3 className="text-xl font-medium text-gray-400 mb-2">
+            Something went wrong
+          </h3>
           <p className="text-gray-500 mb-6">{error}</p>
           {retry && (
             <Button
@@ -798,7 +914,9 @@ function ExpenseManager() {
         exit={{ opacity: 0, scale: 0.9 }}
         whileHover={{ y: -4 }}
         className={`bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-xl p-6 border transition-all duration-200 shadow-lg hover:shadow-xl ${
-          isSelected ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-white/10 hover:border-white/20'
+          isSelected
+            ? "border-blue-500 ring-2 ring-blue-500/20"
+            : "border-white/10 hover:border-white/20"
         }`}
       >
         <div className="flex justify-between items-start mb-4">
@@ -811,11 +929,15 @@ function ExpenseManager() {
                 className="form-checkbox h-4 w-4 text-blue-500 rounded mr-3"
               />
             )}
-            <div className={`p-3 bg-gradient-to-r ${categoryInfo.gradient} rounded-lg mr-4 shadow-lg`}>
+            <div
+              className={`p-3 bg-gradient-to-r ${categoryInfo.gradient} rounded-lg mr-4 shadow-lg`}
+            >
               <i className={`fas ${categoryInfo.icon} text-white text-xl`}></i>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{expense.description}</h3>
+              <h3 className="text-lg font-semibold text-white">
+                {expense.description}
+              </h3>
               <p className="text-sm text-gray-400">{categoryInfo.name}</p>
             </div>
           </div>
@@ -846,10 +968,10 @@ function ExpenseManager() {
           <div className="flex justify-between items-center">
             <span className="text-gray-400 text-sm">Date</span>
             <span className="text-white">
-              {new Date(expense.date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
+              {new Date(expense.date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
               })}
             </span>
           </div>
@@ -866,12 +988,12 @@ function ExpenseManager() {
   };
 
   // Table Row Component
-  const ExpenseTableRow = ({ 
-    expense, 
-    onEdit, 
+  const ExpenseTableRow = ({
+    expense,
+    onEdit,
     onDelete,
     isSelected,
-    onSelect
+    onSelect,
   }: {
     expense: Expense;
     onEdit: (expense: Expense) => void;
@@ -893,12 +1015,18 @@ function ExpenseManager() {
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center">
-            <div className={`p-2 bg-gradient-to-r ${categoryInfo.gradient} rounded-lg mr-3`}>
+            <div
+              className={`p-2 bg-gradient-to-r ${categoryInfo.gradient} rounded-lg mr-3`}
+            >
               <i className={`fas ${categoryInfo.icon} text-white text-sm`}></i>
             </div>
             <div>
-              <div className="font-medium text-gray-900 dark:text-white">{expense.description}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">{categoryInfo.name}</div>
+              <div className="font-medium text-gray-900 dark:text-white">
+                {expense.description}
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {categoryInfo.name}
+              </div>
             </div>
           </div>
         </td>
@@ -906,10 +1034,10 @@ function ExpenseManager() {
           -{formatCurrency(expense.amount)}
         </td>
         <td className="px-4 py-3 text-gray-900 dark:text-white">
-          {new Date(expense.date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
+          {new Date(expense.date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
           })}
         </td>
         <td className="px-4 py-3">
@@ -946,7 +1074,7 @@ function ExpenseManager() {
     <div className="min-h-screen text-gray-900 dark:text-white">
       <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
         <BulkActionsBar />
-        
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -957,7 +1085,9 @@ function ExpenseManager() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
                 Expense Manager
               </h1>
-              <p className="text-gray-400 mt-2">Track and manage your spending</p>
+              <p className="text-gray-400 mt-2">
+                Track and manage your spending
+              </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
@@ -1029,7 +1159,7 @@ function ExpenseManager() {
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <i className="fas fa-times"></i>
@@ -1038,7 +1168,9 @@ function ExpenseManager() {
           </div>
           {searchQuery && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center md:text-left">
-              Found {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} matching &ldquo;{searchQuery}&rdquo;
+              Found {filteredExpenses.length} expense
+              {filteredExpenses.length !== 1 ? "s" : ""} matching &ldquo;
+              {searchQuery}&rdquo;
             </p>
           )}
         </motion.div>
@@ -1096,13 +1228,17 @@ function ExpenseManager() {
                             <div
                               key={i}
                               className={`w-2 h-2 rounded-full ${
-                                Math.random() > 0.3 ? 'bg-red-400' : 'bg-gray-600'
+                                Math.random() > 0.3
+                                  ? "bg-red-400"
+                                  : "bg-gray-600"
                               }`}
                               title={`Day ${i + 1}`}
                             />
                           ))}
                         </div>
-                        <span className="text-xs text-gray-500 ml-2">Last 7 days</span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          Last 7 days
+                        </span>
                       </div>
                     </div>
                     <div className="p-3 bg-red-500/20 rounded-lg">
@@ -1121,12 +1257,19 @@ function ExpenseManager() {
                       <div className="mt-2">
                         <div className="flex items-center">
                           <div className="w-full bg-gray-700 rounded-full h-1.5">
-                            <div 
-                              className="bg-purple-400 h-1.5 rounded-full transition-all duration-500" 
-                              style={{ width: `${Math.min((subscriptionCount / 10) * 100, 100)}%` }}
+                            <div
+                              className="bg-purple-400 h-1.5 rounded-full transition-all duration-500"
+                              style={{
+                                width: `${Math.min(
+                                  (subscriptionCount / 10) * 100,
+                                  100
+                                )}%`,
+                              }}
                             />
                           </div>
-                          <span className="text-xs text-gray-500 ml-2">of 10</span>
+                          <span className="text-xs text-gray-500 ml-2">
+                            of 10
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1139,7 +1282,9 @@ function ExpenseManager() {
                 <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/30">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-gray-400 text-sm">Total Transactions</p>
+                      <p className="text-gray-400 text-sm">
+                        Total Transactions
+                      </p>
                       <p className="text-3xl font-bold text-orange-400 mt-1">
                         {expenses.length}
                       </p>
@@ -1165,7 +1310,9 @@ function ExpenseManager() {
               >
                 <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-semibold text-white">Spending Trend</h3>
+                    <h3 className="text-xl font-semibold text-white">
+                      Spending Trend
+                    </h3>
                     <div className="flex gap-2">
                       {["30", "90", "365"].map((days) => (
                         <button
@@ -1173,11 +1320,15 @@ function ExpenseManager() {
                           onClick={() => setTimeRange(days)}
                           className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
                             timeRange === days
-                              ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                              : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                              ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
+                              : "bg-white/10 text-gray-400 hover:bg-white/20"
                           }`}
                         >
-                          {days === "365" ? "Year" : days === "90" ? "Quarter" : "Month"}
+                          {days === "365"
+                            ? "Year"
+                            : days === "90"
+                            ? "Quarter"
+                            : "Month"}
                         </button>
                       ))}
                     </div>
@@ -1190,16 +1341,20 @@ function ExpenseManager() {
                 </div>
 
                 <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-                  <h3 className="text-xl font-semibold text-white mb-6">Spending by Category</h3>
+                  <h3 className="text-xl font-semibold text-white mb-6">
+                    Spending by Category
+                  </h3>
                   <PieChart
-                    data={Object.entries(expensesByCategory).map(([category, data]) => {
-                      const categoryInfo = getCategoryInfo(category);
-                      return {
-                        name: categoryInfo.name,
-                        value: data.amount / 100,
-                        color: categoryInfo.color,
-                      };
-                    })}
+                    data={Object.entries(expensesByCategory).map(
+                      ([category, data]) => {
+                        const categoryInfo = getCategoryInfo(category);
+                        return {
+                          name: categoryInfo.name,
+                          value: data.amount / 100,
+                          color: categoryInfo.color,
+                        };
+                      }
+                    )}
                   />
                 </div>
               </motion.div>
@@ -1215,21 +1370,28 @@ function ExpenseManager() {
                     onClick={() => setFilterCategory("all")}
                     className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                       filterCategory === "all"
-                        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                        : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
+                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
                     }`}
                   >
                     All Categories
                   </button>
                   {allCategories.map((category) => {
-                    const categoryExpenses = Object.keys(expensesByCategory).filter(cat => {
+                    const categoryExpenses = Object.keys(
+                      expensesByCategory
+                    ).filter((cat) => {
                       const catInfo = getCategoryInfo(cat);
-                      return cat === category.id || catInfo.parent === category.id;
+                      return (
+                        cat === category.id || catInfo.parent === category.id
+                      );
                     });
-                    const totalCount = categoryExpenses.reduce((sum, cat) => sum + (expensesByCategory[cat]?.count || 0), 0);
-                    
+                    const totalCount = categoryExpenses.reduce(
+                      (sum, cat) => sum + (expensesByCategory[cat]?.count || 0),
+                      0
+                    );
+
                     if (totalCount === 0) return null;
-                    
+
                     return (
                       <div key={category.id} className="relative">
                         <button
@@ -1243,8 +1405,8 @@ function ExpenseManager() {
                           }}
                           className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center ${
                             filterCategory === category.id
-                              ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                              : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                              ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
+                              : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
                           }`}
                           data-dropdown
                         >
@@ -1252,33 +1414,45 @@ function ExpenseManager() {
                           {category.name} ({totalCount})
                           <i className="fas fa-chevron-down ml-2 text-xs"></i>
                         </button>
-                        
+
                         {openCategoryDropdown === category.id && (
-                          <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 min-w-48" data-dropdown>
+                          <div
+                            className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 min-w-48"
+                            data-dropdown
+                          >
                             <button
                               onClick={() => {
                                 setFilterCategory(category.id);
-                                setFilters(prev => ({ ...prev, subcategory: '' }));
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  subcategory: "",
+                                }));
                                 setOpenCategoryDropdown(null);
                               }}
                               className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
                             >
                               All {category.name}
                             </button>
-                            {getSubcategories(category.id).map(sub => {
-                              const subCount = expensesByCategory[sub.id]?.count || 0;
+                            {getSubcategories(category.id).map((sub) => {
+                              const subCount =
+                                expensesByCategory[sub.id]?.count || 0;
                               if (subCount === 0) return null;
                               return (
                                 <button
                                   key={sub.id}
                                   onClick={() => {
                                     setFilterCategory(category.id);
-                                    setFilters(prev => ({ ...prev, subcategory: sub.id }));
+                                    setFilters((prev) => ({
+                                      ...prev,
+                                      subcategory: sub.id,
+                                    }));
                                     setOpenCategoryDropdown(null);
                                   }}
                                   className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white flex items-center"
                                 >
-                                  <i className={`fas ${sub.icon} mr-2 text-sm`}></i>
+                                  <i
+                                    className={`fas ${sub.icon} mr-2 text-sm`}
+                                  ></i>
                                   {sub.name} ({subCount})
                                 </button>
                               );
@@ -1295,8 +1469,8 @@ function ExpenseManager() {
                     onClick={() => setViewMode("grid")}
                     className={`p-2 rounded-lg transition-all duration-200 ${
                       viewMode === "grid"
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
                     }`}
                     title="Grid View"
                   >
@@ -1306,8 +1480,8 @@ function ExpenseManager() {
                     onClick={() => setViewMode("list")}
                     className={`p-2 rounded-lg transition-all duration-200 ${
                       viewMode === "list"
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
                     }`}
                     title="List View"
                   >
@@ -1317,8 +1491,8 @@ function ExpenseManager() {
                     onClick={() => setViewMode("table")}
                     className={`p-2 rounded-lg transition-all duration-200 ${
                       viewMode === "table"
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
                     }`}
                     title="Table View"
                   >
@@ -1335,7 +1509,10 @@ function ExpenseManager() {
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        checked={selectedExpenses.size === filteredExpenses.length && filteredExpenses.length > 0}
+                        checked={
+                          selectedExpenses.size === filteredExpenses.length &&
+                          filteredExpenses.length > 0
+                        }
                         onChange={handleSelectAll}
                         className="form-checkbox h-4 w-4 text-blue-500 rounded"
                       />
@@ -1349,11 +1526,14 @@ function ExpenseManager() {
                       </span>
                     )}
                   </div>
-                  
+
                   {selectedExpenses.size > 0 && (
                     <div className="flex items-center space-x-2">
                       <select
-                        onChange={(e) => e.target.value && handleBulkCategoryUpdate(e.target.value)}
+                        onChange={(e) =>
+                          e.target.value &&
+                          handleBulkCategoryUpdate(e.target.value)
+                        }
                         className="text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-3 py-1"
                         defaultValue=""
                       >
@@ -1361,7 +1541,7 @@ function ExpenseManager() {
                         {allCategories.map((category) => (
                           <optgroup key={category.id} label={category.name}>
                             <option value={category.id}>{category.name}</option>
-                            {getSubcategories(category.id).map(sub => (
+                            {getSubcategories(category.id).map((sub) => (
                               <option key={sub.id} value={sub.id}>
                                 {sub.name}
                               </option>
@@ -1369,7 +1549,7 @@ function ExpenseManager() {
                           </optgroup>
                         ))}
                       </select>
-                      
+
                       <button
                         onClick={handleBulkDelete}
                         className="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors"
@@ -1397,10 +1577,14 @@ function ExpenseManager() {
                         <i className="fas fa-receipt"></i>
                       </div>
                       <h3 className="text-xl font-medium text-gray-400 mb-2">
-                        {filterCategory === "all" ? "No Expenses Yet" : `No ${getCategoryInfo(filterCategory).name} Expenses`}
+                        {filterCategory === "all"
+                          ? "No Expenses Yet"
+                          : `No ${
+                              getCategoryInfo(filterCategory).name
+                            } Expenses`}
                       </h3>
                       <p className="text-gray-500 mb-6">
-                        {filterCategory === "all" 
+                        {filterCategory === "all"
                           ? "Start by adding your first expense to track your spending"
                           : "No expenses found in this category"}
                       </p>
@@ -1414,7 +1598,9 @@ function ExpenseManager() {
                     </motion.div>
                   ) : (
                     <motion.div
-                      key={`${viewMode}-${filterCategory}-${JSON.stringify(filters)}`}
+                      key={`${viewMode}-${filterCategory}-${JSON.stringify(
+                        filters
+                      )}`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
@@ -1427,7 +1613,9 @@ function ExpenseManager() {
                               expense={expense}
                               onEdit={handleEdit}
                               onDelete={handleDelete}
-                              isSelected={selectedExpenses.has(expense.id || '')}
+                              isSelected={selectedExpenses.has(
+                                expense.id || ""
+                              )}
                               onSelect={handleSelectExpense}
                               showCheckbox={filteredExpenses.length > 1}
                             />
@@ -1443,7 +1631,9 @@ function ExpenseManager() {
                               expense={expense}
                               onEdit={handleEdit}
                               onDelete={handleDelete}
-                              isSelected={selectedExpenses.has(expense.id || '')}
+                              isSelected={selectedExpenses.has(
+                                expense.id || ""
+                              )}
                               onSelect={handleSelectExpense}
                               showCheckbox={filteredExpenses.length > 1}
                             />
@@ -1459,7 +1649,11 @@ function ExpenseManager() {
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                   <input
                                     type="checkbox"
-                                    checked={selectedExpenses.size === filteredExpenses.length && filteredExpenses.length > 0}
+                                    checked={
+                                      selectedExpenses.size ===
+                                        filteredExpenses.length &&
+                                      filteredExpenses.length > 0
+                                    }
                                     onChange={handleSelectAll}
                                     className="form-checkbox h-4 w-4 text-blue-500 rounded"
                                   />
@@ -1488,7 +1682,9 @@ function ExpenseManager() {
                                   expense={expense}
                                   onEdit={handleEdit}
                                   onDelete={handleDelete}
-                                  isSelected={selectedExpenses.has(expense.id || '')}
+                                  isSelected={selectedExpenses.has(
+                                    expense.id || ""
+                                  )}
                                   onSelect={handleSelectExpense}
                                 />
                               ))}
@@ -1508,10 +1704,7 @@ function ExpenseManager() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <FinancialInsights
-                expenses={expenses}
-                timeRange={timeRange}
-              />
+              <FinancialInsights expenses={expenses} timeRange={timeRange} />
             </motion.div>
           )}
         </AnimatePresence>

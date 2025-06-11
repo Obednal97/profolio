@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { useUpdates, GitHubRelease } from '@/hooks/useUpdates';
-import { 
-  Download, 
-  RefreshCw, 
-  CheckCircle, 
-  AlertCircle, 
+import React, { useEffect, useState, useMemo } from "react";
+import { useUpdates, GitHubRelease } from "@/hooks/useUpdates";
+import {
+  Download,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
   ExternalLink,
   Play,
   Square,
@@ -17,9 +17,9 @@ import {
   ChevronDown,
   Settings,
   Cloud,
-  Server
-} from 'lucide-react';
-import DOMPurify from 'dompurify';
+  Server,
+} from "lucide-react";
+import DOMPurify from "dompurify";
 
 interface ChangelogEntry {
   version: string;
@@ -43,37 +43,37 @@ export default function UpdatesPage() {
     cancelUpdate,
     clearUpdateStatus,
     lastChecked,
-    isDemoMode
+    isDemoMode,
   } = useUpdates();
 
   const [showLogs, setShowLogs] = useState(false);
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const [autoUpdatesEnabled, setAutoUpdatesEnabled] = useState(false);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<string>('');
+  const [selectedVersion, setSelectedVersion] = useState<string>("");
 
   // Detect deployment mode - cloud vs self-hosted
-  const isCloudMode = isDemoMode || (
-    typeof window !== 'undefined' && 
-    !window.location.hostname.includes('localhost') &&
-    !window.location.hostname.includes('127.0.0.1') &&
-    !window.location.hostname.includes('local')
-  );
-  
+  const isCloudMode =
+    isDemoMode ||
+    (typeof window !== "undefined" &&
+      !window.location.hostname.includes("localhost") &&
+      !window.location.hostname.includes("127.0.0.1") &&
+      !window.location.hostname.includes("local"));
+
   const isSelfHosted = !isCloudMode;
 
   // Load auto-updates setting on mount
   useEffect(() => {
     const loadAutoUpdatesSettings = async () => {
       if (!isSelfHosted) return;
-      
+
       try {
         // Try to load from localStorage first (fallback)
-        const stored = localStorage.getItem('autoUpdatesEnabled');
+        const stored = localStorage.getItem("autoUpdatesEnabled");
         if (stored) {
           setAutoUpdatesEnabled(JSON.parse(stored));
         }
-        
+
         // TODO: Load from backend settings API when available
         // const response = await fetch('/api/settings/auto-updates');
         // if (response.ok) {
@@ -81,37 +81,36 @@ export default function UpdatesPage() {
         //   setAutoUpdatesEnabled(data.enabled);
         // }
       } catch (error) {
-        console.error('Failed to load auto-updates setting:', error);
+        console.error("Failed to load auto-updates setting:", error);
       }
     };
-    
+
     loadAutoUpdatesSettings();
   }, [isSelfHosted]);
 
   // Handle auto-updates toggle
   const handleAutoUpdatesToggle = async () => {
     if (!isSelfHosted || isUpdatingSettings) return;
-    
+
     setIsUpdatingSettings(true);
     const newValue = !autoUpdatesEnabled;
-    
+
     try {
       // Update localStorage immediately for responsiveness
-      localStorage.setItem('autoUpdatesEnabled', JSON.stringify(newValue));
+      localStorage.setItem("autoUpdatesEnabled", JSON.stringify(newValue));
       setAutoUpdatesEnabled(newValue);
-      
+
       // TODO: Update backend settings when API is available
       // await fetch('/api/settings/auto-updates', {
       //   method: 'PUT',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({ enabled: newValue })
       // });
-      
     } catch (error) {
-      console.error('Failed to update auto-updates setting:', error);
+      console.error("Failed to update auto-updates setting:", error);
       // Revert on error
       setAutoUpdatesEnabled(!newValue);
-      localStorage.setItem('autoUpdatesEnabled', JSON.stringify(!newValue));
+      localStorage.setItem("autoUpdatesEnabled", JSON.stringify(!newValue));
     } finally {
       setIsUpdatingSettings(false);
     }
@@ -129,80 +128,98 @@ export default function UpdatesPage() {
     if (updateInfo?.allReleases) {
       const parsedChangelog = parseChangelog(updateInfo.allReleases);
       setChangelog(parsedChangelog);
-      // Auto-select latest version if none selected
-      if (!selectedVersion && parsedChangelog.length > 0) {
-        setSelectedVersion(parsedChangelog[0].version);
+      // Auto-select latest version if none selected (always set to first/latest)
+      if (parsedChangelog.length > 0) {
+        const latestVersion = parsedChangelog[0].version;
+        if (!selectedVersion || selectedVersion !== latestVersion) {
+          setSelectedVersion(latestVersion);
+        }
       }
     } else if (updateInfo?.releaseNotes) {
       // Fallback to single release if allReleases not available
-      const parsedChangelog = parseChangelogFromReleaseNotes(updateInfo.releaseNotes, updateInfo.latestVersion, updateInfo.publishedAt);
+      const parsedChangelog = parseChangelogFromReleaseNotes(
+        updateInfo.releaseNotes,
+        updateInfo.latestVersion,
+        updateInfo.publishedAt
+      );
       setChangelog(parsedChangelog);
-      if (!selectedVersion && parsedChangelog.length > 0) {
-        setSelectedVersion(parsedChangelog[0].version);
+      if (parsedChangelog.length > 0) {
+        const latestVersion = parsedChangelog[0].version;
+        if (!selectedVersion || selectedVersion !== latestVersion) {
+          setSelectedVersion(latestVersion);
+        }
       }
     }
-  }, [updateInfo, selectedVersion]);
+  }, [updateInfo]);
 
   // Parse multiple GitHub releases into structured changelog
   const parseChangelog = (releases: GitHubRelease[]): ChangelogEntry[] => {
     // Sort releases by date in descending order (newest first)
     const sortedReleases = [...releases].sort((a, b) => {
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+      return (
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      );
     });
 
-    return sortedReleases.map(release => {
+    return sortedReleases.map((release) => {
       const sections: { id: string; title: string; items: string[] }[] = [];
-      let currentSection: { id: string; title: string; items: string[] } | null = null;
+      let currentSection: {
+        id: string;
+        title: string;
+        items: string[];
+      } | null = null;
       let inCodeBlock = false;
-      let codeBlockContent = '';
+      let codeBlockContent = "";
 
-      const lines = release.body.split('\n');
-      
+      const lines = release.body.split("\n");
+
       for (const line of lines) {
         const trimmedLine = line.trim();
-        
+
         // Handle code block start/end
-        if (trimmedLine.startsWith('```')) {
+        if (trimmedLine.startsWith("```")) {
           if (inCodeBlock) {
             // End of code block
             if (currentSection && codeBlockContent.trim()) {
-              currentSection.items.push('```\n' + codeBlockContent + '\n```');
+              currentSection.items.push("```\n" + codeBlockContent + "\n```");
             }
             inCodeBlock = false;
-            codeBlockContent = '';
+            codeBlockContent = "";
           } else {
             // Start of code block
             inCodeBlock = true;
-            codeBlockContent = '';
+            codeBlockContent = "";
           }
           continue;
         }
-        
+
         // If we're in a code block, accumulate content
         if (inCodeBlock) {
-          codeBlockContent += line + '\n';
+          codeBlockContent += line + "\n";
           continue;
         }
-        
+
         // Section headers (### or ##)
-        if (trimmedLine.startsWith('###') || trimmedLine.startsWith('##')) {
+        if (trimmedLine.startsWith("###") || trimmedLine.startsWith("##")) {
           if (currentSection && currentSection.items.length > 0) {
             sections.push(currentSection);
           }
-          
-          const title = trimmedLine.replace(/#{2,3}\s*/, '').trim();
-          const id = `${release.version}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-          
+
+          const title = trimmedLine.replace(/#{2,3}\s*/, "").trim();
+          const id = `${release.version}-${title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")}`;
+
           currentSection = {
             id,
             title,
-            items: []
+            items: [],
           };
         }
         // List items
-        else if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+        else if (trimmedLine.startsWith("-") || trimmedLine.startsWith("*")) {
           if (currentSection) {
-            const item = trimmedLine.replace(/^[-*]\s*/, '').trim();
+            const item = trimmedLine.replace(/^[-*]\s*/, "").trim();
             if (item) {
               currentSection.items.push(item);
             }
@@ -212,8 +229,8 @@ export default function UpdatesPage() {
         else if (trimmedLine && !currentSection) {
           currentSection = {
             id: `${release.version}-changes`,
-            title: 'Changes',
-            items: []
+            title: "Changes",
+            items: [],
           };
           if (trimmedLine) {
             currentSection.items.push(trimmedLine);
@@ -224,63 +241,70 @@ export default function UpdatesPage() {
           currentSection.items.push(trimmedLine);
         }
       }
-      
+
       // Handle any remaining code block
       if (inCodeBlock && currentSection && codeBlockContent.trim()) {
-        currentSection.items.push('```\n' + codeBlockContent + '\n```');
+        currentSection.items.push("```\n" + codeBlockContent + "\n```");
       }
-      
+
       // Add the last section
       if (currentSection && currentSection.items.length > 0) {
         sections.push(currentSection);
       }
-      
+
       // If no sections found, create a basic one
       if (sections.length === 0 && release.body.trim()) {
         sections.push({
           id: `${release.version}-overview`,
-          title: 'Overview',
-          items: [release.body.trim()]
+          title: "Overview",
+          items: [release.body.trim()],
         });
       }
 
       return {
         version: release.version,
         date: release.publishedAt,
-        sections
+        sections,
       };
     });
   };
 
   // Parse release notes into structured changelog
-  const parseChangelogFromReleaseNotes = (notes: string, version: string, date: string): ChangelogEntry[] => {
+  const parseChangelogFromReleaseNotes = (
+    notes: string,
+    version: string,
+    date: string
+  ): ChangelogEntry[] => {
     const sections: { id: string; title: string; items: string[] }[] = [];
-    let currentSection: { id: string; title: string; items: string[] } | null = null;
+    let currentSection: { id: string; title: string; items: string[] } | null =
+      null;
 
-    const lines = notes.split('\n');
-    
+    const lines = notes.split("\n");
+
     for (const line of lines) {
       const trimmedLine = line.trim();
-      
+
       // Section headers (### or ##)
-      if (trimmedLine.startsWith('###') || trimmedLine.startsWith('##')) {
+      if (trimmedLine.startsWith("###") || trimmedLine.startsWith("##")) {
         if (currentSection && currentSection.items.length > 0) {
           sections.push(currentSection);
         }
-        
-        const title = trimmedLine.replace(/#{2,3}\s*/, '').trim();
-        const id = `${version}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-        
+
+        const title = trimmedLine.replace(/#{2,3}\s*/, "").trim();
+        const id = `${version}-${title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")}`;
+
         currentSection = {
           id,
           title,
-          items: []
+          items: [],
         };
       }
       // List items
-      else if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+      else if (trimmedLine.startsWith("-") || trimmedLine.startsWith("*")) {
         if (currentSection) {
-          const item = trimmedLine.replace(/^[-*]\s*/, '').trim();
+          const item = trimmedLine.replace(/^[-*]\s*/, "").trim();
           if (item) {
             currentSection.items.push(item);
           }
@@ -290,38 +314,40 @@ export default function UpdatesPage() {
       else if (trimmedLine && !currentSection) {
         currentSection = {
           id: `${version}-changes`,
-          title: 'Changes',
-          items: []
+          title: "Changes",
+          items: [],
         };
       }
     }
-    
+
     // Add the last section
     if (currentSection && currentSection.items.length > 0) {
       sections.push(currentSection);
     }
-    
+
     // If no sections found, create a basic one
     if (sections.length === 0 && notes.trim()) {
       sections.push({
         id: `${version}-overview`,
-        title: 'Overview',
-        items: [notes.trim()]
+        title: "Overview",
+        items: [notes.trim()],
       });
     }
 
-    return [{
-      version,
-      date,
-      sections
-    }];
+    return [
+      {
+        version,
+        date,
+        sections,
+      },
+    ];
   };
 
   const handleStartUpdate = async () => {
     try {
       await startUpdate();
     } catch (error) {
-      console.error('Failed to start update:', error);
+      console.error("Failed to start update:", error);
     }
   };
 
@@ -330,27 +356,33 @@ export default function UpdatesPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-GB", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const getProgressColor = () => {
     switch (updateProgress?.stage) {
-      case 'complete': return 'bg-green-500';
-      case 'error': return 'bg-red-500';
-      case 'installing': return 'bg-blue-500';
-      case 'downloading': return 'bg-blue-500';
-      case 'restarting': return 'bg-yellow-500';
-      default: return 'bg-blue-500';
+      case "complete":
+        return "bg-green-500";
+      case "error":
+        return "bg-red-500";
+      case "installing":
+        return "bg-blue-500";
+      case "downloading":
+        return "bg-blue-500";
+      case "restarting":
+        return "bg-yellow-500";
+      default:
+        return "bg-blue-500";
     }
   };
 
   // Get selected release for display
   const selectedRelease = useMemo(() => {
-    return changelog.find(release => release.version === selectedVersion);
+    return changelog.find((release) => release.version === selectedVersion);
   }, [changelog, selectedVersion]);
 
   // Enhanced function to process and format release note items with markdown support
@@ -367,12 +399,12 @@ export default function UpdatesPage() {
       /^[\s]*https?:\/\/.*\.(sh|js|ts|py|rb).*$/m, // Script URLs
     ];
 
-    const isCode = codePatterns.some(pattern => pattern.test(item));
-    
+    const isCode = codePatterns.some((pattern) => pattern.test(item));
+
     if (isCode) {
       // Remove markdown code fences if present
-      const cleanCode = item.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '');
-      
+      const cleanCode = item.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "");
+
       return (
         <div className="bg-gray-900 dark:bg-black rounded-lg p-3 mt-2 overflow-x-auto">
           <code className="text-green-400 font-mono text-sm whitespace-pre-wrap break-all">
@@ -385,94 +417,109 @@ export default function UpdatesPage() {
     // Enhanced markdown parsing with better overlap handling
     const parseMarkdown = (text: string) => {
       const parts: (string | React.ReactElement)[] = [];
-      
+
       // Process markdown step by step to avoid conflicts
       let processedText = text;
       let elementCounter = 0;
-      
+
       // Step 1: Handle links first (they can contain other formatting)
-      processedText = processedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
-        const placeholder = `__LINK_${elementCounter}__`;
-        parts.push(
-          <a
-            key={`link-${elementCounter}`}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
-          >
-            {linkText}
-          </a>
-        );
-        elementCounter++;
-        return placeholder;
-      });
-      
+      processedText = processedText.replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        (match, linkText, url) => {
+          const placeholder = `__LINK_${elementCounter}__`;
+          parts.push(
+            <a
+              key={`link-${elementCounter}`}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+            >
+              {linkText}
+            </a>
+          );
+          elementCounter++;
+          return placeholder;
+        }
+      );
+
       // Step 2: Handle inline code (prevent other formatting inside)
       processedText = processedText.replace(/`([^`]+)`/g, (match, codeText) => {
         const placeholder = `__CODE_${elementCounter}__`;
         parts.push(
-          <code key={`code-${elementCounter}`} className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono">
+          <code
+            key={`code-${elementCounter}`}
+            className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono"
+          >
             {codeText}
           </code>
         );
         elementCounter++;
         return placeholder;
       });
-      
+
       // Step 3: Handle bold text
-      processedText = processedText.replace(/\*\*([^*]+)\*\*/g, (match, boldText) => {
-        const placeholder = `__BOLD_${elementCounter}__`;
-        parts.push(
-          <strong key={`bold-${elementCounter}`} className="font-semibold">
-            {boldText}
-          </strong>
-        );
-        elementCounter++;
-        return placeholder;
-      });
-      
+      processedText = processedText.replace(
+        /\*\*([^*]+)\*\*/g,
+        (match, boldText) => {
+          const placeholder = `__BOLD_${elementCounter}__`;
+          parts.push(
+            <strong key={`bold-${elementCounter}`} className="font-semibold">
+              {boldText}
+            </strong>
+          );
+          elementCounter++;
+          return placeholder;
+        }
+      );
+
       // Step 4: Handle italic text
-      processedText = processedText.replace(/\*([^*]+)\*/g, (match, italicText) => {
-        const placeholder = `__ITALIC_${elementCounter}__`;
-        parts.push(
-          <em key={`italic-${elementCounter}`} className="italic">
-            {italicText}
-          </em>
-        );
-        elementCounter++;
-        return placeholder;
-      });
-      
+      processedText = processedText.replace(
+        /\*([^*]+)\*/g,
+        (match, italicText) => {
+          const placeholder = `__ITALIC_${elementCounter}__`;
+          parts.push(
+            <em key={`italic-${elementCounter}`} className="italic">
+              {italicText}
+            </em>
+          );
+          elementCounter++;
+          return placeholder;
+        }
+      );
+
       // Step 5: Handle strikethrough
-      processedText = processedText.replace(/~~([^~]+)~~/g, (match, strikeText) => {
-        const placeholder = `__STRIKE_${elementCounter}__`;
-        parts.push(
-          <span key={`strike-${elementCounter}`} className="line-through">
-            {strikeText}
-          </span>
-        );
-        elementCounter++;
-        return placeholder;
-      });
-      
+      processedText = processedText.replace(
+        /~~([^~]+)~~/g,
+        (match, strikeText) => {
+          const placeholder = `__STRIKE_${elementCounter}__`;
+          parts.push(
+            <span key={`strike-${elementCounter}`} className="line-through">
+              {strikeText}
+            </span>
+          );
+          elementCounter++;
+          return placeholder;
+        }
+      );
+
       // Step 6: Reconstruct the final content with placeholders replaced
       const finalParts: (string | React.ReactElement)[] = [];
       const textParts = processedText.split(/(__\w+_\d+__)/);
-      
+
       textParts.forEach((part) => {
         if (part.match(/^__\w+_\d+__$/)) {
           // Find the corresponding React element
-          const elementIndex = parseInt(part.match(/\d+/)?.[0] || '0');
+          const elementIndex = parseInt(part.match(/\d+/)?.[0] || "0");
           const element = parts.find((_, i) => i === elementIndex);
-          if (element && typeof element !== 'string') {
+          if (element && typeof element !== "string") {
             finalParts.push(element);
           }
         } else if (part.trim()) {
           finalParts.push(part);
         }
       });
-      
+
       return finalParts.length > 0 ? finalParts : [text];
     };
 
@@ -480,9 +527,9 @@ export default function UpdatesPage() {
     const urlRegex = /^https?:\/\/[^\s]+$/;
     if (urlRegex.test(item.trim())) {
       return (
-        <a 
-          href={item.trim()} 
-          target="_blank" 
+        <a
+          href={item.trim()}
+          target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 dark:text-blue-400 hover:underline break-all"
         >
@@ -493,18 +540,20 @@ export default function UpdatesPage() {
 
     // Parse and render markdown with XSS protection
     const formattedContent = parseMarkdown(item);
-    
+
     // Sanitize any HTML output before rendering to prevent XSS
-    const sanitizedContent = formattedContent.map(part => 
-      typeof part === 'string' 
-        ? DOMPurify.sanitize(part) 
-        : part
+    const sanitizedContent = formattedContent.map((part) =>
+      typeof part === "string" ? DOMPurify.sanitize(part) : part
     );
-    
+
     return (
       <span>
-        {sanitizedContent.map((part, index) => 
-          typeof part === 'string' ? part : React.cloneElement(part as React.ReactElement, { key: `final-${index}` })
+        {sanitizedContent.map((part, index) =>
+          typeof part === "string"
+            ? part
+            : React.cloneElement(part as React.ReactElement, {
+                key: `final-${index}`,
+              })
         )}
       </span>
     );
@@ -529,7 +578,9 @@ export default function UpdatesPage() {
                 </h1>
               </div>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                {isCloudMode ? 'Managed updates and release history' : 'System updates and release history'}
+                {isCloudMode
+                  ? "Managed updates and release history"
+                  : "System updates and release history"}
               </p>
             </div>
           </div>
@@ -543,9 +594,9 @@ export default function UpdatesPage() {
               {/* Update Status Card */}
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
                 <div className="flex items-center gap-3 mb-4">
-                  {updateProgress?.stage === 'complete' ? (
+                  {updateProgress?.stage === "complete" ? (
                     <CheckCircle className="h-6 w-6 text-green-500" />
-                  ) : updateProgress?.stage === 'error' ? (
+                  ) : updateProgress?.stage === "error" ? (
                     <AlertCircle className="h-6 w-6 text-red-500" />
                   ) : isChecking || isUpdating ? (
                     <RefreshCw className="h-6 w-6 text-blue-500 animate-spin" />
@@ -556,10 +607,12 @@ export default function UpdatesPage() {
                   )}
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {hasUpdate && isSelfHosted ? 'Update Available' : 'Up to Date'}
+                      {hasUpdate && isSelfHosted
+                        ? "Update Available"
+                        : "Up to Date"}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {updateInfo ? `v${updateInfo.currentVersion}` : 'v1.7.1'}
+                      {updateInfo ? `v${updateInfo.currentVersion}` : "v1.7.1"}
                     </p>
                   </div>
                   {isCloudMode && (
@@ -574,12 +627,14 @@ export default function UpdatesPage() {
                 {hasUpdate && isSelfHosted && updateInfo && (
                   <div className="space-y-3">
                     <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Latest Version</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Latest Version
+                      </p>
                       <p className="text-lg font-bold text-green-600 dark:text-green-400">
                         v{updateInfo.latestVersion}
                       </p>
                     </div>
-                    
+
                     {!isUpdating && !updateProgress && (
                       <button
                         onClick={handleStartUpdate}
@@ -599,8 +654,12 @@ export default function UpdatesPage() {
                       disabled={isChecking || isUpdating}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
                     >
-                      <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
-                      {isChecking ? 'Checking...' : 'Check for Updates'}
+                      <RefreshCw
+                        className={`h-4 w-4 ${
+                          isChecking ? "animate-spin" : ""
+                        }`}
+                      />
+                      {isChecking ? "Checking..." : "Check for Updates"}
                     </button>
                   </div>
                 )}
@@ -614,31 +673,47 @@ export default function UpdatesPage() {
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Last Checked:</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Last Checked:
+                    </span>
                     <span className="text-gray-900 dark:text-white">
-                      {lastChecked ? formatDate(lastChecked.toISOString()) : 'Never'}
+                      {lastChecked
+                        ? formatDate(lastChecked.toISOString())
+                        : "Never"}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Channel:</span>
-                    <span className="text-gray-900 dark:text-white">Stable</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Channel:
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      Stable
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Auto Updates:</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Auto Updates:
+                    </span>
                     {isCloudMode ? (
-                      <span className="text-gray-500 dark:text-gray-500">Cloud Managed</span>
+                      <span className="text-gray-500 dark:text-gray-500">
+                        Cloud Managed
+                      </span>
                     ) : (
                       <button
                         onClick={handleAutoUpdatesToggle}
                         disabled={isUpdatingSettings}
                         className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                          autoUpdatesEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                          autoUpdatesEnabled
+                            ? "bg-blue-600"
+                            : "bg-gray-200 dark:bg-gray-700"
                         }`}
                         aria-label="Toggle auto updates"
                       >
                         <span
                           className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            autoUpdatesEnabled ? 'translate-x-4' : 'translate-x-0'
+                            autoUpdatesEnabled
+                              ? "translate-x-4"
+                              : "translate-x-0"
                           }`}
                         />
                       </button>
@@ -664,13 +739,17 @@ export default function UpdatesPage() {
                           onClick={() => setSelectedVersion(release.version)}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                             selectedVersion === release.version
-                              ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              ? "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                              : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                           }`}
                         >
                           <div className="min-w-0 break-words">
-                            <div className="text-sm font-medium truncate">Version {release.version}</div>
-                            <div className="text-xs opacity-75 break-words">{formatDate(release.date)}</div>
+                            <div className="text-sm font-medium truncate">
+                              Version {release.version}
+                            </div>
+                            <div className="text-xs opacity-75 break-words">
+                              {formatDate(release.date)}
+                            </div>
                           </div>
                         </button>
                       ))}
@@ -696,7 +775,9 @@ export default function UpdatesPage() {
                 </h1>
               </div>
               <p className="text-gray-600 dark:text-gray-400">
-                {isCloudMode ? 'Managed updates and release history' : 'System updates and release history'}
+                {isCloudMode
+                  ? "Managed updates and release history"
+                  : "System updates and release history"}
               </p>
             </div>
 
@@ -705,9 +786,9 @@ export default function UpdatesPage() {
               {/* Current Version Status - Mobile */}
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex items-center gap-4">
-                  {updateProgress?.stage === 'complete' ? (
+                  {updateProgress?.stage === "complete" ? (
                     <CheckCircle className="h-8 w-8 text-green-500 flex-shrink-0" />
-                  ) : updateProgress?.stage === 'error' ? (
+                  ) : updateProgress?.stage === "error" ? (
                     <AlertCircle className="h-8 w-8 text-red-500 flex-shrink-0" />
                   ) : isChecking || isUpdating ? (
                     <RefreshCw className="h-8 w-8 text-blue-500 animate-spin flex-shrink-0" />
@@ -718,10 +799,12 @@ export default function UpdatesPage() {
                   )}
                   <div className="min-w-0 flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {hasUpdate && isSelfHosted ? 'Update Available' : 'Up to Date'}
+                      {hasUpdate && isSelfHosted
+                        ? "Update Available"
+                        : "Up to Date"}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {updateInfo ? `v${updateInfo.currentVersion}` : 'v1.7.1'}
+                      {updateInfo ? `v${updateInfo.currentVersion}` : "v1.7.1"}
                     </p>
                   </div>
                   {isCloudMode && (
@@ -736,12 +819,14 @@ export default function UpdatesPage() {
                 {hasUpdate && isSelfHosted && updateInfo && (
                   <div className="space-y-4 mt-4">
                     <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Latest Version</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        Latest Version
+                      </p>
                       <p className="text-xl font-bold text-green-600 dark:text-green-400">
                         v{updateInfo.latestVersion}
                       </p>
                     </div>
-                    
+
                     {!isUpdating && !updateProgress && (
                       <button
                         onClick={handleStartUpdate}
@@ -761,8 +846,12 @@ export default function UpdatesPage() {
                       disabled={isChecking || isUpdating}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
                     >
-                      <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
-                      {isChecking ? 'Checking...' : 'Check for Updates'}
+                      <RefreshCw
+                        className={`h-4 w-4 ${
+                          isChecking ? "animate-spin" : ""
+                        }`}
+                      />
+                      {isChecking ? "Checking..." : "Check for Updates"}
                     </button>
                   </div>
                 )}
@@ -776,31 +865,47 @@ export default function UpdatesPage() {
                 </h3>
                 <div className="grid grid-cols-1 gap-4 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Last Checked:</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Last Checked:
+                    </span>
                     <span className="text-gray-900 dark:text-white font-medium">
-                      {lastChecked ? formatDate(lastChecked.toISOString()) : 'Never'}
+                      {lastChecked
+                        ? formatDate(lastChecked.toISOString())
+                        : "Never"}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Channel:</span>
-                    <span className="text-gray-900 dark:text-white font-medium">Stable</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Channel:
+                    </span>
+                    <span className="text-gray-900 dark:text-white font-medium">
+                      Stable
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Auto Updates:</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Auto Updates:
+                    </span>
                     {isCloudMode ? (
-                      <span className="text-gray-500 dark:text-gray-500">Cloud Managed</span>
+                      <span className="text-gray-500 dark:text-gray-500">
+                        Cloud Managed
+                      </span>
                     ) : (
                       <button
                         onClick={handleAutoUpdatesToggle}
                         disabled={isUpdatingSettings}
                         className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                          autoUpdatesEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                          autoUpdatesEnabled
+                            ? "bg-blue-600"
+                            : "bg-gray-200 dark:bg-gray-700"
                         }`}
                         aria-label="Toggle auto updates"
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            autoUpdatesEnabled ? 'translate-x-5' : 'translate-x-0'
+                            autoUpdatesEnabled
+                              ? "translate-x-5"
+                              : "translate-x-0"
                           }`}
                         />
                       </button>
@@ -816,7 +921,7 @@ export default function UpdatesPage() {
                     <Hash className="h-5 w-5" />
                     Releases
                   </h3>
-                  
+
                   {/* Version Dropdown */}
                   <div className="relative">
                     <select
@@ -825,9 +930,16 @@ export default function UpdatesPage() {
                       className="w-full appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors break-words"
                     >
                       {changelog.map((release) => (
-                        <option key={release.version} value={release.version} className="break-words">
+                        <option
+                          key={release.version}
+                          value={release.version}
+                          className="break-words"
+                        >
                           Version {release.version} - {formatDate(release.date)}
-                          {hasUpdate && updateInfo?.latestVersion === release.version ? ' (Latest)' : ''}
+                          {hasUpdate &&
+                          updateInfo?.latestVersion === release.version
+                            ? " (Latest)"
+                            : ""}
                         </option>
                       ))}
                     </select>
@@ -850,14 +962,14 @@ export default function UpdatesPage() {
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full transition-all duration-300 ${getProgressColor()}`}
                       style={{ width: `${updateProgress.progress}%` }}
                     />
                   </div>
                 </div>
 
-                {updateProgress.stage === 'error' && updateProgress.error && (
+                {updateProgress.stage === "error" && updateProgress.error && (
                   <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <p className="text-sm text-red-800 dark:text-red-400 mb-3 break-words">
                       {updateProgress.error}
@@ -878,12 +990,14 @@ export default function UpdatesPage() {
                       onClick={() => setShowLogs(!showLogs)}
                       className="text-sm text-blue-600 dark:text-blue-400 hover:underline mb-2"
                     >
-                      {showLogs ? 'Hide' : 'Show'} installation logs
+                      {showLogs ? "Hide" : "Show"} installation logs
                     </button>
                     {showLogs && (
                       <div className="p-3 bg-black text-green-400 rounded-lg text-xs font-mono max-h-40 overflow-y-auto break-all">
                         {updateProgress.logs.map((log, index) => (
-                          <div key={index} className="break-all">{log}</div>
+                          <div key={index} className="break-all">
+                            {log}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -920,12 +1034,16 @@ export default function UpdatesPage() {
                         </h2>
                         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                           <Calendar className="h-4 w-4" />
-                          <span className="text-sm">{formatDate(selectedRelease.date)}</span>
-                          {hasUpdate && updateInfo?.latestVersion === selectedRelease.version && (
-                            <span className="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
-                              Latest
-                            </span>
-                          )}
+                          <span className="text-sm">
+                            {formatDate(selectedRelease.date)}
+                          </span>
+                          {hasUpdate &&
+                            updateInfo?.latestVersion ===
+                              selectedRelease.version && (
+                              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                                Latest
+                              </span>
+                            )}
                         </div>
                       </div>
                     </div>
@@ -952,9 +1070,14 @@ export default function UpdatesPage() {
                       <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
                         <ul className="space-y-3">
                           {section.items.map((item, index) => (
-                            <li key={index} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
+                            <li
+                              key={index}
+                              className="flex items-start gap-3 text-gray-700 dark:text-gray-300"
+                            >
                               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2.5 flex-shrink-0" />
-                              <span className="leading-relaxed text-sm lg:text-base break-words overflow-hidden">{formatReleaseItem(item)}</span>
+                              <span className="leading-relaxed text-sm lg:text-base break-words overflow-hidden">
+                                {formatReleaseItem(item)}
+                              </span>
                             </li>
                           ))}
                         </ul>
@@ -983,7 +1106,9 @@ export default function UpdatesPage() {
                     No Releases Available
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    {isCloudMode ? 'Release information will be displayed here.' : 'Unable to load release information. Please check for updates.'}
+                    {isCloudMode
+                      ? "Release information will be displayed here."
+                      : "Unable to load release information. Please check for updates."}
                   </p>
                 </div>
               </div>
@@ -996,4 +1121,4 @@ export default function UpdatesPage() {
       </div>
     </div>
   );
-} 
+}

@@ -1,44 +1,82 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Asset } from '@/types/global';
-import { AssetCard } from '@/components/cards/AssetCard';
-import { AssetModal } from '@/components/modals/AssetModal';
-import { Tile } from '@/components/ui/tile/tile';
-import { useAuth } from '@/lib/unifiedAuth';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import { Asset } from "@/types/global";
+import { AssetCard } from "@/components/cards/AssetCard";
+import { AssetModal } from "@/components/modals/AssetModal";
+import { Tile } from "@/components/ui/tile/tile";
+import { useAuth } from "@/lib/unifiedAuth";
 import {
   SkeletonCard,
   SkeletonChart,
   Skeleton,
   SkeletonStat,
-  SkeletonButton
-} from '@/components/ui/skeleton';
-import { AnimatePresence } from 'framer-motion';
+  SkeletonButton,
+} from "@/components/ui/skeleton";
+import { AnimatePresence } from "framer-motion";
 
 // Asset type configuration
 const assetTypeConfig = {
-  stock: { icon: "fa-chart-line", color: "blue", gradient: "from-blue-500 to-blue-600" },
-  crypto: { icon: "fa-bitcoin", color: "orange", gradient: "from-orange-500 to-orange-600" },
-  property: { icon: "fa-home", color: "green", gradient: "from-green-500 to-green-600" },
-  cash: { icon: "fa-dollar-sign", color: "purple", gradient: "from-purple-500 to-purple-600" },
-  savings: { icon: "fa-piggy-bank", color: "emerald", gradient: "from-emerald-500 to-emerald-600" },
-  bond: { icon: "fa-university", color: "indigo", gradient: "from-indigo-500 to-indigo-600" },
-  stock_options: { icon: "fa-certificate", color: "pink", gradient: "from-pink-500 to-pink-600" },
-  other: { icon: "fa-box", color: "gray", gradient: "from-gray-500 to-gray-600" },
+  stock: {
+    icon: "fa-chart-line",
+    color: "blue",
+    gradient: "from-blue-500 to-blue-600",
+  },
+  crypto: {
+    icon: "fa-bitcoin",
+    color: "orange",
+    gradient: "from-orange-500 to-orange-600",
+  },
+  property: {
+    icon: "fa-home",
+    color: "green",
+    gradient: "from-green-500 to-green-600",
+  },
+  cash: {
+    icon: "fa-dollar-sign",
+    color: "purple",
+    gradient: "from-purple-500 to-purple-600",
+  },
+  savings: {
+    icon: "fa-piggy-bank",
+    color: "emerald",
+    gradient: "from-emerald-500 to-emerald-600",
+  },
+  bond: {
+    icon: "fa-university",
+    color: "indigo",
+    gradient: "from-indigo-500 to-indigo-600",
+  },
+  stock_options: {
+    icon: "fa-certificate",
+    color: "pink",
+    gradient: "from-pink-500 to-pink-600",
+  },
+  other: {
+    icon: "fa-box",
+    color: "gray",
+    gradient: "from-gray-500 to-gray-600",
+  },
 };
 
 // Crypto-specific icons
 const getCryptoIcon = (symbol: string) => {
   const symbolUpper = symbol?.toUpperCase();
   switch (symbolUpper) {
-    case 'BTC':
-    case 'BITCOIN':
-      return 'fa-bitcoin';
-    case 'ETH':
-    case 'ETHEREUM':
-      return 'fa-ethereum';
+    case "BTC":
+    case "BITCOIN":
+      return "fa-bitcoin";
+    case "ETH":
+    case "ETHEREUM":
+      return "fa-ethereum";
     default:
-      return 'fa-coins'; // Generic crypto icon for other cryptocurrencies
+      return "fa-coins"; // Generic crypto icon for other cryptocurrencies
   }
 };
 
@@ -96,31 +134,34 @@ export default function PortfolioPage() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'value' | 'change' | 'name'>('value');
+  const [filter, setFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"value" | "change" | "name">("value");
 
   // Use ref to track abort controller for cleanup
   const fetchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Check if user is in demo mode
-  const isDemoMode = useMemo(() => 
-    typeof window !== 'undefined' && localStorage.getItem('demo-mode') === 'true',
+  const isDemoMode = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem("demo-mode") === "true",
     []
   );
-  
+
   // Use Firebase user data or demo user data - memoized
   const currentUser = useMemo(() => {
     if (user) {
       return {
         id: user.id,
-        name: user.displayName || user.name || user.email?.split('@')[0] || 'User',
-        email: user.email || ''
+        name:
+          user.displayName || user.name || user.email?.split("@")[0] || "User",
+        email: user.email || "",
       };
     } else if (isDemoMode) {
       return {
-        id: 'demo-user-id',
-        name: 'Demo User',
-        email: 'demo@profolio.com'
+        id: "demo-user-id",
+        name: "Demo User",
+        email: "demo@profolio.com",
       };
     }
     return null;
@@ -136,51 +177,60 @@ export default function PortfolioPage() {
 
   const fetchAssets = useCallback(async () => {
     if (!currentUser?.id) return;
-    
+
     // Cancel any ongoing fetch request
     cleanup();
 
     // Create new AbortController for this request
     const controller = new AbortController();
     fetchAbortControllerRef.current = controller;
-    
+
     try {
       setLoading(true);
       setError(null);
-      
-      const { apiCall } = await import('@/lib/mockApi');
-      const response = await apiCall('/api/assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method: 'READ', userId: currentUser.id }),
+
+      // Use the proxy endpoint with authentication
+      const authToken = (isDemoMode ? "demo-token" : user?.token) || null;
+
+      const response = await fetch("/api/assets", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ method: "READ", userId: currentUser.id }),
         signal: controller.signal,
       });
 
       if (controller.signal.aborted) return;
-      
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-      
+
       if (!controller.signal.aborted) {
         setAssets(data.assets || []);
       }
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (err instanceof Error && err.name === "AbortError") {
         return; // Expected cancellation
       }
-      console.error('Error fetching assets:', err);
+      console.error("Error fetching assets:", err);
       if (!controller.signal.aborted) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch assets');
+        setError(err instanceof Error ? err.message : "Failed to fetch assets");
       }
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
       }
     }
-  }, [currentUser?.id, cleanup]);
+  }, [currentUser?.id, cleanup, isDemoMode, user?.token]);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -195,43 +245,54 @@ export default function PortfolioPage() {
 
   // Memoized calculations for performance
   const portfolioMetrics = useMemo(() => {
-    const totalValue = assets.reduce((sum, asset) => sum + (asset.current_value || 0), 0);
+    const totalValue = assets.reduce(
+      (sum, asset) => sum + (asset.current_value || 0),
+      0
+    );
     const totalInvested = assets.reduce((sum, asset) => {
-      return sum + (asset.purchase_price && asset.quantity ? asset.purchase_price * asset.quantity : 0);
+      return (
+        sum +
+        (asset.purchase_price && asset.quantity
+          ? asset.purchase_price * asset.quantity
+          : 0)
+      );
     }, 0);
     const totalGainLoss = totalValue - totalInvested;
-    const gainLossPercent = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
+    const gainLossPercent =
+      totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
 
     return {
       totalValue,
       totalInvested,
       totalGainLoss,
       gainLossPercent,
-      assetCount: assets.length
+      assetCount: assets.length,
     };
   }, [assets]);
 
   // Memoized filtered and sorted assets
   const filteredAndSortedAssets = useMemo(() => {
     let filtered = assets;
-    
-    if (filter !== 'all') {
-      filtered = assets.filter(asset => asset.type === filter);
+
+    if (filter !== "all") {
+      filtered = assets.filter((asset) => asset.type === filter);
     }
-    
+
     return filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'value':
+        case "value":
           return (b.current_value || 0) - (a.current_value || 0);
-        case 'change':
-          const aGain = a.current_value && a.purchase_price && a.quantity
-            ? a.current_value - (a.purchase_price * a.quantity)
-            : 0;
-          const bGain = b.current_value && b.purchase_price && b.quantity
-            ? b.current_value - (b.purchase_price * b.quantity)
-            : 0;
+        case "change":
+          const aGain =
+            a.current_value && a.purchase_price && a.quantity
+              ? a.current_value - a.purchase_price * a.quantity
+              : 0;
+          const bGain =
+            b.current_value && b.purchase_price && b.quantity
+              ? b.current_value - b.purchase_price * b.quantity
+              : 0;
           return bGain - aGain;
-        case 'name':
+        case "name":
           return a.name.localeCompare(b.name);
         default:
           return 0;
@@ -244,32 +305,48 @@ export default function PortfolioPage() {
     setShowModal(true);
   }, []);
 
-  const handleDelete = useCallback(async (assetId: string) => {
-    if (!currentUser || !confirm('Are you sure you want to delete this asset?')) return;
+  const handleDelete = useCallback(
+    async (assetId: string) => {
+      if (
+        !currentUser ||
+        !confirm("Are you sure you want to delete this asset?")
+      )
+        return;
 
-    try {
-      const { apiCall } = await import('@/lib/mockApi');
-      await apiCall('/api/assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: 'DELETE',
-          userId: currentUser.id,
-          id: assetId,
-        }),
-      });
-      
-      fetchAssets();
-    } catch (err) {
-      console.error('Error deleting asset:', err);
-      setError('Failed to delete asset');
-    }
-  }, [currentUser, fetchAssets]);
+      try {
+        // Use the proxy endpoint with authentication
+        const authToken = (isDemoMode ? "demo-token" : user?.token) || null;
+
+        const response = await fetch("/api/assets", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            method: "DELETE",
+            userId: currentUser.id,
+            id: assetId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        fetchAssets();
+      } catch (err) {
+        console.error("Error deleting asset:", err);
+        setError("Failed to delete asset");
+      }
+    },
+    [currentUser, fetchAssets, isDemoMode, user?.token]
+  );
 
   const formatCurrency = useCallback((amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   }, []);
 
@@ -324,31 +401,45 @@ export default function PortfolioPage() {
       {/* Portfolio Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Total Value
+          </p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {formatCurrency(portfolioMetrics.totalValue)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Invested</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Total Invested
+          </p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {formatCurrency(portfolioMetrics.totalInvested)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
-          <p className={`text-2xl font-bold ${
-            portfolioMetrics.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {portfolioMetrics.totalGainLoss >= 0 ? '+' : ''}{formatCurrency(portfolioMetrics.totalGainLoss)}
+          <p
+            className={`text-2xl font-bold ${
+              portfolioMetrics.totalGainLoss >= 0
+                ? "text-green-600"
+                : "text-red-600"
+            }`}
+          >
+            {portfolioMetrics.totalGainLoss >= 0 ? "+" : ""}
+            {formatCurrency(portfolioMetrics.totalGainLoss)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">Return</p>
-          <p className={`text-2xl font-bold ${
-            portfolioMetrics.gainLossPercent >= 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {portfolioMetrics.gainLossPercent >= 0 ? '+' : ''}{portfolioMetrics.gainLossPercent.toFixed(2)}%
+          <p
+            className={`text-2xl font-bold ${
+              portfolioMetrics.gainLossPercent >= 0
+                ? "text-green-600"
+                : "text-red-600"
+            }`}
+          >
+            {portfolioMetrics.gainLossPercent >= 0 ? "+" : ""}
+            {portfolioMetrics.gainLossPercent.toFixed(2)}%
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -393,7 +484,9 @@ export default function PortfolioPage() {
           </select>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'value' | 'change' | 'name')}
+            onChange={(e) =>
+              setSortBy(e.target.value as "value" | "change" | "name")
+            }
             className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
             <option value="value">Sort by Value</option>
@@ -408,7 +501,7 @@ export default function PortfolioPage() {
         <div className="text-center py-12">
           <i className="fas fa-inbox text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
           <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-            {filter === 'all' ? 'No assets found' : `No ${filter} assets found`}
+            {filter === "all" ? "No assets found" : `No ${filter} assets found`}
           </p>
           <button
             onClick={() => {
@@ -427,7 +520,10 @@ export default function PortfolioPage() {
               <AssetCard
                 key={asset.id}
                 asset={asset}
-                config={assetTypeConfig[asset.type as keyof typeof assetTypeConfig] || assetTypeConfig.other}
+                config={
+                  assetTypeConfig[asset.type as keyof typeof assetTypeConfig] ||
+                  assetTypeConfig.other
+                }
                 getCryptoIcon={getCryptoIcon}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
@@ -450,4 +546,4 @@ export default function PortfolioPage() {
       )}
     </div>
   );
-} 
+}

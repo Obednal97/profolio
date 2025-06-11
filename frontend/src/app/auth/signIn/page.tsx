@@ -7,6 +7,7 @@ import { AuthLayout } from "@/components/layout/authLayout";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
+import { logger } from "@/lib/logger";
 
 function SignInPage() {
   const {
@@ -35,7 +36,7 @@ function SignInPage() {
 
   // Redirect if already authenticated (unified user or demo mode)
   useEffect(() => {
-    console.log("Auth state check:", {
+    logger.auth("Auth state check:", {
       user: user?.id,
       authLoading,
       isDemoMode,
@@ -44,7 +45,7 @@ function SignInPage() {
 
     // Only redirect if we have a valid user AND we're not in a loading state
     if (!authLoading && ((user && user.id) || isDemoMode)) {
-      console.log("Redirecting to dashboard...");
+      logger.auth("Redirecting to dashboard...");
 
       // Use a small delay to ensure the auth state is fully settled
       const redirectTimer = setTimeout(() => {
@@ -65,7 +66,7 @@ function SignInPage() {
       // Redirect with signing in indicator
       window.location.href = "/app/dashboard?auth-action=signing-in";
     } catch (err: unknown) {
-      console.error("Sign in error:", err);
+      logger.auth("Sign in error:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Invalid email or password";
       setError(errorMessage);
@@ -84,7 +85,7 @@ function SignInPage() {
 
     try {
       const result = await signInWithGoogleProvider();
-      console.log("Google sign-in successful:", result);
+      logger.auth("Google sign-in successful:", result);
 
       // Primary redirect attempt with signing in indicator
       window.location.href = "/app/dashboard?auth-action=signing-in";
@@ -92,12 +93,12 @@ function SignInPage() {
       // Fallback redirect in case the primary one doesn't work
       setTimeout(() => {
         if (window.location.pathname === "/auth/signIn") {
-          console.log("Fallback redirect triggered");
+          logger.auth("Fallback redirect triggered");
           window.location.replace("/app/dashboard?auth-action=signing-in");
         }
       }, 1000);
     } catch (err: unknown) {
-      console.error("Google sign in error:", err);
+      logger.auth("Google sign in error:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Failed to sign in with Google";
       setError(errorMessage);
@@ -115,7 +116,7 @@ function SignInPage() {
         redirect: true,
       });
     } catch (err) {
-      console.error("Demo mode error:", err);
+      logger.auth("Demo mode error:", err);
       setError("Failed to start demo mode. Please try again.");
       setDemoLoading(false);
     }
