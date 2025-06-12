@@ -1,6 +1,6 @@
 # Release Notes - v1.13.1
 
-**Released**: 14th January 2025  
+**Released**: 12th June 2025  
 **Type**: Minor Release  
 **Compatibility**: Fully backward compatible
 
