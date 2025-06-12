@@ -15,6 +15,7 @@ import PieChart from "@/components/charts/pie";
 import { PropertyModal } from "@/components/modals/PropertyModal";
 import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
 import { PropertyManagerSkeleton } from "@/components/ui/skeleton";
+import { GlassCard } from "@/components/cards";
 
 const propertyTypeConfig = {
   residential: {
@@ -661,7 +662,12 @@ export default function PropertyManager() {
             transition={{ delay: 0.2 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
           >
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+            <GlassCard
+              variant="prominent"
+              padding="lg"
+              animate
+              animationDelay={0.2}
+            >
               <h3 className="text-xl font-semibold text-white mb-6">
                 Property Distribution
               </h3>
@@ -674,14 +680,24 @@ export default function PropertyManager() {
                       ?.color || "#6b7280",
                 }))}
               />
-            </div>
+            </GlassCard>
 
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+            <GlassCard
+              variant="prominent"
+              padding="lg"
+              animate
+              animationDelay={0.25}
+            >
               <h3 className="text-xl font-semibold text-white mb-6">
                 Portfolio Insights
               </h3>
               <div className="space-y-4">
-                <div className="p-4 bg-white/5 rounded-lg">
+                <GlassCard
+                  variant="subtle"
+                  padding="md"
+                  borderRadius="lg"
+                  animate={false}
+                >
                   <p className="text-gray-400 text-sm mb-1">
                     Average Property Value
                   </p>
@@ -690,16 +706,26 @@ export default function PropertyManager() {
                       properties.length > 0 ? totalValue / properties.length : 0
                     )}
                   </p>
-                </div>
-                <div className="p-4 bg-white/5 rounded-lg">
+                </GlassCard>
+                <GlassCard
+                  variant="subtle"
+                  padding="md"
+                  borderRadius="lg"
+                  animate={false}
+                >
                   <p className="text-gray-400 text-sm mb-1">
                     Total Annual Income
                   </p>
                   <p className="text-2xl font-bold text-green-400">
                     {formatCurrency(totalRentalIncome * 12)}
                   </p>
-                </div>
-                <div className="p-4 bg-white/5 rounded-lg">
+                </GlassCard>
+                <GlassCard
+                  variant="subtle"
+                  padding="md"
+                  borderRadius="lg"
+                  animate={false}
+                >
                   <p className="text-gray-400 text-sm mb-1">Average ROI</p>
                   <p className="text-2xl font-bold text-blue-400">
                     {totalValue > 0
@@ -709,9 +735,9 @@ export default function PropertyManager() {
                       : 0}
                     %
                   </p>
-                </div>
+                </GlassCard>
               </div>
-            </div>
+            </GlassCard>
           </motion.div>
         )}
 

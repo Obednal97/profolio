@@ -27,6 +27,7 @@ import {
   SkeletonButton,
   SkeletonInput,
 } from "@/components/ui/skeleton";
+import { GlassCard } from "@/components/cards";
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
@@ -1306,7 +1307,12 @@ function ExpenseManager() {
                 transition={{ delay: 0.2 }}
                 className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
               >
-                <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+                <GlassCard
+                  variant="prominent"
+                  padding="lg"
+                  animate
+                  animationDelay={0.2}
+                >
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-semibold text-white">
                       Spending Trend
@@ -1336,9 +1342,14 @@ function ExpenseManager() {
                     xKey="month"
                     lines={[{ dataKey: "amount", color: "#ef4444" }]}
                   />
-                </div>
+                </GlassCard>
 
-                <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+                <GlassCard
+                  variant="prominent"
+                  padding="lg"
+                  animate
+                  animationDelay={0.25}
+                >
                   <h3 className="text-xl font-semibold text-white mb-6">
                     Spending by Category
                   </h3>
@@ -1354,7 +1365,7 @@ function ExpenseManager() {
                       }
                     )}
                   />
-                </div>
+                </GlassCard>
               </motion.div>
 
               <motion.div

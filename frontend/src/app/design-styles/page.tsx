@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
   TrendingDown,
@@ -374,13 +374,63 @@ export default function DesignStylesPage() {
             </div>
           </section>
 
-          {/* Modal Example */}
-          <section className="space-y-6">
-            <h2 className="text-2xl font-bold glass-typography text-gray-900 dark:text-white">
-              Modal & Dialog Components
-            </h2>
+          {/* Enhanced Modal Showcase */}
+          <section className="space-y-8">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl font-bold glass-typography text-gray-900 dark:text-white">
+                Glass Modal Showcase
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                Experience Apple&apos;s refined modal system with sophisticated
+                glass materials, elegant transitions, and multiple interaction
+                patterns designed for financial applications.
+              </p>
+            </div>
 
-            <ModalDemo />
+            <EnhancedModalShowcase />
+
+            {/* Modal Features Documentation */}
+            <div className="liquid-glass bg-white/12 dark:bg-black/25 backdrop-blur-md p-8 rounded-2xl border border-white/25 dark:border-white/15 shadow-xl mt-8">
+              <h3 className="text-xl font-semibold glass-typography text-gray-900 dark:text-white mb-6">
+                Glass Modal Features
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    ✨ Advanced Effects
+                  </h4>
+                  <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <li>• Progressive backdrop blur transitions</li>
+                    <li>• Enhanced glass material with subtle depth</li>
+                    <li>• Specular light reflections on top edges</li>
+                    <li>• Performance-optimized animations</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    🎯 Interaction Design
+                  </h4>
+                  <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <li>• Smooth entrance/exit with spring physics</li>
+                    <li>• Contextual close button animations</li>
+                    <li>• Glass input fields with focus effects</li>
+                    <li>• Portfolio-specific performance tinting</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 liquid-glass bg-white/8 dark:bg-black/20 rounded-xl border border-white/20 dark:border-white/10">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  <strong>Implementation Note:</strong> These modals use
+                  Apple&apos;s signature glass materials with enhanced
+                  backdrop-filter effects, creating authentic depth and
+                  translucency. The progressive blur system ensures smooth
+                  transitions that maintain 60fps performance.
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* Loading States */}
@@ -474,138 +524,473 @@ function PortfolioGlassCard({
   );
 }
 
-// Modal Demo Component
-function ModalDemo() {
-  const [isOpen, setIsOpen] = useState(false);
+// Enhanced Modal Showcase Component
+function EnhancedModalShowcase() {
+  const [currentModal, setCurrentModal] = useState<string | null>(null);
   const [isBlurActive, setIsBlurActive] = useState(false);
 
-  // Handle modal opening with proper blur timing
-  const openModal = () => {
-    setIsOpen(true);
-    // Even longer delay for a more gradual, noticeable fade-in
-    setTimeout(() => setIsBlurActive(true), 200);
+  // Handle modal opening - activate blur after a tiny delay
+  const openModal = (modalType: string) => {
+    setCurrentModal(modalType);
+    // Small delay to let DOM update, then activate blur transition
+    setTimeout(() => setIsBlurActive(true), 50);
   };
 
-  // Handle modal closing with proper blur timing
+  // Handle modal closing - deactivate blur immediately
   const closeModal = () => {
     setIsBlurActive(false);
-    // Wait for blur to fade out before unmounting modal
-    setTimeout(() => setIsOpen(false), 400);
+    setCurrentModal(null);
   };
 
   return (
     <>
-      <button
-        onClick={openModal}
-        className="glass-button--primary bg-gradient-to-r from-blue-600 to-purple-600 text-white backdrop-blur-sm px-6 py-3 rounded-xl border border-white/30 shadow-lg hover:shadow-xl transition-all"
-      >
-        Open Glass Modal
-      </button>
-
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 30,
-            delay: 0.1, // Delay content animation to let blur start first
-            duration: 0.4,
-          }}
+      {/* Modal Trigger Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <motion.button
+          onClick={() => openModal("basic")}
+          className="glass-button bg-gradient-to-br from-blue-600/80 to-cyan-600/80 text-white backdrop-blur-sm p-6 rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all group"
+          whileHover={{ y: -2, scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
-          {/* Enhanced glass backdrop with CSS transition for blur */}
-          <div
-            className={`absolute inset-0 bg-black/50 transition-all duration-500 ease-out ${
-              isBlurActive
-                ? "backdrop-blur-xl backdrop-saturate-150"
-                : "backdrop-blur-none"
-            }`}
-            style={{
-              transitionProperty: "backdrop-filter, opacity",
-              transitionDuration: "400ms",
-              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
-            onClick={closeModal}
-          />
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 mx-auto bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-all">
+              <span className="text-2xl">💬</span>
+            </div>
+            <h3 className="font-semibold">Basic Modal</h3>
+            <p className="text-sm opacity-90">Simple confirmation dialog</p>
+          </div>
+        </motion.button>
 
-          {/* Modal content with enhanced entrance animation */}
+        <motion.button
+          onClick={() => openModal("form")}
+          className="glass-button bg-gradient-to-br from-purple-600/80 to-pink-600/80 text-white backdrop-blur-sm p-6 rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all group"
+          whileHover={{ y: -2, scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 mx-auto bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-all">
+              <span className="text-2xl">📝</span>
+            </div>
+            <h3 className="font-semibold">Form Modal</h3>
+            <p className="text-sm opacity-90">Add asset form example</p>
+          </div>
+        </motion.button>
+
+        <motion.button
+          onClick={() => openModal("portfolio")}
+          className="glass-button bg-gradient-to-br from-green-600/80 to-emerald-600/80 text-white backdrop-blur-sm p-6 rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all group"
+          whileHover={{ y: -2, scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 mx-auto bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-all">
+              <span className="text-2xl">📊</span>
+            </div>
+            <h3 className="font-semibold">Portfolio Modal</h3>
+            <p className="text-sm opacity-90">Asset details with charts</p>
+          </div>
+        </motion.button>
+
+        <motion.button
+          onClick={() => openModal("settings")}
+          className="glass-button bg-gradient-to-br from-orange-600/80 to-red-600/80 text-white backdrop-blur-sm p-6 rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all group"
+          whileHover={{ y: -2, scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 mx-auto bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-all">
+              <span className="text-2xl">⚙️</span>
+            </div>
+            <h3 className="font-semibold">Settings Modal</h3>
+            <p className="text-sm opacity-90">Complex preferences UI</p>
+          </div>
+        </motion.button>
+      </div>
+
+      {/* Modal Implementations */}
+      <AnimatePresence mode="wait">
+        {currentModal && (
           <motion.div
-            className="glass-modal bg-white/20 dark:bg-black/40 backdrop-blur-xl p-8 rounded-3xl max-w-md w-full relative border border-white/30 dark:border-white/20 shadow-2xl"
-            initial={{
-              scale: 0.8,
-              opacity: 0,
-              y: 20,
-            }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-              y: 0,
-            }}
-            exit={{
-              scale: 0.9,
-              opacity: 0,
-              y: 10,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 30,
-              delay: 0.1, // Delay content animation to let blur start first
-              duration: 0.4,
-            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            {/* Glass overlay for enhanced depth */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-3xl pointer-events-none" />
+            {/* Enhanced Backdrop */}
+            <motion.div
+              className="fixed inset-0"
+              style={{
+                background: `radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%)`,
+                backdropFilter: isBlurActive
+                  ? "blur(32px) saturate(150%)"
+                  : "blur(0px) saturate(100%)",
+                transition:
+                  "backdrop-filter 400ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onClick={closeModal}
+            />
 
-            {/* Specular highlight on top edge */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent rounded-t-3xl" />
+            {/* Modal Content Based on Type */}
+            {currentModal === "basic" && <BasicModal onClose={closeModal} />}
+            {currentModal === "form" && <FormModal onClose={closeModal} />}
+            {currentModal === "portfolio" && (
+              <PortfolioModal onClose={closeModal} />
+            )}
+            {currentModal === "settings" && (
+              <SettingsModal onClose={closeModal} />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
 
-            <div className="relative z-10">
+// Basic Modal Component
+function BasicModal({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div
+      className="relative max-w-md w-full"
+      initial={{ scale: 0.9, opacity: 0, y: 20 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.95, opacity: 0, y: 10 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    >
+      {/* Glass Container */}
+      <div className="liquid-glass--prominent bg-white/25 dark:bg-black/40 backdrop-blur-2xl p-8 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl relative overflow-hidden">
+        {/* Top Light Reflection */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+
+        {/* Subtle Inner Glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-3xl pointer-events-none" />
+
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold glass-typography text-gray-900 dark:text-white">
+              Confirm Action
+            </h3>
+            <motion.button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 w-8 h-8 rounded-full hover:bg-white/10 dark:hover:bg-black/20 flex items-center justify-center transition-all"
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              ✕
+            </motion.button>
+          </div>
+
+          <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
+            This is a beautifully crafted glass modal with enhanced blur
+            effects, subtle animations, and Apple&apos;s signature attention to
+            detail.
+          </p>
+
+          <div className="flex gap-3">
+            <motion.button
+              className="glass-button--primary bg-gradient-to-r from-blue-600 to-purple-600 text-white backdrop-blur-sm px-6 py-3 rounded-xl border border-white/30 shadow-lg hover:shadow-xl transition-all flex-1"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Confirm
+            </motion.button>
+            <motion.button
+              className="glass-button bg-white/15 dark:bg-black/25 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/25 dark:border-white/15 hover:bg-white/25 dark:hover:bg-black/35 transition-all text-gray-900 dark:text-white flex-1"
+              onClick={onClose}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Cancel
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Form Modal Component
+function FormModal({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div
+      className="relative max-w-lg w-full"
+      initial={{ scale: 0.9, opacity: 0, y: 20 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.95, opacity: 0, y: 10 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    >
+      <div className="liquid-glass--prominent bg-white/25 dark:bg-black/40 backdrop-blur-2xl p-8 rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-3xl pointer-events-none" />
+
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold glass-typography text-gray-900 dark:text-white">
+              Add New Asset
+            </h3>
+            <motion.button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 w-8 h-8 rounded-full hover:bg-white/10 dark:hover:bg-black/20 flex items-center justify-center transition-all"
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              ✕
+            </motion.button>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Asset Symbol
+              </label>
+              <input
+                type="text"
+                placeholder="AAPL"
+                className="w-full liquid-glass bg-white/20 dark:bg-black/30 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/30 dark:border-white/20 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Quantity
+              </label>
+              <input
+                type="number"
+                placeholder="100"
+                className="w-full liquid-glass bg-white/20 dark:bg-black/30 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/30 dark:border-white/20 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Purchase Price
+              </label>
+              <input
+                type="number"
+                placeholder="150.00"
+                step="0.01"
+                className="w-full liquid-glass bg-white/20 dark:bg-black/30 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/30 dark:border-white/20 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <motion.button
+              className="glass-button--primary bg-gradient-to-r from-green-600 to-emerald-600 text-white backdrop-blur-sm px-6 py-3 rounded-xl border border-white/30 shadow-lg hover:shadow-xl transition-all flex-1"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Add Asset
+            </motion.button>
+            <motion.button
+              className="glass-button bg-white/15 dark:bg-black/25 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/25 dark:border-white/15 hover:bg-white/25 dark:hover:bg-black/35 transition-all text-gray-900 dark:text-white flex-1"
+              onClick={onClose}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Cancel
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Portfolio Modal Component
+function PortfolioModal({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div
+      className="relative max-w-2xl w-full max-h-[90vh]"
+      initial={{ scale: 0.9, opacity: 0, y: 20 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.95, opacity: 0, y: 10 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    >
+      <div className="liquid-glass--prominent bg-white/25 dark:bg-black/40 backdrop-blur-2xl rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-3xl pointer-events-none" />
+
+        <div className="relative z-10 p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold glass-typography text-gray-900 dark:text-white">
+              Apple Inc. (AAPL)
+            </h3>
+            <motion.button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 w-8 h-8 rounded-full hover:bg-white/10 dark:hover:bg-black/20 flex items-center justify-center transition-all"
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              ✕
+            </motion.button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="liquid-glass bg-gradient-to-br from-green-500/15 to-emerald-500/15 border-green-500/30 backdrop-blur-md p-6 rounded-2xl border shadow-xl">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold glass-typography text-gray-900 dark:text-white">
-                  Enhanced Glass Modal
-                </h3>
-                <motion.button
-                  onClick={closeModal}
-                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xl w-8 h-8 rounded-full hover:bg-white/10 dark:hover:bg-black/20 flex items-center justify-center transition-all"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  ✕
-                </motion.button>
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  Current Value
+                </span>
+                <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
-
-              <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                This modal now features a smooth transitional blur effect that
-                gradually fades in the background blur using CSS transitions
-                combined with Framer Motion for the perfect Apple-quality
-                experience.
+              <p className="text-2xl font-bold glass-typography--numbers text-green-600">
+                £12,500
               </p>
+              <p className="text-sm text-green-600">+£2,500 (+25.0%)</p>
+            </div>
 
-              <div className="flex gap-3">
-                <motion.button
-                  className="glass-button--primary bg-gradient-to-r from-blue-600 to-purple-600 text-white backdrop-blur-sm px-4 py-2 rounded-xl border border-white/30 shadow-lg hover:shadow-xl transition-all flex-1"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Confirm
-                </motion.button>
-                <motion.button
-                  className="glass-button bg-white/15 dark:bg-black/25 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/25 dark:border-white/15 hover:bg-white/25 dark:hover:bg-black/35 transition-all text-gray-900 dark:text-white flex-1"
-                  onClick={closeModal}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Cancel
-                </motion.button>
+            <div className="liquid-glass bg-white/12 dark:bg-black/25 backdrop-blur-md p-6 rounded-2xl border border-white/25 dark:border-white/15 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  Shares Owned
+                </span>
+                <Wallet className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </div>
+              <p className="text-2xl font-bold glass-typography--numbers text-gray-900 dark:text-white">
+                100
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                @ £125.00 each
+              </p>
+            </div>
+          </div>
+
+          <div className="liquid-glass bg-white/12 dark:bg-black/25 backdrop-blur-md p-6 rounded-2xl border border-white/25 dark:border-white/15 shadow-xl mb-6">
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-4">
+              Performance Chart
+            </h4>
+            <div className="h-32 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center">
+              <span className="text-gray-600 dark:text-gray-400">
+                📈 Chart Visualization
+              </span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <motion.button
+              className="glass-button bg-gradient-to-r from-blue-600 to-purple-600 text-white backdrop-blur-sm px-6 py-3 rounded-xl border border-white/30 shadow-lg hover:shadow-xl transition-all flex-1"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Buy More
+            </motion.button>
+            <motion.button
+              className="glass-button bg-gradient-to-r from-red-600 to-rose-600 text-white backdrop-blur-sm px-6 py-3 rounded-xl border border-white/30 shadow-lg hover:shadow-xl transition-all flex-1"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Sell
+            </motion.button>
+            <motion.button
+              className="glass-button bg-white/15 dark:bg-black/25 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/25 dark:border-white/15 hover:bg-white/25 dark:hover:bg-black/35 transition-all text-gray-900 dark:text-white"
+              onClick={onClose}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Close
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Settings Modal Component
+function SettingsModal({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div
+      className="relative max-w-xl w-full max-h-[90vh]"
+      initial={{ scale: 0.9, opacity: 0, y: 20 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.95, opacity: 0, y: 10 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    >
+      <div className="liquid-glass--prominent bg-white/25 dark:bg-black/40 backdrop-blur-2xl rounded-3xl border border-white/30 dark:border-white/20 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-3xl pointer-events-none" />
+
+        <div className="relative z-10 p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold glass-typography text-gray-900 dark:text-white">
+              Preferences
+            </h3>
+            <motion.button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 w-8 h-8 rounded-full hover:bg-white/10 dark:hover:bg-black/20 flex items-center justify-center transition-all"
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              ✕
+            </motion.button>
+          </div>
+
+          <div className="space-y-6 mb-6">
+            <div className="liquid-glass bg-white/12 dark:bg-black/25 backdrop-blur-md p-4 rounded-xl border border-white/25 dark:border-white/15">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    Push Notifications
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Get alerts for portfolio changes
+                  </p>
+                </div>
+                <GlassToggle label="" defaultChecked={true} />
               </div>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </>
+
+            <div className="liquid-glass bg-white/12 dark:bg-black/25 backdrop-blur-md p-4 rounded-xl border border-white/25 dark:border-white/15">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    Auto-sync Data
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Automatically update portfolio data
+                  </p>
+                </div>
+                <GlassToggle label="" defaultChecked={false} />
+              </div>
+            </div>
+
+            <div className="liquid-glass bg-white/12 dark:bg-black/25 backdrop-blur-md p-4 rounded-xl border border-white/25 dark:border-white/15">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    Market Hours Only
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Only show data during market hours
+                  </p>
+                </div>
+                <GlassToggle label="" defaultChecked={true} />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <motion.button
+              className="glass-button--primary bg-gradient-to-r from-blue-600 to-purple-600 text-white backdrop-blur-sm px-6 py-3 rounded-xl border border-white/30 shadow-lg hover:shadow-xl transition-all flex-1"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Save Changes
+            </motion.button>
+            <motion.button
+              className="glass-button bg-white/15 dark:bg-black/25 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/25 dark:border-white/15 hover:bg-white/25 dark:hover:bg-black/35 transition-all text-gray-900 dark:text-white flex-1"
+              onClick={onClose}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Cancel
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }

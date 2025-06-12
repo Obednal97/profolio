@@ -7,13 +7,16 @@ interface GooglePlacesApiKeyModalProps {
   onApiKeyUpdated?: () => void;
 }
 
-export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlacesApiKeyModalProps) {
+export function GooglePlacesApiKeyModal({
+  onClose,
+  onApiKeyUpdated,
+}: GooglePlacesApiKeyModalProps) {
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Load existing API key on mount
   useEffect(() => {
-    const storedKey = localStorage.getItem('google_places_api_key');
+    const storedKey = localStorage.getItem("google_places_api_key");
     if (storedKey) {
       setApiKey(storedKey);
     }
@@ -27,23 +30,27 @@ export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlac
     }
 
     // Store the API key
-    localStorage.setItem('google_places_api_key', apiKey.trim());
-    
+    localStorage.setItem("google_places_api_key", apiKey.trim());
+
     // Notify parent component
     if (onApiKeyUpdated) {
       onApiKeyUpdated();
     }
-    
+
     // Close modal
     onClose();
   };
 
   // Handle API key removal
   const handleRemoveKey = () => {
-    if (confirm("Are you sure you want to remove your Google Places API key? Address search will fall back to OpenStreetMap.")) {
-      localStorage.removeItem('google_places_api_key');
+    if (
+      confirm(
+        "Are you sure you want to remove your Google Places API key? Address search will fall back to OpenStreetMap."
+      )
+    ) {
+      localStorage.removeItem("google_places_api_key");
       setApiKey("");
-      
+
       if (onApiKeyUpdated) {
         onApiKeyUpdated();
       }
@@ -51,7 +58,7 @@ export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlac
   };
 
   // Check if we have a stored key
-  const hasStoredKey = localStorage.getItem('google_places_api_key');
+  const hasStoredKey = localStorage.getItem("google_places_api_key");
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -82,8 +89,9 @@ export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlac
             Enhanced Address Search
           </h4>
           <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-            Adding a Google Places API key provides more accurate address suggestions and auto-completion. 
-            Without it, the app uses OpenStreetMap (which still works, just less accurate).
+            Adding a Google Places API key provides more accurate address
+            suggestions and auto-completion. Without it, the app uses
+            OpenStreetMap (which still works, just less accurate).
           </p>
           <div className="flex items-center justify-between text-xs">
             <span className="text-blue-600 dark:text-blue-400">
@@ -119,7 +127,9 @@ export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlac
                 onClick={() => setShowApiKey(!showApiKey)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                <i
+                  className={`fas ${showApiKey ? "fa-eye-slash" : "fa-eye"}`}
+                ></i>
               </button>
             </div>
           </div>
@@ -129,8 +139,9 @@ export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlac
             <p className="text-sm text-green-700 dark:text-green-300 flex items-start">
               <i className="fas fa-info-circle mr-2 mt-0.5 flex-shrink-0"></i>
               <span>
-                Your API key will be validated automatically when you use address search. 
-                If there are any issues, the app will fall back to OpenStreetMap.
+                Your API key will be validated automatically when you use
+                address search. If there are any issues, the app will fall back
+                to OpenStreetMap.
               </span>
             </p>
           </div>
@@ -143,11 +154,29 @@ export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlac
             </h5>
             <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-1 ml-4">
               <li className="list-decimal">
-                Visit <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Google Cloud Console</a>
+                Visit{" "}
+                <a
+                  href="https://console.cloud.google.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline"
+                >
+                  Google Cloud Console
+                </a>
               </li>
-              <li className="list-decimal">Create a project and enable <strong>Places API</strong></li>
-              <li className="list-decimal">Create an <strong>API Key</strong> and restrict it to Places APIs</li>
-              <li className="list-decimal">Add domain restrictions: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">localhost:3000/*</code></li>
+              <li className="list-decimal">
+                Create a project and enable <strong>Places API</strong>
+              </li>
+              <li className="list-decimal">
+                Create an <strong>API Key</strong> and restrict it to Places
+                APIs
+              </li>
+              <li className="list-decimal">
+                Add domain restrictions:{" "}
+                <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+                  localhost:3000/*
+                </code>
+              </li>
               <li className="list-decimal">Paste the key above and save it</li>
             </ol>
           </div>
@@ -190,4 +219,4 @@ export function GooglePlacesApiKeyModal({ onClose, onApiKeyUpdated }: GooglePlac
       </motion.div>
     </div>
   );
-} 
+}
