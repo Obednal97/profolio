@@ -55,7 +55,7 @@ export default function BillingSuccessPage() {
         {/* Features List */}
         <div className="glass-tile rounded-xl p-6 mb-8 text-left">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-            What's included:
+            What&apos;s included:
           </h3>
           <ul className="space-y-2">
             {[

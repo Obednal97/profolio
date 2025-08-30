@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { loadStripe } from '@stripe/stripe-js';
+// import { loadStripe } from '@stripe/stripe-js';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/lib/unifiedAuth';
 import { logger } from '@/lib/logger';
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+// Initialize Stripe - commented out as it's not currently used
+// const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 interface Subscription {
   id?: string;
@@ -196,7 +196,7 @@ export default function BillingPage() {
                     Free Plan
                   </span>
                   <p className="text-gray-600 dark:text-gray-400 mt-2">
-                    You're currently on the free plan. Upgrade to unlock premium features.
+                    You&apos;re currently on the free plan. Upgrade to unlock premium features.
                   </p>
                 </div>
               )}

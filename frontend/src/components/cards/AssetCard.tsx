@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import type { Asset } from '@/types/global';
 import { FinancialCalculator } from '@/lib/financial';
 import { Button } from '@/components/ui/button';

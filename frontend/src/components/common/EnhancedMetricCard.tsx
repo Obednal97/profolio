@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 
 export interface EnhancedMetricCardProps {

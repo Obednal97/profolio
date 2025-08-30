@@ -52,6 +52,7 @@ export function FilterBar({
   searchValue = "",
   onSearchChange,
   searchPlaceholder = "Search...",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   showAdvancedFilters = false,
   advancedFiltersContent,
   sortOptions,
@@ -59,6 +60,7 @@ export function FilterBar({
   onSortChange,
   viewMode = "grid",
   onViewChange,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   availableViews = ["grid", "list", "table"],
   className,
 }: FilterBarProps) {

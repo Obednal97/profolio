@@ -25,13 +25,13 @@ export default function BillingCancelPage() {
         </h1>
         
         <p className="text-gray-600 dark:text-gray-400 mb-8">
-          No worries! Your checkout was cancelled and you haven't been charged. You can always upgrade later when you're ready.
+          No worries! Your checkout was cancelled and you haven&apos;t been charged. You can always upgrade later when you&apos;re ready.
         </p>
 
         {/* Benefits reminder */}
         <div className="glass-tile rounded-xl p-6 mb-8 text-left">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-            What you're missing:
+            What you&apos;re missing:
           </h3>
           <ul className="space-y-2">
             {[

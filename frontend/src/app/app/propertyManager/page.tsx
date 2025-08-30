@@ -9,7 +9,6 @@ import React, {
 import type { Property } from "@/types/global";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { Button, Tabs } from "@/components/ui/button";
-import { ViewSwitcher } from "@/components/ui/ViewSwitcher";
 import { StatCard } from "@/components/cards/StatCard";
 import { motion, AnimatePresence } from "framer-motion";
 import PieChart from "@/components/charts/pie";

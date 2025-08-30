@@ -1,6 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { EnhancedGlassModal, EnhancedGlassModalContent } from "@/components/ui/enhanced-glass/EnhancedGlassModal";
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -15,7 +14,7 @@ interface BaseModalProps {
   origin?: { x: number; y: number };
 }
 
-export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children, title, description, dismissible = true, origin }) => {
+export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children, title, description, dismissible = true }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(80); // Default header height
 
@@ -64,11 +63,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children,
       onClose();
     }
   };
-
-  const originStyle = origin ? {
-    originX: origin.x / window.innerWidth,
-    originY: origin.y / window.innerHeight,
-  } : { originX: 0.5, originY: 0.5 };
 
   return (
     <div 

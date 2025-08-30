@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button/button";
 import { 
   EnhancedGlassModal, 
   EnhancedGlassModalContent,
   EnhancedGlassModalHeader,
-  EnhancedGlassModalBody,
-  EnhancedGlassModalFooter,
-  EnhancedGlassButton
+  EnhancedGlassModalBody
 } from "@/components/ui/enhanced-glass/EnhancedGlassModal";
 
 interface GooglePlacesApiKeyModalProps {

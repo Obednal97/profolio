@@ -1062,14 +1062,14 @@ export default function AssetManager() {
           {/* Search Results Count */}
           {searchQuery && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Found {filteredAssets.length} {filteredAssets.length === 1 ? 'asset' : 'assets'} matching "{searchQuery}"
+              Found {filteredAssets.length} {filteredAssets.length === 1 ? 'asset' : 'assets'} matching &quot;{searchQuery}&quot;
             </p>
           )}
 
           {/* Collapsible Advanced Filters */}
           <AnimatePresence>
             {showAdvancedFilters && (
-              <motion.div
+              <MotionDiv
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
@@ -1116,7 +1116,7 @@ export default function AssetManager() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </MotionDiv>
             )}
           </AnimatePresence>
         </MotionDiv>

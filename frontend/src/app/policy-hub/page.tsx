@@ -8,7 +8,7 @@ export default function PolicyHubPage() {
         <section className="space-y-2">
           <h1 className="text-3xl font-semibold">Profolio Policies</h1>
           <p className="text-muted-foreground">Important information about how we operate</p>
-          <p>Welcome to Profolio's Policy Hub. Here you'll find all our policies and guidelines that help ensure a safe, transparent, and compliant platform for our users.</p>
+          <p>Welcome to Profolio&apos;s Policy Hub. Here you&apos;ll find all our policies and guidelines that help ensure a safe, transparent, and compliant platform for our users.</p>
         </section>
 
         <section>

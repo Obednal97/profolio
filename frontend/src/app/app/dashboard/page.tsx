@@ -10,8 +10,7 @@ import { createUserContext } from "@/lib/userUtils";
 import { useAppPagePreloader } from "@/hooks/usePagePreloader";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
-import { StatsGrid, StatItem } from "@/components/common/StatsGrid";
-import { EnhancedMetricCard } from "@/components/common/EnhancedMetricCard";
+import { StatsGrid } from "@/components/common/StatsGrid";
 import { Wallet, CreditCard, Home, TrendingUp } from "lucide-react";
 
 // 🚀 PERFORMANCE: Dynamic import of Confetti to reduce initial bundle size and prevent hydration issues

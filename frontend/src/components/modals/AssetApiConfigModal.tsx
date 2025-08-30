@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { BaseModal } from "./modal";

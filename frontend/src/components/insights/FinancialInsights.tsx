@@ -8,7 +8,6 @@ import { getCategoryInfo } from "@/lib/transactionClassifier";
 import LineChart from "@/components/charts/line";
 import PieChart from "@/components/charts/pie";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
-import { StatCard } from "@/components/cards/StatCard";
 
 interface FinancialInsightsProps {
   expenses: Expense[];
@@ -40,6 +39,7 @@ export default function FinancialInsights({
   expenses,
   timeRange,
   expensesByCategory = {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   monthlyExpensesTrend = [],
   setTimeRange,
 }: FinancialInsightsProps) {

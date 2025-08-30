@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockApi } from "@/lib/mockApi";
 import { generateDemoAssets } from "@/lib/demoData";
 
 // Auto-detect backend URL with proper protocol

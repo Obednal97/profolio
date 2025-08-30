@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Property } from '@/types/global';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { EnhancedGlassCard } from '@/components/ui/enhanced-glass/EnhancedGlassCard';
 
