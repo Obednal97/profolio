@@ -56,7 +56,7 @@ export default function UpgradePage() {
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.post('/api/billing/checkout', {
+      const response = await apiClient.post<{ data?: { url: string } }>('/api/billing/checkout', {
         priceId: selectedPlan,
       });
 

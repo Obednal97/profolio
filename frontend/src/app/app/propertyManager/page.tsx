@@ -309,10 +309,10 @@ export default function PropertyManager() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((property) => 
-        property.name.toLowerCase().includes(query) ||
         property.address?.toLowerCase().includes(query) ||
         property.propertyType?.toLowerCase().includes(query) ||
-        property.city?.toLowerCase().includes(query)
+        property.city?.toLowerCase().includes(query) ||
+        property.street?.toLowerCase().includes(query)
       );
     }
 
@@ -781,8 +781,6 @@ export default function PropertyManager() {
               ]}
               activeTab={viewMode}
               onTabChange={(mode) => setViewMode(mode as "grid" | "list" | "map")}
-              variant="glass"
-              size="sm"
             />
           </div>
         </div>

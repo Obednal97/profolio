@@ -48,7 +48,7 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
       animate
       className="touch-manipulation"
       enablePerformanceTinting={!!appreciation}
-      performance={appreciation?.percentageChange || 0}
+      performance={appreciation?.gainPercent || 0}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center flex-1 min-w-0">

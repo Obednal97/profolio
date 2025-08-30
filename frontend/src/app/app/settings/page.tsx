@@ -416,7 +416,7 @@ const SecurityTab = ({
   loading: boolean;
   userProfile?: { provider?: string; email?: string };
   isDemoMode: boolean;
-}): JSX.Element => {
+}): React.ReactElement => {
   const [tokenExpiration, setTokenExpiration] = useState(() => {
     if (typeof window !== "undefined") {
       const prefs = getSecurePreferences();

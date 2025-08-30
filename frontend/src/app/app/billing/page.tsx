@@ -32,7 +32,7 @@ export default function BillingPage() {
     const fetchSubscription = async () => {
       try {
         console.log('Fetching subscription for user:', user);
-        const response = await apiClient.get('/api/billing/subscription');
+        const response = await apiClient.get<{ data: Subscription }>('/api/billing/subscription');
         console.log('Subscription response:', response);
         if (response.data) {
           setSubscription(response.data);
@@ -59,9 +59,9 @@ export default function BillingPage() {
   const handleManageSubscription = async () => {
     setActionLoading(true);
     try {
-      const response = await apiClient.post('/api/billing/portal');
-      if (response.data?.url) {
-        window.location.href = response.data.url;
+      const response = await apiClient.post<{ portalUrl?: string }>('/api/billing/portal');
+      if (response?.portalUrl) {
+        window.location.href = response.portalUrl;
       }
     } catch (error) {
       logger.error('Failed to open customer portal:', error);
@@ -84,9 +84,9 @@ export default function BillingPage() {
 
     setActionLoading(true);
     try {
-      await apiClient.delete('/api/billing/subscription');
+      await apiClient.delete<void>('/api/billing/subscription');
       // Refresh subscription data
-      const response = await apiClient.get('/api/billing/subscription');
+      const response = await apiClient.get<{ data: Subscription }>('/api/billing/subscription');
       setSubscription(response.data);
       alert('Your subscription has been scheduled for cancellation.');
     } catch (error) {
