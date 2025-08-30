@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: UK date formatting standards and chronological validation patterns for releases and documentation
 ruleType: agentRequested
 alwaysApply: false
@@ -16,30 +11,36 @@ Enforce UK date formatting conventions and chronological accuracy across all pro
 ## Date Format Standards
 
 ### CHANGELOG.md
+
 - **Format**: `YYYY-MM-DD` (ISO 8601)
 - **Example**: `## [v1.8.3] - 2025-06-03`
 - **Command**: `date +%Y-%m-%d`
 
 ### Release Notes
+
 - **Format**: Ordinal day, full month, year (UK style)
 - **Example**: `**Released**: 3rd June 2025`
 - **Pattern**: `dd(st|nd|rd|th) Month YYYY`
 
 ### Documentation
+
 - **Format**: UK conventions (DD-MM-YYYY or ordinal dates)
 - **Example**: `Last Updated: 3rd June 2025`
 - **Never use**: US format (MM-DD-YYYY)
 
 ### Commit Messages
+
 - **Format**: ISO format for any date references
 - **Example**: `feat: v1.8.3 - enhanced features (2025-06-03)`
 
 ## Chronological Validation
 
 ### Critical Rule
+
 **NEW RELEASES MUST ALWAYS HAVE DATES AFTER PREVIOUS RELEASES**
 
 ### Validation Commands
+
 ```bash
 # Get current date for releases
 CURRENT_DATE=$(date +%Y-%m-%d)
@@ -59,6 +60,7 @@ fi
 ## Date Generation Patterns
 
 ### For CHANGELOG.md
+
 ```bash
 # Always use current date in ISO format
 CHANGELOG_DATE=$(date +%Y-%m-%d)
@@ -66,6 +68,7 @@ echo "## [v${VERSION}] - ${CHANGELOG_DATE}"
 ```
 
 ### For Release Notes
+
 ```bash
 # UK ordinal format
 RELEASE_DATE=$(date +"%d %B %Y" | sed 's/^0//' | sed 's/1 /1st /; s/2 /2nd /; s/3 /3rd /; s/[4-9] /th /; s/1[0-9] /th /')
@@ -73,6 +76,7 @@ echo "**Released**: ${RELEASE_DATE}"
 ```
 
 ### For Documentation
+
 ```bash
 # UK readable format
 DOC_DATE=$(date +"%d %B %Y" | sed 's/^0//' | sed 's/1 /1st /; s/2 /2nd /; s/3 /3rd /; s/[4-9] /th /; s/1[0-9] /th /')
@@ -82,42 +86,51 @@ echo "Last Updated: ${DOC_DATE}"
 ## UK Date Patterns
 
 ### Ordinal Number Rules
+
 - 1st, 2nd, 3rd (special cases)
 - 4th, 5th, 6th, 7th, 8th, 9th, 10th (th suffix)
 - 11th, 12th, 13th (th suffix, not 1st, 2nd, 3rd)
 - 21st, 22nd, 23rd (follows units digit rule)
 
 ### Month Names
+
 Always use full month names, never abbreviations:
+
 - January, February, March, April, May, June
 - July, August, September, October, November, December
 
 ### Week Start Convention
+
 Weeks start on Monday (UK standard), not Sunday (US standard).
 
 ## Release Content Standards
 
 ### Clean Markdown Requirements
+
 - ❌ **NO LINKS**: Remove all GitHub links, documentation links, or external references
 - ❌ **NO SIGN-OFFS**: Remove "enjoy" messages or similar endings
 - ✅ **CLEAN STRUCTURE**: Use simple formatting compatible with parser
 - ✅ **CONTENT FOCUS**: Include only user-relevant information
 
 ### Example Clean Release Note
+
 ```markdown
 # v1.8.3 Release Notes
 
 **Released**: 3rd June 2025
 
 ## ✨ New Features
+
 - Enhanced notification system with badge counts
 - Improved PWA status bar visual harmony
 
 ## 🐛 Bug Fixes
+
 - Fixed Next.js 15+ dynamic route parameter handling
 - Resolved Yahoo Finance API retry timing issues
 
 ## 🎨 UI Improvements
+
 - Updated notification badge styling
 - Enhanced responsive layout patterns
 ```
@@ -125,18 +138,21 @@ Weeks start on Monday (UK standard), not Sunday (US standard).
 ## Anti-Patterns to Avoid
 
 ### Date Formatting
+
 - ❌ US format: `06/03/2025` or `June 3rd, 2025`
 - ❌ Inconsistent formats within same document
 - ❌ Hardcoded dates without verification
 - ❌ Copy-pasting old dates from templates
 
 ### Chronological Issues
+
 - ❌ Releases with dates before previous releases
 - ❌ Not checking system timezone
 - ❌ Using UTC when project uses local time
 - ❌ Not verifying dates before committing
 
 ### Content Issues
+
 - ❌ Including external links in release notes
 - ❌ Complex nested markdown that breaks parsers
 - ❌ Development-specific content users don't need
@@ -144,6 +160,7 @@ Weeks start on Monday (UK standard), not Sunday (US standard).
 ## Validation Checklist
 
 Before any release:
+
 - [ ] Current date obtained with verified timezone
 - [ ] Date is chronologically after last release
 - [ ] CHANGELOG.md uses ISO format (YYYY-MM-DD)
@@ -156,6 +173,7 @@ Before any release:
 ## Emergency Date Correction
 
 If wrong date is published:
+
 ```bash
 # Fix CHANGELOG.md
 CORRECT_DATE=$(date +%Y-%m-%d)

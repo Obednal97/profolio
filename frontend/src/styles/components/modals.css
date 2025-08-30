@@ -1,0 +1,185 @@
+/* === Components: Modal Styles === */
+/* Modal and dialog components for the Profolio platform */
+
+/* Modal overlay from globals.css */
+.modal-overlay {
+  background-color: oklch(0 0 0 / 0.4);
+  backdrop-filter: blur(6px);
+}
+
+@layer components {
+  /* Modal overlay from globals.css */
+  .modal-overlay {
+    background-color: oklch(0 0 0 / 0.4);
+    backdrop-filter: blur(6px);
+    @apply fixed inset-0 z-50;
+    @apply animate-fade-in;
+  }
+
+  /* Base modal container */
+  .modal-container {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    @apply pointer-events-none;
+  }
+
+  .modal-container > * {
+    @apply pointer-events-auto;
+  }
+
+  /* Modal content */
+  .modal-content {
+    @apply relative w-full max-w-lg mx-auto;
+    @apply animate-scale-in;
+  }
+
+  /* Modal sizes */
+  .modal-sm {
+    @apply max-w-sm;
+  }
+
+  .modal-md {
+    @apply max-w-md;
+  }
+
+  .modal-lg {
+    @apply max-w-lg;
+  }
+
+  .modal-xl {
+    @apply max-w-xl;
+  }
+
+  .modal-full {
+    @apply max-w-full m-4;
+  }
+
+  /* Modal header */
+  .modal-header {
+    @apply flex items-center justify-between p-6 pb-4;
+  }
+
+  .modal-title {
+    @apply text-lg font-semibold;
+  }
+
+  /* Modal body */
+  .modal-body {
+    @apply px-6 py-4;
+  }
+
+  /* Modal footer */
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 p-6 pt-4;
+  }
+
+  /* Close button */
+  .modal-close {
+    @apply absolute top-4 right-4 p-1 rounded-full;
+    @apply hover:bg-gray-100 dark:hover:bg-gray-800;
+    @apply transition-colors duration-200;
+  }
+
+  /* Drawer variants */
+  .drawer {
+    @apply fixed z-50 bg-background shadow-xl;
+    @apply transition-transform duration-300 ease-in-out;
+  }
+
+  .drawer-left {
+    @apply top-0 left-0 h-full w-80;
+    @apply -translate-x-full;
+  }
+
+  .drawer-left.open {
+    @apply translate-x-0;
+  }
+
+  .drawer-right {
+    @apply top-0 right-0 h-full w-80;
+    @apply translate-x-full;
+  }
+
+  .drawer-right.open {
+    @apply translate-x-0;
+  }
+
+  .drawer-top {
+    @apply top-0 left-0 w-full h-80;
+    @apply -translate-y-full;
+  }
+
+  .drawer-top.open {
+    @apply translate-y-0;
+  }
+
+  .drawer-bottom {
+    @apply bottom-0 left-0 w-full h-80;
+    @apply translate-y-full;
+  }
+
+  .drawer-bottom.open {
+    @apply translate-y-0;
+  }
+
+  /* Toast/Notification styles */
+  .toast {
+    @apply fixed z-50 flex items-center gap-3 p-4 rounded-lg shadow-lg;
+    @apply bg-background border border-border;
+    @apply animate-scale-in;
+  }
+
+  .toast-top-right {
+    @apply top-4 right-4;
+  }
+
+  .toast-top-left {
+    @apply top-4 left-4;
+  }
+
+  .toast-bottom-right {
+    @apply bottom-4 right-4;
+  }
+
+  .toast-bottom-left {
+    @apply bottom-4 left-4;
+  }
+
+  .toast-success {
+    @apply border-green-500 bg-green-50 dark:bg-green-900/20;
+  }
+
+  .toast-error {
+    @apply border-red-500 bg-red-50 dark:bg-red-900/20;
+  }
+
+  .toast-warning {
+    @apply border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20;
+  }
+
+  .toast-info {
+    @apply border-blue-500 bg-blue-50 dark:bg-blue-900/20;
+  }
+
+  /* Popover styles */
+  .popover {
+    @apply absolute z-50 rounded-lg shadow-lg;
+    @apply bg-popover text-popover-foreground;
+    @apply border border-border p-4;
+    @apply animate-scale-in origin-top;
+  }
+
+  .popover-arrow {
+    @apply absolute w-2 h-2 bg-popover border-border;
+    @apply rotate-45 border-t border-l;
+  }
+
+  /* Tooltip styles */
+  .tooltip {
+    @apply absolute z-50 px-2 py-1 text-xs rounded;
+    @apply bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900;
+    @apply pointer-events-none animate-fade-in;
+  }
+
+  /* Glass modal styles (enhanced) */
+  /* See glass-system.css for .glass-modal and .glass-modal-overlay */
+}

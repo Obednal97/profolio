@@ -14,6 +14,7 @@ import { PropertiesModule } from "@/app/api/properties/properties.module";
 import { ExpensesModule } from "@/app/api/expenses/expenses.module";
 import { RbacModule } from "@/common/rbac/rbac.module";
 import { SetupModule } from "@/setup/setup.module";
+import { BillingModule } from "@/app/api/billing/billing.module";
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SetupModule } from "@/setup/setup.module";
     PropertiesModule,
     ExpensesModule,
     SetupModule,
+    BillingModule,
   ],
   providers: [PrismaService],
   exports: [PrismaService],

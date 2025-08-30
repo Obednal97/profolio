@@ -73,7 +73,7 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh 
 
 ```bash
 # Install specific version
-sudo ./install.sh --version v1.12.5
+sudo ./install.sh --version v1.14.1
 
 # Unattended installation for automation
 sudo ./install.sh --auto
@@ -263,7 +263,7 @@ sudo systemctl enable profolio-backend profolio-frontend
 sudo ./install.sh
 
 # Update to specific version
-sudo ./install.sh --version v1.12.5
+sudo ./install.sh --version v1.14.1
 
 # Check for updates
 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep tag_name
@@ -344,7 +344,7 @@ pnpm run dev:frontend   # http://localhost:3000
 
 - 💬 **[GitHub Discussions](https://github.com/Obednal97/profolio/discussions)** - Community Q&A
 - 🐛 **[Issue Tracker](https://github.com/Obednal97/profolio/issues)** - Bug reports and feature requests
-- 📋 **[Contributing Guide](CONTRIBUTING.md)** - How to contribute code and documentation
+- 📄 **[Changelog](CHANGELOG.md)** - Version history and release notes
 
 ### **Professional Support**
 

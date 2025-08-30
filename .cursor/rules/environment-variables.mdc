@@ -1,9 +1,4 @@
 ---
-description: Add environment variable
-globs: 
-alwaysApply: false
----
----
 description: Guidelines for setting up and managing environment variables in Next.js and NestJS applications
 ruleType: agentRequested
 alwaysApply: false
@@ -23,6 +18,7 @@ For first-time setup or environment reset, use the development setup script:
 ```
 
 This script will:
+
 - Create all necessary environment files
 - Handle existing file backup/overwrite scenarios
 - Install dependencies (optional)
@@ -32,34 +28,42 @@ This script will:
 ## Environment File Structure
 
 ### Root Environment (`.env`)
+
 Shared configuration for both frontend and backend development.
 
 **Key Variables:**
+
 - `NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted` - Controls UI deployment type display
 - `NEXT_PUBLIC_AUTH_MODE=firebase` - Authentication provider
 - `NEXT_PUBLIC_API_URL=http://localhost:3001` - Backend API endpoint
 - `NEXT_PUBLIC_ENABLE_API_PROXY=true` - Enable Next.js API proxying
 
 ### Frontend Override (`frontend/.env.local`)
+
 Local development overrides for frontend-specific settings.
 
 **Key Variables:**
+
 - `NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted` - Ensures correct deployment mode
 - `NEXT_PUBLIC_ENABLE_DEMO_MODE=false` - Controls demo/development features
 - `NEXT_PUBLIC_ENABLE_DEBUG=true` - Debug logging in development
 
 ### Backend Configuration (`backend/.env`)
+
 Database and security configuration for backend services.
 
 **Key Variables:**
+
 - `DATABASE_URL="postgresql://..."` - PostgreSQL connection string
 - `JWT_SECRET="..."` - JSON Web Token signing secret
 - `API_ENCRYPTION_KEY="..."` - API encryption key
 
 ### Production Frontend (`.env.production`)
+
 Production-specific frontend configuration (created by installer).
 
 **Key Variables:**
+
 - `NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted` - Production deployment mode
 - `NEXT_PUBLIC_AUTH_MODE=local` - Production auth mode
 - `NEXT_PUBLIC_ENABLE_DEBUG=false` - Disable debug in production
@@ -67,6 +71,7 @@ Production-specific frontend configuration (created by installer).
 ## Variable Categories
 
 ### 🌐 Deployment Configuration
+
 ```bash
 # Controls how the app identifies itself
 NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted  # or "cloud"
@@ -74,6 +79,7 @@ NEXT_PUBLIC_AUTH_MODE=firebase           # or "local"
 ```
 
 ### 🔗 API Configuration
+
 ```bash
 # Backend connectivity
 PORT=3001
@@ -82,6 +88,7 @@ NEXT_PUBLIC_ENABLE_API_PROXY=true
 ```
 
 ### 🎛️ Feature Flags
+
 ```bash
 # Control application features
 NEXT_PUBLIC_USE_MOCK_API=false
@@ -92,6 +99,7 @@ NEXT_PUBLIC_SHOW_BRANDING=true
 ```
 
 ### 🔧 Development Settings
+
 ```bash
 # Development-specific configuration
 NEXT_PUBLIC_ENABLE_DEBUG=true
@@ -100,6 +108,7 @@ NODE_ENV=development
 ```
 
 ### 🔐 Security Configuration
+
 ```bash
 # Backend security (never prefix with NEXT_PUBLIC_)
 DATABASE_URL="postgresql://user:pass@localhost:5432/profolio_dev"
@@ -108,6 +117,7 @@ API_ENCRYPTION_KEY="32-byte-encryption-key-for-development"
 ```
 
 ### 🔥 Firebase Configuration
+
 ```bash
 # Firebase authentication (optional)
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
@@ -119,6 +129,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
 ### 🗺️ External API Keys
+
 ```bash
 # Third-party services
 NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=your_google_places_api_key
@@ -126,25 +137,28 @@ NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=your_google_places_api_key
 
 ## Frontend Environment Variables (Next.js)
 
-### Client-Side Variables (NEXT_PUBLIC_*)
+### Client-Side Variables (NEXT*PUBLIC*\*)
+
 - **Must be prefixed with `NEXT_PUBLIC_`**
 - Exposed to the browser in the final bundle
 - Use for: API endpoints, feature flags, public configuration
 - **Never use for secrets or sensitive data**
 
 ### Server-Side Variables
+
 - **No special prefix required**
 - Stay secure on the server during SSR/SSG
 - Use for: Database URLs, API keys, secrets
 
 ### Access in Components
+
 ```typescript
 // Client-side (browser)
-const apiUrl = process.env.NEXT_PUBLIC_API_URL
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 // Server-side (SSR/SSG)
 export async function getServerSideProps() {
-  const dbUrl = process.env.DATABASE_URL // Secure on server
+  const dbUrl = process.env.DATABASE_URL; // Secure on server
   // ...
 }
 ```
@@ -152,33 +166,35 @@ export async function getServerSideProps() {
 ## Backend Environment Variables (NestJS)
 
 ### Access with ConfigService
+
 ```typescript
-import { ConfigService } from '@nestjs/config';
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AppService {
   constructor(private configService: ConfigService) {}
 
   getDatabaseUrl() {
-    return this.configService.get<string>('DATABASE_URL');
+    return this.configService.get<string>("DATABASE_URL");
   }
 
   getJwtSecret() {
-    return this.configService.get<string>('JWT_SECRET');
+    return this.configService.get<string>("JWT_SECRET");
   }
 }
 ```
 
 ### Configuration Module Setup
+
 ```typescript
 // app.module.ts
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule } from "@nestjs/config";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ".env",
     }),
   ],
 })
@@ -188,16 +204,20 @@ export class AppModule {}
 ## Production Deployment
 
 ### Installer Script Integration
+
 The production installer (`install-or-update.sh`) automatically creates:
+
 - `/opt/profolio/backend/.env` with generated secrets
 - `/opt/profolio/frontend/.env.production` with server IP configuration
 
 ### Environment File Priority
+
 1. `.env.production` (production builds)
 2. `.env.local` (local overrides, all environments)
 3. `.env` (default configuration)
 
 ### Security Considerations
+
 - **Production secrets are auto-generated by installer**
 - **Never commit real environment files to git**
 - **Use strong, unique secrets for each environment**
@@ -206,6 +226,7 @@ The production installer (`install-or-update.sh`) automatically creates:
 ## Manual Environment Setup
 
 ### For Development
+
 ```bash
 # 1. Copy from templates
 cp env-templates.md templates/
@@ -219,6 +240,7 @@ cp env-templates.md templates/
 ```
 
 ### For Production
+
 ```bash
 # Use the installer script (recommended)
 sudo ./install-or-update.sh
@@ -230,8 +252,9 @@ sudo ./install-or-update.sh
 ## Environment Templates
 
 See `env-templates.md` for complete environment file templates that include:
+
 - Development Environment Template
-- Production Frontend Environment Template  
+- Production Frontend Environment Template
 - Backend Environment Template
 - Local Development Frontend Override Template
 
@@ -240,22 +263,27 @@ See `env-templates.md` for complete environment file templates that include:
 ### Common Issues
 
 #### "Cloud Managed" instead of "Self-Hosted"
+
 **Problem:** Missing `NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted`
 **Solution:** Add to all environment files (root, frontend/.env.local, .env.production)
 
 #### Firebase Auth Not Working
+
 **Problem:** Missing Firebase configuration variables
 **Solution:** Configure all `NEXT_PUBLIC_FIREBASE_*` variables
 
 #### API Connection Issues
+
 **Problem:** Incorrect `NEXT_PUBLIC_API_URL` or proxy settings
 **Solution:** Verify API URL matches backend server address
 
 #### Database Connection Issues
+
 **Problem:** Incorrect `DATABASE_URL` format or credentials
 **Solution:** Use correct PostgreSQL connection string format
 
 ### Environment File Debugging
+
 ```bash
 # Check current environment variables
 printenv | grep NEXT_PUBLIC
@@ -270,18 +298,21 @@ cd backend && npm run start:dev
 ## Best Practices
 
 ### Development
+
 - Use the setup script for consistent environment creation
 - Keep development secrets simple but secure
 - Document any custom variables in this file
 - Use `.env.local` for personal overrides
 
 ### Production
+
 - Let the installer handle environment creation
 - Never expose production secrets
 - Use environment-specific Firebase projects
 - Monitor and rotate secrets regularly
 
 ### Security
+
 - **Never commit `.env*` files (they're gitignored)**
 - **Always update templates when adding new variables**
 - **Use descriptive variable names with consistent naming**
@@ -289,6 +320,7 @@ cd backend && npm run start:dev
 - **Document sensitive variables in deployment guides**
 
 ### Code Quality
+
 - Validate required environment variables on startup
 - Provide sensible defaults where possible
 - Use TypeScript types for environment variables
@@ -297,6 +329,7 @@ cd backend && npm run start:dev
 ## Environment Variable Validation
 
 ### Frontend Validation
+
 ```typescript
 // lib/env.ts
 const requiredEnvVars = {
@@ -313,9 +346,10 @@ Object.entries(requiredEnvVars).forEach(([key, value]) => {
 ```
 
 ### Backend Validation
+
 ```typescript
 // config/env.validation.ts
-import { IsString, IsPort } from 'class-validator';
+import { IsString, IsPort } from "class-validator";
 
 export class EnvironmentVariables {
   @IsString()

@@ -8,14 +8,11 @@ import { MarketDataWidget } from "@/components/ui/marketData/marketDataWidget";
 import { useAuth } from "@/lib/unifiedAuth";
 import { createUserContext } from "@/lib/userUtils";
 import { useAppPagePreloader } from "@/hooks/usePagePreloader";
-import {
-  SkeletonCard,
-  SkeletonChart,
-  SkeletonStat,
-  Skeleton,
-  SkeletonList,
-  SkeletonButton,
-} from "@/components/ui/skeleton";
+import { DashboardSkeleton } from "@/components/ui/skeleton";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { StatsGrid, StatItem } from "@/components/common/StatsGrid";
+import { EnhancedMetricCard } from "@/components/common/EnhancedMetricCard";
+import { Wallet, CreditCard, Home, TrendingUp } from "lucide-react";
 
 // 🚀 PERFORMANCE: Dynamic import of Confetti to reduce initial bundle size and prevent hydration issues
 const Confetti = dynamic(() => import("react-confetti"), {
@@ -82,90 +79,7 @@ const getWindowDimensions = () => {
   };
 };
 
-// Skeleton component for the entire dashboard
-function DashboardSkeleton() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
-      {/* Header skeleton */}
-      <div className="mb-8">
-        <Skeleton className="h-10 w-48 mb-2" />
-        <Skeleton className="h-5 w-64" />
-      </div>
-
-      {/* Net Worth skeleton */}
-      <div className="mb-8">
-        <SkeletonCard className="h-32" />
-      </div>
-
-      {/* Stats Grid skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <SkeletonStat key={i} />
-        ))}
-      </div>
-
-      {/* Main content grid skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart skeleton */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <Skeleton className="h-6 w-48 mb-4" />
-            <SkeletonChart height="h-80" />
-          </div>
-
-          {/* Quick Actions skeleton */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="grid grid-cols-2 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <SkeletonButton key={i} size="lg" className="w-full" />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar skeleton */}
-        <div className="space-y-6">
-          {/* Recent Transactions skeleton */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <Skeleton className="h-6 w-40 mb-4" />
-            <SkeletonList items={5} />
-          </div>
-
-          {/* Market Data skeleton */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex justify-between items-center">
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* News skeleton */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-3 w-3/4" />
-                  <div className="flex gap-4">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// DashboardSkeleton is now imported from @/components/ui/skeleton
 
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
@@ -493,106 +407,66 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+      <StatsGrid
+        items={[
+          {
+            label: "Total Assets",
+            value: dashboardData.totalAssets,
+            format: "currency" as const,
+            trend: 12.5,
+            subtitle: "this month",
+            icon: <Wallet />,
+            iconColor: "text-blue-500",
+          },
+          {
+            label: "Monthly Expenses",
+            value: dashboardData.totalExpenses,
+            format: "currency" as const,
+            trend: -5.2,
+            subtitle: "vs last month",
+            icon: <CreditCard />,
+            iconColor: "text-red-500",
+          },
+          {
+            label: "Properties",
+            value: dashboardData.properties,
+            format: "number" as const,
+            subtitle: "Valued at $2.4M",
+            icon: <Home />,
+            iconColor: "text-purple-500",
+          },
+          {
+            label: "Monthly Income",
+            value: dashboardData.monthlyIncome,
+            format: "currency" as const,
+            trend: 0,
+            subtitle: "On track",
+            icon: <TrendingUp />,
+            iconColor: "text-green-500",
+          },
+        ]}
+        variant="performance"
+        columns={4}
+        className="mb-8"
         data-testid="portfolio-summary"
-      >
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Total Assets
-              </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                ${dashboardData.totalAssets.toLocaleString()}
-              </p>
-              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                <i className="fas fa-arrow-up mr-1"></i>
-                +12.5% this month
-              </p>
-            </div>
-            <div className="text-3xl text-blue-500">
-              <i className="fas fa-wallet"></i>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Monthly Expenses
-              </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                ${dashboardData.totalExpenses.toLocaleString()}
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                <i className="fas fa-arrow-down mr-1"></i>
-                -5.2% vs last month
-              </p>
-            </div>
-            <div className="text-3xl text-red-500">
-              <i className="fas fa-credit-card"></i>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Properties
-              </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {dashboardData.properties}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                Valued at $2.4M
-              </p>
-            </div>
-            <div className="text-3xl text-purple-500">
-              <i className="fas fa-home"></i>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Monthly Income
-              </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                ${dashboardData.monthlyIncome.toLocaleString()}
-              </p>
-              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                <i className="fas fa-check-circle mr-1"></i>
-                On track
-              </p>
-            </div>
-            <div className="text-3xl text-green-500">
-              <i className="fas fa-chart-line"></i>
-            </div>
-          </div>
-        </div>
-      </div>
+      />
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Charts and Actions */}
         <div className="lg:col-span-2 space-y-6">
           {/* Portfolio Performance Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.1} enableLensing>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Portfolio Performance
             </h2>
             <div className="h-80 flex items-center justify-center text-gray-500 dark:text-gray-400">
               <i className="fas fa-chart-area text-6xl opacity-20"></i>
             </div>
-          </div>
+          </EnhancedGlassCard>
 
           {/* Quick Actions */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.1} enableLensing>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Quick Actions
             </h2>
@@ -627,15 +501,16 @@ export default function DashboardPage() {
                 <span className="font-medium">View Reports</span>
               </Link>
             </div>
-          </div>
+          </EnhancedGlassCard>
         </div>
 
         {/* Right Column - Activity Feed */}
         <div className="space-y-6">
           {/* Recent Transactions */}
-          <div
-            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
+          <EnhancedGlassCard
+            variant="standard" padding="md" animate animationDelay={0.3}
             data-testid="assets-table"
+            enableLensing
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -643,7 +518,7 @@ export default function DashboardPage() {
               </h2>
               <Link
                 href="/app/transactions"
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
                 View all
               </Link>
@@ -694,13 +569,13 @@ export default function DashboardPage() {
                   </div>
                 ))}
             </div>
-          </div>
+          </EnhancedGlassCard>
 
           {/* Market Data Widget */}
           <MarketDataWidget />
 
           {/* Financial News */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.1} enableLensing>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Market News
             </h2>
@@ -729,7 +604,7 @@ export default function DashboardPage() {
                   </a>
                 ))}
             </div>
-          </div>
+          </EnhancedGlassCard>
         </div>
       </div>
     </div>

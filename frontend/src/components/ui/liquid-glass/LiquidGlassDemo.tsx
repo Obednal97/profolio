@@ -2,9 +2,6 @@
 
 import React from "react";
 
-// Import the liquid glass styles
-import "../../../styles/liquid-glass.css";
-
 // Demo component showing Liquid Glass usage
 export function LiquidGlassDemo() {
   return (
@@ -14,7 +11,7 @@ export function LiquidGlassDemo() {
       {/* Basic Glass Card */}
       <div className="glass-card">
         <h3 className="text-lg font-semibold mb-2">Basic Glass Card</h3>
-        <p>This demonstrates Apple's Liquid Glass design language</p>
+        <p>This demonstrates Apple&apos;s Liquid Glass design language</p>
       </div>
 
       {/* Performance Cards */}

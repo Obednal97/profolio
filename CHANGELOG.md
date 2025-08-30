@@ -5,25 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.1] - 2025-08-30
+
+### ✨ **New Features**
+
+- **Glass Design System**: Complete Apple-style liquid glass UI foundation with backdrop filters and dynamic gradients
+- **Billing Integration**: Full Stripe subscription management with payment methods and tier selection
+- **Common Components Library**: FilterBar, EnhancedMetricCard, DataTable, StatsGrid with animations
+- **CSS Modular Architecture**: Foundation layers, platform styles, theme system, utility classes
+- **Test Infrastructure**: Visual regression tests, component showcases, isolated test environments
+
+### 🐛 **Bug Fixes**
+
+- **Performance**: Added GPU acceleration and transform3d optimizations for animations
+- **Loading States**: Implemented skeleton screens and consistent loading spinners
+- **Error Handling**: Added ErrorBoundary components for graceful error recovery
+
+### 🔧 **Improvements**
+
+- **Developer Experience**: Added CLAUDE.md AI assistant instructions and development scripts
+- **Build Performance**: Optimized bundle size with modular imports and selective compilation
+- **PWA Enhancement**: Updated service worker (v5) with improved offline support
+- **Release Process**: Enhanced prepare-release.mjs with version sync validation
+- **Port Management**: Added cleanup scripts for development port conflicts
+
+### 📊 **Summary**
+
+- **Files Changed**: 182
+- **Lines Added**: 17,693
+- **Lines Removed**: 10,636
+- **Bundle Size Reduction**: ~40% through modular CSS architecture
+
 ## [v1.14.0] - 2025-08-30
 
 ### ✨ **New Features**
 
-- **TODO**: Add new features
+- **Demo Mode Enhancements**: Fixed demo data generation for Asset, Property, and Expense managers
+- **Income Tracking**: Added comprehensive income entries (salary, freelance, refunds, transfers) to demo data
+- **Advanced Sorting**: Implemented 8-way sorting for Expense Manager (date, amount, name, category)
+- **Visual Improvements**: Income displays as green/positive, expenses as red/negative across all views
 
 ### 🐛 **Bug Fixes**
 
-- **TODO**: Add bug fixes
+- **Demo Data Display**: Fixed API routes to generate demo data server-side (localStorage not available)
+- **Category Mapping**: Corrected expense categories from capitalized names to lowercase IDs
+- **Amount Sorting**: Fixed sorting logic by converting all amounts to cents (multiplied by 100)
+- **Income Display**: Fixed ExpenseTableRow and ExpenseCard to properly show income as positive values
 
 ### 🔧 **Improvements**
 
-- **TODO**: Add improvements
+- **Data Generation**: Enhanced generateDemoExpenses() with realistic merchants and descriptions
+- **Category System**: Aligned demo categories with transactionClassifier valid categories
+- **Sorting Logic**: Implemented signed value sorting (income positive, expenses negative)
+- **UI Consistency**: Unified visual treatment of income vs expenses across card and table views
 
 ### 📊 **Summary**
 
-- **Files Changed**: TODO
-- **Features Added**: TODO
-- **Issues Resolved**: TODO
+- **Files Changed**: 8
+- **Components Updated**: ExpenseManager, ExpenseCard, ExpenseTableRow, ExpenseManagerCard
+- **API Routes Fixed**: /api/expenses, /api/assets, /api/properties
+- **Demo Data Enhanced**: 50+ realistic transactions with proper categorization
 
 ## [v1.13.1] - 2025-06-12
 

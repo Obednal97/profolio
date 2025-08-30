@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button/button";
+import { Button } from "@/components/ui/button";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { BaseModal } from "./modal";
 import type { Expense } from "@/types/global";
 
 interface ExpenseModalProps {
@@ -75,7 +77,14 @@ export function ExpenseModal({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-2xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl mt-4 sm:mt-8 relative z-50">
+    <BaseModal isOpen={true} onClose={onClose}>
+      <EnhancedGlassCard
+        variant="prominent"
+        padding="lg"
+        hoverable={false}
+        enableLensing={false}
+        animate={false}
+        className="w-full max-w-2xl relative z-50">
       <div className="flex justify-between items-center mb-6 sm:mb-8">
         <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
           {initialData ? "Edit Expense" : "Add New Expense"}
@@ -106,7 +115,7 @@ export function ExpenseModal({
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-red-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+                className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-red-500 focus:bg-white/20 dark:focus:bg-black/30 transition-all duration-200 touch-manipulation"
                 required
               >
                 <option value="">Select Category</option>
@@ -135,7 +144,7 @@ export function ExpenseModal({
                   step="0.01"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-red-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+                  className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl pl-8 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-red-500 focus:bg-white/20 dark:focus:bg-black/30 transition-all duration-200 touch-manipulation"
                   placeholder="0.00"
                   required
                 />
@@ -151,7 +160,7 @@ export function ExpenseModal({
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-red-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+                className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-red-500 focus:bg-white/20 dark:focus:bg-black/30 transition-all duration-200 touch-manipulation"
                 required
               />
             </div>
@@ -218,7 +227,7 @@ export function ExpenseModal({
                       frequency: e.target.value as ExpenseFormData["frequency"] 
                     })
                   }
-                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-red-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+                  className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-red-500 focus:bg-white/20 dark:focus:bg-black/30 transition-all duration-200 touch-manipulation"
                   required={formData.recurrence === "recurring"}
                 >
                   <option value="">Select frequency</option>
@@ -252,6 +261,7 @@ export function ExpenseModal({
           </Button>
         </div>
       </form>
-    </div>
+      </EnhancedGlassCard>
+    </BaseModal>
   );
 } 

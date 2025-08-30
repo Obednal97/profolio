@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Guidelines for creating and managing Cursor rules in this project using the modern .mdc format
 ruleType: agentRequested
 alwaysApply: false
@@ -36,8 +31,8 @@ Each rule file uses the MDC format with YAML frontmatter:
 ```markdown
 ---
 description: "Clear description of what this rule covers"
-globs: ["src/**/*.tsx", "*.ts"]  # Optional: file patterns
-alwaysApply: false               # Optional: always include rule
+globs: ["src/**/*.tsx", "*.ts"] # Optional: file patterns
+alwaysApply: false # Optional: always include rule
 ---
 
 # Rule Title
@@ -52,16 +47,19 @@ Rule content in markdown format with examples and guidelines.
 There are four types of rules based on their metadata:
 
 ### 1. Always Rules
+
 ```yaml
 ---
 description: "Core project guidelines"
 alwaysApply: true
 ---
 ```
+
 - Always included in the AI's context for this project
 - Use for fundamental project standards and patterns
 
 ### 2. Auto Attached Rules
+
 ```yaml
 ---
 description: "React component guidelines"
@@ -69,83 +67,99 @@ globs: ["src/**/*.tsx", "src/**/*.jsx"]
 alwaysApply: false
 ---
 ```
+
 - Automatically included when files matching the glob patterns are in context
 - Perfect for technology-specific guidelines (React, TypeScript, etc.)
 - **Example**: This file uses `globs: [".cursor/rules/**/*.mdc"]` to appear when editing cursor rules
 
 ### 3. Agent Requested Rules
+
 ```yaml
 ---
 description: "Advanced database optimization patterns for complex queries"
 alwaysApply: false
 ---
 ```
+
 - Available to the AI, which decides whether to use them based on the description
 - Use for specialized knowledge that applies in specific situations
 
 ### 4. Manual Rules
+
 ```yaml
 ---
 alwaysApply: false
 ---
 ```
+
 - Only included when explicitly mentioned using `@rule-name` in chat
 - Use for optional or context-specific guidelines
 
 ## Creating New Rules
 
 ### Method 1: Command Palette
+
 1. Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
 2. Search for "New Cursor Rule"
 3. Follow the prompts to create a new `.mdc` file
 
 ### Method 2: Generate from Chat
+
 1. After a productive chat where you've refined AI behavior
 2. Use the `/Generate Cursor Rules` command
 3. Cursor will create a rule based on your conversation
 
 ### Method 3: Manual Creation
+
 Create a new `.mdc` file in `.cursor/rules/` following the structure above.
 
 ## Best Practices for Writing Rules
 
 ### Be Specific and Actionable
+
 ```markdown
 ❌ Bad: "Write good code"
 ✅ Good: "Use TanStack Query for data fetching with proper error handling"
 ```
 
 ### Keep Rules Concise
+
 - Aim for under 500 lines per rule
 - Break complex standards into smaller, focused rules
 - One responsibility per rule file
 
 ### Use Examples and Code Snippets
-```markdown
+
+````markdown
 ## Data Fetching Pattern
 
 Always use TanStack Query for API calls:
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
 export function usePortfolioData(portfolioId: string) {
   return useQuery({
-    queryKey: ['portfolio', portfolioId],
+    queryKey: ["portfolio", portfolioId],
     queryFn: () => fetchPortfolio(portfolioId),
     enabled: !!portfolioId,
   });
 }
 ```
+````
 
 ### Reference Project Files
+
 Use `@filename.ext` to reference specific files:
+
 ```markdown
 Follow the patterns established in @frontend/src/hooks/usePortfolio.ts
 ```
 
 ### Use Clear Descriptions
+
 For Agent Requested rules, write descriptions that help the AI understand when to use them:
+
 ```yaml
 ---
 description: "Guidelines for implementing complex financial calculations and portfolio analytics with proper decimal handling"
@@ -162,6 +176,7 @@ description: "Guidelines for implementing complex financial calculations and por
 ## Rule Organization Examples
 
 ### Technology-Specific Rules
+
 ```yaml
 # frontend-react.mdc
 ---
@@ -172,6 +187,7 @@ alwaysApply: false
 ```
 
 ### Feature-Specific Rules
+
 ```yaml
 # portfolio-calculations.mdc
 ---
@@ -182,6 +198,7 @@ alwaysApply: false
 ```
 
 ### Always-Applied Project Rules
+
 ```yaml
 # project-standards.mdc
 ---
@@ -207,49 +224,57 @@ alwaysApply: true
 ## Troubleshooting
 
 ### Rule Not Applying
+
 - Check frontmatter syntax (YAML must be valid)
 - Verify glob patterns match your file structure
 - Ensure rule file is in `.cursor/rules/` directory
 
 ### Rule Too Broad
+
 - Add more specific glob patterns
 - Split into multiple focused rules
 - Use Manual type instead of Always
 
 ### AI Ignoring Rules
+
 - Make instructions more specific and actionable
 - Add concrete examples
 - Check that descriptions accurately reflect rule content
 
 ## Example Rule Template
 
-```markdown
+````markdown
 ---
 description: "Brief description of what this rule covers and when it should be used"
-globs: ["relevant/**/*.ext"]  # Optional: only for Auto Attached rules
-alwaysApply: false           # Set to true only for core project standards
+globs: ["relevant/**/*.ext"] # Optional: only for Auto Attached rules
+alwaysApply: false # Set to true only for core project standards
 ---
 
 # Rule Title
 
 ## Purpose
+
 Brief explanation of why this rule exists.
 
 ## Guidelines
+
 - Specific, actionable guideline 1
 - Specific, actionable guideline 2
 
 ## Examples
 
 ### Good Example
+
 ```typescript
 // Example of following the rule
 const goodExample = () => {
   // Implementation
 };
 ```
+````
 
 ### Bad Example
+
 ```typescript
 // Example of what to avoid
 const badExample = () => {
@@ -258,8 +283,11 @@ const badExample = () => {
 ```
 
 ## Related Files
+
 - @path/to/relevant/file.ts
 - @path/to/example/implementation.tsx
+
 ```
 
 Remember: The goal is to provide the AI with clear, consistent guidance that improves code quality and maintains project standards while being flexible enough to handle edge cases.
+```

@@ -3,9 +3,6 @@
 import React, { useState, useEffect, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Import the liquid glass styles
-import "../../styles/liquid-glass.css";
-
 export interface GlassModalProps {
   isOpen: boolean;
   onClose: () => void;

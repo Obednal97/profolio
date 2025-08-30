@@ -231,6 +231,69 @@ function createReleaseNotesStructure(version) {
 }
 
 /**
+ * Create CHANGELOG.md entry template
+ */
+function createChangelogEntry(version) {
+  const { isoDate } = getCurrentDates();
+  const changelogPath = join(PROJECT_ROOT, 'CHANGELOG.md');
+  
+  try {
+    let changelogContent = readFileSync(changelogPath, 'utf8');
+    
+    // Check if version already exists
+    if (changelogContent.includes(`## [v${normalizeVersion(version)}]`)) {
+      warn(`CHANGELOG.md already contains v${normalizeVersion(version)} entry`);
+      return true;
+    }
+    
+    // Create new entry template
+    const newEntry = `## [v${normalizeVersion(version)}] - ${isoDate}
+
+### ✨ **New Features**
+
+- **TODO**: Add new features
+
+### 🐛 **Bug Fixes**
+
+- **TODO**: Add bug fixes
+
+### 🔧 **Improvements**
+
+- **TODO**: Add improvements
+
+### 📊 **Summary**
+
+- **Files Changed**: TODO
+- **Features Added**: TODO
+- **Issues Resolved**: TODO
+
+`;
+    
+    // Find the position after the header to insert the new entry
+    const headerEndPattern = /and this project adheres to \[Semantic Versioning\].*?\n\n/s;
+    const match = changelogContent.match(headerEndPattern);
+    
+    if (match) {
+      const insertPosition = match.index + match[0].length;
+      changelogContent = 
+        changelogContent.slice(0, insertPosition) +
+        newEntry +
+        changelogContent.slice(insertPosition);
+      
+      writeFileSync(changelogPath, changelogContent);
+      success(`Added v${normalizeVersion(version)} template to CHANGELOG.md`);
+      return true;
+    } else {
+      error('Could not find insertion point in CHANGELOG.md');
+      return false;
+    }
+  } catch (err) {
+    error(`Failed to update CHANGELOG.md: ${err.message}`);
+    return false;
+  }
+}
+
+/**
  * Create release notes template
  */
 function createReleaseNotesTemplate(version, releaseDir) {
@@ -289,7 +352,7 @@ TODO: Add performance improvements
 Update your Profolio installation to v${normalizeVersion(version)}:
 
 \`\`\`bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh)"
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 \`\`\`
 
 Self-hosted installations will detect and install this version automatically.
@@ -372,23 +435,26 @@ function displayNextSteps(version, releaseNotesPath) {
   header('NEXT STEPS');
   
   log('\n📝 Manual Tasks Required:', 'yellow');
-  log(`1. Update CHANGELOG.md with v${normalizeVersion(version)} entry (use date: ${isoDate})`);
-  log(`2. Complete release notes: ${join(PROJECT_ROOT, releaseNotesPath)}`);
-  log('3. Review and test all changes');
+  log(`1. Complete CHANGELOG.md entry for v${normalizeVersion(version)} (template added)`);
+  log(`2. Complete release notes: ${releaseNotesPath}`);
+  log('3. Ensure both CHANGELOG.md and release notes have matching information');
+  log('4. Review and test all changes');
   
   log('\n🚀 Release Commands:', 'cyan');
-  log('4. Commit changes:');
+  log('5. Commit changes:');
   log(`   git add -A`);
   log(`   git commit -m "feat: v${normalizeVersion(version)} - [brief description]"`);
   
-  log('\n5. Create and push tag:');
+  log('\n6. Create and push tag:');
   log(`   git tag -a v${normalizeVersion(version)} -m "Release v${normalizeVersion(version)}"`);
   log(`   git push origin main --tags`);
   
-  log('\n6. Create GitHub release:');
-  log(`   gh release create v${normalizeVersion(version)} --title "v${normalizeVersion(version)} - [title]" --notes-file "${join(PROJECT_ROOT, releaseNotesPath)}"`);
+  log('\n7. Create GitHub release:');
+  log(`   gh release create v${normalizeVersion(version)} --title "v${normalizeVersion(version)} - [title]" --notes-file "${releaseNotesPath}"`);
   
   log('\n💡 Automation Notes:', 'blue');
+  log('   • CHANGELOG.md template created automatically ✅');
+  log('   • Release notes template created automatically ✅');
   log('   • Service worker version updated automatically ✅');
   log('   • PWA cache will be invalidated for all users ✅');
   log('   • README.md version examples updated ✅');
@@ -445,9 +511,15 @@ async function main() {
     process.exit(1);
   }
   
-  // Create release notes structure
-  header('CREATING RELEASE NOTES');
+  // Create release documentation
+  header('CREATING RELEASE DOCUMENTATION');
   
+  // Create CHANGELOG.md entry
+  if (!createChangelogEntry(version)) {
+    process.exit(1);
+  }
+  
+  // Create release notes structure
   const releaseDir = createReleaseNotesStructure(version);
   if (!releaseDir) {
     process.exit(1);

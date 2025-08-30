@@ -1,0 +1,94 @@
+/* === Foundation: Typography System === */
+/* Typography definitions and text styling for the Profolio platform */
+
+@layer base {
+  /* Font stack definitions */
+  body {
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Code and monospace elements */
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, "SF Mono",
+      Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  /* Heading styles */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  /* Paragraph spacing */
+  p {
+    line-height: 1.6;
+  }
+
+  /* Link styling - removed global color to prevent lime green issue */
+  /* Links should inherit color from their parent or use explicit classes */
+  a {
+    text-decoration: none;
+    transition: color var(--animation-duration-fast)
+      var(--animation-easing-smooth);
+  }
+
+  /* Removed underline on hover for cleaner appearance
+  a:hover {
+    text-decoration: underline;
+  } */
+
+  /* List styling */
+  ul,
+  ol {
+    padding-left: var(--space-xl);
+  }
+
+  /* Blockquote styling */
+  blockquote {
+    border-left: 4px solid var(--border);
+    padding-left: var(--space-lg);
+    font-style: italic;
+    color: var(--muted-foreground);
+  }
+
+  /* Small text utility */
+  small {
+    font-size: 0.875rem;
+  }
+
+  /* Strong emphasis */
+  strong,
+  b {
+    font-weight: 600;
+  }
+
+  /* Code inline styling */
+  code:not(pre code) {
+    background: var(--muted);
+    padding: 0.125rem 0.25rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875em;
+  }
+
+  /* Preformatted text */
+  pre {
+    background: var(--muted);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+}

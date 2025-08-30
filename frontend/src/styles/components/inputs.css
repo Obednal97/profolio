@@ -1,0 +1,197 @@
+/* === Components: Input Styles === */
+/* Form input fields and related components for the Profolio platform */
+
+@layer components {
+  /* Base input styles */
+  .input-base {
+    @apply w-full px-3 py-2 rounded-md;
+    @apply border border-input bg-background;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Input sizes */
+  .input-sm {
+    @apply px-2 py-1 text-sm;
+  }
+
+  .input-lg {
+    @apply px-4 py-3 text-lg;
+  }
+
+  /* Input variants */
+  .input-default {
+    /* Extends input-base */
+    @apply w-full px-3 py-2 rounded-md;
+    @apply border border-input bg-background;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .input-error {
+    /* Extends input-base with error styling */
+    @apply w-full px-3 py-2 rounded-md;
+    @apply border bg-background;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply border-red-500 focus:ring-red-500;
+  }
+
+  .input-success {
+    /* Extends input-base with success styling */
+    @apply w-full px-3 py-2 rounded-md;
+    @apply border bg-background;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply border-green-500 focus:ring-green-500;
+  }
+
+  /* Glass input (defined in glass-system.css) */
+  /* See glass-system.css for .glass-input styles */
+
+  /* Textarea */
+  .textarea {
+    /* Extends input-base */
+    @apply w-full px-3 py-2 rounded-md;
+    @apply border border-input bg-background;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply min-h-[80px] resize-y;
+  }
+
+  /* Select */
+  .select {
+    /* Extends input-base */
+    @apply w-full px-3 py-2 rounded-md;
+    @apply border border-input bg-background;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px] bg-[right_0.7rem_center] bg-no-repeat pr-10;
+  }
+
+  .dark .select {
+    @apply bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')];
+  }
+
+  /* Checkbox */
+  .checkbox {
+    @apply h-4 w-4 rounded border border-input text-primary;
+    @apply focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Radio */
+  .radio {
+    @apply h-4 w-4 border border-input text-primary;
+    @apply focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Switch/Toggle */
+  .switch {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full;
+    @apply bg-gray-200 dark:bg-gray-700;
+    @apply transition-colors duration-200 ease-in-out;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
+
+  .switch[data-state="checked"] {
+    @apply bg-primary;
+  }
+
+  .switch-thumb {
+    @apply inline-block h-5 w-5 transform rounded-full bg-white shadow-lg;
+    @apply transition-transform duration-200 ease-in-out;
+    @apply translate-x-0.5;
+  }
+
+  .switch[data-state="checked"] .switch-thumb {
+    @apply translate-x-5;
+  }
+
+  /* Input group */
+  .input-group {
+    @apply relative flex items-stretch w-full;
+  }
+
+  .input-group-prepend,
+  .input-group-append {
+    @apply flex items-center px-3 py-2;
+    @apply bg-muted border border-input text-muted-foreground;
+  }
+
+  .input-group-prepend {
+    @apply rounded-l-md border-r-0;
+  }
+
+  .input-group-append {
+    @apply rounded-r-md border-l-0;
+  }
+
+  .input-group .input-base {
+    @apply rounded-none;
+  }
+
+  .input-group .input-base:first-child {
+    @apply rounded-l-md;
+  }
+
+  .input-group .input-base:last-child {
+    @apply rounded-r-md;
+  }
+
+  /* Form labels */
+  .label {
+    @apply text-sm font-medium leading-none;
+    @apply peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+
+  /* Form hints and errors */
+  .form-hint {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
+  .form-error {
+    @apply text-sm text-red-500 mt-1;
+  }
+
+  /* File input */
+  .file-input {
+    /* Extends input-base */
+    @apply w-full px-3 py-2 rounded-md;
+    @apply border border-input bg-background;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply file:border-0 file:bg-transparent file:text-sm file:font-medium;
+  }
+
+  /* Range slider */
+  .range {
+    @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer;
+    @apply dark:bg-gray-700;
+  }
+
+  .range::-webkit-slider-thumb {
+    @apply appearance-none w-4 h-4 bg-primary rounded-full cursor-pointer;
+    @apply transition-all duration-200 hover:scale-110;
+  }
+
+  .range::-moz-range-thumb {
+    @apply w-4 h-4 bg-primary rounded-full cursor-pointer border-0;
+    @apply transition-all duration-200 hover:scale-110;
+  }
+}

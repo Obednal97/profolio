@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Guidelines for integrating and using Model Context Protocol (MCP) servers
 ruleType: agentRequested
 alwaysApply: false
@@ -16,23 +11,27 @@ Model Context Protocol (MCP) servers provide extended capabilities to Cursor thr
 ## Available MCP Categories
 
 ### Database Integration
+
 - **Postgres MCP**: Direct database queries and schema inspection
 - **MongoDB MCP**: Document database operations
 - **Redis MCP**: Caching and session management
 
 ### External Services
+
 - **GitHub MCP**: Repository management and API integration
 - **Resend MCP**: Email sending capabilities
 - **Supabase MCP**: Backend-as-a-service integration
 - **Neon MCP**: Serverless database management
 
 ### Development Tools
+
 - **Bucket MCP**: Cloud storage operations
 - **Upstash MCP**: Edge database and messaging
 
 ## Implementation Guidelines
 
 ### MCP Server Configuration
+
 ```json
 {
   "mcpServers": {
@@ -44,7 +43,7 @@ Model Context Protocol (MCP) servers provide extended capabilities to Cursor thr
       }
     },
     "github": {
-      "command": "npx", 
+      "command": "npx",
       "args": ["@modelcontextprotocol/server-github"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
@@ -57,13 +56,17 @@ Model Context Protocol (MCP) servers provide extended capabilities to Cursor thr
 ### Usage Patterns
 
 #### Database Operations
+
 When working with database schemas or queries:
+
 - Use the appropriate MCP server for direct database interaction
 - Leverage schema inspection capabilities
 - Execute queries safely through MCP interfaces
 
 #### External API Integration
+
 For third-party service integration:
+
 - Prefer MCP servers over direct API calls when available
 - Use standardised MCP interfaces for consistent error handling
 - Leverage built-in authentication and rate limiting
@@ -71,11 +74,13 @@ For third-party service integration:
 ## Security Considerations
 
 ### Environment Variables
+
 - Store all sensitive credentials in environment variables
 - Never commit MCP configuration with hardcoded secrets
 - Use project-specific environment files
 
 ### Access Control
+
 - Limit MCP server permissions to minimum required scope
 - Regularly rotate API tokens and credentials
 - Monitor MCP server logs for unusual activity
@@ -83,6 +88,7 @@ For third-party service integration:
 ## Profolio-Specific MCP Usage
 
 ### Database Management
+
 ```typescript
 // Use Postgres MCP for schema operations
 // Direct integration with our PostgreSQL database
@@ -90,6 +96,7 @@ For third-party service integration:
 ```
 
 ### Authentication
+
 ```typescript
 // GitHub MCP for repository operations
 // User authentication and authorisation flows
@@ -97,6 +104,7 @@ For third-party service integration:
 ```
 
 ### File Storage
+
 ```typescript
 // Bucket MCP for portfolio document storage
 // Secure file upload and retrieval
@@ -114,11 +122,13 @@ For third-party service integration:
 ## Troubleshooting
 
 ### Common Issues
+
 - **Connection Errors**: Verify environment variables and network connectivity
 - **Authentication Failures**: Check API tokens and permissions
 - **Performance Issues**: Monitor server logs and connection pooling
 
 ### Debugging
+
 - Enable MCP server logging for detailed diagnostics
 - Use Cursor's MCP debugging tools
 - Test MCP operations independently before integration

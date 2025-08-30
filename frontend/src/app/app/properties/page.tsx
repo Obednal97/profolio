@@ -10,48 +10,12 @@ import React, {
 import { Property } from "@/types/global";
 import { PropertyCard } from "@/components/cards/PropertyCard";
 import { useAuth } from "@/lib/unifiedAuth";
-import {
-  SkeletonCard,
-  Skeleton,
-  SkeletonStat,
-  SkeletonButton,
-} from "@/components/ui/skeleton";
+import { PropertiesSkeleton } from "@/components/ui/skeleton";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { Button } from "@/components/ui/button";
 import { FullScreenModal } from "@/components/modals/modal";
 import { PropertyModal } from "@/components/modals/PropertyModal";
 
-// Skeleton component for properties page
-function PropertiesSkeleton() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
-      {/* Header skeleton */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <Skeleton className="h-10 w-48 mb-2" />
-          <Skeleton className="h-5 w-64" />
-        </div>
-        <SkeletonButton size="lg" />
-      </div>
-
-      {/* Stats grid skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <SkeletonStat key={i} />
-        ))}
-      </div>
-
-      {/* Properties grid skeleton */}
-      <div className="mb-4">
-        <Skeleton className="h-8 w-40 mb-4" />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, i) => (
-          <SkeletonCard key={i} className="h-64" />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function PropertiesPage() {
   const { user } = useAuth();
@@ -301,12 +265,14 @@ export default function PropertiesPage() {
             Failed to Load Properties
           </h3>
           <p className="text-red-600 dark:text-red-300">{error}</p>
-          <button
+          <Button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            variant="danger"
+            size="md"
+            className="mt-4"
           >
             Try Again
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -324,26 +290,27 @@ export default function PropertiesPage() {
             Manage your real estate investments
           </p>
         </div>
-        <button
+        <Button
           onClick={handleAddProperty}
-          className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2 px-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl flex items-center gap-2"
+          variant="gradient"
+          size="lg"
+          icon="fa-plus"
         >
-          <i className="fas fa-plus"></i>
           Add Property
-        </button>
+        </Button>
       </div>
 
       {/* Portfolio Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.1} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Total Value
           </p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             ${totalValue.toLocaleString()}
           </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        </EnhancedGlassCard>
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.2} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Total Gain/Loss
           </p>
@@ -354,21 +321,21 @@ export default function PropertiesPage() {
           >
             ${Math.abs(totalGain).toLocaleString()}
           </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        </EnhancedGlassCard>
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.3} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Monthly Rental
           </p>
           <p className="text-2xl font-bold text-purple-600">
             ${totalRental.toLocaleString()}
           </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        </EnhancedGlassCard>
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.4} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">Properties</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {properties.length}
           </p>
-        </div>
+        </EnhancedGlassCard>
       </div>
 
       {/* Properties Grid */}
@@ -397,13 +364,14 @@ export default function PropertiesPage() {
           <p className="text-gray-500 dark:text-gray-400 mb-6">
             Add your first property to start tracking your real estate portfolio
           </p>
-          <button
+          <Button
             onClick={handleAddProperty}
-            className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl"
+            variant="gradient"
+            size="lg"
+            icon="fa-plus"
           >
-            <i className="fas fa-plus mr-2"></i>
             Add Your First Property
-          </button>
+          </Button>
         </div>
       )}
 

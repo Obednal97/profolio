@@ -6,11 +6,16 @@ import type { Expense } from "@/types/global";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { getCategoryInfo } from "@/lib/transactionClassifier";
 import LineChart from "@/components/charts/line";
-import { GlassCard, PerformanceCard, InfoCard } from "@/components/cards";
+import PieChart from "@/components/charts/pie";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { StatCard } from "@/components/cards/StatCard";
 
 interface FinancialInsightsProps {
   expenses: Expense[];
   timeRange: string;
+  expensesByCategory?: Record<string, { count: number; amount: number }>;
+  monthlyExpensesTrend?: Array<{ month: string; amount: number }>;
+  setTimeRange?: (range: string) => void;
 }
 
 interface CategorySpending {
@@ -34,6 +39,9 @@ interface MonthlyData {
 export default function FinancialInsights({
   expenses,
   timeRange,
+  expensesByCategory = {},
+  monthlyExpensesTrend = [],
+  setTimeRange,
 }: FinancialInsightsProps) {
   const { formatCurrency } = useAppContext();
 
@@ -262,95 +270,63 @@ export default function FinancialInsights({
 
   return (
     <div className="space-y-6">
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <PerformanceCard
-            title="Total Income"
-            value={metrics.totalIncome}
-            performance={metrics.savingsRate}
-            subtitle={`${formatCurrency(metrics.avgMonthlyIncome * 100)}/mo`}
-            icon={<i className="fas fa-arrow-down text-xl"></i>}
-            solidColor="green"
-            animationDelay={0}
-          />
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <PerformanceCard
-            title="Savings"
-            value={metrics.totalSavings}
-            performance={metrics.savingsRate}
-            subtitle={`${metrics.savingsRate.toFixed(1)}% rate`}
-            icon={<i className="fas fa-piggy-bank text-xl"></i>}
-            solidColor="blue"
-            animationDelay={0.1}
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <InfoCard
-            title="Subscriptions"
-            content={
-              <div>
-                <p className="text-3xl font-bold text-purple-400">
-                  {metrics.subscriptions}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {formatCurrency(metrics.monthlySubscriptionCost * 100)}/mo
-                </p>
-              </div>
-            }
-            solidColor="purple"
-            animate
-            animationDelay={0.2}
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <PerformanceCard
-            title="Next Month Projection"
-            value={formatCurrency(metrics.projectedSavings * 100)}
-            performance={metrics.projectedSavings > 0 ? 1 : -1}
-            subtitle="savings estimate"
-            icon={<i className="fas fa-chart-line text-xl"></i>}
-            solidColor="orange"
-            showPercentage={false}
-            animationDelay={0.3}
-          />
-        </motion.div>
-      </div>
-
-      {/* Income vs Expenses Trend */}
+      {/* 1. Cashflow Trend - Full Width */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.1 }}
       >
-        <GlassCard
+        <EnhancedGlassCard
           variant="prominent"
           padding="lg"
+          hoverable={false}
+          enableLensing={true}
           animate
-          animationDelay={0.4}
+          animationDelay={0.1}
         >
-          <h3 className="text-xl font-semibold text-white mb-6">
-            Cash Flow Trend
-          </h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Cashflow Trend
+            </h3>
+            <div className="flex items-center gap-3">
+              {setTimeRange && (
+                <div className="flex gap-2">
+                  {["30", "90", "365"].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => setTimeRange(days)}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        timeRange === days
+                          ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                          : "bg-white/10 text-gray-400 hover:bg-white/20"
+                      }`}
+                    >
+                      {days === "365"
+                        ? "Year"
+                        : days === "90"
+                        ? "Quarter"
+                        : "Month"}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-400">Income</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-sm text-gray-400">Expenses</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-400">Savings</span>
+                </div>
+              </div>
+            </div>
+          </div>
           <LineChart
             data={monthlyData}
             xKey="month"
@@ -360,93 +336,159 @@ export default function FinancialInsights({
               { dataKey: "savings", color: "#3b82f6" },
             ]}
           />
-        </GlassCard>
+        </EnhancedGlassCard>
       </motion.div>
 
-      {/* Category Spending Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* 2-4. Three Column Layout: Top Categories, Spending Patterns, Budget Health */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 2. Top Spending Categories */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.2 }}
         >
-          <GlassCard
-            variant="standard"
+          <EnhancedGlassCard
+            variant="prominent"
             padding="lg"
+            hoverable={false}
+            enableLensing={true}
             animate
-            animationDelay={0.5}
+            animationDelay={0.2}
           >
-            <h3 className="text-xl font-semibold text-white mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Top Spending Categories
             </h3>
-            <div className="space-y-4">
-              {categorySpending.map((category) => (
-                <div
-                  key={category.category}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${category.color}20` }}
-                    >
-                      <i
-                        className={`fas ${category.icon}`}
-                        style={{ color: category.color }}
-                      ></i>
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">
-                        {category.category}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        {category.count} transactions
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white font-medium">
-                      {formatCurrency(category.amount * 100)}
-                    </p>
-                    <p
-                      className={`text-sm ${
-                        category.change > 0 ? "text-red-400" : "text-green-400"
-                      }`}
-                    >
-                      {category.change > 0 ? "↑" : "↓"}{" "}
-                      {Math.abs(category.change).toFixed(1)}%
-                    </p>
-                  </div>
+            {Object.keys(expensesByCategory).length > 0 ? (
+              <>
+                <div className="mb-4" style={{ height: '200px' }}>
+                  <PieChart
+                    data={Object.entries(expensesByCategory)
+                      .sort((a, b) => b[1].amount - a[1].amount)
+                      .slice(0, 5)
+                      .map(([category, data]) => {
+                        const categoryInfo = getCategoryInfo(category);
+                        return {
+                          name: categoryInfo.name,
+                          value: data.amount / 100,
+                          color: categoryInfo.color,
+                        };
+                      })}
+                  />
                 </div>
-              ))}
-            </div>
-          </GlassCard>
+                <div className="space-y-3">
+                  {categorySpending.slice(0, 5).map((category) => (
+                    <div
+                      key={category.category}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className="w-8 h-8 rounded flex items-center justify-center"
+                          style={{ backgroundColor: `${category.color}20` }}
+                        >
+                          <i
+                            className={`fas ${category.icon} text-xs`}
+                            style={{ color: category.color }}
+                          ></i>
+                        </div>
+                        <div>
+                          <p className="text-gray-900 dark:text-white text-sm font-medium">
+                            {category.category}
+                          </p>
+                          <p className="text-gray-400 text-xs">
+                            {category.count} items
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white text-sm font-medium">
+                          {formatCurrency(category.amount * 100)}
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            category.change > 0 ? "text-red-400" : "text-green-400"
+                          }`}
+                        >
+                          {category.change > 0 ? "↑" : "↓"}{" "}
+                          {Math.abs(category.change).toFixed(0)}%
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                {categorySpending.slice(0, 5).map((category) => (
+                  <div
+                    key={category.category}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: `${category.color}20` }}
+                      >
+                        <i
+                          className={`fas ${category.icon}`}
+                          style={{ color: category.color }}
+                        ></i>
+                      </div>
+                      <div>
+                        <p className="text-gray-900 dark:text-white font-medium">
+                          {category.category}
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          {category.count} transactions
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-900 dark:text-white font-medium">
+                        {formatCurrency(category.amount * 100)}
+                      </p>
+                      <p
+                        className={`text-sm ${
+                          category.change > 0 ? "text-red-400" : "text-green-400"
+                        }`}
+                      >
+                        {category.change > 0 ? "↑" : "↓"}{" "}
+                        {Math.abs(category.change).toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </EnhancedGlassCard>
         </motion.div>
 
-        {/* Advanced Spending Patterns */}
+        {/* 3. Spending Patterns */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
+          transition={{ delay: 0.3 }}
         >
-          <GlassCard
-            variant="standard"
+          <EnhancedGlassCard
+            variant="prominent"
             padding="lg"
+            hoverable={false}
+            enableLensing={true}
             animate
-            animationDelay={0.55}
+            animationDelay={0.3}
           >
-            <h3 className="text-xl font-semibold text-white mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Spending Patterns
             </h3>
             <div className="space-y-4">
               {/* Peak spending day */}
-              <GlassCard
-                solidColor="blue"
+              <EnhancedGlassCard
+                variant="standard"
                 padding="md"
-                borderRadius="lg"
-                hoverable
-                hoverScale={1.01}
+                hoverable={true}
+                enableLensing={true}
                 animate={false}
+                className="bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -460,16 +502,16 @@ export default function FinancialInsights({
                   </div>
                   <span className="font-bold">Fri</span>
                 </div>
-              </GlassCard>
+              </EnhancedGlassCard>
 
               {/* Average transaction size */}
-              <GlassCard
-                solidColor="purple"
+              <EnhancedGlassCard
+                variant="standard"
                 padding="md"
-                borderRadius="lg"
-                hoverable
-                hoverScale={1.01}
+                hoverable={true}
+                enableLensing={true}
                 animate={false}
+                className="bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/30"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -490,16 +532,16 @@ export default function FinancialInsights({
                     )}
                   </span>
                 </div>
-              </GlassCard>
+              </EnhancedGlassCard>
 
               {/* Most frequent merchant */}
-              <GlassCard
-                solidColor="green"
+              <EnhancedGlassCard
+                variant="standard"
                 padding="md"
-                borderRadius="lg"
-                hoverable
-                hoverScale={1.01}
+                hoverable={true}
+                enableLensing={true}
                 animate={false}
+                className="bg-green-500/10 dark:bg-green-500/20 border-green-500/30"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -513,16 +555,16 @@ export default function FinancialInsights({
                   </div>
                   <span className="font-bold">Starbucks</span>
                 </div>
-              </GlassCard>
+              </EnhancedGlassCard>
 
               {/* Spending velocity */}
-              <GlassCard
-                solidColor="orange"
+              <EnhancedGlassCard
+                variant="standard"
                 padding="md"
-                borderRadius="lg"
-                hoverable
-                hoverScale={1.01}
+                hoverable={true}
+                enableLensing={true}
                 animate={false}
+                className="bg-orange-500/10 dark:bg-orange-500/20 border-orange-500/30"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -540,25 +582,27 @@ export default function FinancialInsights({
                     )}
                   </span>
                 </div>
-              </GlassCard>
+              </EnhancedGlassCard>
             </div>
-          </GlassCard>
+          </EnhancedGlassCard>
         </motion.div>
 
-        {/* Budget Recommendations */}
+        {/* 4. Budget Health */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.4 }}
         >
-          <GlassCard
+          <EnhancedGlassCard
             variant="prominent"
             padding="lg"
+            hoverable={false}
+            enableLensing={true}
             animate
-            animationDelay={0.6}
+            animationDelay={0.4}
           >
-            <h3 className="text-xl font-semibold text-white mb-6">
-              Budget Health (50/30/20 Rule)
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Budget Health
             </h3>
             <div className="space-y-4">
               {/* Needs */}
@@ -566,7 +610,7 @@ export default function FinancialInsights({
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center space-x-2">
                     <i className="fas fa-home text-blue-400"></i>
-                    <span className="text-white font-medium">Needs (50%)</span>
+                    <span className="text-gray-900 dark:text-white font-medium">Needs (50%)</span>
                   </div>
                   <span className="text-sm text-gray-400">
                     {formatCurrency(budgetRecommendations.needs.current * 100)}{" "}
@@ -604,7 +648,7 @@ export default function FinancialInsights({
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center space-x-2">
                     <i className="fas fa-shopping-bag text-purple-400"></i>
-                    <span className="text-white font-medium">Wants (30%)</span>
+                    <span className="text-gray-900 dark:text-white font-medium">Wants (30%)</span>
                   </div>
                   <span className="text-sm text-gray-400">
                     {formatCurrency(budgetRecommendations.wants.current * 100)}{" "}
@@ -642,7 +686,7 @@ export default function FinancialInsights({
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center space-x-2">
                     <i className="fas fa-piggy-bank text-green-400"></i>
-                    <span className="text-white font-medium">
+                    <span className="text-gray-900 dark:text-white font-medium">
                       Savings (20%)
                     </span>
                   </div>
@@ -681,12 +725,13 @@ export default function FinancialInsights({
             </div>
 
             {/* Insights */}
-            <GlassCard
-              solidColor="blue"
+            <EnhancedGlassCard
+              variant="standard"
               padding="md"
-              borderRadius="lg"
+              hoverable={false}
+              enableLensing={true}
               animate={false}
-              className="mt-6"
+              className="mt-6 bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30"
             >
               <h4 className="font-medium mb-2">
                 <i className="fas fa-lightbulb mr-2"></i>
@@ -720,8 +765,8 @@ export default function FinancialInsights({
                   </li>
                 )}
               </ul>
-            </GlassCard>
-          </GlassCard>
+            </EnhancedGlassCard>
+          </EnhancedGlassCard>
         </motion.div>
       </div>
     </div>

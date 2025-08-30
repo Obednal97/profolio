@@ -1,18 +1,14 @@
 ---
-description: 
-globs: frontend/src/**/*.tsx, frontend/src/**/*.jsx, frontend/src/components/**/*, **/tailwind.config.*, **/components.json, **/*.css, **/globals.css, **/layout.tsx, **/page.tsx
-alwaysApply: false
----
----
 description: UI component and styling guidelines using Radix UI primitives and Tailwind CSS
 ruleType: autoAttached
-globs: ["frontend/src/**/*.tsx", "frontend/src/**/*.jsx", "frontend/src/components/**/*", "**/tailwind.config.*", "**/components.json", "**/*.css", "**/globals.css", "**/layout.tsx", "**/page.tsx"]
+globs: frontend/src/**/*.tsx, frontend/src/**/*.jsx, frontend/src/components/**/*, **/tailwind.config.*, **/components.json, **/*.css, **/globals.css, **/layout.tsx, **/page.tsx
 alwaysApply: false
 ---
 
 # UI Components and Styling
 
 ## UI Framework
+
 - Use Radix UI primitives and Tailwind CSS for components and styling
 - Implement responsive design with Tailwind CSS using a mobile-first approach
 - Use `next/image` package for images
@@ -33,18 +29,21 @@ pnpm add @radix-ui/react-dialog @radix-ui/react-slot
 ```
 
 ## Data Fetching with TanStack Query
+
 For API requests use TanStack Query (React Query):
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
 const { data, isLoading, error } = useQuery({
-  queryKey: ['portfolio-data', portfolioId],
-  queryFn: () => fetch(`/api/portfolio/${portfolioId}`).then(res => res.json())
+  queryKey: ["portfolio-data", portfolioId],
+  queryFn: () =>
+    fetch(`/api/portfolio/${portfolioId}`).then((res) => res.json()),
 });
 ```
 
 ## Loading Components
+
 Handle loading states with conditional rendering:
 
 ```tsx
@@ -60,6 +59,7 @@ Handle loading states with conditional rendering:
 ```
 
 ## Component Styling
+
 Use Tailwind CSS classes with proper responsive design:
 
 ```tsx
@@ -73,16 +73,19 @@ Use Tailwind CSS classes with proper responsive design:
 ```
 
 ## Icon Usage
+
 Use Lucide React for consistent iconography:
 
 ```tsx
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 
-<TrendingUp className="h-4 w-4 text-green-500" />
+<TrendingUp className="h-4 w-4 text-green-500" />;
 ```
 
 ## Form Components
+
 ### Text Inputs
+
 ```tsx
 <Input
   type="email"
@@ -94,6 +97,7 @@ import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 ```
 
 ### Text Area
+
 ```tsx
 <Input
   type="text"
@@ -104,4 +108,4 @@ import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
   registerProps={register("message", { required: true })}
   error={errors.message}
 />
-``` 
+```

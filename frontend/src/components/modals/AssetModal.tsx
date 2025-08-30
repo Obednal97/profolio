@@ -8,7 +8,8 @@ import React, {
   useRef,
 } from "react";
 import { Asset } from "@/types/global";
-import { Button } from "@/components/ui/button/button";
+import { Button } from "@/components/ui/button";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { FinancialCalculator } from "@/lib/financial";
 
 // Asset type fields configuration
@@ -702,7 +703,13 @@ export function AssetModal({
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl mt-4 sm:mt-8 relative z-50">
+    <EnhancedGlassCard
+      variant="prominent"
+      padding="lg"
+      hoverable={false}
+      enableLensing={false}
+      animate={false}
+      className="w-full max-w-4xl relative z-50">
       <div className="flex justify-between items-center mb-6 sm:mb-8">
         <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
           {initialData ? "Edit Asset" : "Add New Asset"}
@@ -727,7 +734,7 @@ export function AssetModal({
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+              className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white/20 dark:focus:bg-black/30 transition-all duration-200 touch-manipulation"
               placeholder="e.g., Apple Stock"
               required
             />
@@ -742,7 +749,7 @@ export function AssetModal({
               onChange={(e) =>
                 setFormData({ ...formData, type: e.target.value as AssetType })
               }
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 touch-manipulation"
+              className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white/20 dark:focus:bg-black/30 transition-all duration-200 touch-manipulation"
             >
               {Object.keys(assetTypeFields).map((type) => (
                 <option
@@ -816,6 +823,6 @@ export function AssetModal({
           </Button>
         </div>
       </form>
-    </div>
+    </EnhancedGlassCard>
   );
 }

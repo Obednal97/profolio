@@ -1,0 +1,41 @@
+/* === Layouts: Spacing === */
+/* Spacing utilities and margin/padding */
+
+/* Section spacing */
+.section-spacing {
+  padding: 3rem 0;
+}
+
+.section-spacing-sm {
+  padding: 1.5rem 0;
+}
+
+.section-spacing-lg {
+  padding: 6rem 0;
+}
+
+/* Component spacing */
+.component-spacing {
+  margin-bottom: 2rem;
+}
+
+.component-spacing-sm {
+  margin-bottom: 1rem;
+}
+
+.component-spacing-lg {
+  margin-bottom: 3rem;
+}
+
+/* Stack spacing */
+.stack > * + * {
+  margin-top: 1rem;
+}
+
+.stack-sm > * + * {
+  margin-top: 0.5rem;
+}
+
+.stack-lg > * + * {
+  margin-top: 2rem;
+}

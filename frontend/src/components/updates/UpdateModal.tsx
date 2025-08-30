@@ -196,7 +196,7 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
               {updateProgress.logs && updateProgress.logs.length > 0 && (
                 <button
                   onClick={() => setShowLogs(!showLogs)}
-                  className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                 >
                   {showLogs ? 'Hide' : 'Show'} installation logs
                 </button>
@@ -253,7 +253,7 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
                     href={updateInfo.downloadUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline"
+                    className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                   >
                     View on GitHub
                     <ExternalLink className="h-4 w-4" />

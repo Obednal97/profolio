@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 import { logger } from "@/lib/logger";
 import { handleGoogleRedirectResult } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 function SignInPage() {
   const {
@@ -19,6 +20,7 @@ function SignInPage() {
     authMode,
   } = useAuth();
   const { signInWithDemo } = useAuthHook();
+  const router = useRouter();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ function SignInPage() {
           logger.auth(
             "Google auth redirect successful, redirecting to dashboard"
           );
-          window.location.href = "/app/dashboard?auth-action=signing-in";
+          router.push("/app/dashboard");
         }
       } catch (error) {
         logger.auth("Failed to handle redirect result:", error);
@@ -79,7 +81,7 @@ function SignInPage() {
     try {
       await signIn(formData.email, formData.password);
       // Redirect with signing in indicator
-      window.location.href = "/app/dashboard?auth-action=signing-in";
+      router.push("/app/dashboard");
     } catch (err: unknown) {
       logger.auth("Sign in error:", err);
       const errorMessage =
@@ -103,13 +105,13 @@ function SignInPage() {
       logger.auth("Google sign-in successful:", result);
 
       // Primary redirect attempt with signing in indicator
-      window.location.href = "/app/dashboard?auth-action=signing-in";
+      router.push("/app/dashboard");
 
       // Fallback redirect in case the primary one doesn't work
       setTimeout(() => {
         if (window.location.pathname === "/auth/signIn") {
           logger.auth("Fallback redirect triggered");
-          window.location.replace("/app/dashboard?auth-action=signing-in");
+          router.push("/app/dashboard");
         }
       }, 1000);
     } catch (err: unknown) {
@@ -136,7 +138,7 @@ function SignInPage() {
 
     try {
       await signInWithDemo({
-        callbackUrl: "/app/dashboard?auth-action=signing-in",
+        callbackUrl: "/app/dashboard",
         redirect: true,
       });
     } catch (err) {

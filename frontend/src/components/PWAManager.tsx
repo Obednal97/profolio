@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, memo, useRef } from "react";
-import { Button } from "@/components/ui/button/button";
+import { Button } from "@/components/ui/button";
 import { X, Download } from "lucide-react";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { logger } from "@/lib/logger";
@@ -462,9 +462,9 @@ const PWAManager = memo(() => {
         </div>
         <Button
           onClick={handleDismiss}
-          variant="ghost"
+          variant="glass-ghost"
           size="sm"
-          className="text-white hover:bg-white/20 p-1 h-auto flex-shrink-0"
+          className="p-1 h-auto flex-shrink-0"
           aria-label="Dismiss install prompt for 7 days"
           disabled={isInstalling}
         >
@@ -474,7 +474,8 @@ const PWAManager = memo(() => {
       <div className="flex gap-2 mt-3">
         <Button
           onClick={handleInstallClick}
-          className="bg-white text-blue-600 hover:bg-blue-50 flex-1 text-sm py-2"
+          variant="glass-primary"
+          className="flex-1 text-sm"
           aria-describedby="pwa-install-description"
           disabled={isInstalling}
         >
@@ -489,8 +490,8 @@ const PWAManager = memo(() => {
         </Button>
         <Button
           onClick={handleDismiss}
-          variant="ghost"
-          className="text-white hover:bg-white/20 text-sm py-2"
+          variant="glass-ghost"
+          className="text-sm"
           disabled={isInstalling}
           title="Don't show again for 7 days"
         >

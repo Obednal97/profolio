@@ -433,7 +433,7 @@ export default function UpdatesPage() {
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 break-all"
             >
               {linkText}
             </a>
@@ -531,7 +531,7 @@ export default function UpdatesPage() {
           href={item.trim()}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 break-all"
         >
           {item.trim()}
         </a>
@@ -988,7 +988,7 @@ export default function UpdatesPage() {
                   <div className="mt-4">
                     <button
                       onClick={() => setShowLogs(!showLogs)}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline mb-2"
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-2"
                     >
                       {showLogs ? "Hide" : "Show"} installation logs
                     </button>

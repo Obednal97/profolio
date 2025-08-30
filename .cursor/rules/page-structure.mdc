@@ -1,12 +1,6 @@
 ---
-description: 
-globs: frontend/src/app/**/page.tsx, frontend/src/app/**/layout.tsx, frontend/src/app/**/loading.tsx, frontend/src/app/**/error.tsx, frontend/src/app/**/not-found.tsx, frontend/src/app/**/template.tsx
-alwaysApply: false
----
----
 description: Next.js page structure guidelines and patterns for the App Router
-ruleType: autoAttached
-globs: ["frontend/src/app/**/page.tsx", "frontend/src/app/**/layout.tsx", "frontend/src/app/**/loading.tsx", "frontend/src/app/**/error.tsx", "frontend/src/app/**/not-found.tsx", "frontend/src/app/**/template.tsx"]
+globs: frontend/src/app/**/page.tsx, frontend/src/app/**/layout.tsx, frontend/src/app/**/loading.tsx, frontend/src/app/**/error.tsx, frontend/src/app/**/not-found.tsx, frontend/src/app/**/template.tsx
 alwaysApply: false
 ---
 
@@ -22,11 +16,11 @@ alwaysApply: false
 
 ```typescript
 // frontend/src/app/portfolio/page.tsx
-import { PortfolioList } from './PortfolioList';
+import { PortfolioList } from "./PortfolioList";
 
 export default async function PortfolioPage() {
   // Server-side data loading
-  const initialData = await fetch('http://localhost:3001/api/portfolio');
+  const initialData = await fetch("http://localhost:3001/api/portfolio");
   const portfolios = await initialData.json();
 
   return (
@@ -42,22 +36,23 @@ export default async function PortfolioPage() {
 // frontend/src/app/portfolio/PortfolioList.tsx
 "use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
 export function PortfolioList({ initialData }: { initialData: Portfolio[] }) {
   const { data: portfolios } = useQuery({
-    queryKey: ['portfolios'],
-    queryFn: () => fetch('/api/portfolio').then(res => res.json()),
+    queryKey: ["portfolios"],
+    queryFn: () => fetch("/api/portfolio").then((res) => res.json()),
     initialData,
   });
 
   return (
     <div>
-      {portfolios.map(portfolio => (
+      {portfolios.map((portfolio) => (
         <div key={portfolio.id} onClick={() => handleClick(portfolio.id)}>
           {portfolio.name}
         </div>
       ))}
     </div>
   );
-} 
+}
+```

@@ -1,12 +1,7 @@
 ---
-description: 
-globs: backend/prisma/**/*, backend/src/**/*prisma*, backend/src/**/*database*, **/*schema.prisma, **/migrations/**/*, backend/src/**/*service*.ts, backend/src/**/*repository*.ts
-alwaysApply: false
----
----
 description: Prisma ORM usage patterns and best practices for PostgreSQL database operations
 ruleType: autoAttached
-globs: ["backend/prisma/**/*", "backend/src/**/*prisma*", "backend/src/**/*database*", "**/*schema.prisma", "**/migrations/**/*", "backend/src/**/*service*.ts", "backend/src/**/*repository*.ts"]
+globs: backend/prisma/**/*, backend/src/**/*prisma*, backend/src/**/*database*, **/*schema.prisma, **/migrations/**/*, backend/src/**/*service*.ts, backend/src/**/*repository*.ts
 alwaysApply: false
 ---
 
@@ -19,7 +14,7 @@ We use PostgreSQL as our database.
 This is how we import prisma in the backend:
 
 ```typescript
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 ```
@@ -27,7 +22,7 @@ const prisma = new PrismaClient();
 Or using a singleton pattern for better performance:
 
 ```typescript
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -35,7 +30,7 @@ declare global {
 
 const prisma = globalThis.prisma || new PrismaClient();
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   globalThis.prisma = prisma;
 }
 
@@ -56,7 +51,7 @@ export default prisma;
 // Create
 const portfolio = await prisma.portfolio.create({
   data: {
-    name: 'My Portfolio',
+    name: "My Portfolio",
     userId: user.id,
   },
 });
@@ -73,7 +68,7 @@ const portfolio = await prisma.portfolio.findUnique({
 // Update
 const updatedPortfolio = await prisma.portfolio.update({
   where: { id: portfolioId },
-  data: { name: 'Updated Portfolio Name' },
+  data: { name: "Updated Portfolio Name" },
 });
 
 // Delete
@@ -89,7 +84,7 @@ await prisma.$transaction(async (tx) => {
   await tx.transaction.create({
     data: transactionData,
   });
-  
+
   await tx.holding.upsert({
     where: { portfolioId_symbol: { portfolioId, symbol } },
     update: { quantity: { increment: quantity } },

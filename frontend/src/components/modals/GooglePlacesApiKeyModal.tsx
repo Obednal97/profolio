@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button/button";
+import { 
+  EnhancedGlassModal, 
+  EnhancedGlassModalContent,
+  EnhancedGlassModalHeader,
+  EnhancedGlassModalBody,
+  EnhancedGlassModalFooter,
+  EnhancedGlassButton
+} from "@/components/ui/enhanced-glass/EnhancedGlassModal";
 
 interface GooglePlacesApiKeyModalProps {
   onClose: () => void;
@@ -61,29 +69,16 @@ export function GooglePlacesApiKeyModal({
   const hasStoredKey = localStorage.getItem("google_places_api_key");
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl"
-      >
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent flex items-center">
-            <i className="fab fa-google mr-2 text-blue-500"></i>
-            Google Places API Key
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-          >
-            <i className="fas fa-times text-lg"></i>
-          </button>
-        </div>
+    <EnhancedGlassModal isOpen={true} onClose={onClose} size="lg">
+      <EnhancedGlassModalContent>
+        <EnhancedGlassModalHeader 
+          title="Google Places API Key" 
+          onClose={onClose}
+        />
 
+        <EnhancedGlassModalBody>
         {/* Info Section */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+        <div className="bg-blue-500/10 backdrop-blur-sm border border-blue-500/20 rounded-lg p-4 mb-6">
           <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center">
             <i className="fas fa-info-circle mr-2"></i>
             Enhanced Address Search
@@ -101,7 +96,7 @@ export function GooglePlacesApiKeyModal({
               href="https://console.cloud.google.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
             >
               Get API Key →
             </a>
@@ -135,7 +130,7 @@ export function GooglePlacesApiKeyModal({
           </div>
 
           {/* Info about validation */}
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+          <div className="bg-green-500/10 backdrop-blur-sm border border-green-500/20 rounded-lg p-3">
             <p className="text-sm text-green-700 dark:text-green-300 flex items-start">
               <i className="fas fa-info-circle mr-2 mt-0.5 flex-shrink-0"></i>
               <span>
@@ -147,7 +142,7 @@ export function GooglePlacesApiKeyModal({
           </div>
 
           {/* Setup Instructions */}
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+          <div className="bg-white/5 dark:bg-black/10 backdrop-blur-sm rounded-lg p-4">
             <h5 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center">
               <i className="fas fa-list-ol mr-2 text-gray-500"></i>
               Quick Setup Guide
@@ -159,7 +154,7 @@ export function GooglePlacesApiKeyModal({
                   href="https://console.cloud.google.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline"
+                  className="text-blue-500 hover:text-blue-600 dark:hover:text-blue-400"
                 >
                   Google Cloud Console
                 </a>
@@ -173,7 +168,7 @@ export function GooglePlacesApiKeyModal({
               </li>
               <li className="list-decimal">
                 Add domain restrictions:{" "}
-                <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">
+                <code className="bg-white/10 dark:bg-black/20 px-1 rounded">
                   localhost:3000/*
                 </code>
               </li>
@@ -209,14 +204,15 @@ export function GooglePlacesApiKeyModal({
 
         {/* Current Status */}
         {hasStoredKey && (
-          <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <div className="mt-4 p-3 bg-green-500/10 backdrop-blur-sm border border-green-500/20 rounded-lg">
             <p className="text-sm text-green-700 dark:text-green-300 flex items-center">
               <i className="fas fa-check-circle mr-2"></i>
               Google Places API is currently active for enhanced address search
             </p>
           </div>
         )}
-      </motion.div>
-    </div>
+        </EnhancedGlassModalBody>
+      </EnhancedGlassModalContent>
+    </EnhancedGlassModal>
   );
 }

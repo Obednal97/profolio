@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,10 +16,11 @@ interface Heading {
 }
 
 const tabs = [
-  { href: "/policies/terms", label: "Terms of Service" },
-  { href: "/policies/privacy", label: "Privacy Policy" },
-  { href: "/policies/community", label: "Community Guidelines" },
-  { href: "/policies/creators", label: "Creator Policy" },
+  { href: "/policy-hub/terms", label: "Terms of Service" },
+  { href: "/policy-hub/privacy", label: "Privacy Policy" },
+  { href: "/policy-hub/community", label: "Community Guidelines" },
+  { href: "/policy-hub/cookies", label: "Cookie Policy" },
+  { href: "/policy-hub/aup", label: "Acceptable Use Policy" },
 ];
 
 export const PoliciesLayout: React.FC<PoliciesLayoutProps> = ({ children }) => {
@@ -63,46 +66,50 @@ export const PoliciesLayout: React.FC<PoliciesLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground px-6 py-8 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8">
-      <aside className="space-y-6 sticky top-24 self-start">
-        <nav className="border-b border-white/10 pb-4">
-          <div className="flex flex-col gap-2">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
+    <div className="min-h-screen">
+      <div className="px-6 py-8 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8">
+        <aside className="space-y-6 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto">
+          <nav className="border-b border-white/10 pb-4">
+            <div className="flex flex-col gap-2">
+              {tabs.map((tab) => (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors duration-200",
+                    pathname === tab.href
+                      ? "text-foreground font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground uppercase tracking-wide text-xs">Contents</p>
+            {headings.map((heading, index) => (
+              <button
+                key={heading.id || `heading-${index}`}
+                onClick={() => handleScrollTo(heading.id)}
                 className={cn(
-                  "text-sm font-medium transition-colors duration-200",
-                  pathname === tab.href
-                    ? "text-white"
-                    : "text-muted-foreground hover:text-white"
+                  "block text-left hover:text-foreground transition-colors",
+                  heading.level === 3 ? "ml-4 text-sm" : "text-base",
+                  activeId === heading.id
+                    ? "text-foreground font-semibold"
+                    : "text-muted-foreground"
                 )}
               >
-                {tab.label}
-              </Link>
+                {heading.text}
+              </button>
             ))}
           </div>
-        </nav>
-        <div className="space-y-2 text-sm">
-          <p className="text-muted-foreground uppercase tracking-wide text-xs">Contents</p>
-          {headings.map((heading) => (
-            <button
-              key={heading.id}
-              onClick={() => handleScrollTo(heading.id)}
-              className={cn(
-                "block text-left hover:text-white transition-colors",
-                heading.level === 3 ? "ml-4 text-sm" : "text-base",
-                activeId === heading.id
-                  ? "text-white font-semibold"
-                  : "text-muted-foreground"
-              )}
-            >
-              {heading.text}
-            </button>
-          ))}
+        </aside>
+        <div ref={contentRef} className="prose dark:prose-invert max-w-none !bg-transparent">
+          {children}
         </div>
-      </aside>
-      <div ref={contentRef} className="prose dark:prose-invert max-w-none">{children}</div>
+      </div>
     </div>
   );
 };

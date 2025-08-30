@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { GlassCard } from "@/components/cards/GlassCard";
 
 function Skeleton({
   className,
@@ -42,18 +43,19 @@ function SkeletonCard({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-4",
-        className
-      )}
+    <GlassCard
+      variant="standard"
+      padding="md"
+      animate
+      animationDelay={0.1}
+      className={cn("space-y-4", className)}
       {...props}
     >
       <Skeleton className="h-4 w-1/2" />
       <Skeleton className="h-8 w-3/4" />
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-2/3" />
-    </div>
+    </GlassCard>
   );
 }
 
@@ -205,11 +207,12 @@ function SkeletonStat({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-2",
-        className
-      )}
+    <GlassCard
+      variant="standard"
+      padding="md"
+      animate
+      animationDelay={0.1}
+      className={cn("space-y-2", className)}
       {...props}
     >
       <Skeleton className="h-4 w-20" />
@@ -218,7 +221,7 @@ function SkeletonStat({
         <Skeleton className="h-4 w-4" />
         <Skeleton className="h-4 w-16" />
       </div>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -252,7 +255,7 @@ function SettingsSkeleton() {
         {/* Settings sections */}
         <div className="space-y-8">
           {/* Profile section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.1}>
             <Skeleton className="h-6 w-32 mb-4" />
             <div className="flex items-center gap-4 mb-4">
               <Skeleton className="h-16 w-16 rounded-full" />
@@ -271,10 +274,10 @@ function SettingsSkeleton() {
                 <Skeleton className="h-10 w-full" />
               </div>
             </div>
-          </div>
+          </GlassCard>
 
           {/* Preferences section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.15}>
             <Skeleton className="h-6 w-40 mb-4" />
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
@@ -287,10 +290,10 @@ function SettingsSkeleton() {
                 </div>
               ))}
             </div>
-          </div>
+          </GlassCard>
 
           {/* Security section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.2}>
             <Skeleton className="h-6 w-24 mb-4" />
             <div className="space-y-4">
               {[...Array(2)].map((_, i) => (
@@ -303,7 +306,7 @@ function SettingsSkeleton() {
                 </div>
               ))}
             </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
     </div>
@@ -400,9 +403,12 @@ function AssetManagerSkeleton() {
         {/* Summary Cards skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {[...Array(4)].map((_, i) => (
-            <div
+            <GlassCard
               key={i}
-              className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700"
+              variant="standard"
+              padding="md"
+              animate
+              animationDelay={0.1 + i * 0.05}
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -411,13 +417,13 @@ function AssetManagerSkeleton() {
                 </div>
                 <Skeleton className="h-12 w-12 rounded-lg" />
               </div>
-            </div>
+            </GlassCard>
           ))}
         </div>
 
         {/* Charts Section skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+          <GlassCard variant="standard" padding="lg" animate animationDelay={0.3}>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
               <Skeleton className="h-6 w-48" />
               <div className="flex gap-1 sm:gap-2">
@@ -427,12 +433,12 @@ function AssetManagerSkeleton() {
               </div>
             </div>
             <Skeleton className="h-48 sm:h-64 rounded-lg" />
-          </div>
+          </GlassCard>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+          <GlassCard variant="standard" padding="lg" animate animationDelay={0.35}>
             <Skeleton className="h-6 w-40 mb-4 sm:mb-6" />
             <Skeleton className="h-48 sm:h-64 rounded-lg" />
-          </div>
+          </GlassCard>
         </div>
 
         {/* Filter Controls skeleton */}
@@ -460,6 +466,233 @@ function AssetManagerSkeleton() {
   );
 }
 
+// Portfolio skeleton
+function PortfolioSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
+      {/* Header skeleton */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <Skeleton className="h-10 w-48 mb-2" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <SkeletonButton size="lg" />
+      </div>
+
+      {/* Stats grid skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {[...Array(4)].map((_, i) => (
+          <SkeletonStat key={i} />
+        ))}
+      </div>
+
+      {/* Portfolio overview skeleton */}
+      <div className="mb-8">
+        <GlassCard variant="standard" padding="md" animate animationDelay={0.1}>
+          <Skeleton className="h-6 w-48 mb-4" />
+          <SkeletonChart height="h-64" />
+        </GlassCard>
+      </div>
+
+      {/* Assets grid skeleton */}
+      <div className="mb-4 flex justify-between items-center">
+        <Skeleton className="h-8 w-32" />
+        <div className="flex gap-2">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-10 w-24 rounded-lg" />
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, i) => (
+          <SkeletonCard key={i} className="h-48" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Properties skeleton
+function PropertiesSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
+      {/* Header skeleton */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <Skeleton className="h-10 w-48 mb-2" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <SkeletonButton size="lg" />
+      </div>
+
+      {/* Stats grid skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {[...Array(4)].map((_, i) => (
+          <SkeletonStat key={i} />
+        ))}
+      </div>
+
+      {/* Properties grid skeleton */}
+      <div className="mb-4">
+        <Skeleton className="h-8 w-40 mb-4" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, i) => (
+          <SkeletonCard key={i} className="h-64" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ExpenseManager skeleton
+function ExpenseManagerSkeleton() {
+  return (
+    <div className="min-h-screen text-gray-900 dark:text-white">
+      <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
+        {/* Header skeleton */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <Skeleton className="h-10 w-64 mb-2" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <SkeletonButton size="lg" className="w-40" />
+              <SkeletonButton size="lg" className="w-36" />
+              <SkeletonButton size="lg" className="w-36" />
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <SkeletonStat key={i} />
+          ))}
+        </div>
+
+        {/* Tab navigation skeleton */}
+        <div className="flex space-x-1 mb-6">
+          <Skeleton className="h-10 w-32 rounded-lg" />
+          <Skeleton className="h-10 w-32 rounded-lg" />
+        </div>
+
+        {/* Filters skeleton */}
+        <div className="mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search skeleton */}
+            <div className="flex-1 max-w-md">
+              <SkeletonInput className="w-full" />
+            </div>
+
+            {/* Filter controls skeleton */}
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-10 w-32 rounded-lg" />
+              <Skeleton className="h-10 w-28 rounded-lg" />
+              <Skeleton className="h-10 w-20 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        {/* Content area skeleton based on view mode */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonCard key={i} className="h-48" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Dashboard skeleton
+function DashboardSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
+      {/* Header skeleton */}
+      <div className="mb-8">
+        <Skeleton className="h-10 w-48 mb-2" />
+        <Skeleton className="h-5 w-64" />
+      </div>
+
+      {/* Net Worth skeleton */}
+      <div className="mb-8">
+        <SkeletonCard className="h-32" />
+      </div>
+
+      {/* Stats Grid skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {[...Array(4)].map((_, i) => (
+          <SkeletonStat key={i} />
+        ))}
+      </div>
+
+      {/* Main content grid skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chart skeleton */}
+        <div className="lg:col-span-2 space-y-6">
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.1}>
+            <Skeleton className="h-6 w-48 mb-4" />
+            <SkeletonChart height="h-80" />
+          </GlassCard>
+
+          {/* Quick Actions skeleton */}
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.1}>
+            <Skeleton className="h-6 w-32 mb-4" />
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <SkeletonButton key={i} size="lg" className="w-full" />
+              ))}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Sidebar skeleton */}
+        <div className="space-y-6">
+          {/* Recent Transactions skeleton */}
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.1}>
+            <Skeleton className="h-6 w-40 mb-4" />
+            <SkeletonList items={5} />
+          </GlassCard>
+
+          {/* Market Data skeleton */}
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.1}>
+            <Skeleton className="h-6 w-32 mb-4" />
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex justify-between items-center">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+
+          {/* News skeleton */}
+          <GlassCard variant="standard" padding="md" animate animationDelay={0.1}>
+            <Skeleton className="h-6 w-32 mb-4" />
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <div className="flex gap-4">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export {
   Skeleton,
   SkeletonText,
@@ -477,4 +710,8 @@ export {
   PropertyManagerSkeleton,
   ChartLoadingSkeleton,
   AssetManagerSkeleton,
+  DashboardSkeleton,
+  ExpenseManagerSkeleton,
+  PortfolioSkeleton,
+  PropertiesSkeleton,
 };

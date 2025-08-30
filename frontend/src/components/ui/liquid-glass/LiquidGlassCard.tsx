@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 
-interface LiquidGlassCardProps {
+export interface LiquidGlassCardProps {
   children: React.ReactNode;
   className?: string;
   performance?: number; // Portfolio performance for dynamic tinting

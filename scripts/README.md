@@ -55,9 +55,72 @@ chmod +x scripts/setup-dev-environment.sh
 
 ### `prepare-release.mjs`
 
-**Automated release preparation**
+**Automated release preparation and documentation creation**
 
-Prepares version bumps, changelog updates, and release artifacts.
+```bash
+node scripts/prepare-release.mjs v1.14.0
+```
+
+**What it does:**
+
+- ✅ Updates all package.json files with new version
+- ✅ Creates CHANGELOG.md entry template
+- ✅ Creates release notes file template in docs/releases/
+- ✅ Updates service worker version (PWA cache invalidation)
+- ✅ Updates README.md version examples
+- ✅ Validates builds (frontend and backend)
+- ✅ Creates directory structure for release notes
+- ✅ Checks git status and date chronology
+
+**Usage:**
+
+```bash
+# Prepare release for v1.14.0
+node scripts/prepare-release.mjs v1.14.0
+
+# With or without 'v' prefix
+node scripts/prepare-release.mjs 1.14.0
+
+# Show help
+node scripts/prepare-release.mjs --help
+```
+
+**Output:**
+- Creates templates for both CHANGELOG.md and release notes
+- Shows next steps for completing the release
+- Provides git commands for tagging and pushing
+
+### `validate-release-sync.mjs`
+
+**Release documentation synchronization validator**
+
+```bash
+node scripts/validate-release-sync.mjs
+```
+
+**What it checks:**
+
+- ✅ Every CHANGELOG.md version has corresponding release notes
+- ✅ No orphaned release notes without CHANGELOG entries
+- ✅ Dates match between CHANGELOG and release notes
+- ✅ docs/releases/README.md shows correct current version
+- ✅ Version numbering consistency
+
+**Usage:**
+
+```bash
+# Run validation
+node scripts/validate-release-sync.mjs
+
+# Should be run before every release
+# Exit code 0 = success, 1 = errors found
+```
+
+**Common issues detected:**
+- Missing release notes for CHANGELOG entries
+- Orphaned release notes files
+- Date mismatches between documentation
+- Outdated current version in docs/releases/README.md
 
 ### `check-release-date.sh`
 
@@ -88,6 +151,31 @@ pnpm prisma generate  # In backend/ if schema changed
 pnpm run lint          # Fix React Hook warnings
 pnpm run type-check    # Fix TypeScript errors
 pnpm run build         # Ensure build succeeds
+```
+
+### **For Creating Releases**
+
+```bash
+# 1. Prepare the release
+node scripts/prepare-release.mjs v1.14.0
+
+# 2. Complete the generated templates:
+#    - Edit CHANGELOG.md (high-level summary)
+#    - Edit docs/releases/v1/v1.14/RELEASE_NOTES_v1.14.0.md (detailed)
+
+# 3. Validate synchronization
+node scripts/validate-release-sync.mjs
+
+# 4. Commit and tag
+git add -A
+git commit -m "feat: v1.14.0 - Brief description"
+git tag -a v1.14.0 -m "Release v1.14.0"
+
+# 5. Push to GitHub
+git push origin main --tags
+
+# 6. Create GitHub release
+gh release create v1.14.0 --title "v1.14.0 - Title" --notes-file docs/releases/v1/v1.14/RELEASE_NOTES_v1.14.0.md
 ```
 
 ### **Troubleshooting**

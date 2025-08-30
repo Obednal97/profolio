@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Git workflow automation and commit patterns for consistent project standards
 ruleType: agentRequested
 alwaysApply: false
@@ -16,13 +11,15 @@ Automated assistance for consistent git workflows, commit patterns, and version 
 ## Commit Message Patterns
 
 When creating commits, use this format:
+
 ```bash
 git commit -m "type: brief description - details about what was changed - additional context if needed"
 ```
 
 ### Commit Types
+
 - `feat`: New feature
-- `fix`: Bug fix  
+- `fix`: Bug fix
 - `docs`: Documentation changes
 - `style`: Code style changes (formatting, semicolons, etc)
 - `refactor`: Code refactoring
@@ -33,11 +30,12 @@ git commit -m "type: brief description - details about what was changed - additi
 - `ci`: CI/CD changes
 
 ### Example Patterns
+
 ```bash
 # Feature commit
 git commit -m "feat: add notification badge to user menu - shows unread count on avatar, works across all deployment modes"
 
-# Bug fix commit  
+# Bug fix commit
 git commit -m "fix: resolve Next.js 15+ dynamic route params - await params object before accessing properties in API routes"
 
 # Release commit
@@ -49,11 +47,12 @@ git commit -m "feat: v1.3.0 - notification badges, demo banner, auto-updates tog
 Before any commit, ensure:
 
 ### Build Verification
+
 ```bash
 # Frontend build check
 cd frontend && pnpm run build
 
-# Backend build check  
+# Backend build check
 cd backend && pnpm run build
 
 # Type checking
@@ -70,6 +69,7 @@ cd frontend && pnpm run test:e2e --grep "Authentication|Portfolio"
 ```
 
 ### Version Management (for releases)
+
 ```bash
 # Set new version across all package.json files
 NEW_VERSION="1.3.0"
@@ -80,16 +80,19 @@ grep -h '"version"' package.json backend/package.json frontend/package.json
 ```
 
 ### Critical File Management
+
 **MUST be tracked in git:**
+
 - ✅ `scripts/prepare-release.mjs` - Release automation
 - ✅ `frontend/scripts/update-sw-version.mjs` - PWA version sync
 - ✅ `frontend/public/sw.js` - Service worker (modified during builds)
 - ✅ All build scripts and configuration files
 
 **MUST be ignored (.gitignore):**
+
 - ❌ `node_modules/` directories
 - ❌ `.next/` build output
-- ❌ `dist/` build output  
+- ❌ `dist/` build output
 - ❌ `.env*` environment files
 - ❌ `package-lock.json` (use `pnpm-lock.yaml` only)
 
@@ -98,12 +101,14 @@ grep -h '"version"' package.json backend/package.json frontend/package.json
 When implementing releases:
 
 ### 1. Use Automated Script (Recommended)
+
 ```bash
 # Comprehensive release preparation
 npm run prepare-release 1.3.0
 ```
 
 ### 2. Manual Alternative
+
 ```bash
 # Update versions
 NEW_VERSION="1.3.0"
@@ -117,6 +122,7 @@ mkdir -p docs/releases/v1/v1.3
 ```
 
 ### 3. Verification Commands
+
 ```bash
 # Review staged changes
 git diff --staged
@@ -131,6 +137,7 @@ cd frontend && pnpm run build && cd ../backend && pnpm run build && cd ..
 ## Branch and Push Patterns
 
 ### Standard Development
+
 ```bash
 # Review, stage, commit, and push
 git status
@@ -140,6 +147,7 @@ git push origin main
 ```
 
 ### Release Push
+
 ```bash
 # Push release with tags
 git push origin main --tags
@@ -158,8 +166,9 @@ git push origin main --tags
 ## PWA Service Worker Management
 
 The PWA service worker is automatically managed:
+
 - **Automated Update**: Service worker version matches `package.json` version automatically
-- **Build Integration**: `prebuild` script handles version sync transparently  
+- **Build Integration**: `prebuild` script handles version sync transparently
 - **Cache Invalidation**: New versions force clear all user caches automatically
 
 Look for: `📦 Updating service worker to version X.X.X` in build output.
@@ -167,6 +176,7 @@ Look for: `📦 Updating service worker to version X.X.X` in build output.
 ## Quality Gates
 
 Before pushing any commit:
+
 - [ ] All builds pass without errors
 - [ ] All unit tests pass
 - [ ] Critical E2E tests pass (auth, portfolio operations)
@@ -177,8 +187,9 @@ Before pushing any commit:
 - [ ] CHANGELOG.md updated (for significant changes)
 
 ### **Mandatory Testing Requirements**
+
 - [ ] **Authentication changes**: Security tests added
-- [ ] **Financial calculations**: Accuracy tests added  
+- [ ] **Financial calculations**: Accuracy tests added
 - [ ] **New components**: data-testid attributes added
 - [ ] **API endpoints**: Integration tests added
 - [ ] **Security features**: Injection/XSS tests added

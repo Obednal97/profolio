@@ -1,0 +1,141 @@
+/* === Foundation: Accessibility === */
+/* Accessibility features, media queries, and inclusive design patterns */
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable complex animations on low-performance devices */
+  [class*="motion-"],
+  [data-framer-motion] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: oklch(0 0 0);
+    --ring: oklch(0 0 0);
+  }
+
+  .dark {
+    --border: oklch(1 0 0);
+    --ring: oklch(1 0 0);
+  }
+
+  /* Increase contrast for glass elements */
+  .glass-base,
+  .glass-subtle,
+  .glass-standard,
+  .glass-prominent {
+    border-width: 2px;
+  }
+}
+
+/* Keyboard navigation enhancement */
+@media (prefers-reduced-motion: no-preference) {
+  :focus-visible {
+    transition: outline-offset 0.15s ease-out;
+  }
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip to content link */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--background);
+  color: var(--foreground);
+  text-decoration: none;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.skip-to-content:focus {
+  left: 50%;
+  transform: translateX(-50%);
+  top: var(--space-md);
+}
+
+/* Focus trap utility */
+.focus-trap {
+  position: relative;
+}
+
+/* Ensure interactive elements have minimum touch targets */
+@media (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [role="link"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Dark mode color scheme preference */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    color-scheme: light;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  /* Hide non-essential elements */
+  nav,
+  aside,
+  footer,
+  .no-print {
+    display: none;
+  }
+
+  /* Ensure links are visible */
+  a[href^="http"]:after {
+    content: " (" attr(href) ")";
+  }
+}
+
+/* Forced colors mode (Windows High Contrast) */
+@media (forced-colors: active) {
+  * {
+    forced-color-adjust: none;
+  }
+}

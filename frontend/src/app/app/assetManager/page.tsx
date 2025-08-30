@@ -12,7 +12,11 @@ import { BaseModal as Modal } from "@/components/modals/modal";
 import { AssetModal } from "@/components/modals/AssetModal";
 import { AssetApiConfigModal } from "@/components/modals/AssetApiConfigModal";
 import { AssetCard } from "@/components/cards/AssetCard";
-import { Button } from "@/components/ui/button/button";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { StatCard } from "@/components/cards/StatCard";
+import { Button } from "@/components/ui/button";
+import { EnhancedTabs } from "@/components/ui/enhanced-tabs";
+import { ViewSwitcher } from "@/components/ui/ViewSwitcher";
 import type { Asset } from "@/types/global";
 import dynamic from "next/dynamic";
 import { FinancialCalculator } from "@/lib/financial";
@@ -72,7 +76,7 @@ const assetTypeConfig = {
     gradient: "from-green-400 to-green-600",
   },
   crypto: {
-    icon: "fa-bitcoin",
+    icon: "fa-coins",
     color: "#f59e0b",
     gradient: "from-yellow-400 to-yellow-600",
   },
@@ -106,22 +110,31 @@ const assetTypeConfig = {
 // Crypto-specific icons
 const getCryptoIcon = (symbol: string) => {
   const cryptoIcons: Record<string, string> = {
-    BTC: "fa-bitcoin",
-    ETH: "fa-ethereum",
-    ADA: "fa-coins",
-    DOT: "fa-circle",
-    LINK: "fa-link",
-    XRP: "fa-coins",
-    LTC: "fa-coins",
-    BCH: "fa-coins",
-    BNB: "fa-coins",
-    SOL: "fa-sun",
-    DOGE: "fa-dog",
-    AVAX: "fa-mountain",
-    MATIC: "fa-coins",
-    ATOM: "fa-atom",
+    BTC: "fab fa-bitcoin",
+    ETH: "fab fa-ethereum",
+    ADA: "fas fa-coins",
+    DOT: "fas fa-circle-dot",
+    LINK: "fas fa-link",
+    XRP: "fas fa-water",
+    LTC: "fab fa-litecoin-sign",
+    BCH: "fab fa-bitcoin",
+    BNB: "fas fa-fire",
+    SOL: "fas fa-sun",
+    DOGE: "fas fa-dog",
+    MATIC: "fas fa-diamond",
+    UNI: "fas fa-unicorn",
+    AVAX: "fas fa-mountain",
+    ATOM: "fas fa-atom",
+    FTM: "fas fa-ghost",
+    ALGO: "fas fa-cubes",
+    VET: "fas fa-shield",
+    NEAR: "fas fa-infinity",
+    FLOW: "fas fa-river",
+    USDT: "fas fa-dollar-sign",
+    USDC: "fas fa-dollar-sign",
+    DAI: "fas fa-dollar-sign",
   };
-  return cryptoIcons[symbol.toUpperCase()] || "fa-coins";
+  return cryptoIcons[symbol?.toUpperCase()] || "fas fa-coins";
 };
 
 // 🚀 PERFORMANCE: Pre-calculate metrics to avoid expensive calculations on every render
@@ -208,7 +221,12 @@ export default function AssetManager() {
   const [chartLoading, setChartLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
   const [filterType, setFilterType] = useState<string>("all");
+  const [openCategoryDropdown, setOpenCategoryDropdown] = useState(false);
   const [showApiConfig, setShowApiConfig] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("value");
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // 🚀 PERFORMANCE: Cache calculated metrics and only recalculate when assets change
   const [cachedMetrics, setCachedMetrics] = useState<AssetMetrics | null>(null);
@@ -389,7 +407,10 @@ export default function AssetManager() {
         return;
       }
 
-      console.error("Chart data fetch error:", error);
+      // Don't log error if user is not authenticated
+      if (currentUser?.id) {
+        console.error("Chart data fetch error:", error);
+      }
 
       // 🚀 PERFORMANCE: Use cached total value for error fallback
       const currentTotalValue = metrics?.totalValue || 0;
@@ -543,9 +564,42 @@ export default function AssetManager() {
     };
 
   const filteredAssets = useMemo(() => {
-    if (filterType === "all") return assets;
-    return assets.filter((asset) => asset.type === filterType);
-  }, [assets, filterType]);
+    let filtered = [...assets];
+    
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter((asset) => asset.type === filterType);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((asset) => 
+        asset.name.toLowerCase().includes(query) ||
+        asset.symbol?.toLowerCase().includes(query) ||
+        asset.type.toLowerCase().includes(query)
+      );
+    }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "type":
+          return a.type.localeCompare(b.type);
+        case "performance":
+          const perfA = a.purchase_price ? ((a.current_value - a.purchase_price) / a.purchase_price) : 0;
+          const perfB = b.purchase_price ? ((b.current_value - b.purchase_price) / b.purchase_price) : 0;
+          return perfB - perfA;
+        case "value":
+        default:
+          return b.current_value - a.current_value;
+      }
+    });
+    
+    return filtered;
+  }, [assets, filterType, searchQuery, sortBy]);
 
   const chartDataFormatted = useMemo(() => {
     if (!chartData) return [];
@@ -573,7 +627,7 @@ export default function AssetManager() {
       const iconClass =
         asset.type === "crypto" && asset.symbol
           ? getCryptoIcon(asset.symbol)
-          : config.icon;
+          : `fas ${config.icon}`;
 
       // Pre-calculate appreciation to avoid doing it during render
       const appreciation =
@@ -606,7 +660,7 @@ export default function AssetManager() {
       onDelete: (id: string) => void;
     }) => {
       return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <EnhancedGlassCard enableLensing hoverable variant="standard" padding="sm" className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
@@ -646,7 +700,7 @@ export default function AssetManager() {
                           className={`p-2 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 flex-shrink-0`}
                         >
                           <i
-                            className={`fas ${iconClass} text-white text-sm`}
+                            className={`${iconClass} text-white text-sm`}
                           ></i>
                         </div>
                         <div className="min-w-0">
@@ -706,20 +760,22 @@ export default function AssetManager() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex justify-center space-x-2">
-                        <button
+                        <Button
                           onClick={() => onEdit(asset)}
-                          className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                          variant="ghost"
+                          size="sm"
+                          icon="fa-edit"
+                          className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
                           aria-label="Edit asset"
-                        >
-                          <i className="fas fa-edit text-sm"></i>
-                        </button>
-                        <button
+                        />
+                        <Button
                           onClick={() => asset.id && onDelete(asset.id)}
-                          className="p-1 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                          variant="ghost"
+                          size="sm"
+                          icon="fa-trash"
+                          className="text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
                           aria-label="Delete asset"
-                        >
-                          <i className="fas fa-trash text-sm"></i>
-                        </button>
+                        />
                       </div>
                     </td>
                   </tr>
@@ -727,7 +783,7 @@ export default function AssetManager() {
               </tbody>
             </table>
           </div>
-        </div>
+        </EnhancedGlassCard>
       );
     },
     []
@@ -758,15 +814,18 @@ export default function AssetManager() {
             <div className="flex gap-2">
               <Button
                 onClick={() => setShowApiConfig(true)}
-                variant="outline"
-                className="px-4 py-3 touch-manipulation"
+                variant="glass"
+                animate
+                className="touch-manipulation bg-gradient-to-r from-gray-600/80 to-gray-700/80 hover:from-gray-600 hover:to-gray-700 text-white border-white/20"
               >
                 <i className="fas fa-cog mr-2"></i>
                 API Config
               </Button>
               <Button
                 onClick={handleOpenModal}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-4 sm:px-6 py-3 touch-manipulation"
+                variant="glass-primary"
+                animate
+                className="touch-manipulation"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add Asset
@@ -789,117 +848,35 @@ export default function AssetManager() {
         )}
 
         {/* Summary Cards */}
-        <MotionDiv
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
-        >
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-400 transition-all duration-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                  Total Asset Value
-                </p>
-                <p className="text-2xl sm:text-3xl font-bold text-green-500 mt-1">
-                  {FinancialCalculator.formatCurrency(totalValue)}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <i className="fas fa-wallet text-green-500 text-lg sm:text-xl"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-400 transition-all duration-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                  Total Assets
-                </p>
-                <p className="text-2xl sm:text-3xl font-bold text-blue-500 mt-1">
-                  {assets.length}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <i className="fas fa-chart-pie text-blue-500 text-lg sm:text-xl"></i>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-${
-              totalGainLoss >= 0 ? "green" : "red"
-            }-400 dark:hover:border-${
-              totalGainLoss >= 0 ? "green" : "red"
-            }-400 transition-all duration-200`}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                  Total Gain/Loss
-                </p>
-                <p
-                  className={`text-2xl sm:text-3xl font-bold mt-1 ${
-                    totalGainLoss >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
-                >
-                  {totalGainLoss >= 0 ? "+" : ""}
-                  {FinancialCalculator.formatCurrency(totalGainLoss)}
-                </p>
-              </div>
-              <div
-                className={`p-2 sm:p-3 ${
-                  totalGainLoss >= 0
-                    ? "bg-green-100 dark:bg-green-900/30"
-                    : "bg-red-100 dark:bg-red-900/30"
-                } rounded-lg`}
-              >
-                <i
-                  className={`fas fa-chart-line ${
-                    totalGainLoss >= 0 ? "text-green-500" : "text-red-500"
-                  } text-lg sm:text-xl`}
-                ></i>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-${
-              collectiveAPY >= 0 ? "green" : "red"
-            }-400 dark:hover:border-${
-              collectiveAPY >= 0 ? "green" : "red"
-            }-400 transition-all duration-200`}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                  Portfolio APY
-                </p>
-                <p
-                  className={`text-2xl sm:text-3xl font-bold mt-1 ${
-                    collectiveAPY >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
-                >
-                  {FinancialCalculator.formatAPY(collectiveAPY)}
-                </p>
-              </div>
-              <div
-                className={`p-2 sm:p-3 ${
-                  collectiveAPY >= 0
-                    ? "bg-green-100 dark:bg-green-900/30"
-                    : "bg-red-100 dark:bg-red-900/30"
-                } rounded-lg`}
-              >
-                <i
-                  className={`fas fa-percentage ${
-                    collectiveAPY >= 0 ? "text-green-500" : "text-red-500"
-                  } text-lg sm:text-xl`}
-                ></i>
-              </div>
-            </div>
-          </div>
-        </MotionDiv>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <StatCard
+            title="Total Asset Value"
+            value={FinancialCalculator.formatCurrency(totalValue)}
+            icon="fa-wallet"
+            colorScheme="green"
+          />
+          
+          <StatCard
+            title="Total Assets"
+            value={assets.length}
+            icon="fa-chart-pie"
+            colorScheme="blue"
+          />
+          
+          <StatCard
+            title="Total Gain/Loss"
+            value={`${totalGainLoss >= 0 ? "+" : ""}${FinancialCalculator.formatCurrency(totalGainLoss)}`}
+            icon={totalGainLoss >= 0 ? "fa-arrow-trend-up" : "fa-arrow-trend-down"}
+            colorScheme={totalGainLoss >= 0 ? "green" : "red"}
+          />
+          
+          <StatCard
+            title="Portfolio APY"
+            value={FinancialCalculator.formatAPY(collectiveAPY)}
+            icon="fa-percentage"
+            colorScheme={collectiveAPY >= 0 ? "purple" : "red"}
+          />
+        </div>
 
         {/* Charts Section */}
         <MotionDiv
@@ -908,26 +885,21 @@ export default function AssetManager() {
           transition={{ delay: 0.2 }}
           className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+          <EnhancedGlassCard enableLensing hoverable variant="standard" padding="lg" animate animationDelay={0.3}>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                 Portfolio Performance
               </h3>
-              <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-1">
-                {["7", "30", "90", "365", "max"].map((days) => (
-                  <button
-                    key={days}
-                    onClick={() => setTimeframe(days)}
-                    className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap touch-manipulation ${
-                      timeframe === days
-                        ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    }`}
-                  >
-                    {days === "max" ? "Max" : `${days}D`}
-                  </button>
-                ))}
-              </div>
+              <EnhancedTabs
+                tabs={["7", "30", "90", "365", "max"].map((days) => ({
+                  id: days,
+                  label: days === "max" ? "Max" : `${days}D`,
+                }))}
+                activeTab={timeframe}
+                onTabChange={setTimeframe}
+                variant="glass"
+                size="sm"
+              />
             </div>
             {chartLoading ? (
               <ChartLoadingSkeleton height="h-48 sm:h-64" />
@@ -940,9 +912,9 @@ export default function AssetManager() {
                 />
               </div>
             )}
-          </div>
+          </EnhancedGlassCard>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+          <EnhancedGlassCard enableLensing hoverable variant="standard" padding="lg" animate animationDelay={0.3}>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Asset Distribution
             </h3>
@@ -959,79 +931,196 @@ export default function AssetManager() {
                 }))}
               />
             </div>
-          </div>
+          </EnhancedGlassCard>
         </MotionDiv>
 
-        {/* Filter and View Controls */}
+        {/* New Filter Bar Design - like Expense Manager */}
         <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4"
+          className="mb-6"
         >
-          <div className="flex gap-2 overflow-x-auto pb-2 w-full lg:w-auto">
-            <button
-              onClick={() => setFilterType("all")}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap touch-manipulation ${
-                filterType === "all"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              All Assets
-            </button>
-            {Object.keys(assetsByType).map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap touch-manipulation ${
-                  filterType === type
-                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                }`}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <div className="flex items-center gap-3 flex-1">
+              {/* Category Dropdown */}
+              <div className="relative">
+                <Button
+                  onClick={() => setOpenCategoryDropdown(!openCategoryDropdown)}
+                  variant="glass"
+                  size="md"
+                  animate
+                  className="min-w-[180px] justify-between"
+                >
+                  <span className="flex items-center gap-2">
+                    <i className={`fas ${filterType === "all" ? "fa-layer-group" : assetTypeConfig[filterType as keyof typeof assetTypeConfig]?.icon || "fa-coins"} text-sm`}></i>
+                    {filterType === "all" ? "All Assets" : filterType.charAt(0).toUpperCase() + filterType.slice(1).replace("_", " ")}
+                  </span>
+                  <i className="fas fa-chevron-down text-xs"></i>
+                </Button>
+                
+                {openCategoryDropdown && (
+                  <div className="absolute top-full left-0 mt-2 w-64 liquid-glass rounded-lg shadow-xl z-20 max-h-80 overflow-y-auto">
+                    <Button
+                      onClick={() => {
+                        setFilterType("all");
+                        setOpenCategoryDropdown(false);
+                      }}
+                      variant="dropdown-item"
+                      className="border-b-0"
+                    >
+                      <i className="fas fa-layer-group mr-2"></i>
+                      All Assets
+                    </Button>
+                    
+                    {Object.entries(assetTypeConfig).map(([type, config]) => {
+                      const assetCount = assets.filter(a => a.type === type).length;
+                      if (assetCount === 0 && filterType !== type) return null;
+                      
+                      return (
+                        <Button
+                          key={type}
+                          onClick={() => {
+                            setFilterType(type);
+                            setOpenCategoryDropdown(false);
+                          }}
+                          variant="dropdown-item"
+                          className="flex items-center justify-between border-b-0"
+                        >
+                          <span className="flex items-center">
+                            <i className={`fas ${config.icon} mr-2`}></i>
+                            {type.charAt(0).toUpperCase() + type.slice(1).replace("_", " ")}
+                          </span>
+                          <span className="text-sm text-gray-500">({assetCount})</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Expandable Search Field */}
+              <div className={`relative transition-all duration-300 ${searchExpanded ? 'flex-1' : ''}`}>
+                <Button
+                  onClick={() => setSearchExpanded(!searchExpanded)}
+                  variant="glass"
+                  size="md"
+                  animate
+                  icon="fa-search"
+                  iconOnly
+                  className={`${searchExpanded ? 'hidden' : 'flex'}`}
+                />
+                
+                {searchExpanded && (
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full liquid-glass--subtle rounded-lg pl-10 pr-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
+                        placeholder="Search assets..."
+                        autoFocus
+                      />
+                      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setSearchExpanded(false);
+                        setSearchQuery("");
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      icon="fa-times"
+                      iconOnly
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Advanced Filters Button */}
+              <Button
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                variant="glass"
+                size="md"
+                animate
+                icon={showAdvancedFilters ? "fa-times" : "fa-sliders-h"}
+                className=""
               >
-                {type.charAt(0).toUpperCase() + type.slice(1).replace("_", " ")}{" "}
-                ({assetsByType[type].count})
-              </button>
-            ))}
+                <span className="hidden sm:inline">Advanced Filters</span>
+              </Button>
+            </div>
+
+            {/* View Mode Switcher */}
+            <ViewSwitcher
+              activeView={viewMode}
+              onViewChange={setViewMode}
+              variant="subtle"
+            />
           </div>
 
-          <div className="flex gap-2 self-end lg:self-auto">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-2 sm:p-3 rounded-lg transition-all duration-200 touch-manipulation ${
-                viewMode === "grid"
-                  ? "bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-              aria-label="Grid view"
-            >
-              <i className="fas fa-th text-sm sm:text-base"></i>
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 sm:p-3 rounded-lg transition-all duration-200 touch-manipulation ${
-                viewMode === "list"
-                  ? "bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-              aria-label="List view"
-            >
-              <i className="fas fa-list text-sm sm:text-base"></i>
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`p-2 sm:p-3 rounded-lg transition-all duration-200 touch-manipulation ${
-                viewMode === "table"
-                  ? "bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-              aria-label="Table view"
-            >
-              <i className="fas fa-table text-sm sm:text-base"></i>
-            </button>
-          </div>
+          {/* Search Results Count */}
+          {searchQuery && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Found {filteredAssets.length} {filteredAssets.length === 1 ? 'asset' : 'assets'} matching "{searchQuery}"
+            </p>
+          )}
+
+          {/* Collapsible Advanced Filters */}
+          <AnimatePresence>
+            {showAdvancedFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="p-4 liquid-glass--subtle rounded-lg mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Sort By
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="w-full liquid-glass--subtle rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      >
+                        <option value="value">Value</option>
+                        <option value="name">Name</option>
+                        <option value="type">Type</option>
+                        <option value="performance">Performance</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Min Value
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="$ 0"
+                        className="w-full liquid-glass--subtle rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Max Value
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="$ ∞"
+                        className="w-full liquid-glass--subtle rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </MotionDiv>
+
 
         {/* Assets Grid/List */}
         <AnimatePresence mode="wait">
@@ -1129,12 +1218,10 @@ export default function AssetManager() {
 
       {/* API Configuration Modal */}
       {showApiConfig && (
-        <Modal isOpen={showApiConfig} onClose={() => setShowApiConfig(false)}>
-          <AssetApiConfigModal
-            onClose={() => setShowApiConfig(false)}
-            onApiKeysUpdated={fetchAssets}
-          />
-        </Modal>
+        <AssetApiConfigModal
+          onClose={() => setShowApiConfig(false)}
+          onApiKeysUpdated={fetchAssets}
+        />
       )}
     </div>
   );

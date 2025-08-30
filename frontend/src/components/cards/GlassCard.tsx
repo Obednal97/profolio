@@ -3,9 +3,6 @@
 import React, { ReactNode } from "react";
 import { motion } from "framer-motion";
 
-// Import the liquid glass styles
-import "../../styles/liquid-glass.css";
-
 export interface GlassCardProps {
   children: ReactNode;
   className?: string;
@@ -256,9 +253,8 @@ export function GlassCard({
       {/* Subtle Inner Glow */}
       {showInnerGlow && !solidColor && !gradient && (
         <div
-          className={`absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 ${getBorderRadiusClass(
-            borderRadius
-          )} pointer-events-none`}
+          className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 pointer-events-none"
+          style={{ borderRadius: 'inherit' }}
         />
       )}
 

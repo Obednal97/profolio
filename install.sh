@@ -35,6 +35,15 @@ ROLLBACK_BACKUP_DIR=""
 TARGET_VERSION=""
 FORCE_VERSION=false
 
+# Advanced setup variables
+ADVANCED_MODE=false
+RESTORE_FROM_BACKUP=false
+OPTIMIZE_FILES=true
+AGGRESSIVE_OPTIMIZE=false
+BACKUP_DIR="/opt"
+SKIP_BACKUP=false
+AVAILABLE_BACKUPS=()
+
 # Simple progress spinner - using basic ASCII characters for compatibility
 SPINNER_CHARS="/-\|"
 SPINNER_PID=""
@@ -2596,6 +2605,260 @@ show_operation_statistics() {
     echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 }
 
+# List available backups
+list_available_backups() {
+    local backup_dir="${BACKUP_DIR:-/opt}"
+    local backups=()
+    
+    info "🔍 Searching for Profolio backups in $backup_dir..."
+    
+    # Look for profolio backup directories
+    for dir in "$backup_dir"/profolio-rollback-* "$backup_dir"/profolio-backup-* "$backup_dir"/profolio.backup.*; do
+        if [ -d "$dir" ]; then
+            local backup_name=$(basename "$dir")
+            local backup_date=""
+            local backup_version=""
+            
+            # Try to extract date from directory name
+            if [[ "$backup_name" =~ ([0-9]{8}_[0-9]{6}) ]]; then
+                backup_date="${BASH_REMATCH[1]}"
+            fi
+            
+            # Try to get version from package.json in backup
+            if [ -f "$dir/package.json" ]; then
+                backup_version=$(grep '"version"' "$dir/package.json" | cut -d'"' -f4 2>/dev/null || echo "unknown")
+            fi
+            
+            backups+=("$dir|$backup_name|$backup_date|$backup_version")
+        fi
+    done
+    
+    if [ ${#backups[@]} -eq 0 ]; then
+        warn "No backups found in $backup_dir"
+        return 1
+    fi
+    
+    echo -e "${CYAN}Found ${#backups[@]} backup(s):${NC}"
+    echo ""
+    
+    local i=1
+    for backup in "${backups[@]}"; do
+        IFS='|' read -r path name date version <<< "$backup"
+        echo -e "  ${GREEN}[$i]${NC} $name"
+        [ -n "$version" ] && [ "$version" != "unknown" ] && echo "      Version: $version"
+        [ -n "$date" ] && echo "      Date: $date"
+        echo "      Path: $path"
+        echo ""
+        ((i++))
+    done
+    
+    # Store backups array for selection
+    AVAILABLE_BACKUPS=("${backups[@]}")
+    return 0
+}
+
+# Restore from backup
+restore_from_backup() {
+    local backup_path="$1"
+    
+    if [ ! -d "$backup_path" ]; then
+        error "Backup directory does not exist: $backup_path"
+        return 1
+    fi
+    
+    info "📥 Restoring Profolio from backup: $(basename "$backup_path")"
+    
+    # Stop services if running
+    if systemctl is-active --quiet profolio-frontend || systemctl is-active --quiet profolio-backend; then
+        info "Stopping Profolio services..."
+        systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    fi
+    
+    # Create backup of current installation if exists
+    if [ -d "/opt/profolio" ]; then
+        local timestamp=$(date +%Y%m%d_%H%M%S)
+        local current_backup="/opt/profolio-before-restore-$timestamp"
+        info "Backing up current installation to $current_backup"
+        cp -r /opt/profolio "$current_backup" 2>/dev/null || warn "Could not backup current installation"
+    fi
+    
+    # Remove current installation
+    rm -rf /opt/profolio
+    
+    # Restore from backup
+    info "Copying backup files..."
+    if cp -r "$backup_path" /opt/profolio; then
+        success "✅ Backup restored successfully"
+        
+        # Fix permissions
+        chown -R profolio:profolio /opt/profolio
+        
+        # Reinstall dependencies if needed
+        if [ -d "/opt/profolio" ]; then
+            cd /opt/profolio
+            
+            if [ -f "pnpm-lock.yaml" ]; then
+                info "Reinstalling dependencies with pnpm..."
+                sudo -u profolio pnpm install --frozen-lockfile || warn "Dependencies installation had issues"
+            fi
+            
+            # Rebuild if needed
+            if [ -f "backend/package.json" ] && [ ! -d "backend/dist" ]; then
+                info "Rebuilding backend..."
+                cd backend
+                sudo -u profolio pnpm run build || warn "Backend build had issues"
+                cd ..
+            fi
+            
+            if [ -f "frontend/package.json" ] && [ ! -d "frontend/.next" ]; then
+                info "Rebuilding frontend..."
+                cd frontend
+                sudo -u profolio pnpm run build || warn "Frontend build had issues"
+                cd ..
+            fi
+        fi
+        
+        # Restart services
+        info "Starting Profolio services..."
+        systemctl start profolio-backend
+        sleep 2
+        systemctl start profolio-frontend
+        
+        # Check service status
+        if systemctl is-active --quiet profolio-frontend && systemctl is-active --quiet profolio-backend; then
+            success "✅ Services restored and running"
+            return 0
+        else
+            warn "Services restored but may need manual start"
+            return 0
+        fi
+    else
+        error "Failed to restore from backup"
+        return 1
+    fi
+}
+
+# Run advanced setup wizard
+run_advanced_setup() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                    Advanced Setup Options                     ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    # Rollback protection
+    echo -e "${WHITE}Rollback Protection:${NC}"
+    echo -e "  ${GREEN}[1]${NC} Enable (recommended) - Auto-rollback on failure"
+    echo -e "  ${GREEN}[2]${NC} Disable - No automatic rollback"
+    echo ""
+    read -p "Select rollback protection [1]: " rollback_choice
+    rollback_choice=${rollback_choice:-1}
+    
+    if [ "$rollback_choice" = "2" ]; then
+        ROLLBACK_ENABLED=false
+        warn "⚠️ Automatic rollback disabled"
+    else
+        ROLLBACK_ENABLED=true
+        success "✅ Automatic rollback enabled"
+    fi
+    
+    # Version selection
+    echo ""
+    echo -e "${WHITE}Version Selection:${NC}"
+    echo -e "  ${GREEN}[1]${NC} Latest stable release (recommended)"
+    echo -e "  ${GREEN}[2]${NC} Latest development (main branch)"
+    echo -e "  ${GREEN}[3]${NC} Specific version"
+    echo -e "  ${GREEN}[4]${NC} List available versions"
+    echo ""
+    read -p "Select version option [1]: " version_choice
+    version_choice=${version_choice:-1}
+    
+    case $version_choice in
+        2)
+            TARGET_VERSION="main"
+            info "📦 Will install from main branch"
+            ;;
+        3)
+            read -p "Enter version (e.g., v1.13.1): " TARGET_VERSION
+            if ! validate_version "$TARGET_VERSION"; then
+                error "Invalid version format"
+                exit 1
+            fi
+            info "📦 Will install version $TARGET_VERSION"
+            ;;
+        4)
+            get_available_versions
+            echo ""
+            read -p "Enter version from list: " TARGET_VERSION
+            if ! validate_version "$TARGET_VERSION"; then
+                error "Invalid version format"
+                exit 1
+            fi
+            info "📦 Will install version $TARGET_VERSION"
+            ;;
+        *)
+            TARGET_VERSION="latest"
+            info "📦 Will install latest stable release"
+            ;;
+    esac
+    
+    # File optimization
+    echo ""
+    echo -e "${WHITE}File Optimization:${NC}"
+    echo -e "  ${GREEN}[1]${NC} Standard optimization (recommended)"
+    echo -e "  ${GREEN}[2]${NC} Aggressive optimization (smaller size, slower build)"
+    echo -e "  ${GREEN}[3]${NC} No optimization (faster install, larger size)"
+    echo ""
+    read -p "Select optimization level [1]: " optimize_choice
+    optimize_choice=${optimize_choice:-1}
+    
+    case $optimize_choice in
+        2)
+            OPTIMIZE_FILES=true
+            AGGRESSIVE_OPTIMIZE=true
+            info "🗜️ Aggressive optimization enabled"
+            ;;
+        3)
+            OPTIMIZE_FILES=false
+            info "⏩ Optimization disabled for faster install"
+            ;;
+        *)
+            OPTIMIZE_FILES=true
+            AGGRESSIVE_OPTIMIZE=false
+            info "⚡ Standard optimization enabled"
+            ;;
+    esac
+    
+    # Backup directory
+    echo ""
+    echo -e "${WHITE}Backup Configuration:${NC}"
+    read -p "Custom backup directory (press Enter for /opt): " custom_backup
+    if [ -n "$custom_backup" ]; then
+        BACKUP_DIR="$custom_backup"
+        info "📁 Backup directory: $BACKUP_DIR"
+    else
+        BACKUP_DIR="/opt"
+        info "📁 Using default backup directory: /opt"
+    fi
+    
+    # Summary
+    echo ""
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                    Configuration Summary                      ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "  Rollback Protection: $([ "$ROLLBACK_ENABLED" = true ] && echo "✅ Enabled" || echo "❌ Disabled")"
+    echo -e "  Version: $TARGET_VERSION"
+    echo -e "  Optimization: $([ "$OPTIMIZE_FILES" = true ] && echo "✅ Enabled" || echo "❌ Disabled")"
+    [ "$AGGRESSIVE_OPTIMIZE" = true ] && echo -e "  Optimization Level: Aggressive"
+    echo -e "  Backup Directory: $BACKUP_DIR"
+    echo ""
+    
+    read -p "Proceed with these settings? [Y/n]: " confirm
+    if [[ "$confirm" =~ ^[Nn] ]]; then
+        warn "Installation cancelled by user"
+        exit 0
+    fi
+}
+
 # Main execution logic with improved terminology
 main() {
     # Initialize operation tracking
@@ -2667,6 +2930,35 @@ main() {
                     exit 1
                 fi
                 ;;
+            --advanced)
+                ADVANCED_MODE=true
+                shift
+                ;;
+            --optimize)
+                OPTIMIZE_FILES=true
+                shift
+                ;;
+            --no-optimize)
+                OPTIMIZE_FILES=false
+                shift
+                ;;
+            --backup-dir)
+                BACKUP_DIR="$2"
+                if [ -z "$BACKUP_DIR" ]; then
+                    error "Backup directory parameter requires a value"
+                    echo "Usage: $0 --backup-dir /path/to/backup"
+                    exit 1
+                fi
+                shift 2
+                ;;
+            --restore-backup)
+                RESTORE_FROM_BACKUP=true
+                shift
+                ;;
+            --skip-backup)
+                SKIP_BACKUP=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -2703,6 +2995,40 @@ main() {
         success "Version $TARGET_VERSION validated"
     fi
     
+    # Handle restore from backup if requested
+    if [ "$RESTORE_FROM_BACKUP" = true ]; then
+        info "📥 Restore from backup mode"
+        
+        if list_available_backups; then
+            echo ""
+            read -p "Select backup number to restore (or 'q' to quit): " backup_choice
+            
+            if [[ "$backup_choice" = "q" ]]; then
+                warn "Restore cancelled"
+                exit 0
+            fi
+            
+            if [[ "$backup_choice" =~ ^[0-9]+$ ]] && [ "$backup_choice" -ge 1 ] && [ "$backup_choice" -le "${#AVAILABLE_BACKUPS[@]}" ]; then
+                local selected_backup="${AVAILABLE_BACKUPS[$((backup_choice-1))]}"
+                IFS='|' read -r backup_path rest <<< "$selected_backup"
+                
+                if restore_from_backup "$backup_path"; then
+                    success "✅ Restore completed successfully"
+                    exit 0
+                else
+                    error "Restore failed"
+                    exit 1
+                fi
+            else
+                error "Invalid selection"
+                exit 1
+            fi
+        else
+            error "No backups available to restore"
+            exit 1
+        fi
+    fi
+    
     info "Detecting application state..."
     detect_installation_state
     local install_state=$?
@@ -2710,8 +3036,24 @@ main() {
     case $install_state in
         0)
             info "Application action: First install"
-            if [ "$AUTO_INSTALL" = false ]; then
-                run_configuration_wizard
+            
+            # Check if advanced mode is requested
+            if [ "$ADVANCED_MODE" = true ]; then
+                run_advanced_setup
+            elif [ "$AUTO_INSTALL" = false ]; then
+                # Ask user for basic or advanced setup
+                echo -e "${WHITE}Setup Mode Selection:${NC}"
+                echo -e "  ${GREEN}[1]${NC} Basic Setup (recommended) - Quick installation with defaults"
+                echo -e "  ${GREEN}[2]${NC} Advanced Setup - Full control over all options"
+                echo ""
+                read -p "Select setup mode [1]: " setup_mode
+                setup_mode=${setup_mode:-1}
+                
+                if [ "$setup_mode" = "2" ]; then
+                    run_advanced_setup
+                else
+                    run_configuration_wizard
+                fi
             else
                 use_defaults
             fi
@@ -2719,24 +3061,36 @@ main() {
             ;;
         1)
             info "Application action: Existing installation detected (services not running)"
-            run_update_wizard  # Use same wizard for both running and non-running
             
-            # Determine action based on user choice
-            if [ "${USER_ACTION_CHOICE:-}" = "repair" ]; then
-                repair_installation
-            else
+            if [ "$ADVANCED_MODE" = true ]; then
+                run_advanced_setup
                 update_installation
+            else
+                run_update_wizard  # Use same wizard for both running and non-running
+                
+                # Determine action based on user choice
+                if [ "${USER_ACTION_CHOICE:-}" = "repair" ]; then
+                    repair_installation
+                else
+                    update_installation
+                fi
             fi
             ;;
         2)
             info "Application action: Existing installation detected (services running)"
-            run_update_wizard
             
-            # Determine action based on user choice  
-            if [ "${USER_ACTION_CHOICE:-}" = "repair" ]; then
-                repair_installation
-            else
+            if [ "$ADVANCED_MODE" = true ]; then
+                run_advanced_setup
                 update_installation
+            else
+                run_update_wizard
+                
+                # Determine action based on user choice  
+                if [ "${USER_ACTION_CHOICE:-}" = "repair" ]; then
+                    repair_installation
+                else
+                    update_installation
+                fi
             fi
             ;;
         *)
@@ -2748,39 +3102,57 @@ main() {
 
 # Show enhanced help
 show_help() {
-    echo -e "${CYAN}🚀 Profolio Installer/Updater v2.0${NC}"
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                 🚀 Profolio Installer v2.1                   ║${NC}"
+    echo -e "${CYAN}║         Universal Linux Installer with Advanced Features      ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${WHITE}USAGE:${NC}"
-    echo "  $0 [OPTIONS]"
+    echo "  sudo $0 [OPTIONS]"
     echo ""
-    echo -e "${WHITE}OPTIONS:${NC}"
+    echo -e "${WHITE}INSTALLATION MODES:${NC}"
+    echo -e "  ${GREEN}Basic Setup${NC}     - Quick installation with recommended defaults"
+    echo -e "  ${GREEN}Advanced Setup${NC}  - Full control over configuration options"
+    echo ""
+    echo -e "${WHITE}GENERAL OPTIONS:${NC}"
+    echo -e "  ${GREEN}--help, -h${NC}               Show this help message"
     echo -e "  ${GREEN}--auto, --unattended${NC}     Run with default configuration"
+    echo -e "  ${GREEN}--advanced${NC}               Force advanced setup mode"
+    echo -e "  ${GREEN}--list-versions${NC}          Show available versions and exit"
+    echo ""
+    echo -e "${WHITE}VERSION CONTROL:${NC}"
     echo -e "  ${GREEN}--version VERSION${NC}        Install/update to specific version"
     echo -e "  ${GREEN}--force-version VERSION${NC}  Force version (skip existence check)"
-    echo -e "  ${GREEN}--no-rollback${NC}            Disable automatic rollback on failure"
-    echo -e "  ${GREEN}--list-versions${NC}          Show available versions and exit"
     echo -e "  ${GREEN}--rollback${NC}               Execute manual rollback to previous version"
-    echo -e "  ${GREEN}--help, -h${NC}               Show this help message"
+    echo -e "  ${GREEN}--no-rollback${NC}            Disable automatic rollback on failure"
+    echo ""
+    echo -e "${WHITE}ADVANCED OPTIONS:${NC}"
+    echo -e "  ${GREEN}--optimize${NC}               Enable aggressive file optimization"
+    echo -e "  ${GREEN}--no-optimize${NC}            Skip file optimization"
+    echo -e "  ${GREEN}--backup-dir DIR${NC}         Specify backup directory"
+    echo -e "  ${GREEN}--restore-backup${NC}         Restore from existing backup"
+    echo -e "  ${GREEN}--skip-backup${NC}            Skip backup creation"
     echo ""
     echo -e "${WHITE}VERSION FORMATS:${NC}"
-    echo -e "  ${YELLOW}v1.0.3${NC}                   Install specific release version"
-    echo -e "  ${YELLOW}1.0.3${NC}                    Install specific release version (without 'v')"
+    echo -e "  ${YELLOW}v1.13.1${NC}                  Install specific release version"
+    echo -e "  ${YELLOW}1.13.1${NC}                   Install specific release version (without 'v')"
     echo -e "  ${YELLOW}main${NC}                     Install latest development version"
     echo -e "  ${YELLOW}latest${NC}                   Install latest stable release"
     echo ""
     echo -e "${WHITE}EXAMPLES:${NC}"
     echo -e "  ${CYAN}$0${NC}                        Interactive installation"
     echo -e "  ${CYAN}$0 --auto${NC}                 Quick installation with defaults"
-    echo -e "  ${CYAN}$0 --version v1.0.3${NC}       Install specific version"
-    echo -e "  ${CYAN}$0 --version main${NC}         Install latest development"
-    echo -e "  ${CYAN}$0 --list-versions${NC}        Show available versions"
+    echo -e "  ${CYAN}$0 --advanced${NC}             Advanced setup with options"
+    echo -e "  ${CYAN}$0 --version v1.13.1${NC}      Install specific version"
+    echo -e "  ${CYAN}$0 --restore-backup${NC}       Restore from backup"
     echo -e "  ${CYAN}$0 --rollback${NC}             Rollback to previous version"
     echo ""
-    echo -e "${WHITE}ROLLBACK FEATURES:${NC}"
+    echo -e "${WHITE}ROLLBACK & BACKUP:${NC}"
     echo -e "  • ${GREEN}Automatic rollback${NC} on failed updates"
     echo -e "  • ${GREEN}Git-based restoration${NC} with backup fallback"
     echo -e "  • ${GREEN}Service state preservation${NC}"
     echo -e "  • ${GREEN}Manual rollback${NC} command available"
+    echo -e "  • ${GREEN}Backup detection${NC} and restore options"
     echo ""
     echo -e "${WHITE}SAFETY FEATURES:${NC}"
     echo -e "  • ${GREEN}Pre-update backups${NC} created automatically"

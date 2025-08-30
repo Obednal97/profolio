@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
----
 description: Master index of all active Cursor rules organized by category and purpose
 ruleType: always
 alwaysApply: true
@@ -17,56 +12,56 @@ This document serves as the central index for all active Cursor rules within thi
 
 Fundamental project structure, setup, and general development guidelines.
 
-| Rule File                          | Description                                                 |
-| :--------------------------------- | :---------------------------------------------------------- |
-| @notes.mdc                         | Development guidelines and project context                  |
-| @cursor-rules.mdc                  | How to add or edit Cursor rules in our project              |
-| @project-structure.mdc             | Project structure and file organization guidelines          |
-| @installing-packages.mdc           | How to install packages                                     |
-| @environment-variables.mdc         | Add environment variable                                    |
-| @logging.mdc                       | How to do backend logging                                   |
-| @utilities.mdc                     | Util functions                                              |
-| @git-workflow.mdc                  | Git workflow automation and commit patterns                 |
-| @date-formatting.mdc               | UK date formatting standards and validation                 |
-| @code-quality.mdc                  | Essential security and quality standards                    |
+| Rule File                  | Description                                        |
+| :------------------------- | :------------------------------------------------- |
+| @notes.mdc                 | Development guidelines and project context         |
+| @cursor-rules.mdc          | How to add or edit Cursor rules in our project     |
+| @project-structure.mdc     | Project structure and file organization guidelines |
+| @installing-packages.mdc   | How to install packages                            |
+| @environment-variables.mdc | Add environment variable                           |
+| @logging.mdc               | How to do backend logging                          |
+| @utilities.mdc             | Util functions                                     |
+| @git-workflow.mdc          | Git workflow automation and commit patterns        |
+| @date-formatting.mdc       | UK date formatting standards and validation        |
+| @code-quality.mdc          | Essential security and quality standards           |
 
 ## Frontend & UI
 
 Guidelines for building user interfaces and handling frontend logic.
 
-| Rule File                          | Description                                                 |
-| :--------------------------------- | :---------------------------------------------------------- |
-| @page-structure.mdc                | Page structure guidelines                                   |
-| @ui-components.mdc                 | UI component and styling guidelines (Radix UI, Tailwind)    |
-| @hooks.mdc                         | Guidelines for creating custom React hooks                  |
+| Rule File           | Description                                              |
+| :------------------ | :------------------------------------------------------- |
+| @page-structure.mdc | Page structure guidelines                                |
+| @ui-components.mdc  | UI component and styling guidelines (Radix UI, Tailwind) |
+| @hooks.mdc          | Guidelines for creating custom React hooks               |
 
 ## Backend & API
 
 Guidelines for implementing backend logic, APIs, and data persistence.
 
-| Rule File                          | Description                                                 |
-| :--------------------------------- | :---------------------------------------------------------- |
-| @get-api-route.mdc                 | Guidelines for implementing GET API routes in Next.js       |
-| @server-actions.mdc                | Guidelines for implementing Next.js server actions          |
-| @prisma.mdc                        | How to use Prisma ORM with PostgreSQL                       |
+| Rule File           | Description                                           |
+| :------------------ | :---------------------------------------------------- |
+| @get-api-route.mdc  | Guidelines for implementing GET API routes in Next.js |
+| @server-actions.mdc | Guidelines for implementing Next.js server actions    |
+| @prisma.mdc         | How to use Prisma ORM with PostgreSQL                 |
 
 ## Testing
 
 Comprehensive testing guidelines including E2E, unit, security, and performance testing.
 
-| Rule File                          | Description                                                 |
-| :--------------------------------- | :---------------------------------------------------------- |
-| @testing.mdc                       | Comprehensive testing guidelines (E2E, security, performance, unit) |
+| Rule File    | Description                                                         |
+| :----------- | :------------------------------------------------------------------ |
+| @testing.mdc | Comprehensive testing guidelines (E2E, security, performance, unit) |
 
 ## Project Management
 
 Guidelines for managing project development, tracking progress, and maintaining project knowledge.
 
-| Rule File                          | Description                                                 |
-| :--------------------------------- | :---------------------------------------------------------- |
-| @task-list.mdc                     | Guidelines for creating and managing task lists             |
-| @memory.mdc                        | AI memory system for storing project-specific knowledge     |
-| @learned-memories.mdc              | Project knowledge and preferences learned by AI             |
-| @mcp-integration.mdc               | Guidelines for Model Context Protocol server integration    |
-| @global-rules-management.mdc       | System for sharing rules across multiple projects           |
-| @rule-optimization.mdc             | Best practices for writing efficient, effective rules       |
+| Rule File                    | Description                                              |
+| :--------------------------- | :------------------------------------------------------- |
+| @task-list.mdc               | Guidelines for creating and managing task lists          |
+| @memory.mdc                  | AI memory system for storing project-specific knowledge  |
+| @learned-memories.mdc        | Project knowledge and preferences learned by AI          |
+| @mcp-integration.mdc         | Guidelines for Model Context Protocol server integration |
+| @global-rules-management.mdc | System for sharing rules across multiple projects        |
+| @rule-optimization.mdc       | Best practices for writing efficient, effective rules    |

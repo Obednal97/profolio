@@ -1,0 +1,225 @@
+/* === Platform: PWA === */
+/* Progressive Web App specific styles */
+
+/* iOS Status Bar and Safe Areas */
+.pwa-app {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Mobile overscroll behavior */
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Installation prompt styles */
+.pwa-install-prompt {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 50;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  border-radius: 1.5rem;
+  padding: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* PWA Status Bar Glass Blur Effect - See TODO note from globals.css */
+/* 
+TODO: Status Bar Glass Blur Effect - NEEDS FUTURE WORK
+=====================================
+GOAL: Add glass blur effect to iOS PWA status bar area (where time/battery/signal show)
+ATTEMPTS TRIED:
+1. CSS div with fixed positioning - only showed as thin line
+2. Body pseudo-element with negative top positioning - behind content
+3. Higher z-index (99999) - still not visible
+4. Red test background - worked, proving CSS can reach status bar area
+5. Native iOS method with body background - worked but looked terrible
+
+ISSUE: Blur effect positioning/layering not working correctly
+- Element exists (red test proved it)
+- Positioning is correct (covers status bar area)  
+- But blur doesn't show properly - may be layering or iOS PWA limitation
+
+CURRENT STATE: Disabled blur, basic PWA functionality working
+NEXT STEPS: Research iOS PWA backdrop-filter limitations or alternative approaches
+*/
+
+/* PWA display mode specific styles */
+@media (display-mode: standalone) {
+  /* Normal body background with safe area padding */
+  body {
+    background: var(--background) !important;
+    padding-top: env(safe-area-inset-top, 44px) !important;
+    margin: 0 !important;
+  }
+
+  /* DISABLED: Status bar blur attempt - see TODO above
+  body::before {
+    content: '';
+    position: fixed;
+    top: calc(-1 * env(safe-area-inset-top, 44px));
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 44px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.4);
+    z-index: 99999;
+    pointer-events: none;
+  }
+  
+  .dark body::before {
+    background: rgba(17, 24, 40, 0.5);
+  }
+  */
+
+  /* PWA-ONLY Mobile Navigation Padding */
+  .pwa-mobile-nav,
+  .mobile-bottom-nav nav,
+  nav.pwa-mobile-nav {
+    padding-bottom: calc(
+      12px + env(safe-area-inset-bottom, 0px) + 16px
+    ) !important;
+  }
+
+  /* PWA header adjustments */
+  .pwa-header {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  /* PWA content area adjustments */
+  .pwa-content {
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+      env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
+
+  /* PWA bottom bar spacing */
+  .pwa-bottom-bar {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* iOS specific PWA styles */
+@supports (-webkit-touch-callout: none) {
+  /* iOS status bar handling */
+  @media (display-mode: standalone) {
+    /* Prevent bounce scrolling */
+    body {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Main app container with iOS scroll */
+    .app-root {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+}
+
+/* Android specific PWA styles */
+@media (display-mode: standalone) and (max-width: 768px) {
+  /* Android navigation bar color matching */
+  body {
+    background-color: var(--background);
+  }
+}
+
+/* PWA offline indicator */
+.pwa-offline-indicator {
+  @apply fixed top-0 left-0 right-0 z-50;
+  @apply bg-yellow-500 text-black text-center py-2 text-sm;
+  @apply animate-slide-in-down;
+}
+
+/* PWA update banner */
+.pwa-update-banner {
+  @apply fixed top-0 left-0 right-0 z-50;
+
+  /* Glass subtle styles */
+  backdrop-filter: blur(var(--glass-blur-sm))
+    saturate(var(--glass-saturation-low));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm))
+    saturate(var(--glass-saturation-low));
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border-subtle);
+
+  @apply p-4 text-center;
+  @apply animate-slide-in-down;
+}
+
+/* Enhanced safe area support (duplicated from globals.css for completeness) */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
+  --safe-area-inset-left: env(safe-area-inset-left, 0);
+  --safe-area-inset-right: env(safe-area-inset-right, 0);
+}
+
+/* PWA fullscreen mode */
+@media (display-mode: fullscreen) {
+  /* Hide non-essential UI in fullscreen */
+  .hide-in-fullscreen {
+    display: none;
+  }
+
+  /* Adjust spacing for fullscreen */
+  .fullscreen-content {
+    padding: 0;
+    margin: 0;
+  }
+}
+
+/* PWA minimal UI mode */
+@media (display-mode: minimal-ui) {
+  /* Smaller header in minimal UI */
+  .pwa-header {
+    padding-top: 0;
+    height: 3rem;
+  }
+}
+
+/* PWA orientation handling */
+@media (orientation: landscape) and (display-mode: standalone) {
+  /* Landscape specific adjustments */
+  .pwa-landscape-hidden {
+    display: none;
+  }
+
+  /* Adjust layout for landscape PWA */
+  .pwa-content {
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+}
+
+/* PWA splash screen preparation */
+.pwa-splash {
+  @apply fixed inset-0 z-[100];
+  @apply bg-background flex items-center justify-center;
+  @apply animate-fade-in;
+}
+
+/* PWA loading states */
+.pwa-loading {
+  @apply flex flex-col items-center justify-center gap-4;
+  @apply text-muted-foreground;
+}
+
+.pwa-loading-spinner {
+  @apply animate-spin;
+}

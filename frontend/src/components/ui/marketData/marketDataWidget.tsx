@@ -8,6 +8,7 @@ import React, {
   useRef,
 } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
 
 interface MarketData {
@@ -403,7 +404,7 @@ export function MarketDataWidget() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.1} enableLensing hoverable>
         <Skeleton className="h-6 w-32 mb-4" />
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -419,12 +420,12 @@ export function MarketDataWidget() {
             </div>
           ))}
         </div>
-      </div>
+      </EnhancedGlassCard>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.1} enableLensing hoverable>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           Market Data
@@ -493,6 +494,6 @@ export function MarketDataWidget() {
           <p className="text-sm">No market data available</p>
         </div>
       )}
-    </div>
+    </EnhancedGlassCard>
   );
 }

@@ -121,9 +121,9 @@ export function PortfolioGlassCard({
           {formatCurrency(asset.value)}
         </motion.span>
 
-        <p className="text-sm text-gray-500 dark:text-gray-400 glass-typography">
-          Current Portfolio Value
-        </p>
+        <div className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1">
+          This month&apos;s average performance
+        </div>
       </div>
 
       {/* Performance Chart Preview (placeholder) */}
@@ -186,13 +186,14 @@ export function PortfolioGlassGrid() {
           Portfolio Assets
         </h2>
         <p className="text-gray-600 dark:text-gray-300 glass-typography mt-2">
-          Your investment portfolio with Apple's Liquid Glass design language
+          Your investment portfolio with Apple&apos;s Liquid Glass design
+          language
         </p>
       </div>
 
       {/* Asset Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-        {sampleAssets.map((asset, index) => (
+        {sampleAssets.map((asset) => (
           <PortfolioGlassCard
             key={asset.symbol}
             asset={asset}

@@ -1,12 +1,7 @@
 ---
-description: 
-globs: **/*logger*.ts, **/*logger*.tsx, **/*logging*.ts, **/*logging*.tsx, backend/src/**/*service*.ts, backend/src/**/*controller*.ts, backend/src/**/*middleware*.ts, backend/src/**/*interceptor*.ts
-alwaysApply: false
----
----
 description: Logging best practices for frontend console logging and NestJS backend logging
 ruleType: autoAttached
-globs: ["**/*logger*.ts", "**/*logger*.tsx", "**/*logging*.ts", "**/*logging*.tsx", "backend/src/**/*service*.ts", "backend/src/**/*controller*.ts", "backend/src/**/*middleware*.ts", "backend/src/**/*interceptor*.ts"]
+globs: **/*logger*.ts, **/*logger*.tsx, **/*logging*.ts, **/*logging*.tsx, backend/src/**/*service*.ts, backend/src/**/*controller*.ts, backend/src/**/*middleware*.ts, backend/src/**/*interceptor*.ts
 alwaysApply: false
 ---
 
@@ -23,7 +18,7 @@ console.warn("API response slower than expected", { responseTime });
 console.error("Failed to fetch portfolio data", { error, portfolioId });
 
 // Production-safe logging
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   console.log("Debug info", { data });
 }
 ```
@@ -33,7 +28,7 @@ if (process.env.NODE_ENV === 'development') {
 Use NestJS Logger for backend logging:
 
 ```typescript
-import { Logger } from '@nestjs/common';
+import { Logger } from "@nestjs/common";
 
 @Injectable()
 export class PortfolioService {
@@ -41,10 +36,14 @@ export class PortfolioService {
 
   async createPortfolio(createPortfolioDto: CreatePortfolioDto) {
     this.logger.log(`Creating portfolio for user ${createPortfolioDto.userId}`);
-    
+
     try {
-      const portfolio = await this.portfolioRepository.create(createPortfolioDto);
-      this.logger.log(`Portfolio created successfully`, { portfolioId: portfolio.id });
+      const portfolio = await this.portfolioRepository.create(
+        createPortfolioDto
+      );
+      this.logger.log(`Portfolio created successfully`, {
+        portfolioId: portfolio.id,
+      });
       return portfolio;
     } catch (error) {
       this.logger.error(`Failed to create portfolio`, {
@@ -73,15 +72,15 @@ Include relevant context in log messages:
 
 ```typescript
 // Good: Include relevant context
-this.logger.log('Portfolio updated', {
+this.logger.log("Portfolio updated", {
   portfolioId,
   userId,
-  changedFields: ['name', 'description'],
+  changedFields: ["name", "description"],
   timestamp: new Date().toISOString(),
 });
 
 // Bad: Minimal context
-this.logger.log('Portfolio updated');
+this.logger.log("Portfolio updated");
 ```
 
 ## Error Logging
@@ -92,7 +91,7 @@ Always log errors with context:
 try {
   await this.portfolioService.updatePortfolio(id, updateData);
 } catch (error) {
-  this.logger.error('Portfolio update failed', {
+  this.logger.error("Portfolio update failed", {
     portfolioId: id,
     error: error.message,
     stack: error.stack,

@@ -10,20 +10,92 @@ const config: Config = {
         xs: "475px",
       },
       colors: {
-        background: "#0b0b0c",
-        foreground: "#ffffff",
-        neon: "#39ff14",
-        neonPink: "#ff00c8",
-        neonPurple: "#bf00ff",
-        card: "#1a1a1d",
-      },
-      boxShadow: {
-        neon: "0 0 10px #39ff14, 0 0 20px #39ff14",
-        pinkGlow: "0 0 10px #ff00c8, 0 0 20px #ff00c8",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        card: "var(--card)",
+        "card-foreground": "var(--card-foreground)",
+        popover: "var(--popover)",
+        "popover-foreground": "var(--popover-foreground)",
+        primary: "var(--primary)",
+        "primary-foreground": "var(--primary-foreground)",
+        secondary: "var(--secondary)",
+        "secondary-foreground": "var(--secondary-foreground)",
+        muted: "var(--muted)",
+        "muted-foreground": "var(--muted-foreground)",
+        accent: "var(--accent)",
+        "accent-foreground": "var(--accent-foreground)",
+        destructive: "var(--destructive)",
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
       },
       transitionProperty: {
         height: "height",
         spacing: "margin, padding",
+      },
+      keyframes: {
+        fadeIn: {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        scaleIn: {
+          from: {
+            transform: "scale(0.95)",
+            opacity: "0",
+          },
+          to: {
+            transform: "scale(1)",
+            opacity: "1",
+          },
+        },
+        slideInRight: {
+          from: {
+            transform: "translateX(100%)",
+            opacity: "0",
+          },
+          to: {
+            transform: "translateX(0)",
+            opacity: "1",
+          },
+        },
+        slideInLeft: {
+          from: {
+            transform: "translateX(-100%)",
+            opacity: "0",
+          },
+          to: {
+            transform: "translateX(0)",
+            opacity: "1",
+          },
+        },
+        slideInUp: {
+          from: {
+            transform: "translateY(100%)",
+            opacity: "0",
+          },
+          to: {
+            transform: "translateY(0)",
+            opacity: "1",
+          },
+        },
+        slideInDown: {
+          from: {
+            transform: "translateY(-100%)",
+            opacity: "0",
+          },
+          to: {
+            transform: "translateY(0)",
+            opacity: "1",
+          },
+        },
+      },
+      animation: {
+        "fade-in": "fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both",
+        "scale-in": "scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) both",
+        "slide-in-right": "slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) both",
+        "slide-in-left": "slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) both",
+        "slide-in-up": "slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) both",
+        "slide-in-down": "slideInDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) both",
       },
     },
   },

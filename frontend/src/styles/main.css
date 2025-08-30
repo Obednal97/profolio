@@ -1,0 +1,38 @@
+/* === Profolio Main Styles === */
+/* Organized, modular CSS architecture */
+
+/* Import Tailwind v4 first */
+@import "tailwindcss";
+
+/* Import Tailwind config */
+@import "./tailwind-config.css";
+
+/* 1. Foundation Layer - Design system fundamentals */
+@import "./foundation/tokens.css";
+@import "./foundation/reset.css";
+@import "./foundation/typography.css";
+@import "./foundation/accessibility.css";
+
+/* 2. Component Layer - Component-specific styles */
+@import "./components/glass-system.css";
+@import "./components/buttons.css";
+@import "./components/inputs.css";
+@import "./components/modals.css";
+@import "./components/charts.css";
+
+/* 3. Layout Layer - Structural and spacing */
+@import "./layouts/grid.css";
+@import "./layouts/containers.css";
+@import "./layouts/spacing.css";
+
+/* 4. Theme Layer - Theme-specific overrides */
+@import "./themes/light.css";
+@import "./themes/dark.css";
+
+/* 5. Utility Layer - Helper classes */
+@import "./utilities/animations.css";
+@import "./utilities/performance.css";
+
+/* 6. Platform Layer - Platform-specific optimizations */
+@import "./platform/pwa.css";
+@import "./platform/mobile.css";

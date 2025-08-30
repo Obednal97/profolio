@@ -58,7 +58,7 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { signOut, userProfile } = useAuth();
+  const { signOut, userProfile, authMode } = useAuth();
   const { unreadCount } = useNotifications();
 
   // Prefer prop user (from createUserContext) over raw userProfile for consistency
@@ -174,41 +174,86 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
     setIsProfileOpen((prev) => !prev);
   }, []);
 
+  // Check if billing should be shown
+  const showBilling = useMemo(() => {
+    // Check if we're in cloud mode (Firebase auth) - use actual authMode from context
+    const isCloudMode = authMode === 'firebase';
+    
+    // Check if user is a demo user
+    const isDemoUser = typeof window !== 'undefined' && 
+      (localStorage.getItem('demo-mode') === 'true' || 
+       localStorage.getItem('demo-token') === 'demo-token-secure-123');
+    
+    // Check if running on localhost (development mode)
+    const isLocalhost = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || 
+       window.location.hostname === '127.0.0.1' ||
+       window.location.hostname === '::1');
+    
+    // Show billing in these cases:
+    // 1. Always show on localhost for testing (even for demo users)
+    // 2. In production: only show in cloud mode for non-demo authenticated users
+    if (isLocalhost) {
+      // Development mode: always show billing for testing
+      return isCloudMode && !!user;
+    } else {
+      // Production mode: show only for cloud non-demo users
+      return isCloudMode && !isDemoUser && !!user;
+    }
+  }, [user, authMode]);
+
   // Memoized profile menu items to prevent array recreation
   const profileMenuItems = useMemo(
-    (): MenuItem[] => [
-      {
-        label: "Account Settings",
-        path: "/app/settings",
-        icon: "fa-cog",
-        action: null,
-      },
-      {
-        label: "System Updates",
-        path: "/app/updates",
-        icon: "fa-download",
-        action: null,
-      },
-      {
-        label: "Notifications",
-        path: "/app/notifications",
-        icon: "fa-bell",
-        action: null,
-      },
-      {
-        label: `Switch to ${theme === "light" ? "dark" : "light"} mode`,
-        path: null,
-        icon: themeUtils.icon,
-        action: toggleTheme,
-      },
-      {
-        label: "Sign Out",
-        path: null,
-        icon: "fa-sign-out-alt",
-        action: handleSignOut,
-      },
-    ],
-    [theme, themeUtils.icon, toggleTheme, handleSignOut]
+    (): MenuItem[] => {
+      const items: MenuItem[] = [
+        {
+          label: "Account Settings",
+          path: "/app/settings",
+          icon: "fa-cog",
+          action: null,
+        },
+      ];
+
+      // Add billing link if conditions are met
+      if (showBilling) {
+        items.push({
+          label: "Billing & Subscription",
+          path: "/app/billing",
+          icon: "fa-credit-card",
+          action: null,
+        });
+      }
+
+      items.push(
+        {
+          label: "System Updates",
+          path: "/app/updates",
+          icon: "fa-download",
+          action: null,
+        },
+        {
+          label: "Notifications",
+          path: "/app/notifications",
+          icon: "fa-bell",
+          action: null,
+        },
+        {
+          label: `Switch to ${theme === "light" ? "dark" : "light"} mode`,
+          path: null,
+          icon: themeUtils.icon,
+          action: toggleTheme,
+        },
+        {
+          label: "Sign Out",
+          path: null,
+          icon: "fa-sign-out-alt",
+          action: handleSignOut,
+        }
+      );
+
+      return items;
+    },
+    [theme, themeUtils.icon, toggleTheme, handleSignOut, showBilling]
   );
 
   return (

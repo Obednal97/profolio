@@ -10,7 +10,7 @@ import { AuthLoadingState } from '@/components/ui/AuthLoadingState';
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [authFlow, setAuthFlow] = useState<'loading' | 'signing-in' | 'signing-out' | 'authenticated' | 'unauthenticated'>('loading');
+  const [authFlow, setAuthFlow] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const router = useRouter();
 
   // Always call hooks at the top level (React Hooks rules)
@@ -43,36 +43,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (!isClient) return;
 
     try {
-      // Determine authentication flow state
+      // Determine authentication flow state - optimized for instant navigation
       if (loading) {
-        // Check for specific auth flow indicators in URL or localStorage
-        const urlParams = new URLSearchParams(window.location.search);
-        const authAction = urlParams.get('auth-action');
-        
-        if (authAction === 'signing-in') {
-          setAuthFlow('signing-in');
-        } else if (authAction === 'signing-out') {
-          setAuthFlow('signing-out');
-        } else {
-          setAuthFlow('loading');
-        }
+        setAuthFlow('loading');
       } else if ((user && user.id) || isDemoMode) {
-        // Check if we just finished signing in
-        const urlParams = new URLSearchParams(window.location.search);
-        const authAction = urlParams.get('auth-action');
+        // Authenticated - show content immediately
+        setAuthFlow('authenticated');
         
-        if (authAction === 'signing-in') {
-          // Clear the query parameter and show signing in state briefly
-          setAuthFlow('signing-in');
-          // Clear the parameter after a short delay
-          setTimeout(() => {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('auth-action');
-            window.history.replaceState({}, '', url.toString());
-            setAuthFlow('authenticated');
-          }, 1500);
-        } else {
-          setAuthFlow('authenticated');
+        // Clean up any lingering auth-action parameters without delay
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('auth-action')) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('auth-action');
+          window.history.replaceState({}, '', url.toString());
         }
       } else {
         setAuthFlow('unauthenticated');
@@ -115,13 +98,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // Handle different authentication flow states
   switch (authFlow) {
     case 'loading':
+      // Only show loading state for initial app load, not for auth transitions
       return <AuthLoadingState type="loading" message="Initializing application..." />;
-      
-    case 'signing-in':
-      return <AuthLoadingState type="signing-in" />;
-      
-    case 'signing-out':
-      return <AuthLoadingState type="signing-out" />;
       
     case 'unauthenticated':
       return (

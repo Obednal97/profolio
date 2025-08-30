@@ -6,8 +6,10 @@ import React, {
   useRef,
 } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button/button";
+import { Button } from "@/components/ui/button";
 import { GooglePlacesApiKeyModal } from "./GooglePlacesApiKeyModal";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { BaseModal } from "./modal";
 import type { Property, PropertyFormData } from "@/types/global";
 
 // Country and state data
@@ -911,18 +913,26 @@ export function PropertyModal({
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 w-full max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl mt-4 sm:mt-8 relative z-50">
+    <BaseModal isOpen={true} onClose={onClose}>
+      <EnhancedGlassCard
+        variant="prominent"
+        padding="lg"
+        hoverable={false}
+        enableLensing={false}
+        animate={false}
+        className="w-full max-w-4xl relative z-50">
       <div className="flex justify-between items-center mb-6 sm:mb-8">
         <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
           {initialData ? "Edit Property" : "Add New Property"}
         </h3>
-        <button
+        <Button
           onClick={onClose}
-          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+          variant="ghost"
+          size="sm"
+          icon="fa-times"
+          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           aria-label="Close Modal"
-        >
-          <i className="fas fa-times text-lg sm:text-xl"></i>
-        </button>
+        />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
@@ -930,7 +940,7 @@ export function PropertyModal({
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-red-900/20 backdrop-blur-sm border border-red-800 rounded-xl p-4"
+            className="bg-red-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl p-4"
           >
             <p className="text-red-400 flex items-center">
               <i className="fas fa-exclamation-circle mr-2"></i>
@@ -956,26 +966,30 @@ export function PropertyModal({
                 </label>
                 <div className="flex items-center space-x-2">
                   {!manualAddressEntry && (
-                    <button
+                    <Button
                       type="button"
                       onClick={() => setShowApiKeyModal(true)}
-                      className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 flex items-center"
+                      variant="ghost"
+                      size="sm"
+                      icon="fa-key"
+                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
                     >
-                      <i className="fas fa-key mr-1"></i>
                       {apiKeySource === "none"
                         ? "Add API Key"
                         : "Manage API Key"}
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <Button
                     type="button"
                     onClick={handleManualAddressToggle}
-                    className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     {manualAddressEntry
                       ? "Use Address Search"
                       : "Enter Manually"}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -1047,22 +1061,26 @@ export function PropertyModal({
                             }
 
                             return (
-                              <button
+                              <Button
                                 key={index}
                                 type="button"
                                 onClick={() => handleAddressSelect(suggestion)}
-                                className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 transition-colors"
+                                variant="ghost"
+                                fullWidth
+                                className="text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 justify-start"
                               >
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {suggestion.street || suggestion.display_name}
-                                </div>
-                                {suggestion.street && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {suggestion.city}, {suggestion.state}{" "}
-                                    {suggestion.postcode}, {suggestion.country}
+                                <div className="flex flex-col items-start">
+                                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {suggestion.street || suggestion.display_name}
                                   </div>
-                                )}
-                              </button>
+                                  {suggestion.street && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      {suggestion.city}, {suggestion.state}{" "}
+                                      {suggestion.postcode}, {suggestion.country}
+                                    </div>
+                                  )}
+                                </div>
+                              </Button>
                             );
                           })}
                         </div>
@@ -1085,13 +1103,15 @@ export function PropertyModal({
                           <span>
                             <strong>Tip:</strong> For better address search
                             results, click{" "}
-                            <button
+                            <Button
                               type="button"
                               onClick={() => setShowApiKeyModal(true)}
-                              className="underline hover:text-amber-800 dark:hover:text-amber-200"
+                              variant="ghost"
+                              size="sm"
+                              className="underline hover:text-amber-800 dark:hover:text-amber-200 inline p-0 h-auto"
                             >
                               &ldquo;Add API Key&rdquo;
-                            </button>{" "}
+                            </Button>{" "}
                             to enable Google Places API. Currently using
                             OpenStreetMap for address suggestions.
                           </span>
@@ -1847,6 +1867,7 @@ export function PropertyModal({
           onApiKeyUpdated={handleApiKeyUpdated}
         />
       )}
-    </div>
+      </EnhancedGlassCard>
+    </BaseModal>
   );
 }

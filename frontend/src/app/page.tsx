@@ -8,9 +8,6 @@ import { useRouter } from "next/navigation";
 import { getAuthModeSync } from "@/lib/authConfig";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 
-// Import liquid glass styles
-import "../styles/liquid-glass.css";
-
 const container = {
   hidden: {},
   visible: {
@@ -466,7 +463,7 @@ export default function LandingPage() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="text-lg px-10 py-6 liquid-glass--standard rounded-xl border border-white/25 dark:border-white/15 hover:scale-105 transition-all duration-300"
+                className="text-lg px-10 py-6 liquid-glass--standard rounded-xl border border-white/25 dark:border-white/15 hover:scale-105 transition-all duration-300 text-gray-700 dark:text-gray-300"
                 style={{
                   background: "rgba(255, 255, 255, 0.15)",
                   backdropFilter: "blur(12px) saturate(150%)",

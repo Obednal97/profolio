@@ -16,10 +16,11 @@ export class ApiClient {
   private retryDelay: number = 1000;
 
   constructor(
-    baseURL: string = process.env.NEXT_PUBLIC_API_URL ||
-      "http://localhost:3001/api"
+    baseURL: string = ""  // Use relative URLs for Next.js API routes
   ) {
-    this.baseURL = baseURL;
+    // For Next.js API routes, we want to use relative URLs
+    // so they go through the frontend proxy
+    this.baseURL = baseURL || "";
   }
 
   private async getAuthHeaders(): Promise<HeadersInit> {
@@ -27,16 +28,34 @@ export class ApiClient {
       "Content-Type": "application/json",
     };
 
-    // Get auth token from secure httpOnly cookies
     try {
-      if (typeof window !== "undefined" && window.isSecureContext) {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("auth-token="))
-          ?.split("=")[1];
+      if (typeof window !== "undefined") {
+        // Check for demo mode token
+        const isDemoMode = localStorage.getItem("demo-mode") === "true";
+        const demoToken = localStorage.getItem("demo-token");
+        
+        if (isDemoMode && demoToken) {
+          headers["Authorization"] = `Bearer ${demoToken}`;
+          return headers;
+        }
 
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
+        // Check for Firebase token in localStorage (for Firebase auth)
+        const firebaseToken = localStorage.getItem("firebase-token");
+        if (firebaseToken) {
+          headers["Authorization"] = `Bearer ${firebaseToken}`;
+          return headers;
+        }
+
+        // Check for auth token in cookies (for local auth)
+        if (window.isSecureContext || window.location.hostname === 'localhost') {
+          const token = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("auth-token=") || row.startsWith("token="))
+            ?.split("=")[1];
+
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
         }
       }
     } catch (error) {

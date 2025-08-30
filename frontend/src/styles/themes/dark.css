@@ -1,0 +1,7 @@
+/* === Themes: Dark === */
+/* Dark theme specific overrides */
+
+/* Dark theme adjustments are primarily handled in foundation/tokens.css via .dark class */
+.dark {
+  /* Additional dark theme specific adjustments can go here */
+}

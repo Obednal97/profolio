@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Guidelines for creating and managing project task lists in markdown files
 ruleType: agentRequested
 alwaysApply: false
@@ -16,36 +11,38 @@ Guidelines for creating and managing task lists in markdown files to track proje
 ## Task List Creation
 
 1. Create task lists in a markdown file (in the project root):
+
    - Use `TASKS.md` or a descriptive name relevant to the feature (e.g., `ASSISTANT_CHAT.md`)
    - Include a clear title and description of the feature being implemented
 
 2. Structure the file with these sections:
+
    ```markdown
    # Feature Name Implementation
-   
+
    Brief description of the feature and its purpose.
-   
+
    ## Completed Tasks
-   
+
    - [x] Task 1 that has been completed
    - [x] Task 2 that has been completed
-   
+
    ## In Progress Tasks
-   
+
    - [ ] Task 3 currently being worked on
    - [ ] Task 4 to be completed soon
-   
+
    ## Future Tasks
-   
+
    - [ ] Task 5 planned for future implementation
    - [ ] Task 6 planned for future implementation
-   
+
    ## Implementation Plan
-   
+
    Detailed description of how the feature will be implemented.
-   
+
    ### Relevant Files
-   
+
    - path/to/file1.ts - Description of purpose
    - path/to/file2.ts - Description of purpose
    ```
@@ -53,11 +50,13 @@ Guidelines for creating and managing task lists in markdown files to track proje
 ## Task List Maintenance
 
 1. Update the task list as you progress:
+
    - Mark tasks as completed by changing `[ ]` to `[x]`
    - Add new tasks as they are identified
    - Move tasks between sections as appropriate
 
 2. Keep "Relevant Files" section updated with:
+
    - File paths that have been created or modified
    - Brief descriptions of each file's purpose
    - Status indicators (e.g., ✅) for completed components
@@ -73,23 +72,27 @@ Guidelines for creating and managing task lists in markdown files to track proje
 When working with task lists, the AI should:
 
 1. **Before starting work:**
+
    - Check which task to implement next from the "In Progress Tasks" section
    - Review the implementation plan and relevant files section
    - Understand the overall feature context
 
 2. **During implementation:**
+
    - Regularly update the task list file after implementing significant components
    - Add new tasks discovered during implementation to the appropriate section
    - Update the "Relevant Files" section with accurate file paths and descriptions
    - Document architecture decisions and technical components as they are created
 
 3. **After completing tasks:**
+
    - Mark completed tasks with [x] and move them to "Completed Tasks" section
    - Update file descriptions and status indicators (e.g., ✅) for completed components
    - Add implementation details, especially for complex features
    - Move tasks between sections as their status changes
 
 4. **Task management best practices:**
+
    - Keep the task list as a living document that reflects current project state
    - Break down large tasks into smaller, manageable subtasks when needed
    - Maintain clear task descriptions with acceptance criteria when possible

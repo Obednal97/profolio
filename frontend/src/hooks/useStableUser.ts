@@ -33,14 +33,14 @@ export function useStableUser(): StableUser | null {
           user.displayName || user.name || user.email?.split("@")[0] || "User",
         email: user.email || "",
         token: token || null,
-        isDemoMode: false,
+        isDemoMode: isDemoMode,  // Use actual demo mode detection, not hardcoded false
       };
     } else if (isDemoMode) {
       return {
         id: "demo-user-id",
         name: "Demo User",
         email: "demo@profolio.com",
-        token: "demo-token",
+        token: "demo-token-secure-123",
         isDemoMode: true,
       };
     }

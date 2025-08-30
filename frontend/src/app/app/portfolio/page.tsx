@@ -12,13 +12,9 @@ import { AssetCard } from "@/components/cards/AssetCard";
 import { AssetModal } from "@/components/modals/AssetModal";
 import { Tile } from "@/components/ui/tile/tile";
 import { useAuth } from "@/lib/unifiedAuth";
-import {
-  SkeletonCard,
-  SkeletonChart,
-  Skeleton,
-  SkeletonStat,
-  SkeletonButton,
-} from "@/components/ui/skeleton";
+import { PortfolioSkeleton } from "@/components/ui/skeleton";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
 
 // 🚀 PERFORMANCE: Dynamic import for animations to reduce initial bundle size
@@ -90,52 +86,6 @@ const getCryptoIcon = (symbol: string) => {
   }
 };
 
-// Skeleton component for portfolio page
-function PortfolioSkeleton() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
-      {/* Header skeleton */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <Skeleton className="h-10 w-48 mb-2" />
-          <Skeleton className="h-5 w-64" />
-        </div>
-        <SkeletonButton size="lg" />
-      </div>
-
-      {/* Stats grid skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <SkeletonStat key={i} />
-        ))}
-      </div>
-
-      {/* Portfolio overview skeleton */}
-      <div className="mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <Skeleton className="h-6 w-48 mb-4" />
-          <SkeletonChart height="h-64" />
-        </div>
-      </div>
-
-      {/* Assets grid skeleton */}
-      <div className="mb-4 flex justify-between items-center">
-        <Skeleton className="h-8 w-32" />
-        <div className="flex gap-2">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-10 w-24 rounded-lg" />
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, i) => (
-          <SkeletonCard key={i} className="h-48" />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function PortfolioPage() {
   const { user } = useAuth();
@@ -373,12 +323,14 @@ export default function PortfolioPage() {
             Failed to Load Portfolio
           </h3>
           <p className="text-red-600 dark:text-red-300">{error}</p>
-          <button
+          <Button
             onClick={() => fetchAssets()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            variant="danger"
+            size="md"
+            className="mt-4"
           >
             Try Again
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -396,37 +348,38 @@ export default function PortfolioPage() {
             Track and manage your investment portfolio
           </p>
         </div>
-        <button
+        <Button
           onClick={() => {
             setSelectedAsset(null);
             setShowModal(true);
           }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          variant="primary"
+          size="md"
+          icon="fa-plus"
         >
-          <i className="fas fa-plus"></i>
           Add Asset
-        </button>
+        </Button>
       </div>
 
       {/* Portfolio Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.1} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Total Value
           </p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {formatCurrency(portfolioMetrics.totalValue)}
           </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        </EnhancedGlassCard>
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.2} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Total Invested
           </p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {formatCurrency(portfolioMetrics.totalInvested)}
           </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        </EnhancedGlassCard>
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.3} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
           <p
             className={`text-2xl font-bold ${
@@ -438,8 +391,8 @@ export default function PortfolioPage() {
             {portfolioMetrics.totalGainLoss >= 0 ? "+" : ""}
             {formatCurrency(portfolioMetrics.totalGainLoss)}
           </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        </EnhancedGlassCard>
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.4} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">Return</p>
           <p
             className={`text-2xl font-bold ${
@@ -451,13 +404,13 @@ export default function PortfolioPage() {
             {portfolioMetrics.gainLossPercent >= 0 ? "+" : ""}
             {portfolioMetrics.gainLossPercent.toFixed(2)}%
           </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        </EnhancedGlassCard>
+        <EnhancedGlassCard variant="standard" padding="md" animate animationDelay={0.5} enableLensing hoverable>
           <p className="text-sm text-gray-600 dark:text-gray-400">Assets</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {portfolioMetrics.assetCount}
           </p>
-        </div>
+        </EnhancedGlassCard>
       </div>
 
       {/* Asset Allocation Chart Placeholder */}
@@ -513,15 +466,16 @@ export default function PortfolioPage() {
           <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
             {filter === "all" ? "No assets found" : `No ${filter} assets found`}
           </p>
-          <button
+          <Button
             onClick={() => {
               setSelectedAsset(null);
               setShowModal(true);
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            variant="primary"
+            size="md"
           >
             Add Your First Asset
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

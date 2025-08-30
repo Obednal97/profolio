@@ -9,7 +9,9 @@ import { config } from "dotenv";
 config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true, // Enable raw body for Stripe webhooks
+  });
 
   // Enable CORS with proper production configuration
   const corsOrigins =
@@ -25,7 +27,7 @@ async function bootstrap() {
     origin: corsOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "stripe-signature"],
   });
 
   // Apply security headers

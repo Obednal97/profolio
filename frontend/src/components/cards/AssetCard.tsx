@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import type { Asset } from '@/types/global';
 import { FinancialCalculator } from '@/lib/financial';
+import { Button } from '@/components/ui/button';
+import { EnhancedGlassCard } from '@/components/ui/enhanced-glass/EnhancedGlassCard';
 
 interface AssetCardProps {
   asset: Asset;
@@ -18,7 +20,7 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
   // Use crypto-specific icon if it's a crypto asset
   const iconClass = asset.type === 'crypto' && asset.symbol && getCryptoIcon 
     ? getCryptoIcon(asset.symbol) 
-    : config.icon;
+    : `fas ${config.icon}`;
   
   const calculateAppreciation = () => {
     if (!asset.purchase_price || !asset.current_value || !asset.quantity) return null;
@@ -39,18 +41,20 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
   const appreciation = calculateAppreciation();
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      whileHover={{ y: -4 }}
-      className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation"
+    <EnhancedGlassCard
+      variant="standard"
+      padding="md"
+      enableLensing
+      hoverable
+      animate
+      className="touch-manipulation"
+      enablePerformanceTinting={!!appreciation}
+      performance={appreciation?.percentageChange || 0}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center flex-1 min-w-0">
           <div className={`p-2 sm:p-3 bg-gradient-to-r ${config.gradient} rounded-lg mr-3 sm:mr-4 shadow-lg flex-shrink-0`}>
-            <i className={`fas ${iconClass} text-white text-lg sm:text-xl`}></i>
+            <i className={`${iconClass} text-white text-lg sm:text-xl`}></i>
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{asset.name}</h3>
@@ -60,20 +64,22 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
           </div>
         </div>
         <div className="flex space-x-1 sm:space-x-2 flex-shrink-0 ml-2">
-          <button
+          <Button
             onClick={() => onEdit(asset)}
-            className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+            variant="ghost"
+            size="sm"
+            icon="fa-edit"
+            className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
             aria-label="Edit asset"
-          >
-            <i className="fas fa-edit text-sm sm:text-base"></i>
-          </button>
-          <button
+          />
+          <Button
             onClick={() => asset.id && onDelete(asset.id)}
-            className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+            variant="ghost"
+            size="sm"
+            icon="fa-trash"
+            className="text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
             aria-label="Delete asset"
-          >
-            <i className="fas fa-trash text-sm sm:text-base"></i>
-          </button>
+          />
         </div>
       </div>
 
@@ -106,6 +112,6 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
           </div>
         )}
       </div>
-    </motion.div>
+    </EnhancedGlassCard>
   );
 } 

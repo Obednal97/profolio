@@ -7,15 +7,16 @@ import React, {
   useRef,
 } from "react";
 import type { Property } from "@/types/global";
-import { BaseModal as Modal } from "@/components/modals/modal";
 import { useAppContext } from "@/components/layout/layoutWrapper";
-import { Button } from "@/components/ui/button/button";
+import { Button, Tabs } from "@/components/ui/button";
+import { ViewSwitcher } from "@/components/ui/ViewSwitcher";
+import { StatCard } from "@/components/cards/StatCard";
 import { motion, AnimatePresence } from "framer-motion";
 import PieChart from "@/components/charts/pie";
 import { PropertyModal } from "@/components/modals/PropertyModal";
 import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
 import { PropertyManagerSkeleton } from "@/components/ui/skeleton";
-import { GlassCard } from "@/components/cards";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 
 const propertyTypeConfig = {
   residential: {
@@ -58,6 +59,10 @@ export default function PropertyManager() {
   const [sortOrder, setSortOrder] = useState<
     "value_desc" | "value_asc" | "rental_desc" | "rental_asc"
   >("value_desc");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [openCategoryDropdown, setOpenCategoryDropdown] = useState<string | null>(null);
   const { formatCurrency } = useAppContext();
 
   // 🚀 PERFORMANCE: Use stable user hooks to prevent unnecessary re-renders
@@ -140,6 +145,23 @@ export default function PropertyManager() {
   useEffect(() => {
     return cleanup;
   }, [cleanup]);
+
+  // Handle closing dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openCategoryDropdown && event.target instanceof Element) {
+        const closestDropdown = event.target.closest("[data-dropdown]");
+        if (!closestDropdown) {
+          setOpenCategoryDropdown(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openCategoryDropdown]);
 
   const handleSubmit = async (propertyData: Property) => {
     if (!userId) return;
@@ -277,10 +299,23 @@ export default function PropertyManager() {
   }, [properties]);
 
   const filteredProperties = useMemo(() => {
-    const filtered =
-      filterType === "all"
-        ? properties
-        : properties.filter((p) => p.propertyType === filterType);
+    let filtered = [...properties];
+    
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter((p) => p.propertyType === filterType);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((property) => 
+        property.name.toLowerCase().includes(query) ||
+        property.address?.toLowerCase().includes(query) ||
+        property.propertyType?.toLowerCase().includes(query) ||
+        property.city?.toLowerCase().includes(query)
+      );
+    }
 
     // Sort properties
     return filtered.sort((a, b) => {
@@ -297,7 +332,7 @@ export default function PropertyManager() {
           return 0;
       }
     });
-  }, [properties, filterType, sortOrder]);
+  }, [properties, filterType, sortOrder, searchQuery]);
 
   const PropertyCard = ({
     property,
@@ -383,20 +418,22 @@ export default function PropertyManager() {
             </div>
           </div>
           <div className="flex space-x-1 sm:space-x-2 flex-shrink-0 ml-2">
-            <button
+            <Button
               onClick={() => onEdit(property)}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+              variant="ghost"
+              size="sm"
+              icon="fa-edit"
+              className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
               aria-label="Edit property"
-            >
-              <i className="fas fa-edit text-sm sm:text-base"></i>
-            </button>
-            <button
+            />
+            <Button
               onClick={() => property.id && onDelete(property.id)}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+              variant="ghost"
+              size="sm"
+              icon="fa-trash"
+              className="text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
               aria-label="Delete property"
-            >
-              <i className="fas fa-trash text-sm sm:text-base"></i>
-            </button>
+            />
           </div>
         </div>
 
@@ -569,7 +606,9 @@ export default function PropertyManager() {
             </div>
             <Button
               onClick={handleOpenModal}
-              className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium shadow-lg px-6 py-3"
+              variant="glass-primary"
+              animate
+              className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium shadow-lg border-white/20"
             >
               <i className="fas fa-plus mr-2"></i>
               Add Property
@@ -591,68 +630,209 @@ export default function PropertyManager() {
         )}
 
         {/* Summary Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
-        >
-          <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-sm rounded-xl p-6 border border-green-500/30">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-sm">Total Value</p>
-                <p className="text-3xl font-bold text-green-400 mt-1">
-                  {formatCurrency(totalValue)}
-                </p>
-              </div>
-              <div className="p-3 bg-green-500/20 rounded-lg">
-                <i className="fas fa-home text-green-400 text-xl"></i>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Total Value"
+            value={formatCurrency(totalValue)}
+            icon="fa-home"
+            colorScheme="green"
+          />
+          
+          <StatCard
+            title="Properties"
+            value={properties.length}
+            icon="fa-building"
+            colorScheme="blue"
+          />
+          
+          <StatCard
+            title="Monthly Income"
+            value={formatCurrency(totalRentalIncome)}
+            icon="fa-dollar-sign"
+            colorScheme="purple"
+          />
+          
+          <StatCard
+            title="Total Mortgage"
+            value={formatCurrency(totalMortgage)}
+            icon="fa-file-invoice-dollar"
+            colorScheme="orange"
+          />
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3 flex-1">
+            {/* Category Dropdown */}
+            <div className="relative">
+              <Button
+                onClick={() => setOpenCategoryDropdown(openCategoryDropdown ? null : "main")}
+                variant="glass"
+                size="md"
+                animate
+                className="min-w-[180px] justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <i className={`fas ${filterType === "all" ? "fa-layer-group" : propertyTypeConfig[filterType as keyof typeof propertyTypeConfig]?.icon || "fa-home"} text-sm`}></i>
+                  {filterType === "all" ? "All Properties" : filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                </span>
+                <i className="fas fa-chevron-down text-xs"></i>
+              </Button>
+              
+              {openCategoryDropdown && (
+                <div className="absolute top-full left-0 mt-2 w-64 liquid-glass rounded-lg shadow-xl z-20 max-h-80 overflow-y-auto" data-dropdown>
+                  <button
+                    onClick={() => {
+                      setFilterType("all");
+                      setOpenCategoryDropdown(null);
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-white/10 dark:hover:bg-black/10 text-gray-900 dark:text-white border-b border-white/10 dark:border-black/10"
+                  >
+                    <i className="fas fa-layer-group mr-2"></i>
+                    All Properties
+                  </button>
+                  {Object.entries(propertyTypeConfig).map(([key, config]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setFilterType(key);
+                        setOpenCategoryDropdown(null);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-white/10 dark:hover:bg-black/10 text-gray-900 dark:text-white flex items-center"
+                    >
+                      <i className={`fas ${config.icon} mr-2`}></i>
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Expandable Search Field */}
+            <div className={`relative transition-all duration-300 ${searchExpanded ? 'flex-1' : ''}`}>
+              <Button
+                onClick={() => setSearchExpanded(!searchExpanded)}
+                variant="glass"
+                size="md"
+                animate
+                icon="fa-search"
+                iconOnly
+                className={`${searchExpanded ? 'hidden' : 'flex'}`}
+              />
+              
+              {searchExpanded && (
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search properties..."
+                      className="w-full pl-10 pr-4 py-1.5 bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-white/40 dark:focus:border-white/30"
+                    />
+                    <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"></i>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setSearchExpanded(false);
+                      setSearchQuery("");
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    icon="fa-times"
+                    iconOnly
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Filters Button */}
+            <Button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              variant="glass"
+              size="md"
+              animate
+              icon={showAdvancedFilters ? "fa-times" : "fa-sliders-h"}
+              className=""
+            >
+              <span className="hidden sm:inline">Advanced Filters</span>
+            </Button>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-sm">Properties</p>
-                <p className="text-3xl font-bold text-blue-400 mt-1">
-                  {properties.length}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <i className="fas fa-building text-blue-400 text-xl"></i>
-              </div>
+          {/* Sort Dropdown and View Switcher */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+                className="bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-lg px-3 py-1.5 text-gray-900 dark:text-white focus:outline-none focus:border-white/40 dark:focus:border-white/30 text-sm"
+              >
+                <option value="value_desc">Value: High to Low</option>
+                <option value="value_asc">Value: Low to High</option>
+                <option value="rental_desc">Rental: High to Low</option>
+                <option value="rental_asc">Rental: Low to High</option>
+              </select>
             </div>
+            <Tabs
+              tabs={[
+                { id: "grid", label: "", icon: "fa-th" },
+                { id: "list", label: "", icon: "fa-list" },
+                { id: "map", label: "", icon: "fa-map" },
+              ]}
+              activeTab={viewMode}
+              onTabChange={(mode) => setViewMode(mode as "grid" | "list" | "map")}
+              variant="glass"
+              size="sm"
+            />
           </div>
+        </div>
 
-          <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
-            <div className="flex justify-between items-start">
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 p-4 liquid-glass rounded-xl"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <p className="text-gray-400 text-sm">Monthly Income</p>
-                <p className="text-3xl font-bold text-purple-400 mt-1">
-                  {formatCurrency(totalRentalIncome)}
-                </p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Status
+                </label>
+                <select
+                  className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-lg px-3 py-1.5 text-gray-900 dark:text-white focus:outline-none focus:border-white/40 dark:focus:border-white/30"
+                >
+                  <option value="">All Status</option>
+                  <option value="owned">Owned</option>
+                  <option value="rented">Rented</option>
+                  <option value="listed">Listed</option>
+                </select>
               </div>
-              <div className="p-3 bg-purple-500/20 rounded-lg">
-                <i className="fas fa-dollar-sign text-purple-400 text-xl"></i>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Min Value
+                </label>
+                <input
+                  type="number"
+                  placeholder="Min value"
+                  className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-lg px-3 py-1.5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-white/40 dark:focus:border-white/30"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Max Value
+                </label>
+                <input
+                  type="number"
+                  placeholder="Max value"
+                  className="w-full bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-lg px-3 py-1.5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-white/40 dark:focus:border-white/30"
+                />
               </div>
             </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/30">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-sm">Total Mortgage</p>
-                <p className="text-3xl font-bold text-orange-400 mt-1">
-                  {formatCurrency(totalMortgage)}
-                </p>
-              </div>
-              <div className="p-3 bg-orange-500/20 rounded-lg">
-                <i className="fas fa-file-invoice-dollar text-orange-400 text-xl"></i>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Charts Section */}
         {properties.length > 0 && (
@@ -662,7 +842,7 @@ export default function PropertyManager() {
             transition={{ delay: 0.2 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
           >
-            <GlassCard
+            <EnhancedGlassCard enableLensing hoverable
               variant="prominent"
               padding="lg"
               animate
@@ -680,9 +860,9 @@ export default function PropertyManager() {
                       ?.color || "#6b7280",
                 }))}
               />
-            </GlassCard>
+            </EnhancedGlassCard>
 
-            <GlassCard
+            <EnhancedGlassCard enableLensing hoverable
               variant="prominent"
               padding="lg"
               animate
@@ -692,7 +872,7 @@ export default function PropertyManager() {
                 Portfolio Insights
               </h3>
               <div className="space-y-4">
-                <GlassCard
+                <EnhancedGlassCard enableLensing hoverable
                   variant="subtle"
                   padding="md"
                   borderRadius="lg"
@@ -706,8 +886,8 @@ export default function PropertyManager() {
                       properties.length > 0 ? totalValue / properties.length : 0
                     )}
                   </p>
-                </GlassCard>
-                <GlassCard
+                </EnhancedGlassCard>
+                <EnhancedGlassCard enableLensing hoverable
                   variant="subtle"
                   padding="md"
                   borderRadius="lg"
@@ -719,8 +899,8 @@ export default function PropertyManager() {
                   <p className="text-2xl font-bold text-green-400">
                     {formatCurrency(totalRentalIncome * 12)}
                   </p>
-                </GlassCard>
-                <GlassCard
+                </EnhancedGlassCard>
+                <EnhancedGlassCard enableLensing hoverable
                   variant="subtle"
                   padding="md"
                   borderRadius="lg"
@@ -735,100 +915,12 @@ export default function PropertyManager() {
                       : 0}
                     %
                   </p>
-                </GlassCard>
+                </EnhancedGlassCard>
               </div>
-            </GlassCard>
+            </EnhancedGlassCard>
           </motion.div>
         )}
 
-        {/* Filter and View Controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"
-        >
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterType("all")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                filterType === "all"
-                  ? "bg-gradient-to-r from-green-500 to-blue-500 text-white"
-                  : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-              }`}
-            >
-              All Properties
-            </button>
-            {Object.keys(propertiesByType).map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  filterType === type
-                    ? "bg-gradient-to-r from-green-500 to-blue-500 text-white"
-                    : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                }`}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)} (
-                {propertiesByType[type].count})
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-              className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
-            >
-              <option value="value_desc" className="bg-white dark:bg-gray-800">
-                Value: High to Low
-              </option>
-              <option value="value_asc" className="bg-white dark:bg-gray-800">
-                Value: Low to High
-              </option>
-              <option value="rental_desc" className="bg-white dark:bg-gray-800">
-                Rental: High to Low
-              </option>
-              <option value="rental_asc" className="bg-white dark:bg-gray-800">
-                Rental: Low to High
-              </option>
-            </select>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  viewMode === "grid"
-                    ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
-                }`}
-              >
-                <i className="fas fa-th"></i>
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  viewMode === "list"
-                    ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
-                }`}
-              >
-                <i className="fas fa-list"></i>
-              </button>
-              <button
-                onClick={() => setViewMode("map")}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  viewMode === "map"
-                    ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
-                }`}
-              >
-                <i className="fas fa-map"></i>
-              </button>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Properties Grid/List/Map */}
         <AnimatePresence mode="wait">
@@ -854,7 +946,9 @@ export default function PropertyManager() {
               </p>
               <Button
                 onClick={handleOpenModal}
-                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium"
+                variant="glass-primary"
+                animate
+                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium border-white/20"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add Your First Property
@@ -900,15 +994,13 @@ export default function PropertyManager() {
 
       {/* Modal - Moved outside the relative z-10 container */}
       {showModal && (
-        <Modal isOpen={showModal} onClose={handleCloseModal}>
-          <PropertyModal
-            onClose={handleCloseModal}
-            onSubmit={handleSubmit}
-            initialData={editingProperty}
-            error={modalError}
-            currentUserId={userId || undefined}
-          />
-        </Modal>
+        <PropertyModal
+          onClose={handleCloseModal}
+          onSubmit={handleSubmit}
+          initialData={editingProperty}
+          error={modalError}
+          currentUserId={userId || undefined}
+        />
       )}
     </div>
   );

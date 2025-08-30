@@ -1,0 +1,27 @@
+/* === Layouts: Grid === */
+/* Grid systems and responsive layouts */
+
+/* Container grid utilities */
+.grid-container {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Dashboard specific grids */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

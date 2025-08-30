@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
----
 description: General development guidelines and project context for AI assistants
 ruleType: always
 alwaysApply: true

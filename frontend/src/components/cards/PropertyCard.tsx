@@ -3,6 +3,8 @@
 import React from 'react';
 import { Property } from '@/types/global';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { EnhancedGlassCard } from '@/components/ui/enhanced-glass/EnhancedGlassCard';
 
 interface PropertyCardProps {
   property: Property;
@@ -52,14 +54,18 @@ export function PropertyCard({ property, onEdit, onDelete }: PropertyCardProps) 
     return appreciation.toFixed(1);
   };
 
+  const appreciation = calculateAppreciation();
+  const appreciationValue = appreciation ? parseFloat(appreciation) : 0;
+
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      whileHover={{ y: -4 }}
-      className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+    <EnhancedGlassCard
+      variant="standard"
+      padding="md"
+      enableLensing
+      hoverable
+      animate
+      enablePerformanceTinting={appreciationValue !== 0}
+      performance={appreciationValue}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-start flex-1 min-w-0">
@@ -82,20 +88,22 @@ export function PropertyCard({ property, onEdit, onDelete }: PropertyCardProps) 
           </div>
         </div>
         <div className="flex space-x-2 flex-shrink-0 ml-2">
-          <button
+          <Button
             onClick={() => onEdit(property)}
-            className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            variant="ghost"
+            size="sm"
+            icon="fa-edit"
+            className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
             aria-label="Edit property"
-          >
-            <i className="fas fa-edit"></i>
-          </button>
-          <button
+          />
+          <Button
             onClick={() => property.id && onDelete(property.id)}
-            className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            variant="ghost"
+            size="sm"
+            icon="fa-trash"
+            className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
             aria-label="Delete property"
-          >
-            <i className="fas fa-trash"></i>
-          </button>
+          />
         </div>
       </div>
 
@@ -177,6 +185,6 @@ export function PropertyCard({ property, onEdit, onDelete }: PropertyCardProps) 
           )}
         </div>
       </div>
-    </motion.div>
+    </EnhancedGlassCard>
   );
 } 

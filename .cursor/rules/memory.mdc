@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: How the AI should manage and utilise memory to store project-specific knowledge and preferences
 ruleType: agentRequested
 alwaysApply: false
@@ -42,11 +37,13 @@ Before proposing solutions, code changes, or answering questions, the AI should 
 1. Recognise this as a project-specific technical decision.
 2. Check `learned-memories.mdc` for existing Tailwind version information.
 3. Propose adding or updating an entry in `learned-memories.mdc`:
+
    ```markdown
    ## Technical Decisions
 
-   * **CSS Framework:** Tailwind v4 is used. Ensure usage aligns with v4 documentation and practices, noting differences from v3.
+   - **CSS Framework:** Tailwind v4 is used. Ensure usage aligns with v4 documentation and practices, noting differences from v3.
    ```
+
 4. In subsequent interactions involving Tailwind, the AI will refer to this entry and consult v4 documentation if necessary.
 
 ## Memory File Structure
@@ -65,51 +62,56 @@ This file stores project-specific knowledge, conventions, and user preferences l
 
 ## User Preferences
 
-* [Preference 1]
-* [Preference 2]
+- [Preference 1]
+- [Preference 2]
 
 ## Technical Decisions
 
-* [Decision 1]
-* [Decision 2]
+- [Decision 1]
+- [Decision 2]
 
 ## Project Conventions
 
-* [Convention 1]
-* [Convention 2]
+- [Convention 1]
+- [Convention 2]
 
 ## Business Logic
 
-* [Business rule 1]
-* [Business rule 2]
+- [Business rule 1]
+- [Business rule 2]
 
 ## Known Issues & Workarounds
 
-* [Issue 1 and its workaround]
-* [Issue 2 and its workaround]
+- [Issue 1 and its workaround]
+- [Issue 2 and its workaround]
 ```
 
 ## Memory Categories
 
 ### User Preferences
+
 Personal coding preferences, workflow choices, communication style preferences.
 
 ### Technical Decisions
+
 Technology stack choices, architectural decisions, library selections, version specifications.
 
 ### Project Conventions
+
 Naming conventions, file organisation patterns, code style preferences specific to this project.
 
 ### Business Logic
+
 Domain-specific rules, business requirements, functional specifications.
 
 ### Known Issues & Workarounds
+
 Documented bugs, limitations, and their temporary solutions.
 
 ## Best Practices
 
-* Keep memory entries concise but clear
-* Update contradictory information rather than creating duplicates
-* Reference memory before making suggestions
-* Propose memory updates when learning new information
-* Organise information logically within appropriate categories
+- Keep memory entries concise but clear
+- Update contradictory information rather than creating duplicates
+- Reference memory before making suggestions
+- Propose memory updates when learning new information
+- Organise information logically within appropriate categories

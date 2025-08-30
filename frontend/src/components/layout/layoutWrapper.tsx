@@ -259,8 +259,8 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
           </div>
         )}
 
-        {/* Demo Mode Banner - appears above header when in demo mode */}
-        {isDemoMode && shouldShowHeader && <DemoModeBanner />}
+        {/* Demo Mode Banner - only appears in authenticated areas when in demo mode */}
+        {isDemoMode && isAppSection && shouldShowHeader && <DemoModeBanner />}
 
         {shouldShowHeader && (
           <HeaderLayout user={headerUser} currentPath={pathname} />

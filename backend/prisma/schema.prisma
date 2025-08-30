@@ -31,6 +31,13 @@ model User {
   role                UserRole       @default(USER)
   roleAssignedAt      DateTime?
   roleAssignedBy      String?
+  // Stripe subscription fields
+  stripeCustomerId    String?        @unique
+  subscriptionId      String?        @unique
+  subscriptionStatus  String?        // active, canceled, past_due, etc.
+  subscriptionTier    String?        // cloud_monthly, cloud_annual
+  subscriptionEndDate DateTime?
+  trialEndDate        DateTime?
   apiKeys             ApiKey[]
   assets              Asset[]
   expenses            Expense[]

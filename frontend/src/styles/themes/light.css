@@ -1,0 +1,11 @@
+/* === Themes: Light === */
+/* Light theme specific overrides */
+
+:root {
+  /* Light theme is defined in foundation/tokens.css */
+}
+
+/* Light theme specific component adjustments */
+.light {
+  /* Component-specific light theme adjustments can go here */
+}

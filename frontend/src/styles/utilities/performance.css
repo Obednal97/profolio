@@ -1,0 +1,198 @@
+/* === Utilities: Performance Optimizations === */
+/* Performance enhancement utilities for optimal rendering */
+
+@layer utilities {
+  /* Hardware acceleration */
+  .gpu-accelerated {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  /* Will-change optimizations */
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  .will-change-opacity {
+    will-change: opacity;
+  }
+
+  .will-change-scroll {
+    will-change: scroll-position;
+  }
+
+  .will-change-auto {
+    will-change: auto;
+  }
+
+  /* Contain property for layout optimization */
+  .contain-none {
+    contain: none;
+  }
+
+  .contain-strict {
+    contain: strict;
+  }
+
+  .contain-content {
+    contain: content;
+  }
+
+  .contain-size {
+    contain: size;
+  }
+
+  .contain-layout {
+    contain: layout;
+  }
+
+  .contain-paint {
+    contain: paint;
+  }
+
+  /* Font loading optimization */
+  .font-display-auto {
+    font-display: auto;
+  }
+
+  .font-display-block {
+    font-display: block;
+  }
+
+  .font-display-swap {
+    font-display: swap;
+  }
+
+  .font-display-fallback {
+    font-display: fallback;
+  }
+
+  .font-display-optional {
+    font-display: optional;
+  }
+
+  /* Image rendering optimization */
+  .render-auto {
+    image-rendering: auto;
+  }
+
+  .render-crisp {
+    image-rendering: crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+  }
+
+  .render-pixel {
+    image-rendering: pixelated;
+  }
+
+  /* Scroll performance */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+
+  .scroll-auto {
+    scroll-behavior: auto;
+  }
+
+  .overscroll-auto {
+    overscroll-behavior: auto;
+  }
+
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
+
+  .overscroll-none {
+    overscroll-behavior: none;
+  }
+
+  /* Touch optimization */
+  .touch-auto {
+    touch-action: auto;
+  }
+
+  .touch-none {
+    touch-action: none;
+  }
+
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+
+  .touch-pan-y {
+    touch-action: pan-y;
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Reduced motion utilities */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-safe {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-reduce {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* Hardware acceleration for mobile animations (from globals.css) */
+  @media (max-width: 768px) {
+    /* Optimize all animated elements for mobile performance */
+    [class*="motion-"] {
+      transform: translateZ(0);
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+      perspective: 1000px;
+    }
+
+    /* Optimize framer-motion animations */
+    [data-framer-motion] {
+      transform: translateZ(0);
+      will-change: auto;
+    }
+
+    /* Optimize background gradient animations */
+    .gradient-animation {
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
+      animation-duration: 8s; /* Slower for better performance */
+    }
+
+    /* Optimize blur effects for mobile */
+    [class*="backdrop-blur"] {
+      backdrop-filter: blur(8px); /* Reduced blur for better performance */
+    }
+
+    /* Optimize transitions for 60fps */
+    * {
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      transition-duration: 150ms;
+    }
+  }
+
+  /* Skeleton loading optimization */
+  .skeleton-optimize {
+    contain: paint;
+    will-change: opacity;
+  }
+
+  /* Large list optimization */
+  .virtual-scroll {
+    contain: strict;
+    will-change: scroll-position;
+  }
+
+  /* Intersection observer preparation */
+  .lazy-load {
+    content-visibility: auto;
+  }
+}

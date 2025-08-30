@@ -1,12 +1,7 @@
 ---
-description: 
-globs: frontend/src/lib/actions/**/*, frontend/src/**/*action*.ts, frontend/src/**/*action*.tsx, frontend/src/lib/validations/**/*, **/*server*.ts, **/*server*.tsx
-alwaysApply: false
----
----
 description: Guidelines for implementing Next.js server actions with proper validation and error handling
 ruleType: autoAttached
-globs: ["frontend/src/lib/actions/**/*", "frontend/src/**/*action*.ts", "frontend/src/**/*action*.tsx", "frontend/src/lib/validations/**/*", "**/*server*.ts", "**/*server*.tsx"]
+globs: frontend/src/lib/actions/**/*, frontend/src/**/*action*.ts, frontend/src/**/*action*.tsx, frontend/src/lib/validations/**/*, **/*server*.ts, **/*server*.tsx
 alwaysApply: false
 ---
 
@@ -15,6 +10,7 @@ alwaysApply: false
 ## Basic Structure
 
 Server actions should be placed in appropriate directories:
+
 - Frontend actions: `frontend/src/lib/actions/`
 - Shared utilities: `frontend/src/lib/`
 
@@ -35,13 +31,16 @@ export async function updatePortfolioAction(formData: FormData) {
     }
 
     // Call backend API
-    const response = await fetch(`http://localhost:3001/api/portfolio/${portfolioId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name }),
-    });
+    const response = await fetch(
+      `http://localhost:3001/api/portfolio/${portfolioId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to update portfolio");
@@ -49,12 +48,12 @@ export async function updatePortfolioAction(formData: FormData) {
 
     // Revalidate the page to show updated data
     revalidatePath("/portfolio");
-    
+
     return { success: true };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -88,7 +87,7 @@ export async function updatePortfolioAction(input: unknown) {
   try {
     // Validate input
     const validated = updatePortfolioSchema.parse(input);
-    
+
     // Call backend API
     const response = await fetch(
       `http://localhost:3001/api/portfolio/${validated.portfolioId}`,
@@ -117,7 +116,7 @@ export async function updatePortfolioAction(input: unknown) {
         fieldErrors: error.flatten().fieldErrors,
       };
     }
-    
+
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -137,19 +136,19 @@ import { redirect } from "next/navigation";
 export async function createPortfolioAction(formData: FormData) {
   // Check authentication
   const session = await getServerSession();
-  
+
   if (!session) {
     redirect("/login");
   }
 
   try {
     const name = formData.get("name") as string;
-    
+
     const response = await fetch("http://localhost:3001/api/portfolio", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${session.accessToken}`,
       },
       body: JSON.stringify({
         name,
@@ -187,16 +186,16 @@ export function PortfolioForm({ portfolio }: { portfolio: Portfolio }) {
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
-    
+
     const result = await updatePortfolioAction({
       name: formData.get("name"),
       portfolioId: portfolio.id,
     });
-    
+
     if (!result.success) {
       alert(result.error);
     }
-    
+
     setIsLoading(false);
   }
 
@@ -221,7 +220,7 @@ import { updatePortfolioAction } from "@/lib/actions/portfolio";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
-  
+
   return (
     <button type="submit" disabled={pending}>
       {pending ? "Saving..." : "Save"}

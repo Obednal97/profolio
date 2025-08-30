@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/unifiedAuth";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { BaseModal } from "@/components/modals/modal";
-import { Button } from "@/components/ui/button/button";
+import { Button, Tabs } from "@/components/ui/button";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/providers/theme-provider";
 import { useRouter } from "next/navigation";
@@ -415,7 +416,7 @@ const SecurityTab = ({
   loading: boolean;
   userProfile?: { provider?: string; email?: string };
   isDemoMode: boolean;
-}) => {
+}): JSX.Element => {
   const [tokenExpiration, setTokenExpiration] = useState(() => {
     if (typeof window !== "undefined") {
       const prefs = getSecurePreferences();
@@ -482,7 +483,7 @@ const SecurityTab = ({
     typeof window !== "undefined" &&
     (window.location.hostname.includes(".vercel.app") ||
       window.location.hostname.includes(".netlify.app") ||
-      process.env.NODE_ENV === "production");
+      (typeof process !== "undefined" && process.env?.NODE_ENV === "production"));
 
   const handleTokenExpirationChange = (value: string) => {
     setTokenExpiration(value);
@@ -499,13 +500,9 @@ const SecurityTab = ({
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
+    <div className="space-y-6">
       {/* Authentication Methods Status */}
-      <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+      <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Authentication Methods
         </h3>
@@ -541,11 +538,11 @@ const SecurityTab = ({
             </div>
           </div>
         </div>
-      </div>
+      </EnhancedGlassCard>
 
       {/* Password Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+        <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {isGoogleUser ? "Set Password" : "Change Password"}
           </h3>
@@ -680,7 +677,7 @@ const SecurityTab = ({
               Password changes are not available in demo mode
             </p>
           )}
-        </div>
+        </EnhancedGlassCard>
       </form>
 
       {/* Session Management */}
@@ -721,7 +718,7 @@ const SecurityTab = ({
         )}
 
         {isCloudMode && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 backdrop-blur-sm rounded-xl p-6 border border-blue-200 dark:border-blue-800 mb-6">
+          <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false} className="mb-6 border-blue-200 dark:border-blue-800">
             <div className="flex items-center">
               <i className="fas fa-info-circle text-blue-500 mr-3"></i>
               <div>
@@ -734,7 +731,7 @@ const SecurityTab = ({
                 </p>
               </div>
             </div>
-          </div>
+          </EnhancedGlassCard>
         )}
       </div>
 
@@ -742,7 +739,7 @@ const SecurityTab = ({
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Two-Factor Authentication
         </h3>
-        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+        <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-900 dark:text-white font-medium">
@@ -759,9 +756,9 @@ const SecurityTab = ({
               Enable
             </Button>
           </div>
-        </div>
+        </EnhancedGlassCard>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -782,135 +779,158 @@ const PreferencesTab = ({
     animate={{ opacity: 1, y: 0 }}
     className="space-y-6"
   >
-    <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Theme
-        </label>
-        <select
-          value={preferences.theme}
-          onChange={(e) =>
-            setPreferences({
-              ...preferences,
-              theme: e.target.value as "light" | "dark" | "system",
-            })
-          }
-          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-        >
-          <option value="light" className="bg-white dark:bg-gray-800">
-            Light
-          </option>
-          <option value="dark" className="bg-white dark:bg-gray-800">
-            Dark
-          </option>
-          <option value="system" className="bg-white dark:bg-gray-800">
-            System
-          </option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Currency
-        </label>
-        <select
-          value={preferences.currency}
-          onChange={(e) =>
-            setPreferences({ ...preferences, currency: e.target.value })
-          }
-          className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-        >
-          <option value="USD" className="bg-white dark:bg-gray-800">
-            USD ($)
-          </option>
-          <option value="EUR" className="bg-white dark:bg-gray-800">
-            EUR (€)
-          </option>
-          <option value="GBP" className="bg-white dark:bg-gray-800">
-            GBP (£)
-          </option>
-          <option value="JPY" className="bg-white dark:bg-gray-800">
-            JPY (¥)
-          </option>
-        </select>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Notifications
-        </h3>
-
-        <div className="space-y-3">
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700 dark:text-gray-300">
-              Email Notifications
-            </span>
-            <input
-              type="checkbox"
-              checked={preferences.notifications.email}
-              onChange={(e) =>
-                setPreferences({
-                  ...preferences,
-                  notifications: {
-                    ...preferences.notifications,
-                    email: e.target.checked,
-                  },
-                })
-              }
-              className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
-            />
+    {/* Appearance & Regional Settings */}
+    <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Appearance & Regional
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Theme
           </label>
+          <select
+            value={preferences.theme}
+            onChange={(e) =>
+              setPreferences({
+                ...preferences,
+                theme: e.target.value as "light" | "dark" | "system",
+              })
+            }
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+          >
+            <option value="light" className="bg-white dark:bg-gray-800">
+              Light
+            </option>
+            <option value="dark" className="bg-white dark:bg-gray-800">
+              Dark
+            </option>
+            <option value="system" className="bg-white dark:bg-gray-800">
+              System
+            </option>
+          </select>
+        </div>
 
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700 dark:text-gray-300">
-              Push Notifications
-            </span>
-            <input
-              type="checkbox"
-              checked={preferences.notifications.push}
-              onChange={(e) =>
-                setPreferences({
-                  ...preferences,
-                  notifications: {
-                    ...preferences.notifications,
-                    push: e.target.checked,
-                  },
-                })
-              }
-              className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
-            />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Currency
           </label>
-
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700 dark:text-gray-300">
-              Marketing Emails
-            </span>
-            <input
-              type="checkbox"
-              checked={preferences.notifications.marketing}
-              onChange={(e) =>
-                setPreferences({
-                  ...preferences,
-                  notifications: {
-                    ...preferences.notifications,
-                    marketing: e.target.checked,
-                  },
-                })
-              }
-              className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
-            />
-          </label>
+          <select
+            value={preferences.currency}
+            onChange={(e) =>
+              setPreferences({ ...preferences, currency: e.target.value })
+            }
+            className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
+          >
+            <option value="USD" className="bg-white dark:bg-gray-800">
+              USD ($)
+            </option>
+            <option value="EUR" className="bg-white dark:bg-gray-800">
+              EUR (€)
+            </option>
+            <option value="GBP" className="bg-white dark:bg-gray-800">
+              GBP (£)
+            </option>
+            <option value="JPY" className="bg-white dark:bg-gray-800">
+              JPY (¥)
+            </option>
+          </select>
         </div>
       </div>
+    </EnhancedGlassCard>
 
-      <Button
-        onClick={handlePreferencesUpdate}
-        disabled={loading}
-        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium px-6 py-3"
-      >
-        {loading ? "Saving..." : "Save Preferences"}
-      </Button>
-    </div>
+    {/* Notifications */}
+    <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Notifications
+      </h3>
+      <div className="space-y-4">
+        <label className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+          <div>
+            <span className="text-gray-900 dark:text-white font-medium">
+              Email Notifications
+            </span>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Receive updates about your portfolio via email
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={preferences.notifications.email}
+            onChange={(e) =>
+              setPreferences({
+                ...preferences,
+                notifications: {
+                  ...preferences.notifications,
+                  email: e.target.checked,
+                },
+              })
+            }
+            className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
+          />
+        </label>
+
+        <label className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+          <div>
+            <span className="text-gray-900 dark:text-white font-medium">
+              Push Notifications
+            </span>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Get instant alerts on your device
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={preferences.notifications.push}
+            onChange={(e) =>
+              setPreferences({
+                ...preferences,
+                notifications: {
+                  ...preferences.notifications,
+                  push: e.target.checked,
+                },
+              })
+            }
+            className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
+          />
+        </label>
+
+        <label className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+          <div>
+            <span className="text-gray-900 dark:text-white font-medium">
+              Marketing Emails
+            </span>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Receive news and updates about new features
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={preferences.notifications.marketing}
+            onChange={(e) =>
+              setPreferences({
+                ...preferences,
+                notifications: {
+                  ...preferences.notifications,
+                  marketing: e.target.checked,
+                },
+              })
+            }
+            className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-white/10 focus:ring-blue-500"
+          />
+        </label>
+      </div>
+    </EnhancedGlassCard>
+
+    <Button
+      onClick={handlePreferencesUpdate}
+      disabled={loading}
+      variant="gradient"
+      size="lg"
+      fullWidth
+    >
+      {loading ? "Saving..." : "Save Preferences"}
+    </Button>
   </motion.div>
 );
 
@@ -1522,26 +1542,20 @@ function SettingsPage() {
         </AnimatePresence>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {tabs.map((tab) => (
-            <Button
-              key={tab.id}
-              variant={activeTab === tab.id ? "default" : "ghost"}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center transition-all duration-200 ${
-                activeTab === tab.id
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg"
-                  : "hover:bg-white/10"
-              }`}
-            >
-              <i className={`fas ${tab.icon} mr-2`} />
-              {tab.label}
-            </Button>
-          ))}
+        <div className="flex justify-center mb-8">
+          <Tabs
+            tabs={tabs.map((tab) => ({
+              id: tab.id,
+              label: tab.label,
+              icon: tab.icon,
+            }))}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </div>
 
         {/* Tab Content */}
-        <div className="bg-gray-50 dark:bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-white/10">
+        <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
           <AnimatePresence mode="wait">
             {activeTab === "profile" && (
               <ProfileTab
@@ -1580,7 +1594,7 @@ function SettingsPage() {
               />
             )}
           </AnimatePresence>
-        </div>
+        </EnhancedGlassCard>
       </div>
 
       {/* Delete Account Modal */}
