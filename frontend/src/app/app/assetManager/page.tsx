@@ -589,12 +589,12 @@ export default function AssetManager() {
         case "type":
           return a.type.localeCompare(b.type);
         case "performance":
-          const perfA = a.purchase_price ? ((a.current_value - a.purchase_price) / a.purchase_price) : 0;
-          const perfB = b.purchase_price ? ((b.current_value - b.purchase_price) / b.purchase_price) : 0;
+          const perfA = a.purchase_price && a.current_value ? ((a.current_value - a.purchase_price) / a.purchase_price) : 0;
+          const perfB = b.purchase_price && b.current_value ? ((b.current_value - b.purchase_price) / b.purchase_price) : 0;
           return perfB - perfA;
         case "value":
         default:
-          return b.current_value - a.current_value;
+          return (b.current_value || 0) - (a.current_value || 0);
       }
     });
     

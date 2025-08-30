@@ -379,27 +379,81 @@ TODO: Add commit counts, files changed, contributors
 /**
  * Validate builds work
  */
-function validateBuilds() {
+function validateBuilds(skipOnError = false) {
+  let hasErrors = false;
+  
+  // Test TypeScript compilation first (faster than full build)
   try {
-    info('Testing frontend build...');
-    execSync('pnpm run build', { 
+    info('Testing frontend TypeScript...');
+    execSync('pnpm run type-check', { 
       cwd: join(PROJECT_ROOT, 'frontend'),
       stdio: 'pipe'
     });
-    success('Frontend build successful');
-    
+    success('Frontend TypeScript check passed');
+  } catch (err) {
+    warn('Frontend has TypeScript errors (non-blocking)');
+    hasErrors = true;
+  }
+  
+  try {
+    info('Testing frontend ESLint...');
+    execSync('pnpm run lint', { 
+      cwd: join(PROJECT_ROOT, 'frontend'),
+      stdio: 'pipe'
+    });
+    success('Frontend ESLint check passed');
+  } catch (err) {
+    if (!skipOnError) {
+      error('Frontend has ESLint errors that will block production builds');
+      console.log('\n💡 To fix: cd frontend && npm run lint');
+      return false;
+    }
+    warn('Frontend has ESLint errors (continuing with --skip-build-errors flag)');
+    hasErrors = true;
+  }
+  
+  // Only do full build if no critical errors
+  if (!hasErrors || skipOnError) {
+    try {
+      info('Testing frontend build...');
+      execSync('pnpm run build', { 
+        cwd: join(PROJECT_ROOT, 'frontend'),
+        stdio: 'pipe'
+      });
+      success('Frontend build successful');
+    } catch (err) {
+      if (!skipOnError) {
+        error(`Frontend build failed: ${err.message}`);
+        return false;
+      }
+      warn('Frontend build failed (continuing with --skip-build-errors flag)');
+    }
+  }
+  
+  try {
     info('Testing backend build...');
     execSync('pnpm run build', { 
       cwd: join(PROJECT_ROOT, 'backend'),
       stdio: 'pipe'
     });
     success('Backend build successful');
-    
-    return true;
   } catch (err) {
-    error(`Build validation failed: ${err.message}`);
+    if (!skipOnError) {
+      error(`Backend build failed: ${err.message}`);
+      return false;
+    }
+    warn('Backend build failed (continuing with --skip-build-errors flag)');
+  }
+  
+  if (hasErrors && !skipOnError) {
+    console.log('\n⚠️  Build validation found issues. Options:');
+    console.log('  1. Fix the issues above');
+    console.log('  2. Run with --skip-build-errors flag to continue anyway');
+    console.log('  3. Create a patch release after fixing');
     return false;
   }
+  
+  return true;
 }
 
 /**
@@ -475,7 +529,7 @@ async function main() {
     process.exit(0);
   }
   
-  const version = args[0];
+  const version = versionArg;
   
   header(`PREPARING RELEASE v${normalizeVersion(version)}`);
   
@@ -533,7 +587,7 @@ async function main() {
   // Validate builds
   header('VALIDATING BUILDS');
   
-  if (!validateBuilds()) {
+  if (!validateBuilds(skipBuildErrors)) {
     process.exit(1);
   }
   
