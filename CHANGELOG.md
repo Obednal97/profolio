@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.2] - 2025-08-30
+
+### 🐛 **Bug Fixes**
+
+- **Production Build**: Fixed ESLint errors that prevented production builds from completing
+- **React Warnings**: Fixed unescaped quotes in JSX text content
+- **Dynamic Imports**: Corrected motion.div reference to use proper MotionDiv dynamic import
+
+### 🔧 **Improvements**
+
+- **Code Quality**: Removed unused imports (mockApi, motion, loadStripe) across 21 files
+- **API Routes**: Cleaned up unused request parameters in billing API routes
+- **Documentation**: Updated installation command to use interactive bash execution
+
+### 📊 **Summary**
+
+- **Files Changed**: 21
+- **Critical Fix**: Production builds now complete successfully
+- **Type**: Patch release for build compatibility
+
 ## [v1.14.1] - 2025-08-30
 
 ### ✨ **New Features**
