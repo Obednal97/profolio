@@ -300,109 +300,155 @@ export const generateDemoExpenses = (): Expense[] => {
   const expenses: Expense[] = [];
   const now = new Date();
 
-  // Categories with typical spending patterns
+  // Categories with typical spending patterns using proper category IDs from TRANSACTION_CATEGORIES
   const expensePatterns = [
-    // Recurring expenses
+    // Income items (amounts in cents)
     {
-      category: "Rent",
-      amount: 2500,
+      category: "salary",
+      amount: 550000, // $5,500
+      frequency: "Monthly",
+      isSubscription: false,
+      merchant: "TechCorp Inc",
+      description: "Monthly salary",
+    },
+    {
+      category: "freelance",
+      amount: 120000, // $1,200
+      frequency: "Occasional",
+      merchant: "Client ABC",
+      description: "Freelance project payment",
+    },
+    // Recurring expenses (amounts in cents)
+    {
+      category: "rent_mortgage",
+      amount: 250000, // $2,500
       frequency: "Monthly",
       isSubscription: false,
       merchant: "Apartment Complex",
       description: "Monthly rent payment",
     },
     {
-      category: "Utilities",
-      amount: 150,
+      category: "utilities",
+      amount: 15000, // $150
       frequency: "Monthly",
       isSubscription: false,
       merchant: "City Utilities",
       description: "Electricity & Water",
     },
     {
-      category: "Phone",
-      amount: 89,
+      category: "internet_phone",
+      amount: 8900, // $89
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Verizon",
       description: "Mobile phone plan",
     },
     {
-      category: "Internet",
-      amount: 75,
+      category: "internet_phone",
+      amount: 7500, // $75
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Comcast",
       description: "Internet service",
     },
     {
-      category: "Gym",
-      amount: 45,
+      category: "healthcare",
+      amount: 4500, // $45
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Planet Fitness",
       description: "Gym membership",
     },
     {
-      category: "Spotify",
-      amount: 10.99,
+      category: "streaming",
+      amount: 1099, // $10.99
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Spotify",
       description: "Music streaming",
     },
     {
-      category: "Netflix",
-      amount: 15.49,
+      category: "streaming",
+      amount: 1549, // $15.49
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Netflix",
       description: "Video streaming",
     },
     {
-      category: "Car Insurance",
-      amount: 125,
+      category: "insurance",
+      amount: 12500, // $125
       frequency: "Monthly",
       isSubscription: false,
       merchant: "Geico",
       description: "Auto insurance",
     },
-
-    // Variable expenses
     {
-      category: "Groceries",
-      amountRange: [80, 120],
+      category: "insurance",
+      amount: 18500, // $185
+      frequency: "Monthly",
+      isSubscription: false,
+      merchant: "Blue Cross",
+      description: "Health insurance",
+    },
+    {
+      category: "shopping",
+      amount: 1299, // $12.99
+      frequency: "Monthly",
+      isSubscription: true,
+      merchant: "Adobe",
+      description: "Creative Cloud subscription",
+    },
+
+    // Variable expenses (amounts in cents)
+    {
+      category: "groceries",
+      amountRange: [8000, 12000], // $80-$120
       frequency: "Weekly",
       merchant: "Whole Foods",
       description: "Weekly groceries",
     },
     {
-      category: "Gas",
-      amountRange: [40, 60],
+      category: "fuel",
+      amountRange: [4000, 6000], // $40-$60
       frequency: "Weekly",
       merchant: "Shell",
       description: "Gas for car",
     },
     {
-      category: "Dining Out",
-      amountRange: [25, 60],
+      category: "restaurants",
+      amountRange: [2500, 6000], // $25-$60
       frequency: "Multiple",
-      merchant: "Various",
-      description: "Restaurant",
+      merchant: "Various Restaurants",
+      description: "Dining out",
     },
     {
-      category: "Shopping",
-      amountRange: [50, 200],
+      category: "shopping",
+      amountRange: [5000, 20000], // $50-$200
       frequency: "Occasional",
       merchant: "Amazon",
       description: "Online shopping",
     },
     {
-      category: "Entertainment",
-      amountRange: [20, 80],
+      category: "entertainment",
+      amountRange: [2000, 8000], // $20-$80
       frequency: "Occasional",
-      merchant: "Various",
-      description: "Movies, events",
+      merchant: "AMC Theaters",
+      description: "Movies and events",
+    },
+    {
+      category: "pharmacy",
+      amountRange: [3000, 8000], // $30-$80
+      frequency: "Occasional",
+      merchant: "CVS Pharmacy",
+      description: "Personal care items",
+    },
+    {
+      category: "other",
+      amountRange: [1500, 5000], // $15-$50
+      frequency: "Occasional",
+      merchant: "Udemy",
+      description: "Online courses",
     },
   ];
 
@@ -484,6 +530,41 @@ export const generateDemoExpenses = (): Expense[] => {
           merchant: pattern.merchant,
         });
       }
+    }
+    
+    // Add some random one-off expenses for more variety
+    if (Math.random() < 0.1) {
+      // 10% chance for misc expenses
+      const miscExpenses = [
+        { category: "rideshare", amount: 1500, merchant: "Uber", description: "Ride share" }, // $15
+        { category: "coffee_tea", amount: 800, merchant: "Starbucks", description: "Coffee" }, // $8
+        { category: "pharmacy", amount: 2500, merchant: "Walgreens", description: "Pharmacy" }, // $25
+        { category: "home_garden", amount: 3500, merchant: "Target", description: "Household items" }, // $35
+        { category: "other", amount: 5000, merchant: "Various", description: "Miscellaneous expense" }, // $50
+        { category: "transportation", amount: 20000, merchant: "Delta Airlines", description: "Flight booking" }, // $200
+        { category: "insurance", amount: 9500, merchant: "State Farm", description: "Renters insurance" }, // $95
+        { category: "takeout_delivery", amount: 3200, merchant: "DoorDash", description: "Food delivery" }, // $32
+        { category: "shopping", amount: 4500, merchant: "PetSmart", description: "Pet supplies" }, // $45
+        { category: "clothing", amount: 7500, merchant: "H&M", description: "Clothing" }, // $75
+        // Income items (amounts in cents)
+        { category: "income", amount: 15000, merchant: "John Smith", description: "Friend repaid loan" }, // $150
+        { category: "income", amount: 8900, merchant: "Amazon", description: "Product return refund" }, // $89
+        { category: "investment_income", amount: 25000, merchant: "Vanguard", description: "Dividend payment" }, // $250
+        { category: "freelance", amount: 80000, merchant: "StartupXYZ", description: "Consulting work" }, // $800
+        { category: "income", amount: 50000, merchant: "IRS", description: "Tax refund" }, // $500
+        { category: "income", amount: 20000, merchant: "Birthday Gift", description: "Birthday money from parents" }, // $200
+      ];
+      const misc = miscExpenses[Math.floor(Math.random() * miscExpenses.length)];
+      expenses.push({
+        id: `demo-expense-${expenses.length + 1}`,
+        userId: "demo-user-id",
+        category: misc.category,
+        amount: misc.amount * (0.8 + Math.random() * 0.4), // Add some variance
+        date: date.toISOString().split("T")[0],
+        description: misc.description,
+        recurrence: "one-time",
+        merchant: misc.merchant,
+      });
     }
   }
 

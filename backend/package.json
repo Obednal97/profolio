@@ -1,11 +1,12 @@
 {
   "name": "profolio-backend",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Personal finance backend for Profolio",
   "main": "dist/main.js",
   "scripts": {
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
+    "dev": "nest start --watch",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\" --fix",
@@ -13,21 +14,21 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.0",
+    "@nestjs/common": "^11.1.6",
     "@nestjs/config": "^4.0.2",
-    "@nestjs/core": "^11.1.0",
+    "@nestjs/core": "^11.1.6",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.6",
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "^11.1.6",
-    "@prisma/client": "^6.7.0",
+    "@prisma/client": "^6.14.0",
     "@types/decimal.js": "^0.0.32",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
-    "decimal.js": "^10.5.0",
+    "decimal.js": "^10.6.0",
     "dotenv": "^16.5.0",
     "firebase-admin": "^13.4.0",
     "helmet": "^8.1.0",
@@ -36,18 +37,19 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "stripe": "^18.5.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.7",
-    "@nestjs/schematics": "^11.0.5",
+    "@nestjs/cli": "^11.0.10",
+    "@nestjs/schematics": "^11.0.7",
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/passport-jwt": "^4.0.1",
-    "prisma": "^6.7.0",
+    "prisma": "^6.14.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.9.2"
   },
   "packageManager": "pnpm@9.14.4"
 }

@@ -45,17 +45,17 @@ Each release notes file contains:
 
 ## 📋 Latest Releases
 
-### Current Stable: v1.3.0
-- **Released**: 2025-06-02
-- **Highlights**: Enhanced notification system, demo mode banner, auto-updates toggle, critical fixes
-- **Release Notes**: [v1.3.0](./v1/v1.3/RELEASE_NOTES_v1.3.0.md)
-- **GitHub Release**: [v1.3.0 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.3.0)
+### Current Stable: v1.13.1
+- **Released**: 2025-06-12
+- **Highlights**: Component architecture planning (93% file size reduction roadmap), Apple Liquid Glass design system, modern GlassCard/GlassModal components
+- **Release Notes**: [v1.13.1](./v1/v1.13/RELEASE_NOTES_v1.13.1.md)
+- **GitHub Release**: [v1.13.1 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.13.1)
 
-### Previous Stable: v1.2.1
-- **Released**: 2024-12-15
-- **Highlights**: Proxmox LXC container support, environment preservation system
-- **Release Notes**: [v1.2.1](./v1/v1.2/RELEASE_NOTES_v1.2.1.md)
-- **GitHub Release**: [v1.2.1 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.2.1)
+### Previous Stable: v1.13.0
+- **Released**: 2025-06-11
+- **Highlights**: Technical debt cleanup, complete removal of inappropriate mockApi usage, enhanced API patterns
+- **Release Notes**: [v1.13.0](./v1/v1.13/RELEASE_NOTES_v1.13.0.md)
+- **GitHub Release**: [v1.13.0 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.13.0)
 
 ## 📝 Version History Notes
 
@@ -67,8 +67,18 @@ Some release notes may be missing for certain versions due to:
 Available version series:
 - **v1.0.x**: v1.0.2 through v1.0.11 (with some gaps)
 - **v1.1.x**: v1.1.0
-- **v1.2.x**: v1.2.0, v1.2.1
-- **v1.3.x**: v1.3.0 (current)
+- **v1.2.x**: v1.2.0, v1.2.1, v1.2.3
+- **v1.3.x**: v1.3.0
+- **v1.4.x**: v1.4.0, v1.4.1
+- **v1.5.x**: v1.5.0
+- **v1.6.x**: v1.6.0
+- **v1.7.x**: v1.7.0
+- **v1.8.x**: v1.8.0 through v1.8.8
+- **v1.9.x**: v1.9.0, v1.9.1
+- **v1.10.x**: v1.10.0
+- **v1.11.x**: v1.11.0 through v1.11.16 (series summary available)
+- **v1.12.x**: v1.12.0 through v1.12.5
+- **v1.13.x**: v1.13.0, v1.13.1 (current)
 
 ## 🔍 Finding Release Notes
 
@@ -95,6 +105,57 @@ Profolio follows [Semantic Versioning](https://semver.org/):
 - **PATCH**: Bug fixes (backward compatible)
 
 ### Version History Overview
+
+#### v1.13.x Series - Component Architecture & Glass Design System
+- Comprehensive component improvement plan (93% file size reduction)
+- Apple Liquid Glass design system implementation
+- Modern GlassCard and GlassModal components
+- Technical debt cleanup and API modernization
+
+#### v1.12.x Series - E2E Testing & Production Fixes
+- Comprehensive Playwright E2E testing framework
+- Security, performance, and accessibility testing
+- Critical production environment fixes
+- Database migration improvements
+
+#### v1.11.x Series - Installation & Security Enhancements
+- Enterprise diagnostic system for installer
+- Critical security vulnerability fixes
+- PWA implementation improvements
+
+#### v1.10.x Series - Security Overhaul
+- Complete authentication system security overhaul
+- JWT and Firebase token validation improvements
+- CORS and encryption enhancements
+
+#### v1.9.x Series - PWA & Performance
+- Complete Progressive Web App implementation
+- Critical performance optimizations
+- Service worker and offline support
+
+#### v1.8.x Series - UI/UX & Optimization
+- Markdown support in release notes
+- Mobile-first updates page
+- Space optimization improvements
+
+#### v1.7.x Series - Logo & Design System
+- SVG logo system implementation
+- Modern favicon support
+- PWA icon complete set
+
+#### v1.6.x Series - Landing Page Modernization
+- Glass morphism design implementation
+- Animated backgrounds with Framer Motion
+- Responsive design improvements
+
+#### v1.5.x Series - Documentation
+- Self-hosted focus documentation
+- Security documentation overhaul
+
+#### v1.4.x Series - Stability & Performance
+- Circuit breaker pattern implementation
+- Yahoo Finance rate limiting fixes
+- Build system improvements
 
 #### v1.3.x Series - Notification & UX Enhancements
 - Enhanced notification system with badges

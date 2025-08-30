@@ -58,7 +58,7 @@
 ### 🚀 **Standard Update**
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh)"
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 
 ### 🔄 **Migration Notes**
@@ -80,5 +80,24 @@ This release establishes the foundation for upcoming major improvements:
 - Week 3-4: Asset Manager and Property Manager modernization
 - Week 5-6: Settings page restructuring and API modal unification
 - Week 7-8: Platform-wide glass design system adoption and testing
+
+---
+
+## 📊 **Release Statistics**
+
+- **Files Enhanced**: 15 files with significant improvements
+- **Code Additions**: 5,396 lines of new functionality
+- **Foundation Established**: Complete preparation for 93% file size reduction
+- **Design System**: Apple Liquid Glass implementation ready for adoption
+- **Success Metrics**: Generic component strategy for 4+ manager pages
+
+---
+
+## 🔗 **Related Resources**
+
+- **Full Changelog**: [CHANGELOG.md](../../../../CHANGELOG.md)
+- **GitHub Release**: [v1.13.1 on GitHub](https://github.com/Obednal97/profolio/releases/tag/v1.13.1)
+- **Installation Guide**: [README.md](../../../../README.md)
+- **Contributing**: [CONTRIBUTING.md](../../../../CONTRIBUTING.md)
 
 ---

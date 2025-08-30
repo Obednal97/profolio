@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.0] - 2025-08-30
+
+### ✨ **New Features**
+
+- **TODO**: Add new features
+
+### 🐛 **Bug Fixes**
+
+- **TODO**: Add bug fixes
+
+### 🔧 **Improvements**
+
+- **TODO**: Add improvements
+
+### 📊 **Summary**
+
+- **Files Changed**: TODO
+- **Features Added**: TODO
+- **Issues Resolved**: TODO
+
 ## [v1.13.1] - 2025-06-12
 
 ### 📋 **Component Architecture Planning** (Foundation for Major Improvements)
@@ -204,7 +224,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 **Technical Details**
 
-- **Installer Enhancement**: Modified all `git fetch origin` commands to `git fetch origin --tags` in install-or-update.sh
+- **Installer Enhancement**: Modified all `git fetch origin` commands to `git fetch origin --tags` in install.sh
 - **Tag Synchronization**: Ensures production servers can access all release tags for successful version checkout
 - **Update Reliability**: Eliminates installer failures and automatic rollbacks during legitimate updates
 - **Consistent Fetching**: Applied `--tags` flag to all git fetch operations for comprehensive tag availability
@@ -1024,7 +1044,7 @@ _Note: Detailed changelog entries for these versions were not available in the r
 ### 📦 Installation & Updates
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh)"
 ```
 
 ### 📊 Summary
@@ -1338,7 +1358,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/
 ### 📦 Installation & Updates
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-or-update.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 
 ### 🔧 Technical Stack

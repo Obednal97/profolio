@@ -1,19 +1,27 @@
 {
   "name": "profolio",
-  "version": "1.13.1",
+  "version": "1.14.0",
   "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
-  "main": "install-or-update.sh",
+  "main": "install.sh",
   "scripts": {
-    "install": "./install-or-update.sh",
-    "update": "./install-or-update.sh",
-    "deploy": "./deploy.sh",
-    "setup": "./setup.sh",
+    "start": "concurrently \"pnpm start:backend\" \"pnpm start:frontend\"",
+    "start:dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "start:backend": "cd backend && pnpm start",
+    "start:frontend": "cd frontend && pnpm start",
+    "dev": "pnpm start:dev",
+    "dev:clean": "./scripts/dev-with-cleanup.sh",
+    "cleanup": "./scripts/cleanup-ports.sh",
     "dev:backend": "cd backend && pnpm run start:dev",
     "dev:frontend": "cd frontend && pnpm run dev",
+    "build": "pnpm build:backend && pnpm build:frontend",
     "build:backend": "cd backend && pnpm run build",
     "build:frontend": "cd frontend && pnpm run build",
+    "test": "pnpm test:backend && pnpm test:frontend",
     "test:backend": "cd backend && pnpm test",
-    "test:frontend": "cd frontend && pnpm test"
+    "test:frontend": "cd frontend && pnpm test",
+    "update": "./install.sh",
+    "deploy": "./deploy.sh",
+    "setup": "./setup.sh"
   },
   "repository": {
     "type": "git",
@@ -43,7 +51,7 @@
   },
   "packageManager": "pnpm@9.14.4",
   "files": [
-    "install-or-update.sh",
+    "install.sh",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
@@ -55,6 +63,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "http-proxy": "^1.18.1"
   }
 }

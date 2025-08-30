@@ -10,24 +10,18 @@ import React, {
 import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
 import { useAppContext } from "@/components/layout/layoutWrapper";
 import { ExpenseModal } from "@/components/modals/ExpenseModal";
-import { Button } from "@/components/ui/button/button";
+import { Button, Tabs } from "@/components/ui/button";
+import { ViewSwitcher } from "@/components/ui/ViewSwitcher";
+import { StatCard } from "@/components/cards/StatCard";
 import { motion, AnimatePresence } from "framer-motion";
-import LineChart from "@/components/charts/line";
-import PieChart from "@/components/charts/pie";
 import FinancialInsights from "@/components/insights/FinancialInsights";
 import {
   getAllCategories,
   getSubcategories,
   getCategoryInfo,
 } from "@/lib/transactionClassifier";
-import {
-  SkeletonCard,
-  Skeleton,
-  SkeletonStat,
-  SkeletonButton,
-  SkeletonInput,
-} from "@/components/ui/skeleton";
-import { GlassCard } from "@/components/cards";
+import { ExpenseManagerSkeleton } from "@/components/ui/skeleton";
+import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
@@ -44,15 +38,21 @@ function ExpenseManager() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState("30");
+  const [timeRange, setTimeRange] = useState("30");  // For charts only
+  const [fetchTimeRange] = useState("30");  // For fetching expenses - fixed
   const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [activeTab, setActiveTab] = useState<"expenses" | "insights">(
-    "expenses"
+    "insights"
   );
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(
     new Set()
   );
+  const [sortOrder, setSortOrder] = useState<
+    "date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "name_asc" | "name_desc" | "category_asc" | "category_desc"
+  >("date_desc");
   const [openCategoryDropdown, setOpenCategoryDropdown] = useState<
     string | null
   >(null);
@@ -115,7 +115,7 @@ function ExpenseManager() {
       }
 
       // Use GET with query parameters instead of POST with body
-      const queryParams = timeRange ? `?days=${timeRange}` : "";
+      const queryParams = fetchTimeRange ? `?days=${fetchTimeRange}` : "";
       const response = await fetch(`/api/expenses${queryParams}`, {
         method: "GET", // ✅ Changed from POST to GET
         headers,
@@ -149,7 +149,7 @@ function ExpenseManager() {
         setLoading(false);
       }
     }
-  }, [userId, timeRange, cleanup, authToken]);
+  }, [userId, fetchTimeRange, authToken]);
 
   useEffect(() => {
     if (userId) fetchExpenses();
@@ -348,9 +348,35 @@ function ExpenseManager() {
   const allCategories = useMemo(() => getAllCategories(), []);
 
   // Calculate metrics
-  const totalExpenses = useMemo(() => {
-    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  }, [expenses]);
+  // Calculate 30-day metrics
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+  const last30DaysExpenses = useMemo(() => {
+    return expenses
+      .filter(expense => 
+        expense.date >= thirtyDaysAgoStr &&
+        !['income', 'salary', 'investment_income', 'freelance'].includes(expense.category)
+      )
+      .reduce((sum, expense) => sum + expense.amount, 0);
+  }, [expenses, thirtyDaysAgoStr]);
+
+  const last30DaysIncome = useMemo(() => {
+    return expenses
+      .filter(expense => 
+        expense.date >= thirtyDaysAgoStr &&
+        ['income', 'salary', 'investment_income', 'freelance'].includes(expense.category)
+      )
+      .reduce((sum, expense) => sum + expense.amount, 0);
+  }, [expenses, thirtyDaysAgoStr]);
+
+  const activeSubscriptions = useMemo(() => {
+    return expenses.filter((e) => 
+      e.recurrence === "recurring" && 
+      e.date >= thirtyDaysAgoStr
+    ).length;
+  }, [expenses, thirtyDaysAgoStr]);
 
   const expensesByCategory = useMemo(() => {
     return expenses.reduce((acc, expense) => {
@@ -424,8 +450,40 @@ function ExpenseManager() {
       filtered = filtered.filter((expense) => expense.date <= filters.dateTo);
     }
 
-    return filtered;
-  }, [expenses, filterCategory, filters, searchQuery]);
+    // Sort expenses
+    return filtered.sort((a, b) => {
+      // Helper function to determine if an expense is income
+      const isIncome = (category: string) => 
+        ['income', 'salary', 'investment_income', 'freelance'].includes(category);
+      
+      switch (sortOrder) {
+        case "date_desc":
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        case "date_asc":
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case "amount_desc":
+          // Convert to signed values (income positive, expenses negative) for sorting
+          const aValue = isIncome(a.category) ? a.amount : -a.amount;
+          const bValue = isIncome(b.category) ? b.amount : -b.amount;
+          return bValue - aValue;
+        case "amount_asc":
+          // Convert to signed values (income positive, expenses negative) for sorting
+          const aValueAsc = isIncome(a.category) ? a.amount : -a.amount;
+          const bValueAsc = isIncome(b.category) ? b.amount : -b.amount;
+          return aValueAsc - bValueAsc;
+        case "name_asc":
+          return a.description.localeCompare(b.description);
+        case "name_desc":
+          return b.description.localeCompare(a.description);
+        case "category_asc":
+          return getCategoryInfo(a.category).name.localeCompare(getCategoryInfo(b.category).name);
+        case "category_desc":
+          return getCategoryInfo(b.category).name.localeCompare(getCategoryInfo(a.category).name);
+        default:
+          return 0;
+      }
+    });
+  }, [expenses, filterCategory, filters, searchQuery, sortOrder]);
 
   const monthlyExpensesTrend = useMemo(() => {
     const monthsCount = timeRange === "365" ? 12 : timeRange === "90" ? 3 : 1;
@@ -447,13 +505,7 @@ function ExpenseManager() {
         amount: total / 100,
       };
     });
-  }, [expenses, timeRange]);
-
-  // Count subscriptions
-  const subscriptionCount = useMemo(() => {
-    return expenses.filter((e) => e.recurrence === "recurring" || e.frequency)
-      .length;
-  }, [expenses]);
+  }, [expenses, timeRange]);  // timeRange only affects chart display, not data fetching
 
   // CSV Export functionality - memoized for performance
   const exportToCSV = useCallback(() => {
@@ -508,7 +560,7 @@ function ExpenseManager() {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-6"
+      className="liquid-glass rounded-xl p-6 mb-6"
     >
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
         <i className="fas fa-filter mr-2"></i>
@@ -526,7 +578,7 @@ function ExpenseManager() {
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, type: e.target.value }))
             }
-            className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
+            className="w-full liquid-glass--subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white"
           >
             <option value="all">All Types</option>
             <option value="one-time">One-time</option>
@@ -547,7 +599,7 @@ function ExpenseManager() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, amountMin: e.target.value }))
               }
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
+              className="w-full liquid-glass--subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
             <input
               type="number"
@@ -556,7 +608,7 @@ function ExpenseManager() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, amountMax: e.target.value }))
               }
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
+              className="w-full liquid-glass--subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
           </div>
         </div>
@@ -573,7 +625,7 @@ function ExpenseManager() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
               }
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
+              className="w-full liquid-glass--subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
             <input
               type="date"
@@ -581,7 +633,7 @@ function ExpenseManager() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, dateTo: e.target.value }))
               }
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white"
+              className="w-full liquid-glass--subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white"
             />
           </div>
         </div>
@@ -589,7 +641,7 @@ function ExpenseManager() {
 
       {/* Clear Filters */}
       <div className="mt-4 flex justify-end">
-        <button
+        <Button
           onClick={() =>
             setFilters({
               type: "all",
@@ -600,10 +652,11 @@ function ExpenseManager() {
               subcategory: "",
             })
           }
-          className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          variant="ghost"
+          size="sm"
         >
           Clear All Filters
-        </button>
+        </Button>
       </div>
     </motion.div>
   );
@@ -645,23 +698,25 @@ function ExpenseManager() {
               ))}
             </select>
 
-            <button
+            <Button
               onClick={handleBulkDelete}
-              className="text-sm text-red-600 hover:text-red-700 transition-colors flex items-center"
+              variant="danger"
+              size="sm"
+              icon="fa-trash"
             >
-              <i className="fas fa-trash mr-1"></i>
               Delete
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={() => {
                 setSelectedExpenses(new Set());
                 setShowBulkActions(false);
               }}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              variant="ghost"
+              size="sm"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </motion.div>
       )}
@@ -787,63 +842,7 @@ function ExpenseManager() {
   );
 
   // Comprehensive Expense Manager Skeleton
-  const ExpenseManagerSkeleton = () => (
-    <div className="min-h-screen text-gray-900 dark:text-white">
-      <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
-        {/* Header skeleton */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <Skeleton className="h-10 w-64 mb-2" />
-              <Skeleton className="h-5 w-48" />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <SkeletonButton size="lg" className="w-40" />
-              <SkeletonButton size="lg" className="w-36" />
-              <SkeletonButton size="lg" className="w-36" />
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Cards skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <SkeletonStat key={i} />
-          ))}
-        </div>
-
-        {/* Tab navigation skeleton */}
-        <div className="flex space-x-1 mb-6">
-          <Skeleton className="h-10 w-32 rounded-lg" />
-          <Skeleton className="h-10 w-32 rounded-lg" />
-        </div>
-
-        {/* Filters skeleton */}
-        <div className="mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search skeleton */}
-            <div className="flex-1 max-w-md">
-              <SkeletonInput className="w-full" />
-            </div>
-
-            {/* Filter controls skeleton */}
-            <div className="flex flex-wrap gap-2">
-              <Skeleton className="h-10 w-32 rounded-lg" />
-              <Skeleton className="h-10 w-28 rounded-lg" />
-              <Skeleton className="h-10 w-20 rounded-lg" />
-            </div>
-          </div>
-        </div>
-
-        {/* Content area skeleton based on view mode */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <SkeletonCard key={i} className="h-48" />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  // ExpenseManagerSkeleton is now imported from @/components/ui/skeleton
 
   if (loading) {
     return <ExpenseManagerSkeleton />;
@@ -904,18 +903,19 @@ function ExpenseManager() {
     showCheckbox?: boolean;
   }) => {
     const categoryInfo = getCategoryInfo(expense.category);
+    const isIncome = ['income', 'salary', 'investment_income', 'freelance'].includes(expense.category);
 
     return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        whileHover={{ y: -4 }}
-        className={`bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-xl p-6 border transition-all duration-200 shadow-lg hover:shadow-xl ${
+      <EnhancedGlassCard
+        variant="subtle"
+        padding="md"
+        hoverable
+        enableLensing={false}
+        animate
+        className={`${
           isSelected
             ? "border-blue-500 ring-2 ring-blue-500/20"
-            : "border-white/10 hover:border-white/20"
+            : ""
         }`}
       >
         <div className="flex justify-between items-start mb-4">
@@ -941,26 +941,28 @@ function ExpenseManager() {
             </div>
           </div>
           <div className="flex space-x-2">
-            <button
+            <Button
               onClick={() => onEdit(expense)}
-              className="p-2 text-gray-400 hover:text-blue-400 transition-colors hover:bg-white/10 rounded-lg"
-            >
-              <i className="fas fa-edit"></i>
-            </button>
-            <button
+              variant="ghost"
+              size="sm"
+              icon="fa-edit"
+              className="text-gray-400 hover:text-blue-400"
+            />
+            <Button
               onClick={() => expense.id && onDelete(expense.id)}
-              className="p-2 text-gray-400 hover:text-red-400 transition-colors hover:bg-white/10 rounded-lg"
-            >
-              <i className="fas fa-trash"></i>
-            </button>
+              variant="ghost"
+              size="sm"
+              icon="fa-trash"
+              className="text-gray-400 hover:text-red-400"
+            />
           </div>
         </div>
 
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-gray-400 text-sm">Amount</span>
-            <span className="text-xl font-bold text-red-400">
-              -{formatCurrency(expense.amount)}
+            <span className={`text-xl font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+              {isIncome ? '+' : '-'}{formatCurrency(expense.amount)}
             </span>
           </div>
 
@@ -982,7 +984,7 @@ function ExpenseManager() {
             </div>
           )}
         </div>
-      </motion.div>
+      </EnhancedGlassCard>
     );
   };
 
@@ -1001,6 +1003,7 @@ function ExpenseManager() {
     onSelect: (id: string) => void;
   }) => {
     const categoryInfo = getCategoryInfo(expense.category);
+    const isIncome = ['income', 'salary', 'investment_income', 'freelance'].includes(expense.category);
 
     return (
       <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
@@ -1029,8 +1032,8 @@ function ExpenseManager() {
             </div>
           </div>
         </td>
-        <td className="px-4 py-3 font-medium text-red-500">
-          -{formatCurrency(expense.amount)}
+        <td className={`px-4 py-3 font-medium ${isIncome ? 'text-green-500' : 'text-red-500'}`}>
+          {isIncome ? '+' : '-'}{formatCurrency(expense.amount)}
         </td>
         <td className="px-4 py-3 text-gray-900 dark:text-white">
           {new Date(expense.date).toLocaleDateString("en-US", {
@@ -1051,18 +1054,20 @@ function ExpenseManager() {
         </td>
         <td className="px-4 py-3">
           <div className="flex space-x-2">
-            <button
+            <Button
               onClick={() => onEdit(expense)}
-              className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
-            >
-              <i className="fas fa-edit"></i>
-            </button>
-            <button
+              variant="ghost"
+              size="sm"
+              icon="fa-edit"
+              className="text-gray-400 hover:text-blue-500"
+            />
+            <Button
               onClick={() => expense.id && onDelete(expense.id)}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-            >
-              <i className="fas fa-trash"></i>
-            </button>
+              variant="ghost"
+              size="sm"
+              icon="fa-trash"
+              className="text-gray-400 hover:text-red-500"
+            />
           </div>
         </td>
       </tr>
@@ -1089,23 +1094,30 @@ function ExpenseManager() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <a
+              <Button
+                as="a"
                 href="/app/expenses/import"
-                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200 inline-flex items-center justify-center"
+                variant="link"
+                animate
+                className="w-full sm:w-auto"
               >
                 <i className="fas fa-upload mr-2"></i>
                 Import Expenses
-              </a>
-              <button
+              </Button>
+              <Button
                 onClick={exportToCSV}
-                className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200 inline-flex items-center justify-center"
+                variant="glass"
+                animate
+                className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium shadow-lg rounded-xl border-white/20"
               >
                 <i className="fas fa-download mr-2"></i>
                 Export CSV
-              </button>
+              </Button>
               <Button
                 onClick={handleOpenModal}
-                className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg px-6 py-3 rounded-xl transition-all duration-200"
+                variant="glass-primary"
+                animate
+                className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium shadow-lg rounded-xl border-white/20"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add Expense
@@ -1140,63 +1152,50 @@ function ExpenseManager() {
           </motion.div>
         )}
 
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="relative max-w-md mx-auto md:mx-0">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <i className="fas fa-search text-gray-400"></i>
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-gray-700 transition-all duration-200"
-              placeholder="Search expenses by description, category, or notes..."
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            )}
-          </div>
-          {searchQuery && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center md:text-left">
-              Found {filteredExpenses.length} expense
-              {filteredExpenses.length !== 1 ? "s" : ""} matching &ldquo;
-              {searchQuery}&rdquo;
-            </p>
-          )}
-        </motion.div>
+        {/* Top Statistics - Moved above tabs */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <StatCard
+            title="Expenses (Last 30 Days)"
+            value={formatCurrency(last30DaysExpenses)}
+            icon="fa-receipt"
+            colorScheme="red"
+            dots={Array.from({ length: 7 }, () => Math.random() > 0.3)}
+            subtitle="Daily activity"
+          />
+          
+          <StatCard
+            title="Active Subscriptions"
+            value={activeSubscriptions}
+            icon="fa-sync-alt"
+            colorScheme="purple"
+            progressBar={{
+              value: activeSubscriptions,
+              max: 20,
+              label: "of 20"
+            }}
+          />
+          
+          <StatCard
+            title="Income (Last 30 Days)"
+            value={formatCurrency(last30DaysIncome)}
+            icon="fa-arrow-up"
+            colorScheme="green"
+            trend={{
+              value: last30DaysIncome > last30DaysExpenses ? "Surplus" : "Deficit",
+              isPositive: last30DaysIncome > last30DaysExpenses
+            }}
+          />
+        </div>
 
-        <div className="flex space-x-1 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-          <button
-            onClick={() => setActiveTab("expenses")}
-            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              activeTab === "expenses"
-                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            <i className="fas fa-receipt mr-2"></i>
-            Expenses
-          </button>
-          <button
-            onClick={() => setActiveTab("insights")}
-            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              activeTab === "insights"
-                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            <i className="fas fa-chart-line mr-2"></i>
-            Insights
-          </button>
+        <div className="flex justify-center mb-8">
+          <Tabs
+            tabs={[
+              { id: "insights", label: "Insights", icon: "fa-chart-line" },
+              { id: "expenses", label: "Expenses", icon: "fa-receipt" },
+            ]}
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab as "expenses" | "insights")}
+          />
         </div>
 
         <AnimatePresence mode="wait">
@@ -1207,310 +1206,199 @@ function ExpenseManager() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
             >
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-              >
-                <div className="bg-gradient-to-br from-red-500/20 to-red-600/20 backdrop-blur-sm rounded-xl p-6 border border-red-500/30">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-gray-400 text-sm">Total Expenses</p>
-                      <p className="text-3xl font-bold text-red-400 mt-1">
-                        {formatCurrency(totalExpenses)}
-                      </p>
-                      <div className="flex items-center mt-2">
-                        <div className="flex space-x-1">
-                          {/* Spending intensity dots */}
-                          {Array.from({ length: 7 }, (_, i) => (
-                            <div
-                              key={i}
-                              className={`w-2 h-2 rounded-full ${
-                                Math.random() > 0.3
-                                  ? "bg-red-400"
-                                  : "bg-gray-600"
-                              }`}
-                              title={`Day ${i + 1}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-xs text-gray-500 ml-2">
-                          Last 7 days
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-red-500/20 rounded-lg">
-                      <i className="fas fa-receipt text-red-400 text-xl"></i>
-                    </div>
-                  </div>
-                </div>
+              {/* Removed statistics - now shown above tabs */}
 
-                <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-gray-400 text-sm">Subscriptions</p>
-                      <p className="text-3xl font-bold text-purple-400 mt-1">
-                        {subscriptionCount}
-                      </p>
-                      <div className="mt-2">
-                        <div className="flex items-center">
-                          <div className="w-full bg-gray-700 rounded-full h-1.5">
-                            <div
-                              className="bg-purple-400 h-1.5 rounded-full transition-all duration-500"
-                              style={{
-                                width: `${Math.min(
-                                  (subscriptionCount / 10) * 100,
-                                  100
-                                )}%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-xs text-gray-500 ml-2">
-                            of 10
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-purple-500/20 rounded-lg">
-                      <i className="fas fa-sync-alt text-purple-400 text-xl"></i>
-                    </div>
-                  </div>
-                </div>
+              {/* Charts moved to Insights tab */}
 
-                <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/30">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-gray-400 text-sm">
-                        Total Transactions
-                      </p>
-                      <p className="text-3xl font-bold text-orange-400 mt-1">
-                        {expenses.length}
-                      </p>
-                      <div className="mt-2 flex items-center space-x-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          <i className="fas fa-arrow-up mr-1"></i>
-                          12% vs last month
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-orange-500/20 rounded-lg">
-                      <i className="fas fa-exchange-alt text-orange-400 text-xl"></i>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
-              >
-                <GlassCard
-                  variant="prominent"
-                  padding="lg"
-                  animate
-                  animationDelay={0.2}
-                >
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-semibold text-white">
-                      Spending Trend
-                    </h3>
-                    <div className="flex gap-2">
-                      {["30", "90", "365"].map((days) => (
-                        <button
-                          key={days}
-                          onClick={() => setTimeRange(days)}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            timeRange === days
-                              ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
-                              : "bg-white/10 text-gray-400 hover:bg-white/20"
-                          }`}
-                        >
-                          {days === "365"
-                            ? "Year"
-                            : days === "90"
-                            ? "Quarter"
-                            : "Month"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <LineChart
-                    data={monthlyExpensesTrend}
-                    xKey="month"
-                    lines={[{ dataKey: "amount", color: "#ef4444" }]}
-                  />
-                </GlassCard>
-
-                <GlassCard
-                  variant="prominent"
-                  padding="lg"
-                  animate
-                  animationDelay={0.25}
-                >
-                  <h3 className="text-xl font-semibold text-white mb-6">
-                    Spending by Category
-                  </h3>
-                  <PieChart
-                    data={Object.entries(expensesByCategory).map(
-                      ([category, data]) => {
-                        const categoryInfo = getCategoryInfo(category);
-                        return {
-                          name: categoryInfo.name,
-                          value: data.amount / 100,
-                          color: categoryInfo.color,
-                        };
-                      }
-                    )}
-                  />
-                </GlassCard>
-              </motion.div>
-
+              {/* New Filter Bar Design */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"
+                className="mb-6"
               >
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setFilterCategory("all")}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                      filterCategory === "all"
-                        ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
-                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                    }`}
-                  >
-                    All Categories
-                  </button>
-                  {allCategories.map((category) => {
-                    const categoryExpenses = Object.keys(
-                      expensesByCategory
-                    ).filter((cat) => {
-                      const catInfo = getCategoryInfo(cat);
-                      return (
-                        cat === category.id || catInfo.parent === category.id
-                      );
-                    });
-                    const totalCount = categoryExpenses.reduce(
-                      (sum, cat) => sum + (expensesByCategory[cat]?.count || 0),
-                      0
-                    );
-
-                    if (totalCount === 0) return null;
-
-                    return (
-                      <div key={category.id} className="relative">
-                        <button
-                          onClick={() => {
-                            if (openCategoryDropdown === category.id) {
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    {/* Multi-select Categories Dropdown */}
+                    <div className="relative">
+                      <Button
+                        onClick={() => setOpenCategoryDropdown(openCategoryDropdown ? null : "main")}
+                        variant="glass"
+                        size="md"
+                        animate
+                        className="min-w-[180px]"
+                      >
+                        <i className="fas fa-filter"></i>
+                        <span>{filterCategory === "all" ? "All Categories" : getCategoryInfo(filterCategory).name}</span>
+                        <i className="fas fa-chevron-down text-xs ml-auto"></i>
+                      </Button>
+                      
+                      {openCategoryDropdown === "main" && (
+                        <div className="absolute top-full left-0 mt-2 w-64 liquid-glass rounded-lg shadow-xl z-20 max-h-80 overflow-y-auto">
+                          <Button
+                            onClick={() => {
+                              setFilterCategory("all");
+                              setFilters(prev => ({ ...prev, subcategory: "" }));
                               setOpenCategoryDropdown(null);
-                            } else {
-                              setFilterCategory(category.id);
-                              setOpenCategoryDropdown(category.id);
-                            }
-                          }}
-                          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center ${
-                            filterCategory === category.id
-                              ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
-                              : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                          }`}
-                          data-dropdown
-                        >
-                          <i className={`fas ${category.icon} mr-2`}></i>
-                          {category.name} ({totalCount})
-                          <i className="fas fa-chevron-down ml-2 text-xs"></i>
-                        </button>
-
-                        {openCategoryDropdown === category.id && (
-                          <div
-                            className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 min-w-48"
-                            data-dropdown
+                            }}
+                            variant="dropdown-item"
+                            className="border-b-0"
                           >
-                            <button
-                              onClick={() => {
-                                setFilterCategory(category.id);
-                                setFilters((prev) => ({
-                                  ...prev,
-                                  subcategory: "",
-                                }));
-                                setOpenCategoryDropdown(null);
-                              }}
-                              className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-                            >
-                              All {category.name}
-                            </button>
-                            {getSubcategories(category.id).map((sub) => {
-                              const subCount =
-                                expensesByCategory[sub.id]?.count || 0;
-                              if (subCount === 0) return null;
-                              return (
-                                <button
-                                  key={sub.id}
+                            <i className="fas fa-globe mr-2"></i>
+                            All Categories
+                          </Button>
+                          {allCategories.map((category) => {
+                            const categoryExpenses = Object.keys(expensesByCategory).filter((cat) => {
+                              const catInfo = getCategoryInfo(cat);
+                              return cat === category.id || catInfo.parent === category.id;
+                            });
+                            const totalCount = categoryExpenses.reduce(
+                              (sum, cat) => sum + (expensesByCategory[cat]?.count || 0),
+                              0
+                            );
+                            if (totalCount === 0) return null;
+                            
+                            return (
+                              <div key={category.id}>
+                                <Button
                                   onClick={() => {
                                     setFilterCategory(category.id);
-                                    setFilters((prev) => ({
-                                      ...prev,
-                                      subcategory: sub.id,
-                                    }));
+                                    setFilters(prev => ({ ...prev, subcategory: "" }));
                                     setOpenCategoryDropdown(null);
                                   }}
-                                  className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white flex items-center"
+                                  variant="dropdown-item"
+                                  className="flex items-center justify-between border-b-0"
                                 >
-                                  <i
-                                    className={`fas ${sub.icon} mr-2 text-sm`}
-                                  ></i>
-                                  {sub.name} ({subCount})
-                                </button>
-                              );
-                            })}
+                                  <span className="flex items-center">
+                                    <i className={`fas ${category.icon} mr-2`}></i>
+                                    {category.name}
+                                  </span>
+                                  <span className="text-sm text-gray-500">({totalCount})</span>
+                                </Button>
+                                {getSubcategories(category.id).map((sub) => {
+                                  const subCount = expensesByCategory[sub.id]?.count || 0;
+                                  if (subCount === 0) return null;
+                                  return (
+                                    <Button
+                                      key={sub.id}
+                                      onClick={() => {
+                                        setFilterCategory(category.id);
+                                        setFilters(prev => ({ ...prev, subcategory: sub.id }));
+                                        setOpenCategoryDropdown(null);
+                                      }}
+                                      variant="dropdown-item"
+                                      className="pl-10 flex items-center justify-between border-b-0"
+                                    >
+                                      <span className="flex items-center">
+                                        <i className={`fas ${sub.icon} mr-2 text-sm`}></i>
+                                        {sub.name}
+                                      </span>
+                                      <span className="text-sm text-gray-500">({subCount})</span>
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expandable Search Field */}
+                    <div className={`relative transition-all duration-300 ${searchExpanded ? 'flex-1' : ''}`}>
+                      <Button
+                        onClick={() => setSearchExpanded(!searchExpanded)}
+                        variant="glass"
+                        size="md"
+                        animate
+                        icon="fa-search"
+                        iconOnly
+                        className={`${searchExpanded ? 'hidden' : 'flex'}`}
+                      />
+                      
+                      {searchExpanded && (
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="w-full liquid-glass--subtle rounded-lg pl-10 pr-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
+                              placeholder="Search expenses..."
+                              autoFocus
+                            />
+                            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          <Button
+                            onClick={() => {
+                              setSearchExpanded(false);
+                              setSearchQuery("");
+                            }}
+                            variant="ghost"
+                            size="md"
+                            icon="fa-times"
+                            iconOnly
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Advanced Filters Button */}
+                    <Button
+                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      variant="glass"
+                      size="md"
+                      animate
+                      icon={showAdvancedFilters ? "fa-times" : "fa-sliders-h"}
+                      className=""
+                    >
+                      <span className="hidden sm:inline">Advanced Filters</span>
+                    </Button>
+                  </div>
+
+                  {/* Sort Dropdown and View Switcher */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
+                      <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+                        className="bg-white/10 dark:bg-black/20 backdrop-blur-sm border border-white/20 dark:border-white/10 rounded-lg px-3 py-1.5 text-gray-900 dark:text-white focus:outline-none focus:border-white/40 dark:focus:border-white/30 text-sm"
+                      >
+                        <option value="date_desc">Date: Newest First</option>
+                        <option value="date_asc">Date: Oldest First</option>
+                        <option value="amount_desc">Amount: High to Low</option>
+                        <option value="amount_asc">Amount: Low to High</option>
+                        <option value="name_asc">Name: A to Z</option>
+                        <option value="name_desc">Name: Z to A</option>
+                        <option value="category_asc">Category: A to Z</option>
+                        <option value="category_desc">Category: Z to A</option>
+                      </select>
+                    </div>
+
+                    {/* View Mode Switcher */}
+                    <ViewSwitcher
+                      activeView={viewMode}
+                      onViewChange={setViewMode}
+                      variant="subtle"
+                    />
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      viewMode === "grid"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                    }`}
-                    title="Grid View"
-                  >
-                    <i className="fas fa-th"></i>
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      viewMode === "list"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                    }`}
-                    title="List View"
-                  >
-                    <i className="fas fa-list"></i>
-                  </button>
-                  <button
-                    onClick={() => setViewMode("table")}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      viewMode === "table"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                    }`}
-                    title="Table View"
-                  >
-                    <i className="fas fa-table"></i>
-                  </button>
-                </div>
+                {/* Search Results Count */}
+                {searchQuery && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Found {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? "s" : ""} matching &ldquo;{searchQuery}&rdquo;
+                  </p>
+                )}
+
+                {/* Collapsible Advanced Filters */}
+                <AnimatePresence>
+                  {showAdvancedFilters && (
+                    <AdvancedFilters />
+                  )}
+                </AnimatePresence>
               </motion.div>
-
-              <AdvancedFilters />
 
               {viewMode === "table" && filteredExpenses.length > 0 && (
                 <div className="flex items-center justify-between mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1597,13 +1485,15 @@ function ExpenseManager() {
                           ? "Start by adding your first expense to track your spending"
                           : "No expenses found in this category"}
                       </p>
-                      <button
+                      <Button
                         onClick={handleOpenModal}
-                        className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 py-3 rounded-xl transition-all duration-200"
+                        variant="glass-primary"
+                        animate
+                        className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white"
                       >
                         <i className="fas fa-plus mr-2"></i>
                         Add Your First Expense
-                      </button>
+                      </Button>
                     </motion.div>
                   ) : (
                     <motion.div
@@ -1713,7 +1603,13 @@ function ExpenseManager() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <FinancialInsights expenses={expenses} timeRange={timeRange} />
+              <FinancialInsights 
+                expenses={expenses} 
+                timeRange={timeRange}
+                expensesByCategory={expensesByCategory}
+                monthlyExpensesTrend={monthlyExpensesTrend}
+                setTimeRange={setTimeRange}
+              />
             </motion.div>
           )}
         </AnimatePresence>

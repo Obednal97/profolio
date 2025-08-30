@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mockApi } from "@/lib/mockApi";
+import { generateDemoProperties } from "@/lib/demoData";
 
 // Auto-detect backend URL with proper protocol
 const getBackendUrl = () => {
@@ -26,6 +28,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if this is a demo mode request
+    const isDemoMode = authHeader?.includes("demo-token") || 
+                       request.cookies.get("demo-mode")?.value === "true";
+
     const body = await request.json();
 
     if (!authHeader) {
@@ -33,6 +39,17 @@ export async function POST(request: NextRequest) {
         { success: false, error: "Authorization required - no token found" },
         { status: 401 }
       );
+    }
+
+    // Handle demo mode
+    if (isDemoMode) {
+      // For demo mode POST, we just return success since we don't persist
+      const newProperty = {
+        ...body,
+        id: `demo-property-${Date.now()}`,
+        userId: "demo-user-id"
+      };
+      return NextResponse.json({ property: newProperty, error: null });
     }
 
     // Forward the request to the backend
@@ -103,11 +120,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Check if this is a demo mode request
+    const isDemoMode = authHeader?.includes("demo-token") || 
+                       request.cookies.get("demo-mode")?.value === "true";
+
     if (!authHeader) {
       return NextResponse.json(
         { success: false, error: "Authorization required - no token found" },
         { status: 401 }
       );
+    }
+
+    // Handle demo mode
+    if (isDemoMode) {
+      // Generate demo properties directly since localStorage isn't available on server
+      const properties = generateDemoProperties();
+      return NextResponse.json({ properties, error: null });
     }
 
     // Forward the request to the backend
@@ -150,6 +178,140 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("❌ [Proxy] Properties GET proxy error:", error);
 
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Proxy error - unable to reach backend service",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 503 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    // Get authorization from header or httpOnly cookie
+    let authHeader = request.headers.get("authorization");
+
+    // If no auth header, try to get token from httpOnly cookie
+    if (!authHeader) {
+      const authToken = request.cookies.get("auth-token")?.value;
+      if (authToken) {
+        authHeader = `Bearer ${authToken}`;
+      }
+    }
+
+    // Check if this is a demo mode request
+    const isDemoMode = authHeader?.includes("demo-token") || 
+                       request.cookies.get("demo-mode")?.value === "true";
+
+    // Get the property ID from the URL
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const propertyId = pathParts[pathParts.length - 1];
+
+    // Parse request body
+    const body = await request.json();
+
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Authorization required - no token found" },
+        { status: 401 }
+      );
+    }
+
+    // Handle demo mode
+    if (isDemoMode) {
+      // For demo mode PUT, we just return the updated property
+      const updatedProperty = {
+        ...body,
+        id: propertyId || body.id,
+        userId: "demo-user-id"
+      };
+      return NextResponse.json({ property: updatedProperty, error: null });
+    }
+
+    // Forward the request to the backend
+    const backendUrl = propertyId ? `${BACKEND_URL}/api/properties/${propertyId}` : `${BACKEND_URL}/api/properties`;
+    const backendResponse = await fetch(backendUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await backendResponse.json();
+    return NextResponse.json(data, { status: backendResponse.status });
+  } catch (error) {
+    console.error("❌ [Proxy] Properties PUT proxy error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Proxy error - unable to reach backend service",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 503 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Get authorization from header or httpOnly cookie
+    let authHeader = request.headers.get("authorization");
+
+    // If no auth header, try to get token from httpOnly cookie
+    if (!authHeader) {
+      const authToken = request.cookies.get("auth-token")?.value;
+      if (authToken) {
+        authHeader = `Bearer ${authToken}`;
+      }
+    }
+
+    // Check if this is a demo mode request
+    const isDemoMode = authHeader?.includes("demo-token") || 
+                       request.cookies.get("demo-mode")?.value === "true";
+
+    // Parse request body for the ID
+    const body = await request.json();
+    const propertyId = body.id;
+
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Authorization required - no token found" },
+        { status: 401 }
+      );
+    }
+
+    if (!propertyId) {
+      return NextResponse.json(
+        { success: false, error: "Property ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Handle demo mode
+    if (isDemoMode) {
+      // For demo mode DELETE, just return success
+      return NextResponse.json({ success: true, error: null });
+    }
+
+    // Forward the request to the backend
+    const backendResponse = await fetch(`${BACKEND_URL}/api/properties/${propertyId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await backendResponse.json();
+    return NextResponse.json(data, { status: backendResponse.status });
+  } catch (error) {
+    console.error("❌ [Proxy] Properties DELETE proxy error:", error);
     return NextResponse.json(
       {
         success: false,
