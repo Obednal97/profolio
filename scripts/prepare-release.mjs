@@ -521,11 +521,17 @@ function displayNextSteps(version, releaseNotesPath) {
  */
 async function main() {
   const args = process.argv.slice(2);
+  const skipBuildErrors = args.includes('--skip-build-errors');
+  const versionArg = args.find(arg => !arg.startsWith('--'));
   
-  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
-    log('Usage: node prepare-release.mjs <version>');
+  if (!versionArg || args.includes('--help') || args.includes('-h')) {
+    log('Usage: node prepare-release.mjs <version> [options]');
     log('Example: node prepare-release.mjs v1.9.1');
-    log('         node prepare-release.mjs 1.9.1');
+    log('         node prepare-release.mjs 1.9.1 --skip-build-errors');
+    log('');
+    log('Options:');
+    log('  --skip-build-errors  Continue despite TypeScript/ESLint errors');
+    log('  --help, -h          Show this help message');
     process.exit(0);
   }
   

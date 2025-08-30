@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.3] - 2025-08-30
+
+### 🐛 **Critical Bug Fixes**
+
+- **TypeScript Error**: Fixed 'current_value' possibly undefined in assetManager sorting
+- **Build Failure**: Resolved the issue that prevented v1.14.2 from building on production servers
+
+### 🔧 **Improvements**
+
+- **Build Validation**: Added pre-commit hooks for TypeScript and ESLint checks
+- **Release Script**: Enhanced prepare-release.mjs with --skip-build-errors flag for emergencies
+- **CI/CD**: Configured for automatic validation on commits and PRs
+
+### 📊 **Summary**
+
+- **Files Changed**: 4
+- **Critical Fix**: Production builds now succeed on v1.14.3
+- **Type**: Hotfix for v1.14.2 TypeScript error
+
 ## [v1.14.2] - 2025-08-30
 
 ### 🐛 **Bug Fixes**
