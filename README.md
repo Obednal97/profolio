@@ -38,7 +38,7 @@ Take control of your financial data with complete privacy and sovereignty. Built
 
 ```bash
 # Complete installation in under 5 minutes - works everywhere!
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh)"
 ```
 
 **What happens automatically:**

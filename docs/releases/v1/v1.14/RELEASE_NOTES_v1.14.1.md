@@ -107,7 +107,7 @@
 Update your Profolio installation to v1.14.1:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh)"
 ```
 
 Self-hosted installations will detect and install this version automatically.
