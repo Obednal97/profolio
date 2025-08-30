@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.5] - 2025-08-30
+
+### 🐛 **Bug Fixes**
+
+- **Test Components**: Removed unused test-components page that was causing TypeScript build errors
+- **Build Process**: Eliminated non-critical TypeScript error blocking production deployments
+
+### 🔧 **Improvements**
+
+- **Code Cleanup**: Removed legacy test page that was no longer in use
+- **Build Reliability**: Improved production build success rate by removing problematic test code
+
+### 📊 **Summary**
+
+- **Files Changed**: 1 (removed)
+- **Issues Resolved**: 1 (TypeScript compilation error)
+- **Build Status**: ✅ Production builds now succeed
+
 ## [v1.14.4] - 2025-08-30
 
 ### 🐛 **Critical Bug Fixes**
