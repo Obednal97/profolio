@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.4] - 2025-08-30
+
+### 🐛 **Critical Bug Fixes**
+
+- **TypeScript Compilation**: Fixed multiple TypeScript errors preventing production builds
+- **API Client Types**: Added proper type parameters to all apiClient calls in billing pages
+- **Property Search**: Removed non-existent 'name' field from Property type search
+- **Component Props**: Fixed AssetCard and Tabs component type errors
+
+### 🔧 **Technical Improvements**
+
+- **Type Safety**: Improved type safety across billing and property management pages
+- **Build Reliability**: Resolved all critical TypeScript errors blocking deployment
+
+### 📊 **Summary**
+
+- **Files Changed**: 5 critical files
+- **Build Status**: Production builds now succeed
+- **Type**: Critical hotfix for v1.14.3
+
 ## [v1.14.3] - 2025-08-30
 
 ### 🐛 **Critical Bug Fixes**
