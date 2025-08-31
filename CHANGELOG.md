@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.11] - 2025-08-31
+
+### 🐛 **Bug Fixes**
+
+- **TUI Menu Display**: Fixed menu options not showing in whiptail/dialog
+- **Mock Functions**: Replaced placeholder functions with real installer integration
+- **Menu Format**: Corrected format to use "tag|description" syntax
+
+### ✨ **New Features**
+
+- **Full TUI Integration**: Complete menu-driven interface with real functionality
+- **Version Selection**: Live fetching from GitHub API for available versions
+- **Advanced Options**: All installer options available through TUI menus
+- **Progress Indicators**: Visual feedback during installation
+
+### 🔧 **Improvements**
+
+- **Feature Parity**: TUI now has all options from standard installer
+- **Auto-Detection**: Wrapper automatically uses TUI when whiptail/dialog available
+- **Fallback Support**: Clean CLI interface when TUI tools not available
+
+### 📊 **Summary**
+
+- **Files Changed**: 3 (install-tui.sh, lib/tui-functions.sh, install-wrapper.sh)
+- **Issues Fixed**: TUI menu display and functionality
+- **Status**: ✅ Professional TUI experience matching Proxmox scripts
+
 ## [v1.14.10] - 2025-08-31
 
 ### 🚀 **New Features**
