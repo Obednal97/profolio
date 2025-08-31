@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.16] - 2025-08-31
+
+### 🐛 **Bug Fixes**
+
+- **TUI Silent Mode**: Fixed update wizard appearing despite silent mode
+- **Update Path**: Added AUTO_INSTALL checks to skip wizards during updates
+- **Wizard Functions**: All wizards now return early when AUTO_INSTALL is true
+
+### 🔧 **Improvements**
+
+- **Complete Silent Experience**: No installer UI appears when using TUI
+- **All Operations**: Fresh install, update, and repair all run silently
+- **Professional UX**: Matches Proxmox community scripts behavior
+
+### 📊 **Summary**
+
+- **Files Changed**: 1 (install.sh)
+- **Critical Fix**: Update wizard no longer interrupts TUI experience
+- **Status**: ✅ TUI provides complete uninterrupted installation
+
 ## [v1.14.15] - 2025-08-31
 
 ### ✨ **New Features**
