@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.13] - 2025-08-31
+
+### 🔧 **Bug Fixes**
+
+- **TUI Menu Display**: Fixed menu descriptions not showing in whiptail/dialog
+- **Emoji Removal**: Removed emoji characters that caused display issues
+- **Compatibility**: Ensured menu works across all terminal encodings
+
+### 📊 **Summary**
+
+- **Files Changed**: 1 (install-tui.sh)  
+- **Issue Fixed**: Menu showed only numbers without descriptions
+- **Status**: ✅ TUI menu displays correctly with all options visible
+
 ## [v1.14.12] - 2025-08-31
 
 ### 🔥 **Hotfix**
