@@ -262,9 +262,9 @@ version_install() {
             ;;
     esac
     
-    show_message "Version Selected" "You selected version: $VERSION"
+    tui_msgbox "Version Selected" "You selected version: $VERSION"
     
-    if show_yesno "Confirm Installation" "Install Profolio $VERSION?"; then
+    if tui_yesno "Confirm Installation" "Install Profolio $VERSION?"; then
         run_installation
     fi
 }
@@ -479,14 +479,14 @@ run_repair() {
 
 run_backup() {
     local path="$1"
-    show_message "Backup Complete" "Backup created successfully at:\n$path\n\nThis is a simulation. In the real implementation, this would create a full backup."
+    tui_msgbox "Backup Complete" "Backup created successfully at:\n$path\n\nThis is a simulation. In the real implementation, this would create a full backup."
     
     log_success "Backup completed!"
 }
 
 run_restore() {
     local path="$1"
-    show_message "Restore Complete" "Restored from backup:\n$path\n\nThis is a simulation. In the real implementation, this would restore from the backup."
+    tui_msgbox "Restore Complete" "Restored from backup:\n$path\n\nThis is a simulation. In the real implementation, this would restore from the backup."
     
     log_success "Restore completed!"
 }
@@ -513,7 +513,7 @@ main() {
     
     # Show welcome message
     if [ "$TUI_AVAILABLE" = true ]; then
-        show_message "Welcome to Profolio" "Welcome to the Profolio installer!\n\nThis installer will guide you through setting up Profolio on your system.\n\nUsing TUI mode with: $TUI_TOOL"
+        tui_msgbox "Welcome to Profolio" "Welcome to the Profolio installer!\n\nThis installer will guide you through setting up Profolio on your system.\n\nUsing TUI mode with: $TUI_TOOL"
     else
         log_info "Welcome to Profolio installer!"
         log_warning "TUI not available, using CLI mode"
