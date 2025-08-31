@@ -38,7 +38,7 @@ Take control of your financial data with complete privacy and sovereignty. Built
 
 ```bash
 # Complete installation in under 5 minutes - works everywhere!
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-wrapper.sh)"
 ```
 
 **What happens automatically:**
@@ -69,13 +69,12 @@ curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh 
 
 ### 📥 **Alternative Installation Methods**
 
-If you encounter "Argument list too long" error, use one of these methods:
-
 ```bash
-# Method 1: Download and execute
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh -o install.sh && sudo bash install.sh
+# Method 1: Download and execute (if you prefer to review the script first)
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh -o install.sh
+sudo bash install.sh
 
-# Method 2: Using wget
+# Method 2: Using wget instead of curl
 wget -qO- https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 
