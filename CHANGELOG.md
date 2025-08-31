@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.15] - 2025-08-31
+
+### ✨ **New Features**
+
+- **Silent Mode**: Main installer supports --silent flag to suppress all output
+- **Progress Reporting**: Real-time progress written to file for TUI monitoring
+- **TUI Progress Gauge**: Shows live installation progress in whiptail/dialog
+- **Error Capture**: Errors logged to file and displayed in TUI message boxes
+
+### 🔧 **Improvements**
+
+- **Complete TUI Experience**: No console output interruptions during installation
+- **Professional Interface**: Matches Proxmox community scripts quality
+- **Background Processing**: Installer runs silently while TUI shows progress
+
+### 📊 **Summary**
+
+- **Files Changed**: 2 (install.sh, install-tui.sh)
+- **Lines Modified**: ~200 lines
+- **Status**: ✅ TUI provides complete, uninterrupted installation experience
+
 ## [v1.14.14] - 2025-08-31
 
 ### 🔧 **Bug Fixes**

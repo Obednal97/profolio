@@ -385,7 +385,7 @@ run_installation() {
     export PROFOLIO_FEATURES="$FEATURES"
     
     # Build installer arguments based on configuration
-    local INSTALLER_ARGS="--tui-config"
+    local INSTALLER_ARGS="--tui-config --silent"
     
     [ "$VERSION" != "latest" ] && [ -n "$VERSION" ] && INSTALLER_ARGS="$INSTALLER_ARGS --version $VERSION"
     [ "$PRESERVE_ENV" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --reset-env"
@@ -393,25 +393,56 @@ run_installation() {
     [ "$OPTIMIZATION" = "aggressive" ] && INSTALLER_ARGS="$INSTALLER_ARGS --aggressive-optimize"
     [ "$OPTIMIZATION" = "none" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-optimize"
     
-    # Clear screen for installation output
-    clear
+    # Show installation progress in TUI
+    local PROGRESS_FILE="/tmp/profolio-install-progress.log"
+    local ERROR_FILE="/tmp/profolio-install-error.log"
     
-    echo -e "${BLUE}Starting Profolio Installation${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
+    # Run installer in background
+    bash "$INSTALLER_PATH" $INSTALLER_ARGS &
+    local installer_pid=$!
     
-    # Run the actual installer
-    bash "$INSTALLER_PATH" $INSTALLER_ARGS
+    # Monitor progress and show in TUI gauge
+    {
+        while kill -0 $installer_pid 2>/dev/null; do
+            if [ -f "$PROGRESS_FILE" ]; then
+                # Read progress file
+                local progress_line=$(tail -n 1 "$PROGRESS_FILE" 2>/dev/null || echo "")
+                if [[ "$progress_line" =~ ^PROGRESS: ]]; then
+                    IFS=':' read -r tag current total message <<< "$progress_line"
+                    if [ -n "$total" ] && [ "$total" -gt 0 ]; then
+                        local percent=$((current * 100 / total))
+                        echo "$percent"
+                        echo "# $message"
+                    fi
+                fi
+            fi
+            sleep 0.5
+        done
+        echo "100"
+        echo "# Installation complete"
+    } | tui_gauge "Installing Profolio" "Please wait while Profolio is being installed..."
+    
+    # Wait for installer to finish
+    wait $installer_pid
     local install_result=$?
     
-    # Cleanup
+    # Cleanup temp directory
     rm -rf "$TEMP_DIR"
     
+    # Check for errors
     if [ $install_result -eq 0 ]; then
         tui_msgbox "Installation Complete" "Profolio has been successfully installed!\n\nAccess your instance at:\n• Frontend: http://$(hostname -I | awk '{print $1}'):3000\n• Backend: http://$(hostname -I | awk '{print $1}'):3001"
     else
-        tui_msgbox "Installation Failed" "Installation failed. Please check the logs for details."
+        # Read error details if available
+        local error_msg="Installation failed."
+        if [ -f "$ERROR_FILE" ] && [ -s "$ERROR_FILE" ]; then
+            error_msg="Installation failed:\n\n$(tail -n 5 "$ERROR_FILE")"
+        fi
+        tui_msgbox "Installation Failed" "$error_msg"
     fi
+    
+    # Cleanup progress files
+    rm -f "$PROGRESS_FILE" "$ERROR_FILE"
     
     return $install_result
 }
@@ -444,16 +475,39 @@ run_update() {
     export PROFOLIO_ENABLE_ROLLBACK="$ENABLE_ROLLBACK"
     
     # Build update arguments
-    local INSTALLER_ARGS="--update --tui-config"
+    local INSTALLER_ARGS="--update --tui-config --silent"
     [ "$PRESERVE_ENV" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --reset-env"
     [ "$ENABLE_ROLLBACK" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-rollback"
     
-    clear
-    echo -e "${BLUE}Updating Profolio${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
+    # Show update progress in TUI
+    local PROGRESS_FILE="/tmp/profolio-install-progress.log"
+    local ERROR_FILE="/tmp/profolio-install-error.log"
     
-    bash "$INSTALLER_PATH" $INSTALLER_ARGS
+    # Run installer in background
+    bash "$INSTALLER_PATH" $INSTALLER_ARGS &
+    local installer_pid=$!
+    
+    # Monitor progress and show in TUI gauge
+    {
+        while kill -0 $installer_pid 2>/dev/null; do
+            if [ -f "$PROGRESS_FILE" ]; then
+                local progress_line=$(tail -n 1 "$PROGRESS_FILE" 2>/dev/null || echo "")
+                if [[ "$progress_line" =~ ^PROGRESS: ]]; then
+                    IFS=':' read -r tag current total message <<< "$progress_line"
+                    if [ -n "$total" ] && [ "$total" -gt 0 ]; then
+                        local percent=$((current * 100 / total))
+                        echo "$percent"
+                        echo "# $message"
+                    fi
+                fi
+            fi
+            sleep 0.5
+        done
+        echo "100"
+        echo "# Update complete"
+    } | tui_gauge "Updating Profolio" "Please wait while Profolio is being updated..."
+    
+    wait $installer_pid
     local result=$?
     
     rm -rf "$TEMP_DIR"
@@ -489,12 +543,35 @@ run_repair() {
     
     chmod +x "$INSTALLER_PATH"
     
-    clear
-    echo -e "${BLUE}Repairing Profolio Installation${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
+    # Show repair progress in TUI
+    local PROGRESS_FILE="/tmp/profolio-install-progress.log"
+    local ERROR_FILE="/tmp/profolio-install-error.log"
     
-    bash "$INSTALLER_PATH" --repair
+    # Run installer in background with silent mode
+    bash "$INSTALLER_PATH" --repair --silent &
+    local installer_pid=$!
+    
+    # Monitor progress and show in TUI gauge
+    {
+        while kill -0 $installer_pid 2>/dev/null; do
+            if [ -f "$PROGRESS_FILE" ]; then
+                local progress_line=$(tail -n 1 "$PROGRESS_FILE" 2>/dev/null || echo "")
+                if [[ "$progress_line" =~ ^PROGRESS: ]]; then
+                    IFS=':' read -r tag current total message <<< "$progress_line"
+                    if [ -n "$total" ] && [ "$total" -gt 0 ]; then
+                        local percent=$((current * 100 / total))
+                        echo "$percent"
+                        echo "# $message"
+                    fi
+                fi
+            fi
+            sleep 0.5
+        done
+        echo "100"
+        echo "# Repair complete"
+    } | tui_gauge "Repairing Profolio" "Please wait while Profolio is being repaired..."
+    
+    wait $installer_pid
     local result=$?
     
     rm -rf "$TEMP_DIR"
