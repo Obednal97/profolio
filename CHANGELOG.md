@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.15.2] - 2025-08-31
+
+### 🐛 **Critical Fix**
+
+- **Fixed Installation Failure**: Resolved "wait $pid (exit code: 1)" error
+- **Added Workspace Configuration**: Created missing pnpm-workspace.yaml
+- **Fixed Dependencies**: Added missing concurrently dependency to root package.json
+- **Improved Build Process**: Separated dependency installation for root/frontend/backend
+
+### 🔧 **Improvements**
+
+- **Better Error Reporting**: Enhanced error visibility in spinner function
+- **Error Output Display**: Shows first 10 lines of error on failure
+- **Robust Installation**: Proper monorepo structure support
+
+### 📊 **Summary**
+
+- **Files Added**: `pnpm-workspace.yaml`
+- **Files Modified**: `package.json`, `install-v2.sh`
+- **Root Cause**: Missing workspace configuration and dependencies
+- **Status**: ✅ Installation now works correctly
+
 ## [v1.15.1] - 2025-08-31
 
 ### 🐛 **Bug Fixes**

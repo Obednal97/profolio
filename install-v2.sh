@@ -69,11 +69,14 @@ function run_with_spinner() {
     # Print message
     printf " %s... " "$msg"
     
+    # Create temp file for error output
+    local error_file="/tmp/profolio-error-$$"
+    
     # Run command in background
     if [ "$VERBOSE" == "yes" ]; then
         "$@" &
     else
-        "$@" &>/dev/null &
+        "$@" 2>"$error_file" &
     fi
     local pid=$!
     
@@ -94,9 +97,15 @@ function run_with_spinner() {
     
     if [ $result -eq 0 ]; then
         echo -e "${BFR} ${GN}✓${CL} ${msg}"
+        rm -f "$error_file"
         return 0
     else
         echo -e "${BFR} ${RD}✗${CL} ${msg} (failed)"
+        if [ -s "$error_file" ] && [ "$VERBOSE" != "yes" ]; then
+            echo -e "${RD}Error output:${CL}"
+            cat "$error_file" | head -10
+        fi
+        rm -f "$error_file"
         return $result
     fi
 }
@@ -242,15 +251,19 @@ function build_application() {
     
     cd "$TEMP_DIR"
     
-    # Install dependencies
-    run_with_spinner "Installing project dependencies" pnpm install
+    # Install root dependencies first (if package.json exists)
+    if [ -f "package.json" ]; then
+        run_with_spinner "Installing root dependencies" pnpm install --ignore-scripts
+    fi
     
-    # Build frontend
+    # Install frontend dependencies
     cd frontend
+    run_with_spinner "Installing frontend dependencies" pnpm install
     run_with_spinner "Building frontend" pnpm build
     
-    # Build backend
+    # Install and build backend
     cd ../backend
+    run_with_spinner "Installing backend dependencies" pnpm install
     run_with_spinner "Building backend" pnpm build
     run_with_spinner "Generating Prisma client" pnpm prisma generate
     run_with_spinner "Running database migrations" pnpm prisma migrate deploy
