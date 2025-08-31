@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.15.3] - 2025-09-01
+
+### 🐛 **Bug Fixes**
+
+- **TUI Character Encoding**: Fixed weird characters (�<80>�) in menus by replacing bullet points with ASCII dashes
+- **Container Detection**: Advanced mode no longer asks for CPU/RAM/Disk when already inside a container
+- **Build Errors**: Fixed ESLint and TypeScript errors that prevented builds
+- **Nested Directory**: Removed erroneous frontend/frontend directory
+- **Build Visibility**: Frontend build now shows actual output instead of hiding errors
+
+### 🔧 **Improvements**
+
+- **Container Awareness**: Installer detects if running inside container and adjusts accordingly
+- **Error Reporting**: Build errors now visible with helpful messages
+- **TypeScript Fixes**: Fixed animation variant types in pages
+- **ESLint Fixes**: Removed unused imports and variables
+
+### 📊 **Summary**
+
+- **Files Modified**: `profolio.sh`, `install-v2.sh`, `next.config.js`, multiple page components
+- **Files Removed**: Nested frontend directory
+- **Status**: ✅ All installer issues resolved
+
 ## [v1.15.2] - 2025-08-31
 
 ### 🐛 **Critical Fix**

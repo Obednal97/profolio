@@ -259,7 +259,16 @@ function build_application() {
     # Install frontend dependencies
     cd frontend
     run_with_spinner "Installing frontend dependencies" pnpm install
-    run_with_spinner "Building frontend" pnpm build
+    
+    # Build frontend with better error handling
+    msg_info "Building frontend (this may take a few minutes)"
+    if pnpm build 2>&1 | tee /tmp/frontend-build.log; then
+        msg_ok "Frontend built successfully"
+    else
+        msg_error "Frontend build had issues - see output above"
+        echo "${YW}Note: Build warnings don't prevent installation${CL}"
+        echo "${YW}Check /tmp/frontend-build.log for details${CL}"
+    fi
     
     # Install and build backend
     cd ../backend

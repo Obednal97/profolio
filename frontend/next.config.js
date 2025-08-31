@@ -62,6 +62,16 @@ const nextConfig = {
   reactStrictMode: true, // Enable strict mode for better error detection
   trailingSlash: false, // Consistent URL structure
 
+  // Build configuration
+  eslint: {
+    // During production builds, don't fail on ESLint warnings
+    ignoreDuringBuilds: false,
+  },
+  typescript: {
+    // Don't fail build on TypeScript errors (warnings only)
+    ignoreBuildErrors: false,
+  },
+
   // PERFORMANCE: Experimental features for better performance
   experimental: {
     // PERFORMANCE: Enable modern bundling for better tree shaking

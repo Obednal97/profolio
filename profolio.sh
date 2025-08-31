@@ -97,7 +97,7 @@ function main_menu {
 # Standard Installation
 function install_profolio {
     if $TUI_TOOL --title "Install Profolio" \
-        --yesno "This will install Profolio with default settings:\n\n• 2 CPU cores\n• 4GB RAM\n• 20GB disk space\n• PostgreSQL database\n• Nginx reverse proxy\n\nDo you want to continue?" 14 50; then
+        --yesno "This will install Profolio with default settings:\n\n- 2 CPU cores\n- 4GB RAM\n- 20GB disk space\n- PostgreSQL database\n- Nginx reverse proxy\n\nDo you want to continue?" 14 50; then
         
         # Download and run installer
         mkdir -p "$TEMP_DIR"
@@ -174,20 +174,31 @@ EOF
 
 # Advanced Installation
 function advanced_install {
-    # CPU Cores
-    local cores
-    cores=$($TUI_TOOL --title "CPU Cores" \
-        --inputbox "Enter number of CPU cores (1-8):" 8 50 "2" 3>&1 1>&2 2>&3) || main_menu
+    # Check if we're already inside a container
+    local in_container=false
+    if [ -f /.dockerenv ] || [ -f /run/systemd/container ] || grep -qa container=lxc /proc/1/environ 2>/dev/null; then
+        in_container=true
+    fi
     
-    # RAM Size
-    local ram
-    ram=$($TUI_TOOL --title "RAM Size" \
-        --inputbox "Enter RAM size in MB (1024-16384):" 8 50 "4096" 3>&1 1>&2 2>&3) || main_menu
+    # Skip resource questions if already in container
+    local cores="2"
+    local ram="4096"
+    local disk="20"
     
-    # Disk Size
-    local disk
-    disk=$($TUI_TOOL --title "Disk Size" \
-        --inputbox "Enter disk size in GB (10-100):" 8 50 "20" 3>&1 1>&2 2>&3) || main_menu
+    if [ "$in_container" = false ]; then
+        # Only ask for resources if not in a container
+        # CPU Cores
+        cores=$($TUI_TOOL --title "CPU Cores" \
+            --inputbox "Enter number of CPU cores (1-8):" 8 50 "2" 3>&1 1>&2 2>&3) || main_menu
+        
+        # RAM Size
+        ram=$($TUI_TOOL --title "RAM Size" \
+            --inputbox "Enter RAM size in MB (1024-16384):" 8 50 "4096" 3>&1 1>&2 2>&3) || main_menu
+        
+        # Disk Size
+        disk=$($TUI_TOOL --title "Disk Size" \
+            --inputbox "Enter disk size in GB (10-100):" 8 50 "20" 3>&1 1>&2 2>&3) || main_menu
+    fi
     
     # Version Selection
     local version
@@ -211,8 +222,15 @@ function advanced_install {
     fi
     
     # Confirmation
+    local confirm_msg
+    if [ "$in_container" = true ]; then
+        confirm_msg="Install Profolio with these settings?\n\n- Version: $version\n- Verbose: $verbose\n\n(Using container's existing resources)"
+    else
+        confirm_msg="Install Profolio with these settings?\n\n- CPU: $cores cores\n- RAM: $ram MB\n- Disk: $disk GB\n- Version: $version\n- Verbose: $verbose"
+    fi
+    
     if $TUI_TOOL --title "Confirm Installation" \
-        --yesno "Install Profolio with these settings?\n\n• CPU: $cores cores\n• RAM: $ram MB\n• Disk: $disk GB\n• Version: $version\n• Verbose: $verbose" 14 50; then
+        --yesno "$confirm_msg" 14 50; then
         
         # Download and run installer with parameters
         mkdir -p "$TEMP_DIR"
@@ -236,7 +254,7 @@ function advanced_install {
 # Show Requirements
 function show_requirements {
     $TUI_TOOL --title "System Requirements" \
-        --msgbox "Minimum Requirements:\n• OS: Ubuntu 20.04+ / Debian 11+\n• CPU: 2 cores\n• RAM: 4GB\n• Storage: 20GB\n• Network: Internet connection\n\nRecommended:\n• CPU: 4 cores\n• RAM: 8GB\n• Storage: 50GB\n• SSL certificate for production" 16 60
+        --msgbox "Minimum Requirements:\n- OS: Ubuntu 20.04+ / Debian 11+\n- CPU: 2 cores\n- RAM: 4GB\n- Storage: 20GB\n- Network: Internet connection\n\nRecommended:\n- CPU: 4 cores\n- RAM: 8GB\n- Storage: 50GB\n- SSL certificate for production" 16 60
     
     main_menu
 }
@@ -244,7 +262,7 @@ function show_requirements {
 # Show About
 function show_about {
     $TUI_TOOL --title "About Profolio" \
-        --msgbox "Profolio - Professional Portfolio Management\n\nVersion: 1.14.16\nLicense: MIT\nAuthor: Obednal97\n\nA privacy-focused, self-hosted portfolio management system with:\n• Real-time portfolio tracking\n• Multi-asset support\n• Expense management\n• Property tracking\n• Bank account integration\n\nGitHub: github.com/Obednal97/profolio" 18 60
+        --msgbox "Profolio - Professional Portfolio Management\n\nVersion: 1.14.16\nLicense: MIT\nAuthor: Obednal97\n\nA privacy-focused, self-hosted portfolio management system with:\n- Real-time portfolio tracking\n- Multi-asset support\n- Expense management\n- Property tracking\n- Bank account integration\n\nGitHub: github.com/Obednal97/profolio" 18 60
     
     main_menu
 }
