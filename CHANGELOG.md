@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.9] - 2025-08-31
+
+### 🐛 **Bug Fixes**
+
+- **Installer**: Fixed environment file overwriting during updates with preservation enabled
+- **Environment Preservation**: Root .env, backend .env, and frontend env files now properly preserved
+- **Custom Settings**: Stripe keys, Firebase Admin SDK, and custom configurations persist through updates
+
+### 🔧 **Improvements**
+
+- **Installer Logic**: Enhanced setup_environment function with proper preservation handling
+- **Documentation**: Updated env-templates.md to match actual file structure
+- **Update Process**: Only core credentials updated while custom configs remain intact
+
+### 📊 **Summary**
+
+- **Files Changed**: 2 (install.sh, env-templates.md)
+- **Issue Resolved**: Installer overwriting custom environment configurations
+- **Status**: ✅ Environment preservation now works correctly
+
 ## [v1.14.8] - 2025-08-31
 
 ### 🐛 **Bug Fixes**
