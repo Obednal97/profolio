@@ -18,20 +18,35 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# ===========================
-# TUI Detection and Setup
-# ===========================
+# Source TUI functions library
+TUI_LIB_PATH="$(dirname "$0")/lib/tui-functions.sh"
+if [ -f "$TUI_LIB_PATH" ]; then
+    source "$TUI_LIB_PATH"
+else
+    # Try to download it if not found locally
+    TUI_LIB_URL="https://raw.githubusercontent.com/Obednal97/profolio/main/lib/tui-functions.sh"
+    TEMP_TUI_LIB="/tmp/tui-functions-$$.sh"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$TUI_LIB_URL" -o "$TEMP_TUI_LIB" 2>/dev/null && source "$TEMP_TUI_LIB"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO "$TEMP_TUI_LIB" "$TUI_LIB_URL" 2>/dev/null && source "$TEMP_TUI_LIB"
+    fi
+fi
 
-TUI_AVAILABLE=false
-TUI_TOOL=""
-
-# Check for whiptail (preferred) or dialog
-if command -v whiptail >/dev/null 2>&1; then
-    TUI_AVAILABLE=true
-    TUI_TOOL="whiptail"
-elif command -v dialog >/dev/null 2>&1; then
-    TUI_AVAILABLE=true
-    TUI_TOOL="dialog"
+# TUI should already be initialized from the library
+# If not, initialize it now
+if [ -z "$TUI_AVAILABLE" ]; then
+    TUI_AVAILABLE=false
+    TUI_TOOL=""
+    
+    # Check for whiptail (preferred) or dialog
+    if command -v whiptail >/dev/null 2>&1; then
+        TUI_AVAILABLE=true
+        TUI_TOOL="whiptail"
+    elif command -v dialog >/dev/null 2>&1; then
+        TUI_AVAILABLE=true
+        TUI_TOOL="dialog"
+    fi
 fi
 
 # ===========================
@@ -77,139 +92,8 @@ install_tui_tool() {
     fi
 }
 
-# ===========================
-# TUI Display Functions
-# ===========================
-
-# Display a message box
-show_message() {
-    local title="$1"
-    local message="$2"
-    
-    if [ "$TUI_AVAILABLE" = true ]; then
-        $TUI_TOOL --title "$title" --msgbox "$message" 12 60
-    else
-        echo ""
-        echo "=== $title ==="
-        echo "$message"
-        echo ""
-        read -p "Press Enter to continue..."
-    fi
-}
-
-# Display a yes/no dialog
-show_yesno() {
-    local title="$1"
-    local message="$2"
-    
-    if [ "$TUI_AVAILABLE" = true ]; then
-        $TUI_TOOL --title "$title" --yesno "$message" 10 60
-        return $?
-    else
-        echo ""
-        read -p "$message (y/n): " response
-        [[ "$response" =~ ^[Yy] ]]
-        return $?
-    fi
-}
-
-# Display a menu
-show_menu() {
-    local title="$1"
-    local message="$2"
-    shift 2
-    local options=("$@")
-    
-    if [ "$TUI_AVAILABLE" = true ]; then
-        local menu_items=()
-        for i in "${!options[@]}"; do
-            menu_items+=("$((i+1))" "${options[$i]}")
-        done
-        
-        choice=$($TUI_TOOL --title "$title" --menu "$message" 20 70 10 "${menu_items[@]}" 3>&1 1>&2 2>&3)
-        return $?
-    else
-        echo ""
-        echo "=== $title ==="
-        echo "$message"
-        echo ""
-        for i in "${!options[@]}"; do
-            echo "$((i+1))) ${options[$i]}"
-        done
-        echo ""
-        read -p "Select option: " choice
-        return 0
-    fi
-}
-
-# Display an input box
-show_inputbox() {
-    local title="$1"
-    local message="$2"
-    local default="$3"
-    
-    if [ "$TUI_AVAILABLE" = true ]; then
-        result=$($TUI_TOOL --title "$title" --inputbox "$message" 10 60 "$default" 3>&1 1>&2 2>&3)
-        echo "$result"
-    else
-        echo ""
-        read -p "$message [$default]: " result
-        echo "${result:-$default}"
-    fi
-}
-
-# Display a progress gauge
-show_progress() {
-    local title="$1"
-    local message="$2"
-    local percent="$3"
-    
-    if [ "$TUI_AVAILABLE" = true ]; then
-        echo "$percent" | $TUI_TOOL --title "$title" --gauge "$message" 8 60 0
-    else
-        echo -ne "\r$message: $percent%"
-        if [ "$percent" = "100" ]; then
-            echo ""
-        fi
-    fi
-}
-
-# Display a checklist
-show_checklist() {
-    local title="$1"
-    local message="$2"
-    shift 2
-    local options=("$@")
-    
-    if [ "$TUI_AVAILABLE" = true ]; then
-        local checklist_items=()
-        for item in "${options[@]}"; do
-            IFS='|' read -r tag description status <<< "$item"
-            checklist_items+=("$tag" "$description" "$status")
-        done
-        
-        choices=$($TUI_TOOL --title "$title" --checklist "$message" 20 70 10 "${checklist_items[@]}" 3>&1 1>&2 2>&3)
-        echo "$choices"
-    else
-        echo ""
-        echo "=== $title ==="
-        echo "$message"
-        echo ""
-        local selected=()
-        for item in "${options[@]}"; do
-            IFS='|' read -r tag description status <<< "$item"
-            local default=""
-            if [ "$status" = "ON" ]; then
-                default=" (default: yes)"
-            fi
-            read -p "$description$default (y/n): " response
-            if [[ "$response" =~ ^[Yy] ]] || ([ -z "$response" ] && [ "$status" = "ON" ]); then
-                selected+=("$tag")
-            fi
-        done
-        echo "${selected[@]}"
-    fi
-}
+# The TUI display functions are now provided by lib/tui-functions.sh
+# We'll just use the tui_* functions directly
 
 # ===========================
 # Installation Configuration
@@ -234,16 +118,16 @@ INSTALL_CONFIG=(
 
 main_menu() {
     while true; do
-        show_menu "Profolio Installer" "Welcome to Profolio! Select an option:" \
-            "🚀 Quick Install (Recommended)" \
-            "⚙️  Advanced Install" \
-            "📦 Install Specific Version" \
-            "🔄 Update Existing Installation" \
-            "🛠️  Repair Installation" \
-            "💾 Backup Current Installation" \
-            "📥 Restore from Backup" \
-            "ℹ️  About Profolio" \
-            "❌ Exit"
+        choice=$(tui_menu "Profolio Installer" "Welcome to Profolio! Select an option:" \
+            "1|🚀 Quick Install (Recommended)" \
+            "2|⚙️  Advanced Install" \
+            "3|📦 Install Specific Version" \
+            "4|🔄 Update Existing Installation" \
+            "5|🛠️  Repair Installation" \
+            "6|💾 Backup Current Installation" \
+            "7|📥 Restore from Backup" \
+            "8|ℹ️  About Profolio" \
+            "9|❌ Exit")
         
         case $choice in
             1) quick_install ;;
@@ -260,21 +144,26 @@ main_menu() {
 }
 
 quick_install() {
-    show_message "Quick Install" "This will install Profolio with default settings:\n\n• Latest version\n• Self-hosted mode\n• Local authentication\n• Safe optimization\n\nThe installation will take about 5 minutes."
+    tui_msgbox "Quick Install" "This will install Profolio with default settings:\n\n• Latest version\n• Self-hosted mode\n• Local authentication\n• Safe optimization\n\nThe installation will take about 5 minutes."
     
-    if show_yesno "Confirm Installation" "Do you want to proceed with the quick installation?"; then
+    if tui_yesno "Confirm Installation" "Do you want to proceed with the quick installation?"; then
+        QUICK_INSTALL=true
+        VERSION="latest"
+        DEPLOYMENT_MODE="self-hosted"
+        AUTH_MODE="local"
+        OPTIMIZATION="safe"
         run_installation
     else
-        show_message "Installation Cancelled" "Installation has been cancelled."
+        tui_msgbox "Installation Cancelled" "Installation has been cancelled."
     fi
 }
 
 advanced_install() {
     # Deployment Mode
-    show_menu "Deployment Mode" "Select your deployment mode:" \
-        "Self-Hosted (Recommended)" \
-        "Cloud" \
-        "Development"
+    choice=$(tui_menu "Deployment Mode" "Select your deployment mode:" \
+        "1|Self-Hosted (Recommended)" \
+        "2|Cloud" \
+        "3|Development")
     
     case $choice in
         1) DEPLOYMENT_MODE="self-hosted" ;;
@@ -283,10 +172,10 @@ advanced_install() {
     esac
     
     # Authentication Mode
-    show_menu "Authentication Mode" "Select authentication method:" \
-        "Local Authentication (Built-in)" \
-        "Firebase Authentication" \
-        "Both (Local + Firebase)"
+    choice=$(tui_menu "Authentication Mode" "Select authentication method:" \
+        "1|Local Authentication (Built-in)" \
+        "2|Firebase Authentication" \
+        "3|Both (Local + Firebase)")
     
     case $choice in
         1) AUTH_MODE="local" ;;
@@ -296,13 +185,13 @@ advanced_install() {
     
     # Firebase Configuration (if selected)
     if [ "$AUTH_MODE" = "firebase" ] || [ "$AUTH_MODE" = "both" ]; then
-        if show_yesno "Firebase Configuration" "Do you have Firebase configuration ready?"; then
-            FIREBASE_CONFIG=$(show_inputbox "Firebase Config" "Paste your Firebase configuration JSON:" "")
+        if tui_yesno "Firebase Configuration" "Do you have Firebase configuration ready?"; then
+            FIREBASE_CONFIG=$(tui_inputbox "Firebase Config" "Paste your Firebase configuration JSON:" "")
         fi
     fi
     
     # Optional Features
-    features=$(show_checklist "Optional Features" "Select features to enable:" \
+    features=$(tui_checklist "Optional Features" "Select features to enable:" \
         "billing|Stripe Billing Integration|OFF" \
         "demo|Demo Mode|OFF" \
         "analytics|Analytics Dashboard|ON" \
@@ -310,10 +199,10 @@ advanced_install() {
         "ssh|SSH Access|OFF")
     
     # Optimization Level
-    show_menu "Optimization Level" "Select installation optimization:" \
-        "Safe (Recommended) - ~600-800MB" \
-        "Aggressive - ~400-500MB" \
-        "None - Keep all files"
+    choice=$(tui_menu "Optimization Level" "Select installation optimization:" \
+        "1|Safe (Recommended) - ~600-800MB" \
+        "2|Aggressive - ~400-500MB" \
+        "3|None - Keep all files")
     
     case $choice in
         1) OPTIMIZATION="safe" ;;
@@ -322,12 +211,12 @@ advanced_install() {
     esac
     
     # Installation Path
-    INSTALL_PATH=$(show_inputbox "Installation Path" "Enter installation path:" "/opt/profolio")
+    INSTALL_PATH=$(tui_inputbox "Installation Path" "Enter installation path:" "/opt/profolio")
     
     # Show Summary
-    show_message "Installation Summary" "Configuration Summary:\n\n• Mode: $DEPLOYMENT_MODE\n• Auth: $AUTH_MODE\n• Features: $features\n• Optimization: $OPTIMIZATION\n• Path: $INSTALL_PATH"
+    tui_msgbox "Installation Summary" "Configuration Summary:\n\n• Mode: $DEPLOYMENT_MODE\n• Auth: $AUTH_MODE\n• Features: $features\n• Optimization: $OPTIMIZATION\n• Path: $INSTALL_PATH"
     
-    if show_yesno "Confirm Installation" "Proceed with these settings?"; then
+    if tui_yesno "Confirm Installation" "Proceed with these settings?"; then
         run_installation
     fi
 }
@@ -336,22 +225,41 @@ version_install() {
     # Get available versions
     log_info "Fetching available versions..."
     
-    # Simulate version list (in real implementation, fetch from GitHub)
-    show_menu "Select Version" "Choose Profolio version to install:" \
-        "v1.14.10 (Latest Stable)" \
-        "v1.14.9" \
-        "v1.14.8" \
-        "v1.14.7" \
-        "v1.13.1 (LTS)" \
-        "main (Development)"
+    # Fetch actual versions from GitHub
+    local versions=$(curl -s https://api.github.com/repos/Obednal97/profolio/tags | grep '"name"' | head -10 | cut -d'"' -f4 || echo "")
+    
+    # Build menu options
+    local menu_options=()
+    local i=1
+    menu_options+=("$i|Latest (main branch)")
+    ((i++))
+    
+    if [ -n "$versions" ]; then
+        for ver in $versions; do
+            if [ $i -eq 2 ]; then
+                menu_options+=("$i|$ver (Latest Stable)")
+            else
+                menu_options+=("$i|$ver")
+            fi
+            ((i++))
+            [ $i -gt 10 ] && break
+        done
+    else
+        # Fallback if API fails
+        menu_options+=("2|v1.14.10 (Latest Stable)")
+        menu_options+=("3|v1.14.9")
+        menu_options+=("4|v1.14.8")
+        menu_options+=("5|v1.13.1")
+    fi
+    
+    choice=$(tui_menu "Select Version" "Choose Profolio version to install:" "${menu_options[@]}")
     
     case $choice in
-        1) VERSION="v1.14.10" ;;
-        2) VERSION="v1.14.9" ;;
-        3) VERSION="v1.14.8" ;;
-        4) VERSION="v1.14.7" ;;
-        5) VERSION="v1.13.1" ;;
-        6) VERSION="main" ;;
+        1) VERSION="main" ;;
+        *) 
+            # Extract version from menu option
+            VERSION=$(echo "${menu_options[$((choice-1))]}" | cut -d'|' -f2 | awk '{print $1}')
+            ;;
     esac
     
     show_message "Version Selected" "You selected version: $VERSION"
@@ -362,58 +270,58 @@ version_install() {
 }
 
 update_install() {
-    show_message "Update Installation" "This will update your existing Profolio installation to the latest version.\n\nYour data and configuration will be preserved."
+    tui_msgbox "Update Installation" "This will update your existing Profolio installation to the latest version.\n\nYour data and configuration will be preserved."
     
-    if show_yesno "Environment Preservation" "Preserve existing environment configuration?"; then
+    if tui_yesno "Environment Preservation" "Preserve existing environment configuration?"; then
         PRESERVE_ENV="yes"
     else
         PRESERVE_ENV="no"
     fi
     
-    if show_yesno "Rollback Protection" "Enable automatic rollback on failure?"; then
+    if tui_yesno "Rollback Protection" "Enable automatic rollback on failure?"; then
         ENABLE_ROLLBACK="yes"
     else
         ENABLE_ROLLBACK="no"
     fi
     
-    if show_yesno "Confirm Update" "Proceed with the update?"; then
+    if tui_yesno "Confirm Update" "Proceed with the update?"; then
         run_update
     fi
 }
 
 repair_install() {
-    show_message "Repair Installation" "This will attempt to repair your Profolio installation by:\n\n• Checking system dependencies\n• Verifying database connection\n• Rebuilding the application\n• Restarting services"
+    tui_msgbox "Repair Installation" "This will attempt to repair your Profolio installation by:\n\n• Checking system dependencies\n• Verifying database connection\n• Rebuilding the application\n• Restarting services"
     
-    if show_yesno "Confirm Repair" "Proceed with repair?"; then
+    if tui_yesno "Confirm Repair" "Proceed with repair?"; then
         run_repair
     fi
 }
 
 backup_install() {
-    local backup_path=$(show_inputbox "Backup Location" "Enter backup destination path:" "/opt/profolio-backup-$(date +%Y%m%d)")
+    local backup_path=$(tui_inputbox "Backup Location" "Enter backup destination path:" "/opt/profolio-backup-$(date +%Y%m%d)")
     
-    show_message "Creating Backup" "Creating backup at:\n$backup_path\n\nThis includes:\n• Database\n• Environment files\n• Uploaded files\n• Configuration"
+    tui_msgbox "Creating Backup" "Creating backup at:\n$backup_path\n\nThis includes:\n• Database\n• Environment files\n• Uploaded files\n• Configuration"
     
     run_backup "$backup_path"
 }
 
 restore_install() {
-    local backup_path=$(show_inputbox "Backup Location" "Enter backup path to restore from:" "")
+    local backup_path=$(tui_inputbox "Backup Location" "Enter backup path to restore from:" "")
     
     if [ -z "$backup_path" ] || [ ! -d "$backup_path" ]; then
-        show_message "Error" "Invalid backup path!"
+        tui_msgbox "Error" "Invalid backup path!"
         return
     fi
     
-    show_message "Restore Backup" "This will restore from:\n$backup_path\n\n⚠️ WARNING: This will overwrite current installation!"
+    tui_msgbox "Restore Backup" "This will restore from:\n$backup_path\n\n⚠️ WARNING: This will overwrite current installation!"
     
-    if show_yesno "Confirm Restore" "Are you sure you want to restore from this backup?"; then
+    if tui_yesno "Confirm Restore" "Are you sure you want to restore from this backup?"; then
         run_restore "$backup_path"
     fi
 }
 
 show_about() {
-    show_message "About Profolio" "Profolio - Portfolio Management System\nVersion: v1.14.10\n\nA privacy-focused, self-hosted portfolio management system built with Next.js and NestJS.\n\nFeatures:\n• Real-time portfolio tracking\n• Multi-asset support\n• Expense management\n• Property tracking\n• Privacy-first design\n\nGitHub: github.com/Obednal97/profolio"
+    tui_msgbox "About Profolio" "Profolio - Portfolio Management System\nVersion: v1.14.10\n\nA privacy-focused, self-hosted portfolio management system built with Next.js and NestJS.\n\nFeatures:\n• Real-time portfolio tracking\n• Multi-asset support\n• Expense management\n• Property tracking\n• Privacy-first design\n\nGitHub: github.com/Obednal97/profolio"
 }
 
 # ===========================
@@ -421,52 +329,152 @@ show_about() {
 # ===========================
 
 run_installation() {
-    # Create a temporary file for progress tracking
-    PROGRESS_FILE="/tmp/profolio-progress-$$"
+    # Download and run the actual installer
+    local TEMP_DIR="/tmp/profolio-tui-$$"
+    local INSTALLER_PATH="$TEMP_DIR/install.sh"
     
-    (
-        echo "10"
-        echo "# Checking system requirements..."
-        sleep 1
-        
-        echo "20"
-        echo "# Installing dependencies..."
-        sleep 2
-        
-        echo "40"
-        echo "# Setting up database..."
-        sleep 2
-        
-        echo "60"
-        echo "# Building application..."
-        sleep 2
-        
-        echo "80"
-        echo "# Configuring services..."
-        sleep 1
-        
-        echo "90"
-        echo "# Starting services..."
-        sleep 1
-        
-        echo "100"
-        echo "# Installation complete!"
-        sleep 1
-    ) | $TUI_TOOL --title "Installing Profolio" --gauge "Starting installation..." 10 60 0
+    # Create temp directory
+    mkdir -p "$TEMP_DIR"
     
-    show_message "Installation Complete" "Profolio has been successfully installed!\n\nAccess your instance at:\n• Frontend: http://localhost:3000\n• Backend: http://localhost:3001\n\nDefault credentials:\n• Email: admin@profolio.local\n• Password: (check install log)"
+    # Download the real installer
+    tui_infobox "Downloading" "Downloading Profolio installer..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh" -o "$INSTALLER_PATH" 2>/dev/null
+    else
+        wget -qO "$INSTALLER_PATH" "https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh" 2>/dev/null
+    fi
+    
+    if [ ! -f "$INSTALLER_PATH" ]; then
+        tui_msgbox "Error" "Failed to download installer!"
+        rm -rf "$TEMP_DIR"
+        return 1
+    fi
+    
+    chmod +x "$INSTALLER_PATH"
+    
+    # Build installer arguments based on configuration
+    local INSTALLER_ARGS=""
+    
+    [ "$VERSION" != "latest" ] && [ -n "$VERSION" ] && INSTALLER_ARGS="$INSTALLER_ARGS --version $VERSION"
+    [ "$DEPLOYMENT_MODE" = "development" ] && INSTALLER_ARGS="$INSTALLER_ARGS --dev"
+    [ "$PRESERVE_ENV" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --reset-env"
+    [ "$ENABLE_ROLLBACK" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-rollback"
+    [ "$OPTIMIZATION" = "aggressive" ] && INSTALLER_ARGS="$INSTALLER_ARGS --aggressive-optimize"
+    [ "$OPTIMIZATION" = "none" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-optimize"
+    
+    # For quick install, use auto mode
+    if [ "${QUICK_INSTALL:-false}" = true ]; then
+        INSTALLER_ARGS="$INSTALLER_ARGS --auto"
+    fi
+    
+    # Clear screen for installation output
+    clear
+    
+    echo -e "${BLUE}Starting Profolio Installation${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    
+    # Run the actual installer
+    bash "$INSTALLER_PATH" $INSTALLER_ARGS
+    local install_result=$?
+    
+    # Cleanup
+    rm -rf "$TEMP_DIR"
+    
+    if [ $install_result -eq 0 ]; then
+        tui_msgbox "Installation Complete" "Profolio has been successfully installed!\n\nAccess your instance at:\n• Frontend: http://$(hostname -I | awk '{print $1}'):3000\n• Backend: http://$(hostname -I | awk '{print $1}'):3001"
+    else
+        tui_msgbox "Installation Failed" "Installation failed. Please check the logs for details."
+    fi
+    
+    return $install_result
 }
 
 run_update() {
-    show_message "Update in Progress" "Updating Profolio...\n\nThis is a simulation. In the real implementation, this would:\n• Download latest version\n• Preserve your configuration\n• Update the application\n• Restart services"
+    # Download and run the installer in update mode
+    local TEMP_DIR="/tmp/profolio-tui-$$"
+    local INSTALLER_PATH="$TEMP_DIR/install.sh"
     
-    log_success "Update completed successfully!"
+    mkdir -p "$TEMP_DIR"
+    
+    tui_infobox "Downloading" "Downloading Profolio installer..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh" -o "$INSTALLER_PATH" 2>/dev/null
+    else
+        wget -qO "$INSTALLER_PATH" "https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh" 2>/dev/null
+    fi
+    
+    if [ ! -f "$INSTALLER_PATH" ]; then
+        tui_msgbox "Error" "Failed to download installer!"
+        rm -rf "$TEMP_DIR"
+        return 1
+    fi
+    
+    chmod +x "$INSTALLER_PATH"
+    
+    # Build update arguments
+    local INSTALLER_ARGS="--update"
+    [ "$PRESERVE_ENV" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --reset-env"
+    [ "$ENABLE_ROLLBACK" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-rollback"
+    
+    clear
+    echo -e "${BLUE}Updating Profolio${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    
+    bash "$INSTALLER_PATH" $INSTALLER_ARGS
+    local result=$?
+    
+    rm -rf "$TEMP_DIR"
+    
+    if [ $result -eq 0 ]; then
+        tui_msgbox "Update Complete" "Profolio has been successfully updated!"
+    else
+        tui_msgbox "Update Failed" "Update failed. Please check the logs for details."
+    fi
+    
+    return $result
 }
 
 run_repair() {
-    show_message "Repair in Progress" "Repairing Profolio...\n\nThis is a simulation. In the real implementation, this would:\n• Check dependencies\n• Verify database\n• Rebuild application\n• Restart services"
+    # Download and run the installer in repair mode
+    local TEMP_DIR="/tmp/profolio-tui-$$"
+    local INSTALLER_PATH="$TEMP_DIR/install.sh"
     
-    log_success "Repair completed successfully!"
+    mkdir -p "$TEMP_DIR"
+    
+    tui_infobox "Downloading" "Downloading Profolio installer..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh" -o "$INSTALLER_PATH" 2>/dev/null
+    else
+        wget -qO "$INSTALLER_PATH" "https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh" 2>/dev/null
+    fi
+    
+    if [ ! -f "$INSTALLER_PATH" ]; then
+        tui_msgbox "Error" "Failed to download installer!"
+        rm -rf "$TEMP_DIR"
+        return 1
+    fi
+    
+    chmod +x "$INSTALLER_PATH"
+    
+    clear
+    echo -e "${BLUE}Repairing Profolio Installation${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    
+    bash "$INSTALLER_PATH" --repair
+    local result=$?
+    
+    rm -rf "$TEMP_DIR"
+    
+    if [ $result -eq 0 ]; then
+        tui_msgbox "Repair Complete" "Profolio has been successfully repaired!"
+    else
+        tui_msgbox "Repair Failed" "Repair failed. Please check the logs for details."
+    fi
+    
+    return $result
 }
 
 run_backup() {
