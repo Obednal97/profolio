@@ -27,6 +27,9 @@
     "type": "git",
     "url": "https://github.com/Obednal97/profolio.git"
   },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
   "keywords": [
     "portfolio",
     "finance",
