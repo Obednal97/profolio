@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTheme } from "@/providers/theme-provider";
 import { useAuth } from "@/lib/unifiedAuth";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -56,7 +55,6 @@ const safeConsole = {
 
 export default function UserMenu({ user: propUser }: UserMenuProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { signOut, userProfile, authMode } = useAuth();
   const { unreadCount } = useNotifications();
@@ -155,12 +153,12 @@ export default function UserMenu({ user: propUser }: UserMenuProps) {
     try {
       setIsProfileOpen(false);
       await signOut();
+      // signOut handles the redirect internally
     } catch (error) {
       safeConsole.error("Sign out error:", error);
-      // Use Next.js router for secure navigation
-      router.push("/auth/signIn");
+      // signOut already handles redirect on error, no need for fallback
     }
-  }, [signOut, router]);
+  }, [signOut]);
 
   const toggleTheme = useCallback(() => {
     setTheme(theme === "light" ? "dark" : "light");
