@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.12] - 2025-08-31
+
+### 🔥 **Hotfix**
+
+- **TUI Installer Crash**: Fixed "show_message: command not found" error on startup
+
+### 🐛 **Bug Fixes**
+
+- **Function Calls**: Replaced remaining `show_message` calls with `tui_msgbox`
+
+### 📊 **Summary**
+
+- **Files Changed**: 1 (install-tui.sh)
+- **Lines Fixed**: 4 function calls
+- **Status**: ✅ TUI installer now starts without errors
+
 ## [v1.14.11] - 2025-08-31
 
 ### 🐛 **Bug Fixes**
