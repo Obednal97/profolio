@@ -495,7 +495,11 @@ SSH_PASSWORD_AUTH=""
 SSH_KEY_ONLY=""
 DB_PASSWORD=""
 AUTO_INSTALL=false
+TUI_CONFIG=false
 GENERATE_SSH_KEY=""
+FIREBASE_CONFIG=""
+STRIPE_CONFIG=""
+TUI_FEATURES=""
 
 # Global variable to track operation type and success
 OPERATION_TYPE="install"
@@ -2246,8 +2250,8 @@ NEXT_PUBLIC_APP_NAME=Profolio
 NODE_ENV=production
 
 # === Deployment Configuration ===
-NEXT_PUBLIC_DEPLOYMENT_MODE=self-hosted
-NEXT_PUBLIC_AUTH_MODE=local
+NEXT_PUBLIC_DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-self-hosted}
+NEXT_PUBLIC_AUTH_MODE=${DEFAULT_AUTH_MODE:-local}
 
 # === API Configuration ===
 NEXT_PUBLIC_API_URL=http://$current_ip:3001
@@ -2277,6 +2281,37 @@ NEXT_PUBLIC_LOG_LEVEL=warn
 # NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 EOF
         
+        # Append TUI-provided Firebase configuration if available
+        if [ "$TUI_CONFIG" = true ] && [ -n "$FIREBASE_CONFIG" ]; then
+            info "Configuring Firebase authentication from TUI settings..."
+            echo "" >> /opt/profolio/frontend/.env.production
+            echo "# Firebase Configuration (Configured via TUI)" >> /opt/profolio/frontend/.env.production
+            
+            # Parse Firebase config (assuming JSON format or key=value pairs)
+            if echo "$FIREBASE_CONFIG" | grep -q "{"; then
+                # JSON format - extract values
+                echo "# Parsed from JSON configuration" >> /opt/profolio/frontend/.env.production
+                # Simple JSON parsing (would need jq for complex parsing)
+                echo "$FIREBASE_CONFIG" | sed -n 's/.*"apiKey"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/NEXT_PUBLIC_FIREBASE_API_KEY=\1/p' >> /opt/profolio/frontend/.env.production
+                echo "$FIREBASE_CONFIG" | sed -n 's/.*"authDomain"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=\1/p' >> /opt/profolio/frontend/.env.production
+                echo "$FIREBASE_CONFIG" | sed -n 's/.*"projectId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/NEXT_PUBLIC_FIREBASE_PROJECT_ID=\1/p' >> /opt/profolio/frontend/.env.production
+                echo "$FIREBASE_CONFIG" | sed -n 's/.*"storageBucket"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=\1/p' >> /opt/profolio/frontend/.env.production
+                echo "$FIREBASE_CONFIG" | sed -n 's/.*"messagingSenderId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=\1/p' >> /opt/profolio/frontend/.env.production
+                echo "$FIREBASE_CONFIG" | sed -n 's/.*"appId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/NEXT_PUBLIC_FIREBASE_APP_ID=\1/p' >> /opt/profolio/frontend/.env.production
+            else
+                # Assume key=value format
+                echo "$FIREBASE_CONFIG" >> /opt/profolio/frontend/.env.production
+            fi
+        fi
+        
+        # Append TUI-provided Stripe configuration if available
+        if [ "$TUI_CONFIG" = true ] && [ -n "$STRIPE_CONFIG" ]; then
+            info "Configuring Stripe billing from TUI settings..."
+            echo "" >> /opt/profolio/frontend/.env.production
+            echo "# Stripe Configuration (Configured via TUI)" >> /opt/profolio/frontend/.env.production
+            echo "$STRIPE_CONFIG" >> /opt/profolio/frontend/.env.production
+        fi
+        
         # Handle root .env file
         if [ "$preserve_env_config" = true ] && [ -n "$existing_root_env" ]; then
             # Preserve existing root .env configuration
@@ -2299,7 +2334,7 @@ EOF
 # === Application Metadata ===
 APP_NAME=Profolio
 VERSION=production
-DEPLOYMENT_MODE=self-hosted
+DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-self-hosted}
 
 # === Server Configuration ===
 SERVER_IP=$current_ip
@@ -3010,8 +3045,21 @@ main() {
                 RESTORE_FROM_BACKUP=true
                 shift
                 ;;
+            --update)
+                OPERATION_TYPE="update"
+                shift
+                ;;
+            --repair)
+                OPERATION_TYPE="repair"
+                shift
+                ;;
             --skip-backup)
                 SKIP_BACKUP=true
+                shift
+                ;;
+            --tui-config)
+                TUI_CONFIG=true
+                AUTO_INSTALL=true  # TUI config implies auto mode
                 shift
                 ;;
             --help|-h)
@@ -3025,6 +3073,43 @@ main() {
                 ;;
         esac
     done
+    
+    # Load TUI configuration if provided
+    if [ "$TUI_CONFIG" = true ]; then
+        info "Loading configuration from TUI..."
+        
+        # Read configuration from environment variables
+        [ -n "$PROFOLIO_VERSION" ] && TARGET_VERSION="$PROFOLIO_VERSION"
+        [ -n "$PROFOLIO_DEPLOYMENT_MODE" ] && DEPLOYMENT_MODE="$PROFOLIO_DEPLOYMENT_MODE"
+        [ -n "$PROFOLIO_AUTH_MODE" ] && DEFAULT_AUTH_MODE="$PROFOLIO_AUTH_MODE"
+        [ -n "$PROFOLIO_INSTALL_PATH" ] && INSTALL_DIR="$PROFOLIO_INSTALL_PATH"
+        [ -n "$PROFOLIO_PRESERVE_ENV" ] && [ "$PROFOLIO_PRESERVE_ENV" = "no" ] && preserve_env_config=false
+        [ -n "$PROFOLIO_ENABLE_ROLLBACK" ] && [ "$PROFOLIO_ENABLE_ROLLBACK" = "no" ] && ROLLBACK_ENABLED=false
+        
+        # Handle optimization level
+        if [ -n "$PROFOLIO_OPTIMIZATION" ]; then
+            case "$PROFOLIO_OPTIMIZATION" in
+                aggressive)
+                    OPTIMIZE_FILES=true
+                    AGGRESSIVE_OPTIMIZE=true
+                    ;;
+                none)
+                    OPTIMIZE_FILES=false
+                    ;;
+                safe|*)
+                    OPTIMIZE_FILES=true
+                    AGGRESSIVE_OPTIMIZE=false
+                    ;;
+            esac
+        fi
+        
+        # Store Firebase and Stripe config if provided
+        [ -n "$PROFOLIO_FIREBASE_CONFIG" ] && FIREBASE_CONFIG="$PROFOLIO_FIREBASE_CONFIG"
+        [ -n "$PROFOLIO_STRIPE_CONFIG" ] && STRIPE_CONFIG="$PROFOLIO_STRIPE_CONFIG"
+        [ -n "$PROFOLIO_FEATURES" ] && TUI_FEATURES="$PROFOLIO_FEATURES"
+        
+        success "TUI configuration loaded"
+    fi
     
     # Version validation if specified
     if [ -n "$TARGET_VERSION" ]; then
