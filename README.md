@@ -38,7 +38,7 @@ Take control of your financial data with complete privacy and sovereignty. Built
 
 ```bash
 # Complete installation in under 5 minutes - works everywhere!
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh)"
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 
 **What happens automatically:**
@@ -67,13 +67,25 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/
 - 🚀 **Auto-start on boot** - Services automatically start when container reboots
 - 📦 **Container-optimized** - Resource-efficient deployment for LXC environments
 
+### 📥 **Alternative Installation Methods**
+
+If you encounter "Argument list too long" error, use one of these methods:
+
+```bash
+# Method 1: Download and execute
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh -o install.sh && sudo bash install.sh
+
+# Method 2: Using wget
+wget -qO- https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
+```
+
 ### 🎛️ **Advanced Installation Options**
 
 **Universal installer supports all environments with intelligent detection:**
 
 ```bash
 # Install specific version
-sudo ./install.sh --version v1.14.8
+sudo ./install.sh --version v1.14.9
 
 # Unattended installation for automation
 sudo ./install.sh --auto
