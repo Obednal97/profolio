@@ -71,6 +71,18 @@ show_progress() {
     local message=$3
     local command="$4"
     
+    # Report progress for TUI
+    report_progress "$step" "$total" "$message"
+    
+    # In silent mode, execute command without visual output
+    if [ "$SILENT_MODE" = true ]; then
+        if [[ -n "$command" ]]; then
+            eval "$command" > /tmp/profolio_progress.log 2>&1
+            return $?
+        fi
+        return 0
+    fi
+    
     printf "${BLUE}[$step/$total]${NC} $message"
     
     if [[ -n "$command" ]]; then
@@ -112,7 +124,9 @@ execute_steps() {
     shift
     local steps=("$@")
     
-    echo -e "${CYAN}🚀 $main_message${NC}"
+    if [ "$SILENT_MODE" = false ]; then
+        echo -e "${CYAN}🚀 $main_message${NC}"
+    fi
     
     local step_count=$((${#steps[@]} / 2))
     local current_step=1
@@ -122,35 +136,70 @@ execute_steps() {
         local step_cmd="${steps[i+1]}"
         
         if ! show_progress "$current_step" "$step_count" "$step_msg" "$step_cmd"; then
-            echo -e "${RED}❌ Failed: $step_msg${NC}"
+            if [ "$SILENT_MODE" = false ]; then
+                echo -e "${RED}❌ Failed: $step_msg${NC}"
+            fi
+            error "Failed: $step_msg"
             return 1
         fi
         
         ((current_step++))
     done
     
-    echo -e "${GREEN}✅ $main_message completed successfully${NC}"
+    if [ "$SILENT_MODE" = false ]; then
+        echo -e "${GREEN}✅ $main_message completed successfully${NC}"
+    fi
+    success "$main_message completed successfully"
     return 0
 }
 
 # Simple info messages
 info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    if [ "$SILENT_MODE" = true ]; then
+        echo "[INFO] $1" >> "$PROGRESS_FILE"
+    else
+        echo -e "${BLUE}[INFO]${NC} $1"
+    fi
 }
 
 # Simple warning messages  
 warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    if [ "$SILENT_MODE" = true ]; then
+        echo "[WARN] $1" >> "$PROGRESS_FILE"
+    else
+        echo -e "${YELLOW}[WARN]${NC} $1"
+    fi
 }
 
 # Simple error messages
 error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    if [ "$SILENT_MODE" = true ]; then
+        echo "[ERROR] $1" >> "$ERROR_FILE"
+        echo "[ERROR] $1" >> "$PROGRESS_FILE"
+    else
+        echo -e "${RED}[ERROR]${NC} $1"
+    fi
 }
 
 # Simple success messages
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    if [ "$SILENT_MODE" = true ]; then
+        echo "[SUCCESS] $1" >> "$PROGRESS_FILE"
+    else
+        echo -e "${GREEN}[SUCCESS]${NC} $1"
+    fi
+}
+
+# Report progress for TUI
+report_progress() {
+    local current="$1"
+    local total="$2"
+    local message="$3"
+    
+    if [ "$SILENT_MODE" = true ]; then
+        echo "PROGRESS:$current:$total:$message" > "$PROGRESS_FILE.tmp"
+        mv "$PROGRESS_FILE.tmp" "$PROGRESS_FILE"  # Atomic write
+    fi
 }
 
 # Track service downtime start
@@ -496,10 +545,13 @@ SSH_KEY_ONLY=""
 DB_PASSWORD=""
 AUTO_INSTALL=false
 TUI_CONFIG=false
+SILENT_MODE=false
 GENERATE_SSH_KEY=""
 FIREBASE_CONFIG=""
 STRIPE_CONFIG=""
 TUI_FEATURES=""
+PROGRESS_FILE="/tmp/profolio-install-progress.log"
+ERROR_FILE="/tmp/profolio-install-error.log"
 
 # Global variable to track operation type and success
 OPERATION_TYPE="install"
@@ -904,6 +956,11 @@ handle_proxmox_installation() {
 
 # Banner with improved centering
 show_banner() {
+    # Skip banner in silent mode
+    if [ "$SILENT_MODE" = true ]; then
+        return
+    fi
+    
     # Set TERM if not already set to prevent clear command failures
     if [ -z "$TERM" ]; then
         export TERM=xterm
@@ -954,9 +1011,11 @@ validate_number() {
 
 # Configuration wizard
 run_configuration_wizard() {
-    echo -e "${WHITE}🔧 PROFOLIO CONFIGURATION WIZARD${NC}"
-    echo -e "${YELLOW}Configure your Profolio installation${NC}"
-    echo ""
+    if [ "$SILENT_MODE" = false ]; then
+        echo -e "${WHITE}🔧 PROFOLIO CONFIGURATION WIZARD${NC}"
+        echo -e "${YELLOW}Configure your Profolio installation${NC}"
+        echo ""
+    fi
     
     # Auto-install option
     echo -e "${CYAN}Installation Mode:${NC}"
@@ -2399,6 +2458,11 @@ EOF
 
 # Show access information - removed hardcoded banner (handled by show_completion_status)
 show_access_info() {
+    # Skip in silent mode - TUI will show this info
+    if [ "$SILENT_MODE" = true ]; then
+        return
+    fi
+    
     local_ip=$(hostname -I | awk '{print $1}')
     
     echo -e "${BLUE}🌐 Access your Profolio instance:${NC}"
@@ -2461,6 +2525,11 @@ show_access_info() {
 show_completion_status() {
     local operation_name="$1"
     local operation_success="$2"
+    
+    # Skip in silent mode
+    if [ "$SILENT_MODE" = true ]; then
+        return
+    fi
     
     # Finalize statistics tracking
     OPERATION_END_TIME=$(date +%s)
@@ -3062,6 +3131,10 @@ main() {
                 AUTO_INSTALL=true  # TUI config implies auto mode
                 shift
                 ;;
+            --silent)
+                SILENT_MODE=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -3076,6 +3149,13 @@ main() {
     
     # Load TUI configuration if provided
     if [ "$TUI_CONFIG" = true ]; then
+        # Enable silent mode automatically for TUI
+        SILENT_MODE=true
+        
+        # Initialize progress files
+        > "$PROGRESS_FILE"
+        > "$ERROR_FILE"
+        
         info "Loading configuration from TUI..."
         
         # Read configuration from environment variables
