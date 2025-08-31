@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.8] - 2025-08-31
+
+### 🐛 **Bug Fixes**
+
+- **Billing Service**: Fixed startup crash when Stripe API key is not configured
+- **Runtime Error**: Made Stripe billing optional - service starts without Stripe credentials
+
+### 🔧 **Improvements**
+
+- **Configuration**: Billing features are now optional and won't prevent service startup
+- **Error Handling**: Added proper checks for Stripe availability in all billing methods
+- **Self-Hosting**: Improved support for installations without billing integration
+
+### 📊 **Summary**
+
+- **Files Changed**: 1 (billing.service.ts)
+- **Issue Resolved**: Backend service startup failure
+- **Status**: ✅ Service starts successfully without Stripe configuration
+
 ## [v1.14.7] - 2025-08-31
 
 ### 🐛 **Bug Fixes**

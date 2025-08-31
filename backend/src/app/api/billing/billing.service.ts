@@ -16,12 +16,14 @@ export class BillingService {
   ) {
     const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!stripeSecretKey) {
-      this.logger.warn('Stripe secret key not configured');
+      this.logger.warn('Stripe secret key not configured - billing features disabled');
+      // Initialize with null to indicate Stripe is not configured
+      this.stripe = null as any;
+    } else {
+      this.stripe = new Stripe(stripeSecretKey, {
+        apiVersion: '2025-08-27.basil',
+      });
     }
-    
-    this.stripe = new Stripe(stripeSecretKey || '', {
-      apiVersion: '2025-08-27.basil',
-    });
 
     this.webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET') || '';
   }
@@ -47,6 +49,10 @@ export class BillingService {
    * Create or retrieve Stripe customer for a user
    */
   async getOrCreateCustomer(userId: string): Promise<string> {
+    if (!this.stripe) {
+      throw new BadRequestException('Billing is not configured');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -87,6 +93,10 @@ export class BillingService {
     successUrl: string,
     cancelUrl: string,
   ): Promise<string> {
+    if (!this.stripe) {
+      throw new BadRequestException('Billing is not configured');
+    }
+
     const customerId = await this.getOrCreateCustomer(userId);
     const stripePriceId = this.getPriceId(priceId);
 
@@ -122,6 +132,10 @@ export class BillingService {
    * Create a Stripe Customer Portal session
    */
   async createPortalSession(userId: string, returnUrl: string): Promise<string> {
+    if (!this.stripe) {
+      throw new BadRequestException('Billing is not configured');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -159,7 +173,7 @@ export class BillingService {
     }
 
     // Fetch latest subscription data from Stripe if needed
-    if (user.subscriptionId) {
+    if (user.subscriptionId && this.stripe) {
       try {
         const subscription = await this.stripe.subscriptions.retrieve(user.subscriptionId);
         
@@ -215,6 +229,10 @@ export class BillingService {
    * Handle Stripe webhook events
    */
   async handleWebhook(signature: string, body: Buffer): Promise<void> {
+    if (!this.stripe) {
+      throw new BadRequestException('Billing is not configured');
+    }
+
     let event: Stripe.Event;
 
     try {
@@ -258,7 +276,7 @@ export class BillingService {
       return;
     }
 
-    const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
+    const subscription = await this.stripe!.subscriptions.retrieve(session.subscription as string);
     
     // Determine tier based on price ID
     let tier = 'cloud_monthly';
@@ -375,6 +393,10 @@ export class BillingService {
    * Cancel a subscription
    */
   async cancelSubscription(userId: string): Promise<void> {
+    if (!this.stripe) {
+      throw new BadRequestException('Billing is not configured');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
