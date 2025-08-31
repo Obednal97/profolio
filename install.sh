@@ -2162,7 +2162,28 @@ setup_environment() {
     
     info "Setting up environment configuration..."
     
-    # Create backend .env
+    # Create backend .env - preserve additional settings if they exist
+    local existing_backend_env=""
+    local stripe_settings=""
+    local firebase_admin_settings=""
+    local other_settings=""
+    
+    if [ -f "/opt/profolio/backend/.env" ] && [ "$preserve_env_config" = true ]; then
+        # Extract Stripe settings if they exist
+        stripe_settings=$(grep "^STRIPE_" /opt/profolio/backend/.env 2>/dev/null || echo "")
+        
+        # Extract Firebase Admin SDK settings if they exist
+        firebase_admin_settings=$(grep "^FIREBASE_" /opt/profolio/backend/.env 2>/dev/null || echo "")
+        
+        # Extract any other custom settings (exclude the core ones we're updating)
+        other_settings=$(grep -v "^DATABASE_URL=\|^JWT_SECRET=\|^API_ENCRYPTION_KEY=\|^PORT=\|^NODE_ENV=\|^STRIPE_\|^FIREBASE_" /opt/profolio/backend/.env 2>/dev/null | grep -v "^#" | grep -v "^$" || echo "")
+        
+        if [ -n "$stripe_settings" ] || [ -n "$firebase_admin_settings" ] || [ -n "$other_settings" ]; then
+            info "Preserving additional backend configuration (Stripe, Firebase Admin, etc.)"
+        fi
+    fi
+    
+    # Create backend .env with core settings
     cat > /opt/profolio/backend/.env << EOF
 DATABASE_URL="postgresql://profolio:${db_password}@localhost:5432/profolio"
 JWT_SECRET="${jwt_secret}"
@@ -2170,9 +2191,28 @@ API_ENCRYPTION_KEY="${api_key}"
 PORT=3001
 NODE_ENV=production
 EOF
+    
+    # Append preserved settings if they exist
+    if [ -n "$stripe_settings" ]; then
+        echo "" >> /opt/profolio/backend/.env
+        echo "# === Stripe Configuration ===" >> /opt/profolio/backend/.env
+        echo "$stripe_settings" >> /opt/profolio/backend/.env
+    fi
+    
+    if [ -n "$firebase_admin_settings" ]; then
+        echo "" >> /opt/profolio/backend/.env
+        echo "# === Firebase Admin SDK ===" >> /opt/profolio/backend/.env
+        echo "$firebase_admin_settings" >> /opt/profolio/backend/.env
+    fi
+    
+    if [ -n "$other_settings" ]; then
+        echo "" >> /opt/profolio/backend/.env
+        echo "# === Additional Settings ===" >> /opt/profolio/backend/.env
+        echo "$other_settings" >> /opt/profolio/backend/.env
+    fi
 
     # Create frontend environment configuration
-    if [ "$preserve_frontend_env" = true ] && [ -n "$existing_frontend_env" ]; then
+    if [ "$preserve_env_config" = true ] && [ -n "$existing_frontend_env" ]; then
         # Preserve existing frontend environment configuration
         info "Preserving existing frontend environment configuration"
         
@@ -2237,8 +2277,22 @@ NEXT_PUBLIC_LOG_LEVEL=warn
 # NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 EOF
         
-        # Also create standardized root .env file for shared configuration
-        cat > /opt/profolio/.env << EOF
+        # Handle root .env file
+        if [ "$preserve_env_config" = true ] && [ -n "$existing_root_env" ]; then
+            # Preserve existing root .env configuration
+            info "Preserving existing root .env configuration"
+            echo "$existing_root_env" > /opt/profolio/.env
+            
+            # Update SERVER_IP if it has changed
+            local current_ip=$(hostname -I | awk '{print $1}')
+            if grep -q "^SERVER_IP=" /opt/profolio/.env; then
+                sed -i "s|^SERVER_IP=.*|SERVER_IP=$current_ip|" /opt/profolio/.env
+            fi
+            
+            success "Root .env configuration preserved"
+        else
+            # Create new standardized root .env file for shared configuration
+            cat > /opt/profolio/.env << EOF
 # Profolio Root Environment Configuration
 # Shared configuration across frontend and backend
 
@@ -2270,6 +2324,7 @@ DEFAULT_DEMO_MODE=false
 INSTALL_DATE=$(date +%Y-%m-%d)
 INSTALLER_VERSION=v2.1
 EOF
+        fi
         
         success "Created new environment configuration with standardized structure"
         success "✅ API proxy correctly enabled for production (matches modernized app architecture)"

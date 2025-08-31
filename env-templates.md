@@ -2,6 +2,14 @@
 
 This file contains environment templates for different deployment scenarios.
 
+## Important: Environment Preservation During Updates
+
+When updating Profolio using the installer (`install.sh`), the installer will:
+- **Preserve existing environment files by default** when you choose "Yes" for environment preservation (default option)
+- **Preserve custom settings** like Stripe keys, Firebase Admin SDK, and other custom configurations
+- **Update only core settings** like database credentials while keeping your custom configurations intact
+- **Automatically detect** which environment files you're using (.env, .env.production, .env.local)
+
 ## Development Environment Template (.env)
 
 ```bash
@@ -108,6 +116,19 @@ NODE_ENV=production
 # === Optional Configuration ===
 # LOG_LEVEL=info
 # MAX_CONNECTIONS=100
+
+# === Stripe Configuration (Optional) ===
+# Billing features - will be preserved during updates
+# STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+# STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+# STRIPE_PRICE_CLOUD_MONTHLY=price_your_monthly_price_id
+# STRIPE_PRICE_CLOUD_ANNUAL=price_your_annual_price_id
+
+# === Firebase Admin SDK (Optional) ===
+# For server-side Firebase operations - will be preserved during updates
+# FIREBASE_PROJECT_ID=your_project_id
+# FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour_private_key\n-----END PRIVATE KEY-----\n"
+# FIREBASE_CLIENT_EMAIL=firebase-adminsdk@your-project.iam.gserviceaccount.com
 ```
 
 ## Local Development Frontend Override (.env.local)
