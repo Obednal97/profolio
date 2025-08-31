@@ -48,7 +48,7 @@ EOF
 # Message functions
 function msg_info() {
     local msg="$1"
-    echo -ne " ${YW}⚡${CL} ${msg}..."
+    printf " %s" "$msg..."
 }
 
 function msg_ok() {
@@ -61,15 +61,44 @@ function msg_error() {
     echo -e "${BFR} ${RD}✗${CL} ${msg}"
 }
 
-# Spinner function
-function spinner() {
-    local pid=$1
+# Run command with spinner animation
+function run_with_spinner() {
+    local msg="$1"
+    shift
+    
+    # Print message
+    printf " %s... " "$msg"
+    
+    # Run command in background
+    if [ "$VERBOSE" == "yes" ]; then
+        "$@" &
+    else
+        "$@" &>/dev/null &
+    fi
+    local pid=$!
+    
+    # Show spinner
+    local spin='/-\|'
     local i=0
-    while kill -0 "$pid" 2>/dev/null; do
-        printf "\b${SPINNER:i++%${#SPINNER}:1}"
+    while kill -0 $pid 2>/dev/null; do
+        printf "\b${spin:i++%4:1}"
         sleep 0.1
     done
+    
+    # Check result
+    wait $pid
+    local result=$?
+    
+    # Clear spinner and show result
     printf "\b"
+    
+    if [ $result -eq 0 ]; then
+        echo -e "${BFR} ${GN}✓${CL} ${msg}"
+        return 0
+    else
+        echo -e "${BFR} ${RD}✗${CL} ${msg} (failed)"
+        return $result
+    fi
 }
 
 # Error handler
@@ -135,75 +164,68 @@ function detect_system() {
 
 # Update system
 function update_os() {
-    msg_info "Updating system packages"
-    
-    if [ "$VERBOSE" == "yes" ]; then
-        apt-get update
-        apt-get upgrade -y
-    else
-        apt-get update &>/dev/null
-        apt-get upgrade -y &>/dev/null
-    fi
-    
-    msg_ok "System updated"
+    run_with_spinner "Updating package lists" apt-get update
+    run_with_spinner "Upgrading system packages" apt-get upgrade -y
 }
 
 # Install dependencies
 function install_dependencies() {
-    msg_info "Installing dependencies"
-    
-    local deps="curl wget git build-essential nodejs npm postgresql postgresql-contrib nginx certbot python3-certbot-nginx"
-    
-    if [ "$VERBOSE" == "yes" ]; then
-        apt-get install -y $deps
-    else
-        apt-get install -y $deps &>/dev/null
+    # Install Node.js repository if needed
+    if ! command -v node &>/dev/null; then
+        msg_info "Setting up Node.js repository"
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - &>/dev/null
+        msg_ok "Node.js repository configured"
     fi
+    
+    # Core dependencies
+    run_with_spinner "Installing core tools" apt-get install -y curl wget git build-essential
+    
+    # Node.js and npm
+    run_with_spinner "Installing Node.js" apt-get install -y nodejs
+    
+    # Database
+    run_with_spinner "Installing PostgreSQL" apt-get install -y postgresql postgresql-contrib
+    
+    # Web server
+    run_with_spinner "Installing Nginx" apt-get install -y nginx
+    
+    # SSL tools (optional, may fail)
+    run_with_spinner "Installing SSL tools" apt-get install -y certbot python3-certbot-nginx || true
     
     # Install pnpm
     if ! command -v pnpm &>/dev/null; then
-        npm install -g pnpm@latest &>/dev/null
+        run_with_spinner "Installing pnpm" npm install -g pnpm@latest
     fi
-    
-    msg_ok "Dependencies installed"
 }
 
 # Setup user
 function setup_user() {
-    msg_info "Setting up profolio user"
-    
     if ! id -u profolio &>/dev/null; then
-        useradd -r -s /bin/bash -d /home/profolio -m profolio
+        run_with_spinner "Creating profolio user" useradd -r -s /bin/bash -d /home/profolio -m profolio
+    else
+        msg_ok "User already exists"
     fi
-    
-    msg_ok "User configured"
 }
 
 # Clone repository
 function clone_repository() {
-    msg_info "Downloading Profolio"
-    
     mkdir -p "$TEMP_DIR"
     cd "$TEMP_DIR"
     
     if [ "$PROFOLIO_VERSION" == "latest" ]; then
-        git clone --depth 1 "https://github.com/$GITHUB_REPO.git" . &>/dev/null
+        run_with_spinner "Downloading Profolio (latest)" git clone --depth 1 "https://github.com/$GITHUB_REPO.git" .
     else
-        git clone --depth 1 --branch "$PROFOLIO_VERSION" "https://github.com/$GITHUB_REPO.git" . &>/dev/null
+        run_with_spinner "Downloading Profolio ($PROFOLIO_VERSION)" git clone --depth 1 --branch "$PROFOLIO_VERSION" "https://github.com/$GITHUB_REPO.git" .
     fi
-    
-    msg_ok "Downloaded Profolio $PROFOLIO_VERSION"
 }
 
 # Setup database
 function setup_database() {
-    msg_info "Configuring database"
-    
     # Generate password
     local db_password=$(openssl rand -base64 12)
     
     # Create database and user
-    sudo -u postgres psql <<EOF &>/dev/null
+    run_with_spinner "Creating database" sudo -u postgres psql <<EOF
 CREATE USER profolio WITH PASSWORD '$db_password';
 CREATE DATABASE profolio OWNER profolio;
 GRANT ALL PRIVILEGES ON DATABASE profolio TO profolio;
@@ -211,66 +233,45 @@ EOF
     
     # Save credentials
     echo "DATABASE_URL=postgresql://profolio:$db_password@localhost:5432/profolio" > "$TEMP_DIR/.env"
-    
-    msg_ok "Database configured"
+    msg_ok "Database credentials saved"
 }
 
 # Build application
 function build_application() {
-    msg_info "Building Profolio (this may take several minutes)"
+    echo -e "\n${YW}Building Profolio (this may take several minutes)${CL}"
     
     cd "$TEMP_DIR"
     
     # Install dependencies
-    if [ "$VERBOSE" == "yes" ]; then
-        pnpm install
-    else
-        pnpm install &>/dev/null
-    fi
+    run_with_spinner "Installing project dependencies" pnpm install
     
     # Build frontend
     cd frontend
-    if [ "$VERBOSE" == "yes" ]; then
-        pnpm build
-    else
-        pnpm build &>/dev/null
-    fi
+    run_with_spinner "Building frontend" pnpm build
     
     # Build backend
     cd ../backend
-    if [ "$VERBOSE" == "yes" ]; then
-        pnpm build
-        pnpm prisma generate
-        pnpm prisma migrate deploy
-    else
-        pnpm build &>/dev/null
-        pnpm prisma generate &>/dev/null
-        pnpm prisma migrate deploy &>/dev/null
-    fi
-    
-    msg_ok "Build complete"
+    run_with_spinner "Building backend" pnpm build
+    run_with_spinner "Generating Prisma client" pnpm prisma generate
+    run_with_spinner "Running database migrations" pnpm prisma migrate deploy
 }
 
 # Install application
 function install_application() {
-    msg_info "Installing to $INSTALL_PATH"
-    
     # Create installation directory
     rm -rf "$INSTALL_PATH"
     mkdir -p "$INSTALL_PATH"
     
     # Copy files
-    cp -r "$TEMP_DIR"/* "$INSTALL_PATH/"
+    run_with_spinner "Installing to $INSTALL_PATH" cp -r "$TEMP_DIR"/* "$INSTALL_PATH/"
     
     # Set permissions
-    chown -R profolio:profolio "$INSTALL_PATH"
-    
-    msg_ok "Installation complete"
+    run_with_spinner "Setting permissions" chown -R profolio:profolio "$INSTALL_PATH"
 }
 
 # Setup systemd services
 function setup_services() {
-    msg_info "Configuring services"
+    msg_info "Creating systemd services"
     
     # Frontend service
     cat > /etc/systemd/system/profolio-frontend.service <<EOF
@@ -311,19 +312,18 @@ WantedBy=multi-user.target
 EOF
 
     # Reload and start services
-    systemctl daemon-reload
-    systemctl enable profolio-frontend profolio-backend &>/dev/null
-    systemctl start profolio-frontend profolio-backend
+    run_with_spinner "Reloading systemd" systemctl daemon-reload
+    run_with_spinner "Enabling services" systemctl enable profolio-frontend profolio-backend
+    run_with_spinner "Starting services" systemctl start profolio-frontend profolio-backend
     
     msg_ok "Services configured and started"
 }
 
 # Setup nginx
 function setup_nginx() {
-    msg_info "Configuring web server"
-    
     local server_ip=$(hostname -I | awk '{print $1}')
     
+    msg_info "Creating Nginx configuration"
     cat > /etc/nginx/sites-available/profolio <<EOF
 server {
     listen 80;
@@ -349,18 +349,17 @@ server {
 }
 EOF
 
-    ln -sf /etc/nginx/sites-available/profolio /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
-    nginx -t &>/dev/null
-    systemctl reload nginx
+    run_with_spinner "Enabling site configuration" ln -sf /etc/nginx/sites-available/profolio /etc/nginx/sites-enabled/
+    run_with_spinner "Removing default site" rm -f /etc/nginx/sites-enabled/default
+    run_with_spinner "Testing Nginx configuration" nginx -t
+    run_with_spinner "Reloading Nginx" systemctl reload nginx
     
     msg_ok "Web server configured"
 }
 
 # Cleanup
 function cleanup() {
-    msg_info "Cleaning up"
-    rm -rf "$TEMP_DIR"
+    run_with_spinner "Cleaning up temporary files" rm -rf "$TEMP_DIR"
     msg_ok "Cleanup complete"
 }
 

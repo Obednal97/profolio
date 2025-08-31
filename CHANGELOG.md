@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.15.1] - 2025-08-31
+
+### 🐛 **Bug Fixes**
+
+- **Dependency Installation**: Fixed apt-get exit code 100 error during installation
+- **Node.js Repository**: Separated Node.js repo setup from spinner to avoid pipe issues
+- **Progress Animation**: Replaced static ⚡ icon with animated spinner (/|\-)
+
+### 🔧 **Improvements**
+
+- **Spinner Animation**: All long-running operations now show animated progress
+- **Better Error Handling**: Improved error messages with exit codes
+- **Visual Feedback**: Cleaner progress display with proper spinner cleanup
+
+### 📊 **Summary**
+
+- **Files Modified**: `install-v2.sh`
+- **Functions Updated**: All installation functions now use spinner animation
+- **Status**: ✅ Production ready
+
 ## [v1.15.0] - 2025-08-31
 
 ### 🎉 **Major Release**
