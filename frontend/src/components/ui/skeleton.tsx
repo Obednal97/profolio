@@ -42,6 +42,9 @@ function SkeletonCard({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
+  // Extract onClick to convert type if needed
+  const { onClick } = props;
+  
   return (
     <GlassCard
       variant="standard"
@@ -49,7 +52,7 @@ function SkeletonCard({
       animate
       animationDelay={0.1}
       className={cn("space-y-4", className)}
-      {...props}
+      onClick={onClick ? () => onClick({} as React.MouseEvent<HTMLDivElement>) : undefined}
     >
       <Skeleton className="h-4 w-1/2" />
       <Skeleton className="h-8 w-3/4" />
@@ -206,6 +209,9 @@ function SkeletonStat({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
+  // Extract onClick to convert type if needed
+  const { onClick } = props;
+  
   return (
     <GlassCard
       variant="standard"
@@ -213,7 +219,7 @@ function SkeletonStat({
       animate
       animationDelay={0.1}
       className={cn("space-y-2", className)}
-      {...props}
+      onClick={onClick ? () => onClick({} as React.MouseEvent<HTMLDivElement>) : undefined}
     >
       <Skeleton className="h-4 w-20" />
       <Skeleton className="h-8 w-32" />

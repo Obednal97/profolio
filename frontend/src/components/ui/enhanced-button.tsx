@@ -27,7 +27,7 @@ export interface EnhancedButtonProps extends React.ButtonHTMLAttributes<HTMLButt
   href?: string; // For link variant
 }
 
-const EnhancedButton = React.forwardRef<HTMLButtonElement, EnhancedButtonProps>(
+const EnhancedButton = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, EnhancedButtonProps>(
   (
     {
       className,
@@ -89,28 +89,77 @@ const EnhancedButton = React.forwardRef<HTMLButtonElement, EnhancedButtonProps>(
       lg: iconOnly ? "px-2.5 py-2 text-lg" : "px-5 py-2 text-lg gap-2",
     };
 
-    const Component = as === "a" ? "a" : "button";
-    const ButtonElement = animate && as !== "a" ? motion[Component] : Component;
-    const animationProps = animate ? {
-      whileHover: !disabled ? { scale: 1.02 } : undefined,
-      whileTap: !disabled ? { scale: 0.98 } : undefined,
+    const animationProps = animate && !disabled ? {
+      whileHover: { scale: 1.02 },
+      whileTap: { scale: 0.98 },
       transition: { duration: 0.15, ease: "easeInOut" }
     } : {};
 
+    const classNames = cn(
+      baseStyles,
+      variants[variant],
+      sizes[size],
+      fullWidth && "w-full",
+      className
+    );
+
+    if (as === "a") {
+      const LinkElement = animate ? motion.a : "a";
+      // Extract common event handlers
+      const { onClick, onMouseEnter, onMouseLeave } = props;
+      return (
+        <LinkElement
+          ref={ref as React.Ref<HTMLAnchorElement>}
+          href={href}
+          className={classNames}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onClick={onClick as any}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onMouseEnter={onMouseEnter as any}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onMouseLeave={onMouseLeave as any}
+          {...(animate ? animationProps : {})}
+        >
+          {/* Glass shimmer effect for glass variants */}
+          {variant.startsWith("glass") && (
+            <div 
+              className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              style={{
+                background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%)",
+                animation: "shimmer 2s infinite"
+              }}
+            />
+          )}
+          
+          {/* Button content */}
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            {loading ? (
+              <i className="fas fa-spinner fa-spin" aria-hidden="true" />
+            ) : icon ? (
+              <i className={`fas ${icon}`} aria-hidden="true" />
+            ) : null}
+            {children}
+          </span>
+        </LinkElement>
+      );
+    }
+
+    const ButtonElement = animate ? motion.button : "button";
+    // Filter out conflicting props when using motion
+    const buttonProps = animate ? 
+      (() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { onAnimationStart, onAnimationEnd, onDragStart, onDragEnd, onDrag, ...rest } = props;
+        return rest;
+      })() : props;
+    
     return (
       <ButtonElement
-        ref={as === "button" ? ref : undefined}
-        disabled={as === "button" ? (disabled || loading) : undefined}
-        href={as === "a" ? href : undefined}
-        className={cn(
-          baseStyles,
-          variants[variant],
-          sizes[size],
-          fullWidth && "w-full",
-          className
-        )}
-        {...(as === "button" ? animationProps : {})}
-        {...props}
+        ref={ref as React.Ref<HTMLButtonElement>}
+        disabled={disabled || loading}
+        className={classNames}
+        {...(animate ? animationProps : {})}
+        {...buttonProps}
       >
         {/* Glass shimmer effect for glass variants */}
         {variant.startsWith("glass") && (
