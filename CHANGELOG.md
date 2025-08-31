@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.7] - 2025-08-31
+
+### 🐛 **Bug Fixes**
+
+- **Enhanced Button**: Fixed TypeScript ref type compatibility between button and anchor elements
+- **Skeleton Components**: Fixed onClick type mismatch with GlassCard props
+- **Build Process**: Resolved all TypeScript and ESLint errors preventing production builds
+
+### 🔧 **Improvements**
+
+- **Code Cleanup**: Removed unused test files and __tests__ directory
+- **Type Safety**: Improved type handling for motion components
+- **Build Reliability**: Ensured production builds succeed with strict TypeScript checking
+
+### 📊 **Summary**
+
+- **Files Changed**: 2 (enhanced-button.tsx, skeleton.tsx)
+- **Directories Removed**: 1 (__tests__)
+- **Issues Resolved**: 3 major TypeScript compilation errors
+- **Build Status**: ✅ Production builds now succeed
+
 ## [v1.14.6] - 2025-08-30
 
 ### 🔧 **Improvements**
