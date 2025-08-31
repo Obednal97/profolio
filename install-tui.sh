@@ -119,15 +119,15 @@ INSTALL_CONFIG=(
 main_menu() {
     while true; do
         choice=$(tui_menu "Profolio Installer" "Welcome to Profolio! Select an option:" \
-            "1|🚀 Quick Install (Recommended)" \
-            "2|⚙️  Advanced Install" \
-            "3|📦 Install Specific Version" \
-            "4|🔄 Update Existing Installation" \
-            "5|🛠️  Repair Installation" \
-            "6|💾 Backup Current Installation" \
-            "7|📥 Restore from Backup" \
-            "8|ℹ️  About Profolio" \
-            "9|❌ Exit")
+            "1|Quick Install (Recommended)" \
+            "2|Advanced Install" \
+            "3|Install Specific Version" \
+            "4|Update Existing Installation" \
+            "5|Repair Installation" \
+            "6|Backup Current Installation" \
+            "7|Restore from Backup" \
+            "8|About Profolio" \
+            "9|Exit")
         
         case $choice in
             1) quick_install ;;
