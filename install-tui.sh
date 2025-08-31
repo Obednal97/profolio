@@ -99,18 +99,18 @@ install_tui_tool() {
 # Installation Configuration
 # ===========================
 
-INSTALL_CONFIG=(
-    VERSION="latest"
-    DEPLOYMENT_MODE="self-hosted"
-    AUTH_MODE="local"
-    INSTALL_PATH="/opt/profolio"
-    PRESERVE_ENV="yes"
-    ENABLE_ROLLBACK="yes"
-    OPTIMIZATION="safe"
-    ENABLE_SSH="no"
-    FIREBASE_CONFIG=""
-    STRIPE_CONFIG=""
-)
+# Configuration variables that will be passed to main installer
+VERSION="latest"
+DEPLOYMENT_MODE="self-hosted"
+AUTH_MODE="local"
+INSTALL_PATH="/opt/profolio"
+PRESERVE_ENV="yes"
+ENABLE_ROLLBACK="yes"
+OPTIMIZATION="safe"
+ENABLE_SSH="no"
+FIREBASE_CONFIG=""
+STRIPE_CONFIG=""
+FEATURES=""
 
 # ===========================
 # Main Installation Flow
@@ -152,6 +152,8 @@ quick_install() {
         DEPLOYMENT_MODE="self-hosted"
         AUTH_MODE="local"
         OPTIMIZATION="safe"
+        ENABLE_ROLLBACK="yes"
+        PRESERVE_ENV="yes"
         run_installation
     else
         tui_msgbox "Installation Cancelled" "Installation has been cancelled."
@@ -191,12 +193,19 @@ advanced_install() {
     fi
     
     # Optional Features
-    features=$(tui_checklist "Optional Features" "Select features to enable:" \
+    FEATURES=$(tui_checklist "Optional Features" "Select features to enable:" \
         "billing|Stripe Billing Integration|OFF" \
         "demo|Demo Mode|OFF" \
         "analytics|Analytics Dashboard|ON" \
         "backup|Automatic Backups|ON" \
         "ssh|SSH Access|OFF")
+    
+    # If Stripe billing is selected, get configuration
+    if echo "$FEATURES" | grep -q "billing"; then
+        if tui_yesno "Stripe Configuration" "Do you have Stripe API keys ready?"; then
+            STRIPE_CONFIG=$(tui_inputbox "Stripe Config" "Enter your Stripe configuration (JSON or key=value format):" "")
+        fi
+    fi
     
     # Optimization Level
     choice=$(tui_menu "Optimization Level" "Select installation optimization:" \
@@ -213,8 +222,12 @@ advanced_install() {
     # Installation Path
     INSTALL_PATH=$(tui_inputbox "Installation Path" "Enter installation path:" "/opt/profolio")
     
+    # Set rollback and preservation settings
+    ENABLE_ROLLBACK="yes"  # Default to yes for advanced install
+    PRESERVE_ENV="yes"     # Default to yes for advanced install
+    
     # Show Summary
-    tui_msgbox "Installation Summary" "Configuration Summary:\n\n• Mode: $DEPLOYMENT_MODE\n• Auth: $AUTH_MODE\n• Features: $features\n• Optimization: $OPTIMIZATION\n• Path: $INSTALL_PATH"
+    tui_msgbox "Installation Summary" "Configuration Summary:\n\n• Mode: $DEPLOYMENT_MODE\n• Auth: $AUTH_MODE\n• Features: $FEATURES\n• Optimization: $OPTIMIZATION\n• Path: $INSTALL_PATH"
     
     if tui_yesno "Confirm Installation" "Proceed with these settings?"; then
         run_installation
@@ -265,6 +278,12 @@ version_install() {
     tui_msgbox "Version Selected" "You selected version: $VERSION"
     
     if tui_yesno "Confirm Installation" "Install Profolio $VERSION?"; then
+        # Set default configuration for version install
+        DEPLOYMENT_MODE="self-hosted"
+        AUTH_MODE="local"
+        OPTIMIZATION="safe"
+        ENABLE_ROLLBACK="yes"
+        PRESERVE_ENV="yes"
         run_installation
     fi
 }
@@ -352,20 +371,27 @@ run_installation() {
     
     chmod +x "$INSTALLER_PATH"
     
+    # Export configuration as environment variables for the main installer
+    export PROFOLIO_TUI_CONFIG="true"
+    export PROFOLIO_VERSION="$VERSION"
+    export PROFOLIO_DEPLOYMENT_MODE="$DEPLOYMENT_MODE"
+    export PROFOLIO_AUTH_MODE="$AUTH_MODE"
+    export PROFOLIO_INSTALL_PATH="$INSTALL_PATH"
+    export PROFOLIO_PRESERVE_ENV="$PRESERVE_ENV"
+    export PROFOLIO_ENABLE_ROLLBACK="$ENABLE_ROLLBACK"
+    export PROFOLIO_OPTIMIZATION="$OPTIMIZATION"
+    export PROFOLIO_FIREBASE_CONFIG="$FIREBASE_CONFIG"
+    export PROFOLIO_STRIPE_CONFIG="$STRIPE_CONFIG"
+    export PROFOLIO_FEATURES="$FEATURES"
+    
     # Build installer arguments based on configuration
-    local INSTALLER_ARGS=""
+    local INSTALLER_ARGS="--tui-config"
     
     [ "$VERSION" != "latest" ] && [ -n "$VERSION" ] && INSTALLER_ARGS="$INSTALLER_ARGS --version $VERSION"
-    [ "$DEPLOYMENT_MODE" = "development" ] && INSTALLER_ARGS="$INSTALLER_ARGS --dev"
     [ "$PRESERVE_ENV" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --reset-env"
     [ "$ENABLE_ROLLBACK" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-rollback"
     [ "$OPTIMIZATION" = "aggressive" ] && INSTALLER_ARGS="$INSTALLER_ARGS --aggressive-optimize"
     [ "$OPTIMIZATION" = "none" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-optimize"
-    
-    # For quick install, use auto mode
-    if [ "${QUICK_INSTALL:-false}" = true ]; then
-        INSTALLER_ARGS="$INSTALLER_ARGS --auto"
-    fi
     
     # Clear screen for installation output
     clear
@@ -412,8 +438,13 @@ run_update() {
     
     chmod +x "$INSTALLER_PATH"
     
+    # Export configuration for update mode
+    export PROFOLIO_TUI_CONFIG="true"
+    export PROFOLIO_PRESERVE_ENV="$PRESERVE_ENV"
+    export PROFOLIO_ENABLE_ROLLBACK="$ENABLE_ROLLBACK"
+    
     # Build update arguments
-    local INSTALLER_ARGS="--update"
+    local INSTALLER_ARGS="--update --tui-config"
     [ "$PRESERVE_ENV" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --reset-env"
     [ "$ENABLE_ROLLBACK" = "no" ] && INSTALLER_ARGS="$INSTALLER_ARGS --no-rollback"
     

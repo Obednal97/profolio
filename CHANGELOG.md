@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.14] - 2025-08-31
+
+### 🔧 **Bug Fixes**
+
+- **TUI Configuration Passing**: Fixed double-prompting issue where configuration wasn't passed from TUI to main installer
+- **Environment Variables**: Implemented proper configuration export/import mechanism
+- **Update/Repair Modes**: Added --update and --repair flags for TUI operations
+
+### ✨ **Improvements**
+
+- **Seamless Installation**: Single configuration flow from TUI to completion
+- **Firebase/Stripe Support**: TUI can now configure external services
+- **Feature Selection**: Optional features properly passed to installer
+
+### 📊 **Summary**
+
+- **Files Changed**: 2 (install-tui.sh, install.sh)
+- **Issue Fixed**: Users no longer prompted twice for configuration
+- **Status**: ✅ TUI installer fully functional with proper configuration passing
+
 ## [v1.14.13] - 2025-08-31
 
 ### 🔧 **Bug Fixes**
