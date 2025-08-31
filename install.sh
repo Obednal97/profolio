@@ -1011,6 +1011,11 @@ validate_number() {
 
 # Configuration wizard
 run_configuration_wizard() {
+    # Skip wizard entirely in silent/auto mode
+    if [ "$SILENT_MODE" = true ] || [ "$AUTO_INSTALL" = true ]; then
+        return
+    fi
+    
     if [ "$SILENT_MODE" = false ]; then
         echo -e "${WHITE}🔧 PROFOLIO CONFIGURATION WIZARD${NC}"
         echo -e "${YELLOW}Configure your Profolio installation${NC}"
@@ -1397,6 +1402,11 @@ check_version_update_available() {
 
 # Enhanced update wizard with improved UX flow - collect all preferences upfront
 run_update_wizard() {
+    # Skip wizard entirely in silent/auto mode
+    if [ "$SILENT_MODE" = true ] || [ "$AUTO_INSTALL" = true ]; then
+        return
+    fi
+    
     echo -e "${WHITE}🔄 PROFOLIO UPDATE WIZARD${NC}"
     echo -e "${YELLOW}Update your existing Profolio installation${NC}"
     echo ""
@@ -2899,6 +2909,11 @@ restore_from_backup() {
 
 # Run advanced setup wizard
 run_advanced_setup() {
+    # Skip wizard entirely in silent/auto mode
+    if [ "$SILENT_MODE" = true ] || [ "$AUTO_INSTALL" = true ]; then
+        return
+    fi
+    
     echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║                    Advanced Setup Options                     ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
@@ -3285,6 +3300,10 @@ main() {
             if [ "$ADVANCED_MODE" = true ]; then
                 run_advanced_setup
                 update_installation
+            elif [ "$AUTO_INSTALL" = true ]; then
+                # Skip wizard in auto/silent mode
+                info "Using automatic update configuration"
+                update_installation
             else
                 run_update_wizard  # Use same wizard for both running and non-running
                 
@@ -3301,6 +3320,10 @@ main() {
             
             if [ "$ADVANCED_MODE" = true ]; then
                 run_advanced_setup
+                update_installation
+            elif [ "$AUTO_INSTALL" = true ]; then
+                # Skip wizard in auto/silent mode
+                info "Using automatic update configuration"
                 update_installation
             else
                 run_update_wizard
