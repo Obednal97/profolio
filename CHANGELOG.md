@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.14.10] - 2025-08-31
+
+### 🚀 **New Features**
+
+- **Installer Wrapper**: New lightweight wrapper script for smooth installation experience
+- **Interactive Installation**: Full interactivity preserved with `bash -c` execution method
+- **Professional UX**: Installation now matches Proxmox community scripts pattern
+
+### 🔧 **Improvements**
+
+- **No Size Limits**: Solved "Argument list too long" error with two-stage installation
+- **Better Error Handling**: Clear messages for non-interactive environments
+- **Documentation**: Updated installation commands throughout documentation
+
+### 📊 **Summary**
+
+- **Files Added**: 1 (install-wrapper.sh)
+- **Files Changed**: 2 (install.sh, README.md)
+- **Installation Command**: `bash -c "$(curl -fsSL .../install-wrapper.sh)"`
+- **Status**: ✅ Smooth, interactive installation experience
+
 ## [v1.14.9] - 2025-08-31
 
 ### 🐛 **Bug Fixes**
