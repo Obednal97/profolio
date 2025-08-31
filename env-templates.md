@@ -5,6 +5,7 @@ This file contains environment templates for different deployment scenarios.
 ## Important: Environment Preservation During Updates
 
 When updating Profolio using the installer (`install.sh`), the installer will:
+
 - **Preserve existing environment files by default** when you choose "Yes" for environment preservation (default option)
 - **Preserve custom settings** like Stripe keys, Firebase Admin SDK, and other custom configurations
 - **Update only core settings** like database credentials while keeping your custom configurations intact
@@ -62,7 +63,6 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
 # === Stripe Configuration ===
 # NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-# NEXT_PUBLIC_STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 ```
 
 ## Frontend Local Environment Template (.env.local)
