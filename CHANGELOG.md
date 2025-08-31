@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.15.0] - 2025-08-31
+
+### 🎉 **Major Release**
+
+- **Proxmox-Style Installer**: Complete redesign based on Proxmox VE community scripts
+- **Professional TUI**: Multi-level menu system with intuitive navigation
+- **Enhanced Messaging**: Color-coded output with icons (⚡ ✓ ✗)
+- **Spinner Animation**: Visual progress indicators for long operations
+- **Smart Detection**: Automatic OS and container environment detection
+- **Integrated Updates**: Built-in update and repair functions
+
+### ✨ **New Files**
+
+- `profolio.sh`: Proxmox-style TUI wrapper script
+- `install-v2.sh`: Core installer with professional messaging
+- Updated `install-wrapper.sh`: Smart routing to appropriate installer
+
+### 🔧 **Improvements**
+
+- **Enterprise-Grade UX**: Matches professional deployment tools
+- **Error Handling**: Comprehensive error trapping with cleanup
+- **Fallback Support**: Graceful degradation to legacy installers
+- **Environment Config**: Full configuration via environment variables
+
+### 📊 **Summary**
+
+- **Files Added**: 3 new installer scripts
+- **Architecture**: Complete installer redesign
+- **Compatibility**: Fully backward compatible
+- **Status**: ✅ Production ready
+
 ## [v1.14.16] - 2025-08-31
 
 ### 🐛 **Bug Fixes**
