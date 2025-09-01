@@ -125,6 +125,7 @@ export function UnifiedAuthProvider({
     };
   }, []);
 
+
   // Get backend token from Firebase token (SECURITY: Server-side token exchange)
   const getBackendTokenFromFirebase = useCallback(async (): Promise<
     string | null
@@ -550,7 +551,7 @@ export function UnifiedAuthProvider({
       : undefined;
 
   const signOut = async () => {
-    setLoading(true);
+    // Don't set loading during signout to prevent UI flicker
     try {
       // Check for demo mode first and handle it properly
       if (typeof window !== "undefined") {
@@ -574,9 +575,6 @@ export function UnifiedAuthProvider({
         }
       }
 
-      // Add signing out indicator for better UX
-      const signOutUrl = "/auth/signIn?auth-action=signing-out";
-
       if (authMode === "local") {
         await localAuth.signOut();
       } else {
@@ -591,20 +589,55 @@ export function UnifiedAuthProvider({
 
       // SECURITY: No client-side token clearing needed - server manages httpOnly cookies
 
-      // Clear service worker auth cache to prevent cached auth state
+      // Clear all auth-related storage items explicitly first
+      if (typeof window !== "undefined") {
+        // Clear localStorage
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('user-profile');
+        localStorage.removeItem('demo-user-id');
+        localStorage.removeItem('demo-mode');
+        localStorage.removeItem('demo-session-start');
+        localStorage.removeItem('demo-last-server-check');
+        localStorage.removeItem('user-data');
+        localStorage.removeItem('demo-api-keys');
+        
+        // Clear sessionStorage
+        sessionStorage.removeItem('demo-auth-token');
+        sessionStorage.removeItem('demo-user-data');
+        sessionStorage.removeItem('demo-session-id');
+        sessionStorage.removeItem('demo-session-token');
+        
+        // Clear any auth cookies
+        document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+      }
+
+      // Clear service worker auth cache - MUST complete before redirect
       try {
         const { clearAuthCache } = await import("@/components/PWAManager");
         await clearAuthCache();
-        logger.auth("Cleared auth cache during sign out");
+        logger.auth("✅ Cleared auth cache during sign out");
       } catch (cacheError) {
         logger.auth(
           "⚠️ Failed to clear auth cache during sign out:",
           cacheError
         );
       }
+      
+      // Clear all state before redirect
+      setUser(null);
+      setToken(null);
+      setUserProfile(null);
 
-      // Redirect with signing out indicator
-      window.location.replace(signOutUrl);
+      // Small delay to ensure all async operations complete
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Redirect directly to sign-in page without query parameters
+      // Use absolute URL to ensure proper navigation in production
+      const origin = window.location.origin;
+      const signInUrl = `${origin}/auth/signIn`;
+      
+      // Use replace to prevent back button issues (no reload to avoid webpack errors)
+      window.location.replace(signInUrl);
     } catch (error) {
       logger.auth("Sign out error:", error);
       // Force clear state even if sign out fails
@@ -616,6 +649,8 @@ export function UnifiedAuthProvider({
       try {
         const { clearAuthCache } = await import("@/components/PWAManager");
         await clearAuthCache();
+        // Small delay to ensure cache operations complete
+        await new Promise(resolve => setTimeout(resolve, 50));
       } catch (cacheError) {
         logger.auth(
           "⚠️ Failed to clear auth cache after sign out error:",
@@ -623,10 +658,37 @@ export function UnifiedAuthProvider({
         );
       }
 
-      // Redirect even on error, with signing out indicator
-      window.location.replace("/auth/signIn?auth-action=signing-out");
+      // Clear all auth-related storage items explicitly even on error
+      if (typeof window !== "undefined") {
+        // Clear localStorage
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('user-profile');
+        localStorage.removeItem('demo-user-id');
+        localStorage.removeItem('demo-mode');
+        localStorage.removeItem('demo-session-start');
+        localStorage.removeItem('demo-last-server-check');
+        localStorage.removeItem('user-data');
+        localStorage.removeItem('demo-api-keys');
+        
+        // Clear sessionStorage
+        sessionStorage.removeItem('demo-auth-token');
+        sessionStorage.removeItem('demo-user-data');
+        sessionStorage.removeItem('demo-session-id');
+        sessionStorage.removeItem('demo-session-token');
+        
+        // Clear any auth cookies
+        document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+      }
+
+      // Redirect to sign-in page even on error
+      // Use absolute URL to ensure proper navigation in production
+      const origin = window.location.origin;
+      const signInUrl = `${origin}/auth/signIn`;
+      
+      // Use replace to prevent back button issues (no reload to avoid webpack errors)
+      window.location.replace(signInUrl);
     } finally {
-      setLoading(false);
+      // Don't set loading false here - let the redirect handle it
     }
   };
 
@@ -799,6 +861,102 @@ export function UnifiedAuthProvider({
     token,
     refreshUserProfile,
   };
+
+  // Listen for unauthorized events (401/403 responses)
+  useEffect(() => {
+    const handleUnauthorized = async () => {
+      logger.auth("Received unauthorized event, signing out...");
+      // Force signout when API returns 401/403
+      try {
+        // Clear state first
+        setUser(null);
+        setToken(null);
+        setUserProfile(null);
+        
+        // Then perform signout
+        if (authMode === "local") {
+          await localAuth.signOut();
+        } else {
+          try {
+            const { signOutUser } = await import("./firebase");
+            await signOutUser();
+          } catch (error) {
+            logger.auth("Firebase signout error during unauthorized:", error);
+          }
+        }
+        
+        // Clear service worker cache - ensure it completes
+        try {
+          const { clearAuthCache } = await import("@/components/PWAManager");
+          await clearAuthCache();
+          // Small delay to ensure cache operations complete
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (cacheError) {
+          logger.auth("Failed to clear auth cache:", cacheError);
+        }
+        
+        // Clear all auth-related storage items
+        if (typeof window !== "undefined") {
+          // Clear localStorage
+          localStorage.removeItem('auth-token');
+          localStorage.removeItem('user-profile');
+          localStorage.removeItem('demo-user-id');
+          localStorage.removeItem('demo-mode');
+          localStorage.removeItem('demo-session-start');
+          localStorage.removeItem('demo-last-server-check');
+          localStorage.removeItem('user-data');
+          localStorage.removeItem('demo-api-keys');
+          
+          // Clear sessionStorage
+          sessionStorage.removeItem('demo-auth-token');
+          sessionStorage.removeItem('demo-user-data');
+          sessionStorage.removeItem('demo-session-id');
+          sessionStorage.removeItem('demo-session-token');
+          
+          // Clear any auth cookies
+          document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+        }
+        
+        // Redirect to sign-in
+        const origin = window.location.origin;
+        const signInUrl = `${origin}/auth/signIn`;
+        window.location.replace(signInUrl);
+      } catch (error) {
+        logger.auth("Error during unauthorized signout:", error);
+        // Clear all auth-related storage items even on error
+        if (typeof window !== "undefined") {
+          // Clear localStorage
+          localStorage.removeItem('auth-token');
+          localStorage.removeItem('user-profile');
+          localStorage.removeItem('demo-user-id');
+          localStorage.removeItem('demo-mode');
+          localStorage.removeItem('demo-session-start');
+          localStorage.removeItem('demo-last-server-check');
+          localStorage.removeItem('user-data');
+          localStorage.removeItem('demo-api-keys');
+          
+          // Clear sessionStorage
+          sessionStorage.removeItem('demo-auth-token');
+          sessionStorage.removeItem('demo-user-data');
+          sessionStorage.removeItem('demo-session-id');
+          sessionStorage.removeItem('demo-session-token');
+          
+          // Clear any auth cookies
+          document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict';
+        }
+        
+        // Force redirect even if signout fails
+        const origin = window.location.origin;
+        const signInUrl = `${origin}/auth/signIn`;
+        window.location.replace(signInUrl);
+      }
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [authMode]);
 
   return (
     <UnifiedAuthContext.Provider value={value}>
