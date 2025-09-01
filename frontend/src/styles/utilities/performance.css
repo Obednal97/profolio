@@ -167,15 +167,221 @@
       animation-duration: 8s; /* Slower for better performance */
     }
 
-    /* Optimize blur effects for mobile */
+    /* Optimize blur effects for mobile - reduce intensity */
     [class*="backdrop-blur"] {
-      backdrop-filter: blur(8px); /* Reduced blur for better performance */
+      backdrop-filter: blur(8px) !important; /* Reduced blur for better performance */
+    }
+    
+    .blur-3xl {
+      filter: blur(24px) !important; /* Reduced from 64px */
+    }
+    
+    .blur-2xl {
+      filter: blur(16px) !important; /* Reduced from 40px */
+    }
+    
+    .blur-xl {
+      filter: blur(12px) !important;
     }
 
-    /* Optimize transitions for 60fps */
+    /* Optimize transition timing function only, not duration */
+    /* Don't apply global transition duration - causes delays */
     * {
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 150ms;
+      /* Removed: transition-duration: 150ms; - This was causing delays */
+    }
+    
+    /* Disable scroll snap on mobile for smoother scrolling */
+    .scroll-smooth {
+      scroll-snap-type: none !important;
+    }
+    
+    /* Simplify glass effects on mobile */
+    .glass-tile {
+      backdrop-filter: blur(6px) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    .liquid-glass-standard,
+    .liquid-glass-subtle,
+    .liquid-glass-prominent {
+      backdrop-filter: blur(6px) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Disable complex hover animations on mobile */
+    .hover\:scale-105:hover,
+    .hover\:scale-110:hover,
+    .group-hover\:scale-105:hover,
+    .group-hover\:scale-110:hover {
+      transform: scale(1) !important;
+    }
+    
+    /* Optimize infinite animations */
+    .animate-ping,
+    .animate-pulse,
+    .animate-bounce {
+      animation-iteration-count: 3 !important; /* Limit iterations instead of infinite */
+    }
+    
+    /* === Landing Page Specific Performance Optimizations === */
+    
+    /* Reduce blob count and complexity on mobile */
+    .fixed > div:nth-child(n+4) {
+      display: none !important;
+    }
+    
+    /* Simplify blur effects on mobile */
+    .fixed .blur-3xl {
+      filter: blur(16px) !important;
+      opacity: 0.15 !important;
+    }
+    
+    /* Optimize floating animations for mobile */
+    @keyframes float {
+      0%, 100% { transform: translateY(0) translateZ(0); }
+      50% { transform: translateY(-10px) translateZ(0); } /* Reduced movement */
+    }
+    
+    @keyframes float-delayed {
+      0%, 100% { transform: translateY(0) translateZ(0); }
+      50% { transform: translateY(-8px) translateZ(0); } /* Reduced movement */
+    }
+    
+    @keyframes float-slow {
+      0%, 100% { transform: translateY(0) translateZ(0); }
+      50% { transform: translateY(-6px) translateZ(0); } /* Reduced movement */
+    }
+    
+    /* Disable motion.div animations on mobile */
+    [class*="motion"] > div {
+      animation: none !important;
+    }
+    
+    /* Disable parallax effects on mobile */
+    .parallax,
+    [data-parallax] {
+      transform: none !important;
+    }
+    
+    /* Optimize scroll-triggered animations */
+    [data-aos],
+    [data-scroll],
+    .aos-animate {
+      transition-duration: 300ms !important;
+      transition-delay: 0ms !important;
+    }
+    
+    /* Reduce complexity of gradient animations */
+    .animate-gradient,
+    .bg-gradient-to-r,
+    .bg-gradient-to-br {
+      background-size: 200% 200% !important; /* Smaller gradient size */
+      animation-duration: 15s !important; /* Slower animation */
+    }
+    
+    /* Optimize text animations */
+    .animate-text-gradient {
+      animation: none !important;
+      background-clip: text !important;
+      -webkit-background-clip: text !important;
+    }
+    
+    /* Limit particle effects */
+    .particle,
+    .particles-js {
+      display: none !important;
+    }
+    
+    /* Optimize card animations */
+    .card,
+    .glass-card {
+      transition: transform 200ms ease-out !important;
+      will-change: auto !important;
+    }
+    
+    /* Disable complex shadows on mobile */
+    .shadow-2xl,
+    .shadow-xl {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    }
+    
+    /* Optimize image loading */
+    img {
+      content-visibility: auto;
+      contain-intrinsic-size: 400px 300px;
+    }
+    
+    /* Reduce animation frame rate for counter animations */
+    .counter-animation {
+      animation-duration: 2s !important;
+      animation-timing-function: steps(30) !important; /* 30fps instead of 60fps */
+    }
+  }
+  
+  /* Touch device specific optimizations */
+  @media (hover: none) and (pointer: coarse) {
+    /* Disable hover effects completely on touch devices */
+    .hover\:shadow-xl:hover,
+    .hover\:shadow-2xl:hover {
+      box-shadow: none !important;
+    }
+    
+    /* Simplify transitions on touch */
+    .transition-all {
+      transition-property: opacity, transform !important;
+    }
+  }
+  
+  /* Prefers reduced motion - accessibility and performance */
+  @media (prefers-reduced-motion: reduce) {
+    /* Disable all animations */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    
+    /* Remove infinite animations completely */
+    .animate-spin,
+    .animate-ping,
+    .animate-pulse,
+    .animate-bounce {
+      animation: none !important;
+    }
+    
+    /* Disable floating blob animations */
+    .absolute.rounded-full.mix-blend-soft-light.filter {
+      animation: none !important;
+    }
+    
+    /* Disable gradient animations */
+    .animate-gradient,
+    .bg-gradient-to-r,
+    .bg-gradient-to-br {
+      animation: none !important;
+    }
+    
+    /* Disable parallax and scroll effects */
+    .parallax,
+    [data-parallax],
+    [data-aos],
+    [data-scroll] {
+      transform: none !important;
+      opacity: 1 !important;
+    }
+    
+    /* Disable text animations */
+    .animate-text-gradient {
+      animation: none !important;
+    }
+    
+    /* Disable counter animations */
+    .counter-animation {
+      animation: none !important;
     }
   }
 

@@ -179,7 +179,7 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section
-        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        className="relative flex items-center justify-center overflow-hidden z-10 py-20 sm:py-24 lg:py-32"
         style={{ scrollSnapAlign: "start" }}
       >
         <motion.div
@@ -189,7 +189,7 @@ export default function LandingPage() {
           variants={container}
         >
           <motion.div
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-full liquid-glass--subtle backdrop-blur-md border border-white/25 dark:border-white/15 shadow-xl mb-4 sm:mb-6 lg:mb-8"
+            className="inline-flex items-center gap-3 px-6 py-3 rounded-full liquid-glass--subtle backdrop-blur-md border border-white/25 dark:border-white/15 shadow-xl mb-4 sm:mb-6"
             style={{
               background: "rgba(255, 255, 255, 0.12)",
               backdropFilter: "blur(12px) saturate(150%)",
@@ -208,7 +208,7 @@ export default function LandingPage() {
           </motion.div>
 
           <motion.h1
-            className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8 tracking-tight leading-none"
+            className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 tracking-tight leading-none"
             variants={fadeUp}
           >
             Your Wealth,
@@ -219,7 +219,7 @@ export default function LandingPage() {
           </motion.h1>
 
           <motion.p
-            className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-8 sm:mb-10 lg:mb-12 leading-relaxed font-medium"
+            className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-6 sm:mb-8 leading-relaxed font-medium"
             variants={fadeUp}
           >
             The modern financial operating system for tracking your entire
@@ -230,7 +230,7 @@ export default function LandingPage() {
           </motion.p>
 
           <motion.div
-            className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8 sm:mb-12 lg:mb-16"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 sm:mb-8"
             variants={fadeUp}
           >
             <Button
@@ -239,7 +239,7 @@ export default function LandingPage() {
               className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 border-0"
               data-testid="login-button"
             >
-              <Link href="/auth/signUp">
+              <Link href="/auth/signUp" className="flex items-center justify-center">
                 <i className="fas fa-rocket mr-3" />
                 Start Free Trial
                 <i className="fas fa-arrow-right ml-3" />
@@ -249,9 +249,9 @@ export default function LandingPage() {
               asChild
               size="lg"
               variant="outline"
-              className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10 backdrop-blur-xl shadow-xl hover:scale-105 transition-all duration-300"
+              className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10 backdrop-blur-xl shadow-xl hover:scale-105 transition-all duration-300 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
-              <Link href="/app/assetManager">
+              <Link href="/app/assetManager" className="flex items-center justify-center">
                 <i className="fas fa-play-circle mr-3" />
                 Try Demo
               </Link>
@@ -280,7 +280,7 @@ export default function LandingPage() {
 
       {/* Live Portfolio Section */}
       <section
-        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        className="relative flex items-center justify-center overflow-hidden z-10 py-8 sm:py-12 lg:py-16"
         style={{ scrollSnapAlign: "start" }}
       >
         <motion.div
@@ -363,7 +363,7 @@ export default function LandingPage() {
 
       {/* Features Section */}
       <section
-        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        className="relative flex items-center justify-center overflow-hidden z-10 py-8 sm:py-12 lg:py-16"
         style={{ scrollSnapAlign: "start" }}
       >
         <motion.div
@@ -426,7 +426,7 @@ export default function LandingPage() {
 
       {/* Final CTA Section */}
       <section
-        className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20"
+        className="relative flex items-center justify-center overflow-hidden z-10 py-8 sm:py-12 lg:py-16"
         style={{ scrollSnapAlign: "start" }}
       >
         <motion.div
@@ -454,7 +454,7 @@ export default function LandingPage() {
                 size="lg"
                 className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
               >
-                <Link href="/auth/signUp">
+                <Link href="/auth/signUp" className="flex items-center justify-center">
                   Start Free Trial
                   <i className="fas fa-arrow-right ml-3" />
                 </Link>
@@ -463,15 +463,12 @@ export default function LandingPage() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="text-lg px-10 py-6 liquid-glass--standard rounded-xl border border-white/25 dark:border-white/15 hover:scale-105 transition-all duration-300 text-gray-700 dark:text-gray-300"
-                style={{
-                  background: "rgba(255, 255, 255, 0.15)",
-                  backdropFilter: "blur(12px) saturate(150%)",
-                  boxShadow:
-                    "0 8px 24px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25)",
-                }}
+                className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10 backdrop-blur-xl shadow-xl hover:scale-105 transition-all duration-300 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
               >
-                <Link href="/pricing">View Pricing</Link>
+                <Link href="/pricing" className="flex items-center justify-center">
+                  <i className="fas fa-tags mr-3" />
+                  View Pricing
+                </Link>
               </Button>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-500 mt-10">
