@@ -190,8 +190,13 @@ export class DemoSessionManager {
       console.log('🎭 Demo session ended - all temporary data cleared');
     }
     
-    // Redirect to landing page
-    window.location.href = '/';
+    // Redirect to sign-in page
+    // Use absolute URL to ensure proper navigation in production
+    const origin = window.location.origin;
+    const signInUrl = `${origin}/auth/signIn`;
+    
+    // Use replace to prevent back button issues (no reload to avoid webpack errors)
+    window.location.replace(signInUrl);
   }
 
   /**

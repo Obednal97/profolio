@@ -46,6 +46,7 @@ sudo ./install.sh --rollback                # Manual rollback
 ## Development Commands
 
 ### Quick Start (from root directory)
+
 ```bash
 # Production Mode - Run both frontend and backend in production
 pnpm start            # Runs both services concurrently
@@ -62,6 +63,7 @@ pnpm dev:frontend     # Development frontend only
 ```
 
 ### Frontend (Next.js)
+
 ```bash
 cd frontend
 
@@ -90,6 +92,7 @@ pnpm audit            # Security vulnerability check
 ```
 
 ### Backend (NestJS)
+
 ```bash
 cd backend
 
@@ -111,6 +114,7 @@ pnpm format           # Format with Prettier
 ```
 
 ### Root Level Commands
+
 ```bash
 # Development (from root)
 pnpm dev:frontend     # Start frontend dev server
@@ -124,6 +128,7 @@ pnpm build:backend    # Build backend
 ## Architecture Overview
 
 ### Tech Stack
+
 - **Frontend**: Next.js 15, React 18, TypeScript, TailwindCSS v4, TanStack Query
 - **Backend**: NestJS, Prisma ORM, PostgreSQL, JWT authentication
 - **UI Components**: Radix UI primitives (NOT Shadcn/ui), custom glass design system
@@ -131,6 +136,7 @@ pnpm build:backend    # Build backend
 - **Authentication**: Dual mode - Firebase (cloud) or local JWT (self-hosted)
 
 ### Project Structure
+
 ```
 profolio/
 ├── frontend/                 # Next.js application
@@ -165,6 +171,7 @@ profolio/
 ### Key Design Patterns
 
 #### Frontend Architecture
+
 - **App Router**: Using Next.js 15 app directory structure
 - **Server Components**: Default to server components, use client components only when needed
 - **API Routes**: Next.js API routes proxy to backend NestJS services
@@ -172,6 +179,7 @@ profolio/
 - **Modular CSS**: Component-scoped styles with CSS modules, avoiding inline styles
 
 #### Backend Architecture
+
 - **Module-based**: Each feature is a NestJS module (auth, assets, expenses, properties)
 - **Service Layer**: Business logic in services, controllers handle HTTP
 - **DTOs**: Data validation using class-validator
@@ -179,23 +187,26 @@ profolio/
 - **Prisma ORM**: Type-safe database queries with PostgreSQL
 
 #### Authentication Flow
+
 1. Frontend uses `useAuth()` hook for auth state
 2. Local mode: JWT tokens stored securely, backend validates
 3. Firebase mode: Firebase SDK handles auth, backend validates Firebase tokens
 4. All API calls include auth headers automatically via `apiClient`
 
 #### Data Fetching Pattern
+
 ```typescript
 // Using TanStack Query for data fetching
 const { data, isLoading } = useQuery({
-  queryKey: ['assets'],
-  queryFn: () => apiClient.get('/api/assets')
+  queryKey: ["assets"],
+  queryFn: () => apiClient.get("/api/assets"),
 });
 ```
 
 ## Important Conventions
 
 ### Component Creation
+
 - Check existing components first (especially in `components/common/`)
 - Use Radix UI primitives, NOT Shadcn/ui
 - Follow glass design system patterns from `components/cards/GlassCard.tsx`
@@ -203,12 +214,14 @@ const { data, isLoading } = useQuery({
 - **MANDATORY**: Add `data-testid` attributes to all interactive elements
 
 ### State Management
+
 - Server state: TanStack Query (NOT SWR)
 - Client state: React Context or local state
 - Form state: Controlled components with React state
 - Demo mode: 24-hour sessions with `DemoSessionManager`
 
 ### Styling - Glass Design System
+
 - Use TailwindCSS v4 with PostCSS
 - Glass design tokens in `styles/foundation/tokens.css`
 - Liquid glass variants: `.liquid-glass-subtle`, `.liquid-glass-standard`, `.liquid-glass-prominent`
@@ -217,6 +230,7 @@ const { data, isLoading } = useQuery({
 - Avoid inline styles, use modular CSS architecture
 
 ### Testing Requirements
+
 - **E2E tests**: Playwright with multi-browser support (Chrome, Firefox, Safari, Edge, Mobile)
 - **Security tests**: Tag with `@security` for SQL injection, XSS, rate limiting
 - **Performance tests**: Core Web Vitals (LCP < 2.5s, CLS < 0.1)
@@ -225,6 +239,7 @@ const { data, isLoading } = useQuery({
 - **Coverage**: Minimum 80% for new features, 100% for financial calculations
 
 ### Security Principles
+
 - **NEVER** build custom authentication (use NextAuth, Auth0, Firebase Auth)
 - **NEVER** build custom encryption (use Node.js crypto module)
 - **NEVER** make direct backend calls from frontend (use API proxy routes)
@@ -235,6 +250,7 @@ const { data, isLoading } = useQuery({
 ## Environment Variables
 
 ### Frontend (.env.local)
+
 ```
 NEXT_PUBLIC_AUTH_MODE=local
 NEXT_PUBLIC_API_URL=http://localhost:3001
@@ -242,6 +258,7 @@ NEXT_PUBLIC_FIREBASE_CONFIG={}  # Firebase config JSON if using Firebase auth
 ```
 
 ### Backend (.env)
+
 ```
 DATABASE_URL=postgresql://user:pass@localhost:5432/profolio
 JWT_SECRET=your-secret-key
@@ -252,6 +269,7 @@ PORT=3001
 ## Common Tasks
 
 ### Adding a New Feature
+
 1. Create backend module in `backend/src/app/api/`
 2. Add Prisma schema if needed, run migrations
 3. Create frontend pages in `frontend/src/app/app/`
@@ -260,12 +278,14 @@ PORT=3001
 6. Add E2E tests for critical flows
 
 ### Modifying Database Schema
+
 1. Edit `backend/prisma/schema.prisma`
 2. Run `pnpm prisma:migrate` in backend
 3. Update DTOs in backend module
 4. Update TypeScript types in frontend
 
 ### CSS Architecture Guidelines
+
 - Foundation styles (reset, tokens) go in `styles/foundation/`
 - Component styles in `styles/components/`
 - Use CSS custom properties for theming
@@ -273,6 +293,7 @@ PORT=3001
 - Keep specificity low, avoid !important
 
 ## Package Management
+
 - **MANDATORY**: Use pnpm for all operations (not npm/yarn)
 - Workspace configured at root level
 - Always use `pnpm add` for adding dependencies
@@ -283,6 +304,7 @@ PORT=3001
 ## Current Development Priorities
 
 ### 🔴 High Priority Issues (from todo.md)
+
 - Google auth users cannot set password for email auth
 - Add proper 2FA using otplib
 - Implement failed password rate limiting
@@ -291,12 +313,14 @@ PORT=3001
 - Page transition performance issues
 
 ### 🟢 Ongoing Features
+
 - Apple Liquid Glass Design Language (in progress at `/design-styles`)
 - Component architecture improvements (93% file size reduction planned)
 - CSS modular architecture migration
 - Performance optimizations for 1-4 second page delays
 
 ### ✅ Recently Completed (Reference)
+
 - Fixed mock API preventing real backend usage
 - Created all missing API proxy routes
 - Fixed Google auth with PWA
@@ -306,16 +330,14 @@ PORT=3001
 ## Development Workflow
 
 ### Git Commit Format
+
 ```bash
-# Include Co-Authored-By for pair programming
-git commit -m "feat: Add new feature
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+# Do NOT include Co-Authored-By for pair programming
+git commit -m "feat: Add new feature"
 ```
 
 ### Creating Pull Requests
+
 ```bash
 # Use GitHub CLI
 gh pr create --title "feat: Title" --body "$(cat <<'EOF'
@@ -336,6 +358,7 @@ EOF
 ## Demo Mode
 
 ### Demo Session Management
+
 - 24-hour time-limited sessions
 - Real Yahoo Finance market data (not mock)
 - Automatic session cleanup after expiry
@@ -345,6 +368,7 @@ EOF
 ## Useful References
 
 ### Project Documentation
+
 - **Cursor Rules**: `.cursor/rules/index.mdc` - Development conventions
 - **Testing Guide**: `docs/testing/TESTING_SETUP_GUIDE.md`
 - **Security Policy**: `SECURITY.md` - Security best practices
@@ -352,6 +376,7 @@ EOF
 - **Release Process**: `docs/processes/RELEASE_PROCESS_GUIDE.md`
 
 ### Key Files to Review
+
 - **Current Tasks**: `todo.md` and `todo.csv`
 - **Recent Changes**: `CHANGELOG.md`
 - **Architecture Specs**: `docs/architecture/`

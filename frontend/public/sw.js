@@ -392,21 +392,51 @@ self.addEventListener('message', (event) => {
   
   if (data && data.type === 'CLEAR_AUTH_CACHE') {
     console.log('📨 Clearing auth-related cache entries');
-    // Clear any auth-related cache entries
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          return caches.open(cacheName).then(cache => {
-            return cache.keys().then(keys => {
-              return Promise.all(
-                keys.filter(key => key.url.includes('/app/') || key.url.includes('/auth/'))
-                   .map(key => cache.delete(key))
+    
+    // Use event.waitUntil to ensure the cache clearing completes
+    event.waitUntil(
+      (async () => {
+        try {
+          const cacheNames = await caches.keys();
+          
+          // Clear entries from all caches
+          await Promise.all(
+            cacheNames.map(async (cacheName) => {
+              const cache = await caches.open(cacheName);
+              const keys = await cache.keys();
+              
+              // More aggressive clearing - include API responses and Next.js assets
+              const keysToDelete = keys.filter(key => 
+                key.url.includes('/app/') || 
+                key.url.includes('/auth/') ||
+                key.url.includes('/api/') ||
+                key.url.includes('/_next/') ||
+                key.url.includes('.json') ||
+                // Don't delete static assets like icons and manifest
+                (!key.url.includes('/icons/') && !key.url.includes('/manifest.json'))
               );
-            });
-          });
-        })
-      );
-    });
+              
+              if (keysToDelete.length > 0) {
+                console.log(`🧹 Clearing ${keysToDelete.length} entries from ${cacheName}`);
+                await Promise.all(keysToDelete.map(key => cache.delete(key)));
+              }
+            })
+          );
+          
+          console.log('✅ Auth cache cleared successfully');
+          
+          // Send confirmation back if port is available
+          if (event.ports && event.ports[0]) {
+            event.ports[0].postMessage({ success: true });
+          }
+        } catch (error) {
+          console.error('❌ Failed to clear auth cache:', error);
+          if (event.ports && event.ports[0]) {
+            event.ports[0].postMessage({ success: false, error: error.message });
+          }
+        }
+      })()
+    );
   }
 });
 

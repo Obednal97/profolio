@@ -30,6 +30,23 @@ export async function GET(
       },
     });
     
+    // Check if response is JSON
+    const contentType = backendResponse.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // If backend returns HTML (error page) or non-JSON, return a proper error
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Backend service unavailable',
+          symbol,
+          price: 0, // Fallback price
+          change: 0,
+          changePercent: 0
+        },
+        { status: 503 }
+      );
+    }
+    
     // Get the response data
     const data = await backendResponse.json();
     
