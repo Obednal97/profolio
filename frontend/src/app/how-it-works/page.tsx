@@ -21,7 +21,7 @@ const fadeUp = {
     y: 0,
     transition: {
       duration: 0.8,
-      ease: [0.25, 0.46, 0.45, 0.94],
+      ease: "easeOut" as const,
     },
   },
 };
@@ -441,7 +441,7 @@ export default function HowItWorksPage() {
                     opacity: openFaq === index ? 1 : 0
                   }}
                   transition={{
-                    height: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+                    height: { duration: 0.4, ease: "easeOut" as const },
                     opacity: { duration: 0.3, ease: "easeInOut" }
                   }}
                   className="overflow-hidden"
