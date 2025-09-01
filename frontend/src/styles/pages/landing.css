@@ -1,0 +1,319 @@
+/* === Landing Page Performance Optimizations === */
+/* Specific optimizations for landing pages to improve mobile performance */
+
+/* Fix for content visibility - targeting only actual content, not background */
+/* This preserves the animated background blobs while showing content */
+
+/* Target only content elements with opacity:0, not background blobs */
+/* Make visibility immediate - no transition delays */
+section [style*="opacity:0"],
+section [style*="opacity: 0"] {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  /* Removed transition - was causing delays on mobile */
+}
+
+/* Fix transform for content only - immediate visibility */
+section [style*="transform:translateY"],
+section [style*="transform: translateY"] {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+}
+
+/* Ensure text content within sections is visible */
+section h1, section h2, section h3, section h4, section h5, section h6, 
+section p, section span {
+  opacity: 1 !important;
+}
+
+/* Make sure sections themselves are visible */
+section {
+  opacity: 1 !important;
+  display: block !important;
+}
+
+/* Ensure buttons are visible and properly displayed */
+section button, section a, section [data-slot="button"] {
+  opacity: 1 !important;
+}
+
+@layer components {
+  
+  /* Mobile-specific performance fixes - ONLY for small screens */
+  @media only screen and (max-width: 768px) {
+    /* Simplify backdrop blurs on mobile */
+    [class*="backdrop-blur"] {
+      backdrop-filter: blur(4px) !important;
+      -webkit-backdrop-filter: blur(4px) !important;
+    }
+    
+    /* Reduce blob animations on mobile */
+    .fixed .blur-3xl {
+      filter: blur(16px) !important;
+      opacity: 0.15 !important;
+    }
+    
+    /* Hide excessive blobs on mobile */
+    .fixed > div:nth-child(n+4) {
+      display: none !important;
+    }
+    
+    /* Simplify glass effects on mobile */
+    .liquid-glass-standard,
+    .liquid-glass-subtle,
+    .liquid-glass-prominent,
+    .glass-tile {
+      backdrop-filter: blur(4px) !important;
+      -webkit-backdrop-filter: blur(4px) !important;
+    }
+  }
+  /* Progressive loading for landing page sections */
+  .landing-section {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
+
+  /* Optimize animated background blobs */
+  .animated-blob {
+    will-change: auto; /* Let browser optimize */
+    contain: layout style paint;
+  }
+
+  /* Mobile-specific blob optimizations */
+  @media (max-width: 768px) {
+    /* Hide excessive blobs on mobile */
+    .animated-blob:nth-child(n+4) {
+      display: none !important;
+    }
+    
+    /* Simplify remaining blob animations */
+    .animated-blob {
+      animation-duration: 45s !important;
+      animation-timing-function: linear !important;
+      opacity: 0.15 !important;
+    }
+    
+    /* Reduce blur intensity for better performance */
+    .animated-blob .blur-3xl {
+      filter: blur(20px) !important;
+    }
+  }
+
+  /* Low-end device detection based on screen size and pixel ratio */
+  @media (max-width: 768px) and (max-resolution: 2dppx) {
+    /* Further simplify for low-end devices */
+    .animated-blob {
+      animation: none !important;
+      transform: scale(0.8) !important;
+    }
+    
+    /* Disable complex gradients */
+    .bg-gradient-to-br {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+    }
+  }
+
+  /* Optimize hero section performance */
+  .hero-section {
+    isolation: isolate; /* Create new stacking context */
+    transform: translateZ(0); /* Force GPU layer */
+  }
+
+  /* Lazy load sections below the fold */
+  .below-fold {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 600px;
+  }
+
+  /* Optimize feature cards */
+  @media (max-width: 768px) {
+    .feature-card {
+      transition: transform 150ms ease-out !important;
+      will-change: auto !important;
+    }
+    
+    .feature-card:hover {
+      transform: none !important; /* Disable hover transform on mobile */
+    }
+  }
+
+  /* Optimize testimonial carousel */
+  .testimonial-carousel {
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 768px) {
+    .testimonial-carousel {
+      scroll-snap-type: none; /* Disable snap for smoother scrolling */
+    }
+  }
+
+  /* Optimize pricing cards */
+  .pricing-card {
+    contain: layout style;
+  }
+
+  @media (max-width: 768px) {
+    .pricing-card {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+      backdrop-filter: blur(4px) !important;
+    }
+  }
+
+  /* Optimize FAQ accordions */
+  .faq-accordion {
+    contain: layout;
+  }
+
+  .faq-accordion-content {
+    will-change: height;
+  }
+
+  @media (max-width: 768px) {
+    .faq-accordion-content {
+      transition: height 200ms ease-out !important;
+    }
+  }
+
+  /* Counter animation optimizations */
+  @media (max-width: 768px) {
+    .counter-text {
+      animation: none !important;
+      /* Use CSS counter instead of JS animation */
+      counter-reset: value var(--counter-value, 0);
+    }
+    
+    .counter-text::after {
+      content: counter(value);
+    }
+  }
+
+  /* Optimize scroll-triggered animations */
+  [data-animate-on-scroll] {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+  }
+
+  [data-animate-on-scroll].visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    [data-animate-on-scroll] {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* Optimize background patterns */
+  .bg-pattern {
+    background-attachment: scroll; /* Avoid fixed backgrounds on mobile */
+  }
+
+  @media (max-width: 768px) {
+    .bg-pattern {
+      background-image: none !important;
+    }
+  }
+
+  /* Optimize video backgrounds */
+  .video-background {
+    pointer-events: none;
+  }
+
+  @media (max-width: 768px) {
+    .video-background {
+      display: none !important;
+    }
+    
+    /* Show static image fallback */
+    .video-fallback {
+      display: block !important;
+    }
+  }
+
+  /* Intersection Observer hints */
+  .lazy-load-section {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
+
+  /* Font loading optimization */
+  .hero-title {
+    font-display: swap;
+  }
+
+  /* Image optimization */
+  .hero-image,
+  .feature-image {
+    content-visibility: auto;
+    contain: layout style paint;
+  }
+
+  /* Reduce paint areas */
+  .static-content {
+    contain: style layout;
+  }
+
+  /* Optimize glassmorphism effects */
+  @media (max-width: 768px) {
+    .glass-effect {
+      backdrop-filter: blur(6px) !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+    }
+  }
+
+  /* Safari-specific optimizations */
+  @supports (-webkit-touch-callout: none) {
+    .animated-blob {
+      transform: translate3d(0, 0, 0);
+      -webkit-transform: translate3d(0, 0, 0);
+    }
+    
+    @media (max-width: 768px) {
+      .backdrop-blur {
+        -webkit-backdrop-filter: blur(6px) !important;
+      }
+    }
+  }
+
+  /* Firefox-specific optimizations */
+  @-moz-document url-prefix() {
+    @media (max-width: 768px) {
+      .animated-blob {
+        will-change: transform;
+      }
+    }
+  }
+}
+
+/* CSS Variables for performance tuning */
+:root {
+  --animation-duration-mobile: 300ms;
+  --animation-duration-desktop: 600ms;
+  --blur-intensity-mobile: 6px;
+  --blur-intensity-desktop: 12px;
+  --max-blobs-mobile: 3;
+  --max-blobs-desktop: 6;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --animation-duration: var(--animation-duration-mobile);
+    --blur-intensity: var(--blur-intensity-mobile);
+    --max-blobs: var(--max-blobs-mobile);
+  }
+}
+
+@media (min-width: 769px) {
+  :root {
+    --animation-duration: var(--animation-duration-desktop);
+    --blur-intensity: var(--blur-intensity-desktop);
+    --max-blobs: var(--max-blobs-desktop);
+  }
+}

@@ -135,15 +135,16 @@ export default function AboutPage() {
         />
       </div>
 
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section className="relative flex items-center justify-center overflow-hidden z-10 py-20 sm:py-24 lg:py-32" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto text-center"
           initial="hidden"
           animate="visible"
           variants={container}
         >
+          <motion.div className="h-12 sm:h-14" aria-hidden="true" />
           <motion.h1 
-            className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8 tracking-tight leading-none"
+            className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 tracking-tight leading-none"
             variants={fadeUp}
           >
             About
@@ -154,7 +155,7 @@ export default function AboutPage() {
           </motion.h1>
           
           <motion.p
-            className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-8 sm:mb-12 lg:mb-16 leading-relaxed font-medium"
+            className="text-lg sm:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto mb-6 sm:mb-8 leading-relaxed font-medium"
             variants={fadeUp}
           >
             Built by founders, for founders. The financial operating system for modern wealth management that puts privacy and control first.
@@ -180,7 +181,7 @@ export default function AboutPage() {
         </motion.div>
       </section>
 
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section className="relative flex items-center justify-center overflow-hidden z-10 py-8 sm:py-12 lg:py-16" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-7xl mx-auto"
           initial="hidden"
@@ -222,7 +223,7 @@ export default function AboutPage() {
         </motion.div>
       </section>
 
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section className="relative flex items-center justify-center overflow-hidden z-10 py-8 sm:py-12 lg:py-16" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-6xl mx-auto"
           initial="hidden"
@@ -281,7 +282,7 @@ export default function AboutPage() {
         </motion.div>
       </section>
 
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section className="relative flex items-center justify-center overflow-hidden z-10 py-8 sm:py-12 lg:py-16" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-6xl mx-auto"
           initial="hidden"
@@ -361,7 +362,7 @@ export default function AboutPage() {
         </motion.div>
       </section>
 
-      <section className="relative min-h-screen lg:min-h-0 flex items-center justify-center lg:block overflow-hidden z-10 py-8 sm:py-12 lg:py-20" style={{ scrollSnapAlign: 'start' }}>
+      <section className="relative flex items-center justify-center overflow-hidden z-10 py-8 sm:py-12 lg:py-16" style={{ scrollSnapAlign: 'start' }}>
         <motion.div
           className="relative z-10 px-6 sm:px-12 max-w-5xl mx-auto text-center"
           initial="hidden"
@@ -379,14 +380,14 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <Button asChild size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105">
-                <Link href="/auth/signUp">
+                <Link href="/auth/signUp" className="flex items-center justify-center">
                   <i className="fas fa-rocket mr-3" />
                   Start Free Trial
                   <i className="fas fa-arrow-right ml-3" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10">
-                <Link href="/how-it-works">
+              <Button asChild size="lg" variant="outline" className="text-lg px-10 py-6 glass-tile border-white/30 dark:border-white/20 hover:bg-white/20 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                <Link href="/how-it-works" className="flex items-center justify-center">
                   Learn How It Works
                 </Link>
               </Button>
