@@ -159,8 +159,19 @@ function SignInPage() {
     );
   }
 
-  // Don't render if user is already authenticated or in demo mode
-  if (!authLoading && user && user.id) return null;
+  // If user is authenticated, show a message and redirect
+  if (!authLoading && user && user.id) {
+    return (
+      <AuthLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
+          </div>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout>

@@ -33,6 +33,9 @@
 @import "./utilities/animations.css";
 @import "./utilities/performance.css";
 
-/* 6. Platform Layer - Platform-specific optimizations */
+/* 6. Page-specific optimizations */
+@import "./pages/landing.css";
+
+/* 7. Platform Layer - Platform-specific optimizations */
 @import "./platform/pwa.css";
 @import "./platform/mobile.css";

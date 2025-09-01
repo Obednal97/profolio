@@ -122,38 +122,75 @@ export const clearAuthCache = async (): Promise<void> => {
 
   try {
     // Send message to service worker to clear auth cache
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: "CLEAR_AUTH_CACHE",
-      });
-      logger.pwa("🧹 Requested service worker to clear auth cache");
-    }
-
-    // Also clear browser caches for auth/app routes
-    const cacheNames = await caches.keys();
-    await Promise.all(
-      cacheNames.map(async (cacheName) => {
-        const cache = await caches.open(cacheName);
-        const keys = await cache.keys();
-
-        const authKeys = keys.filter(
-          (key) =>
-            key.url.includes("/app/") ||
-            key.url.includes("/auth/") ||
-            key.url.includes("/api/")
+    // Use Promise to ensure message is processed
+    const clearPromise = new Promise<void>((resolve) => {
+      if (navigator.serviceWorker.controller) {
+        // Create message channel for response
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = () => {
+          logger.pwa("🧹 Service worker confirmed cache cleared");
+          resolve();
+        };
+        
+        navigator.serviceWorker.controller.postMessage(
+          { type: "CLEAR_AUTH_CACHE" },
+          [messageChannel.port2]
         );
+        
+        // Timeout fallback in case service worker doesn't respond
+        setTimeout(() => resolve(), 100);
+      } else {
+        resolve();
+      }
+    });
 
-        await Promise.all(authKeys.map((key) => cache.delete(key)));
+    // Clear all browser caches more aggressively
+    const cacheNames = await caches.keys();
+    const clearOperations = cacheNames.map(async (cacheName) => {
+      const cache = await caches.open(cacheName);
+      const keys = await cache.keys();
 
-        if (authKeys.length > 0) {
-          logger.pwa(
-            `🧹 Cleared ${authKeys.length} auth-related entries from cache: ${cacheName}`
-          );
-        }
-      })
-    );
+      // Clear more aggressively - include all dynamic content
+      const keysToDelete = keys.filter(
+        (key) =>
+          key.url.includes("/app/") ||
+          key.url.includes("/auth/") ||
+          key.url.includes("/api/") ||
+          key.url.includes("/_next/") || // Next.js assets
+          key.url.includes(".json") || // JSON responses
+          !key.url.includes("/icons/") // Keep only icons
+      );
+
+      await Promise.all(keysToDelete.map((key) => cache.delete(key)));
+
+      if (keysToDelete.length > 0) {
+        logger.pwa(
+          `🧹 Cleared ${keysToDelete.length} entries from cache: ${cacheName}`
+        );
+      }
+    });
+
+    // Wait for all operations to complete
+    await Promise.all([clearPromise, ...clearOperations]);
+    
+    // Clear Next.js specific caches if available
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      // Force clear any Next.js prefetch cache
+      try {
+        const nextCaches = await caches.keys();
+        const nextPrefetchCaches = nextCaches.filter(name => 
+          name.includes('next') || name.includes('prefetch')
+        );
+        await Promise.all(nextPrefetchCaches.map(name => caches.delete(name)));
+      } catch {
+        // Ignore errors for Next.js cache clearing
+      }
+    }
+    
+    logger.pwa("✅ All auth caches cleared successfully");
   } catch (error) {
     logger.error("Failed to clear auth cache:", error);
+    // Don't throw - we still want logout to proceed
   }
 };
 
