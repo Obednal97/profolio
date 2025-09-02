@@ -92,7 +92,7 @@ const EnhancedButton = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, E
     const animationProps = animate && !disabled ? {
       whileHover: { scale: 1.02 },
       whileTap: { scale: 0.98 },
-      transition: { duration: 0.15, ease: "easeInOut" }
+      transition: { duration: 0.15, ease: "easeInOut" as const }
     } : {};
 
     const classNames = cn(

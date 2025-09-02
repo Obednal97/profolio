@@ -32,7 +32,7 @@ const fadeIn = {
     opacity: 1,
     transition: {
       duration: 1,
-      ease: 'easeOut',
+      ease: 'easeOut' as const,
     },
   },
 };
