@@ -1774,7 +1774,7 @@ build_application() {
     
     local steps=(
         "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio pnpm install"
-        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma generate"
+        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma:generate"
                         "Running database migrations" "run_database_migrations"
         "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio pnpm run build"
         "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio pnpm install"
