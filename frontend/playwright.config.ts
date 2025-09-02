@@ -38,6 +38,9 @@ export default defineConfig({
 
     /* Global timeout for navigation */
     navigationTimeout: 30000,
+
+    /* Run browsers in headless mode by default */
+    headless: process.env.HEADED !== "true",
   },
 
   /* Configure projects for major browsers */

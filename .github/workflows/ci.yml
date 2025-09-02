@@ -139,10 +139,15 @@ jobs:
           cd frontend
           pnpm run lint
 
+      - name: 🎭 Install Playwright browsers
+        run: |
+          cd frontend
+          pnpm exec playwright install --with-deps chromium firefox
+      
       - name: 🧪 Run tests
         run: |
           cd frontend
-          pnpm test
+          pnpm run test:ci
         if: always()
 
       - name: 🏗️ Build check

@@ -2,6 +2,7 @@
 
 # Test Runner Script
 # Ensures application is running before executing tests
+# Default: Runs tests in headless mode for better performance
 
 set -e
 
@@ -44,8 +45,49 @@ wait_for_service() {
 }
 
 # Parse arguments
-TEST_TYPE=${1:-"e2e"}
-AUTO_START=${2:-"true"}
+TEST_TYPE=""
+AUTO_START="true"
+HEADED=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --headed)
+            HEADED=true
+            shift
+            ;;
+        --no-auto-start)
+            AUTO_START="false"
+            shift
+            ;;
+        --help)
+            echo "Usage: $0 [TEST_TYPE] [OPTIONS]"
+            echo ""
+            echo "Test Types:"
+            echo "  e2e         Run E2E tests (default)"
+            echo "  e2e:ui      Run E2E tests with UI"
+            echo "  security    Run security tests"
+            echo "  performance Run performance tests"
+            echo "  all         Run all tests"
+            echo "  ci          Run CI optimized tests"
+            echo "  quick       Run quick tests (no slow/visual)"
+            echo ""
+            echo "Options:"
+            echo "  --headed        Run tests with browser windows visible"
+            echo "  --no-auto-start Don't auto-start services"
+            echo "  --help          Show this help message"
+            echo ""
+            echo "By default, tests run in headless mode for better performance."
+            exit 0
+            ;;
+        *)
+            TEST_TYPE=$1
+            shift
+            ;;
+    esac
+done
+
+# Default test type if not specified
+TEST_TYPE=${TEST_TYPE:-"e2e"}
 
 # Check if services are running
 FRONTEND_RUNNING=false
@@ -108,11 +150,24 @@ echo ""
 # Navigate to frontend for tests
 cd frontend
 
+# Display mode
+if [ "$HEADED" = true ]; then
+    echo "Mode: Headed (browser windows visible)"
+    export HEADED=true
+else
+    echo "Mode: Headless (optimized for performance)"
+fi
+echo ""
+
 # Run appropriate test command
 case "$TEST_TYPE" in
     "e2e")
         echo "Running E2E tests..."
-        pnpm run test:e2e
+        if [ "$HEADED" = true ]; then
+            pnpm run test:headed
+        else
+            pnpm run test:headless
+        fi
         ;;
     "e2e:ui")
         echo "Running E2E tests with UI..."
@@ -123,16 +178,28 @@ case "$TEST_TYPE" in
         pnpm run test:security
         ;;
     "performance")
-        echo "Running performance tests..."
+        echo "Running performance tests (always headless)..."
         pnpm run test:performance
         ;;
     "all")
         echo "Running all tests..."
-        pnpm run test:all
+        if [ "$HEADED" = true ]; then
+            HEADED=true pnpm run test:all
+        else
+            pnpm run test:all
+        fi
+        ;;
+    "ci")
+        echo "Running CI optimized tests (always headless)..."
+        pnpm run test:ci
+        ;;
+    "quick")
+        echo "Running quick tests (no slow/visual)..."
+        pnpm run test:quick
         ;;
     *)
         echo "Unknown test type: $TEST_TYPE"
-        echo "Available options: e2e, e2e:ui, security, performance, all"
+        echo "Available options: e2e, e2e:ui, security, performance, all, ci, quick"
         exit 1
         ;;
 esac
