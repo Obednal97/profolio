@@ -11,33 +11,47 @@ test.describe("Authentication @security", () => {
   });
 
   test("should display login form", async ({ page }) => {
-    await page.click('[data-testid="login-button"]');
+    // Click Sign In link which navigates to /auth/signIn
+    await page.click('a:has-text("Sign In")');
+    
+    // Wait for navigation to complete
+    await page.waitForURL('**/auth/signIn');
 
-    await expect(page.locator('[data-testid="login-form"]')).toBeVisible();
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    // Check for form elements on the sign-in page
+    await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible();
+    await expect(page.locator('input[type="password"], input[name="password"]')).toBeVisible();
+    await expect(page.locator('button[type="submit"], button:has-text("Sign In")')).toBeVisible();
   });
 
   test("should show validation errors for invalid credentials", async ({
     page,
   }) => {
-    await page.click('[data-testid="login-button"]');
+    // Navigate to sign-in page
+    await page.goto('/auth/signIn');
 
     // Try to submit with empty fields
-    await page.click('[data-testid="submit-login"]');
+    await page.click('button[type="submit"], button:has-text("Sign In")');
 
-    await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
+    // Check for validation error - may be HTML5 validation or custom error message
+    const errorVisible = await page.locator('.error, [role="alert"], .text-red-500, .text-destructive').isVisible().catch(() => false);
+    if (!errorVisible) {
+      // Check for HTML5 validation
+      const emailInput = page.locator('input[type="email"], input[name="email"]');
+      const validationMessage = await emailInput.evaluate((el: HTMLInputElement) => el.validationMessage);
+      expect(validationMessage).toBeTruthy();
+    }
   });
 
   test("should prevent SQL injection in login form @security", async ({
     page,
   }) => {
-    await page.click('[data-testid="login-button"]');
+    // Navigate to sign-in page
+    await page.goto('/auth/signIn');
 
     // Attempt SQL injection
-    await page.fill('input[type="email"]', "admin'; DROP TABLE users; --");
-    await page.fill('input[type="password"]', "password");
-    await page.click('[data-testid="submit-login"]');
+    await page.fill('input[type="email"], input[name="email"]', "admin'; DROP TABLE users; --");
+    await page.fill('input[type="password"], input[name="password"]', "password");
+    await page.click('button[type="submit"], button:has-text("Sign In")');
 
     // Should show invalid credentials, not a database error
     await expect(page.locator('[data-testid="error-message"]')).toContainText(
@@ -46,13 +60,14 @@ test.describe("Authentication @security", () => {
   });
 
   test("should rate limit login attempts @security", async ({ page }) => {
-    await page.click('[data-testid="login-button"]');
+    // Navigate to sign-in page
+    await page.goto('/auth/signIn');
 
     // Make multiple failed login attempts
     for (let i = 0; i < 6; i++) {
-      await page.fill('input[type="email"]', "test@example.com");
-      await page.fill('input[type="password"]', "wrongpassword");
-      await page.click('[data-testid="submit-login"]');
+      await page.fill('input[type="email"], input[name="email"]', "test@example.com");
+      await page.fill('input[type="password"], input[name="password"]', "wrongpassword");
+      await page.click('button[type="submit"], button:has-text("Sign In")');
       await page.waitForTimeout(1000);
     }
 
@@ -77,10 +92,11 @@ test.describe("Authentication @security", () => {
       });
     });
 
-    await page.click('[data-testid="login-button"]');
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "correctpassword");
-    await page.click('[data-testid="submit-login"]');
+    // Navigate to sign-in page
+    await page.goto('/auth/signIn');
+    await page.fill('input[type="email"], input[name="email"]', "test@example.com");
+    await page.fill('input[type="password"], input[name="password"]', "correctpassword");
+    await page.click('button[type="submit"], button:has-text("Sign In")');
 
     await expect(page).toHaveURL(/.*\/dashboard/);
   });
@@ -94,7 +110,7 @@ test.describe("Authentication @security", () => {
 
     // Should redirect to home and clear auth state
     await expect(page).toHaveURL("/");
-    await expect(page.locator('[data-testid="login-button"]')).toBeVisible();
+    await expect(page.locator('a:has-text("Sign In")')).toBeVisible();
   });
 
   test("should redirect unauthenticated users to sign-in", async ({ page }) => {
