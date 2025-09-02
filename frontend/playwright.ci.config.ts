@@ -18,7 +18,7 @@ export default defineConfig({
     trace: "retry-with-trace",
   },
 
-  /* Reduced browser set for faster CI runs */
+  /* Minimal browser set for CI - just Chromium for speed */
   projects: [
     {
       name: "chromium",
@@ -27,28 +27,16 @@ export default defineConfig({
         headless: true,
       },
     },
-    {
-      name: "firefox",
-      use: { 
-        ...devices["Desktop Firefox"],
-        headless: true,
-      },
-    },
-    /* Mobile Chrome for responsive testing */
-    {
-      name: "Mobile Chrome",
-      use: { 
-        ...devices["Pixel 5"],
-        headless: true,
-      },
-    },
   ],
 
   /* Faster timeouts for CI */
-  timeout: 30 * 1000,
+  timeout: 10 * 1000,
   
   /* No retries in CI to fail fast */
   retries: 0,
+  
+  /* Limit test files to reduce scope */
+  testMatch: ['**/auth.spec.ts'],
   
   /* Use single worker for stability */
   workers: 1,

@@ -1,9 +1,7 @@
 name: Deploy to Self-Hosted Server
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:  # Manual triggering only - set up secrets first
 
 jobs:
   deploy:
