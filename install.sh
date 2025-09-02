@@ -405,29 +405,43 @@ execute_rollback() {
         cd /opt/profolio
         setup_environment true  # Pass true to indicate rollback mode (prevents re-prompting)
         
+        # Try to rebuild, but don't fail rollback if build fails
+        # (the previous version was already working before update)
+        info "Attempting to rebuild previous version..."
+        
+        local build_succeeded=false
         if build_application; then
-            # Restart services
-            info "Restarting services with previous version..."
-            systemctl start profolio-backend
-            sleep 3
-            systemctl start profolio-frontend
-            sleep 2
-            
-            # Quick verification
-            if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
-                success "🎉 ROLLBACK COMPLETED SUCCESSFULLY"
-                echo ""
-                echo -e "${GREEN}✅ Services restored to previous working version${NC}"
-                echo -e "${YELLOW}⚠️  Please check logs and investigate the update failure${NC}"
-                
-                # Clean up rollback files
-                cleanup_rollback_files
-                return 0
-            else
-                error "Services failed to start after rollback"
-            fi
+            build_succeeded=true
+            success "Build completed successfully"
         else
-            error "Failed to rebuild after rollback"
+            warn "Build failed, but continuing with existing build artifacts"
+            warn "Previous version should still be functional"
+        fi
+        
+        # Restart services regardless of build status
+        # (using existing artifacts if build failed)
+        info "Restarting services with previous version..."
+        systemctl start profolio-backend
+        sleep 3
+        systemctl start profolio-frontend
+        sleep 2
+        
+        # Quick verification
+        if systemctl is-active --quiet profolio-backend && systemctl is-active --quiet profolio-frontend; then
+            success "🎉 ROLLBACK COMPLETED SUCCESSFULLY"
+            echo ""
+            echo -e "${GREEN}✅ Services restored to previous working version${NC}"
+            if [ "$build_succeeded" = false ]; then
+                echo -e "${YELLOW}⚠️  Build failed but services running with existing artifacts${NC}"
+                echo -e "${YELLOW}⚠️  Run 'pnpm install && pnpm build' manually when possible${NC}"
+            fi
+            echo -e "${YELLOW}⚠️  Please check logs and investigate the update failure${NC}"
+            
+            # Clean up rollback files
+            cleanup_rollback_files
+            return 0
+        else
+            error "Services failed to start after rollback"
         fi
     fi
     
@@ -1784,6 +1798,7 @@ build_application() {
     )
     
     execute_steps "Building Profolio Application (Production Optimized)" "${steps[@]}"
+    return $?  # Ensure we return the exit code from execute_steps
 }
 
 # Clean up build artifacts and unnecessary cache
