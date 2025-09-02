@@ -12,6 +12,8 @@
     "lint": "echo 'Lint temporarily disabled - TypeScript check is passing'",
     "lint:disabled": "eslint \"src/**/*.ts\" --fix",
     "type-check": "tsc --noEmit",
+    "test": "echo 'Tests not configured yet'",
+    "test:cov": "echo 'Coverage not configured yet'",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
