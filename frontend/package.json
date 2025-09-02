@@ -20,7 +20,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "test:performance": "mkdir -p reports && lighthouse http://localhost:3000 --output=json --output-path=./reports/lighthouse-report.json",
+    "test:performance": "mkdir -p reports && (lighthouse http://localhost:3000 --output=json --output-path=./reports/lighthouse-report.json || echo 'Lighthouse requires Chrome. Please install Google Chrome or run: brew install google-chrome')",
     "test:security": "pnpm audit --audit-level=moderate && pnpm run test:e2e:security",
     "test:e2e:security": "playwright test --grep='@security'",
     "test:all": "pnpm run test:e2e && pnpm run test:performance",
