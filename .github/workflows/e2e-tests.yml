@@ -128,14 +128,16 @@ jobs:
       - name: 🚫 Check for 'any' types
         run: |
           echo "Checking for 'any' types in backend..."
-          if grep -r ": any" backend/src --include="*.ts" --include="*.tsx"; then
+          # Exclude comments: lines starting with //, lines with *, and inline comments
+          if grep -r ": any" backend/src --include="*.ts" --include="*.tsx" | grep -v "^\s*//" | grep -v "\*" | grep -v "//.*: any"; then
             echo "❌ Found 'any' types in backend! These must be removed."
             exit 1
           fi
           echo "✅ No 'any' types found in backend"
 
           echo "Checking for 'any' types in frontend..."
-          if grep -r ": any" frontend/src --include="*.ts" --include="*.tsx"; then
+          # Exclude comments: lines starting with //, lines with *, and inline comments
+          if grep -r ": any" frontend/src --include="*.ts" --include="*.tsx" | grep -v "^\s*//" | grep -v "\*" | grep -v "//.*: any"; then
             echo "❌ Found 'any' types in frontend! These must be removed."
             exit 1
           fi
@@ -158,15 +160,33 @@ jobs:
           nohup pnpm start > backend.log 2>&1 &
           echo $! > backend.pid
           echo "Backend PID: $(cat backend.pid)"
-          sleep 20
 
-          # Verify backend is still running
-          if ! kill -0 $(cat backend.pid) 2>/dev/null; then
-            echo "❌ Backend failed to start. Logs:"
+          # Wait for backend to be ready
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3001/api/health 2>/dev/null; then
+              echo "✅ Backend is healthy and responding"
+              break
+            fi
+            echo "Waiting for backend... (attempt $i/30)"
+            sleep 2
+            
+            # Check if process is still alive
+            if ! kill -0 $(cat backend.pid) 2>/dev/null; then
+              echo "❌ Backend process died. Logs:"
+              cat backend.log
+              exit 1
+            fi
+          done
+
+          # Final verification
+          if ! curl -f http://localhost:3001/api/health; then
+            echo "❌ Backend failed to start after 60 seconds. Logs:"
             cat backend.log
             exit 1
           fi
-          echo "✅ Backend is running"
+
+          echo "✅ Backend is running and healthy"
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
@@ -207,33 +227,8 @@ jobs:
           NEXT_PUBLIC_API_URL: http://localhost:3001
           NEXT_PUBLIC_AUTH_MODE: local
 
-      - name: 🧪 Health check services
+      - name: 🧪 Health check frontend
         run: |
-          echo "Checking backend health..."
-          for i in {1..20}; do
-            if curl -f http://localhost:3001/health 2>/dev/null; then
-              echo "✅ Backend is healthy"
-              break
-            fi
-            echo "Waiting for backend... (attempt $i/20)"
-            sleep 3
-            
-            # Check if backend process is still running
-            if [ -f backend/backend.pid ] && ! kill -0 $(cat backend/backend.pid) 2>/dev/null; then
-              echo "❌ Backend process died. Logs:"
-              cat backend/backend.log
-              exit 1
-            fi
-          done
-
-          # Final health check
-          if ! curl -f http://localhost:3001/health; then
-            echo "❌ Backend health check failed after 20 attempts"
-            echo "Backend logs:"
-            cat backend/backend.log
-            exit 1
-          fi
-
           echo "Checking frontend health..."
           for i in {1..20}; do
             if curl -f http://localhost:3000 2>/dev/null; then
@@ -258,6 +253,15 @@ jobs:
             cat frontend/frontend.log
             exit 1
           fi
+
+          # Verify backend is still running
+          echo "Verifying backend is still healthy..."
+          if ! curl -f http://localhost:3001/api/health; then
+            echo "❌ Backend is not responding. Logs:"
+            cat backend/backend.log
+            exit 1
+          fi
+          echo "✅ Both services are healthy and ready for testing"
 
       - name: 🧪 Run E2E tests
         run: |
