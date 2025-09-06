@@ -5,7 +5,9 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { FirebaseService } from "./firebase.service";
+import { TwoFactorService } from "./two-factor.service";
 import { PrismaService } from "@/common/prisma.service";
+import { EncryptionService } from "@/common/encryption.service";
 import { AuthGuard } from "./guards/auth.guard";
 import { JwtStrategy } from "@/common/auth/jwt.strategy";
 import { JwtAuthGuard } from "@/common/auth/jwt-auth.guard";
@@ -27,11 +29,13 @@ import { JwtAuthGuard } from "@/common/auth/jwt-auth.guard";
   providers: [
     AuthService,
     FirebaseService,
+    TwoFactorService,
     PrismaService,
+    EncryptionService,
     AuthGuard,
     JwtStrategy,
     JwtAuthGuard,
   ],
-  exports: [AuthService, FirebaseService, JwtStrategy, JwtAuthGuard, JwtModule],
+  exports: [AuthService, FirebaseService, TwoFactorService, JwtStrategy, JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

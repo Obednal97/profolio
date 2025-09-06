@@ -39,6 +39,15 @@ import { SignUpDto } from "./dto/signup.dto";
 import { SignInDto } from "./dto/signin.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
+import { TwoFactorService } from "./two-factor.service";
+import {
+  SetupTwoFactorDto,
+  VerifyTwoFactorDto,
+  CompleteTwoFactorDto,
+  DisableTwoFactorDto,
+  VerifyBackupCodeDto,
+  RegenerateBackupCodesDto,
+} from "./dto/two-factor.dto";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -62,7 +71,8 @@ export class AuthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
-    private readonly firebaseService: FirebaseService
+    private readonly firebaseService: FirebaseService,
+    private readonly twoFactorService: TwoFactorService
   ) {}
 
   /**
@@ -172,7 +182,23 @@ export class AuthController {
   @ApiResponse({ status: 401, description: "Invalid credentials" })
   async signIn(@Body(ValidationPipe) dto: SignInDto) {
     try {
-      return await this.authService.signIn(dto);
+      const result = await this.authService.signIn(dto);
+      
+      // Check if 2FA is enabled for this user
+      const user = await this.prisma.user.findUnique({
+        where: { email: dto.email.toLowerCase() }
+      });
+      
+      if (user && await this.twoFactorService.isEnabled(user.id)) {
+        // Generate verification token for 2FA flow
+        const verificationToken = await this.twoFactorService.generateVerificationToken(user.id);
+        return {
+          requiresTwoFactor: true,
+          verificationToken
+        };
+      }
+      
+      return result;
     } catch (error) {
       throw new HttpException("Invalid credentials", HttpStatus.UNAUTHORIZED);
     }
@@ -398,5 +424,353 @@ export class AuthController {
     // This should be implemented based on your deployment setup
     // For now, return a placeholder for development
     return "dev-client";
+  }
+
+  // ============= Two-Factor Authentication Endpoints =============
+
+  @Post("2fa/setup")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Setup two-factor authentication" })
+  @ApiResponse({ status: 200, description: "2FA setup initiated" })
+  @ApiResponse({ status: 400, description: "2FA already enabled" })
+  async setupTwoFactor(
+    @Body(ValidationPipe) dto: SetupTwoFactorDto,
+    @Req() req: { user: AuthUser }
+  ) {
+    try {
+      // Verify password first
+      const user = await this.prisma.user.findUnique({
+        where: { id: req.user.id }
+      });
+
+      if (!user || !user.password) {
+        throw new HttpException(
+          "Password verification required",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      const isPasswordValid = await compare(dto.password, user.password);
+      if (!isPasswordValid) {
+        throw new HttpException(
+          "Invalid password",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Generate 2FA setup
+      const result = await this.twoFactorService.generateSecret(req.user.id);
+      
+      return {
+        qrCode: result.qrCode,
+        secret: result.secret,
+        backupCodes: result.backupCodes
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to setup 2FA",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post("2fa/verify")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Verify and enable two-factor authentication" })
+  @ApiResponse({ status: 200, description: "2FA enabled successfully" })
+  @ApiResponse({ status: 400, description: "Invalid verification code" })
+  async verifyTwoFactor(
+    @Body(ValidationPipe) dto: VerifyTwoFactorDto,
+    @Req() req: { user: AuthUser }
+  ) {
+    try {
+      const success = await this.twoFactorService.verifyAndEnable(
+        req.user.id,
+        dto.code
+      );
+
+      return { success };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to verify 2FA code",
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Post("2fa/complete")
+  @ApiOperation({ summary: "Complete login with 2FA code" })
+  @ApiResponse({ status: 200, description: "Login successful" })
+  @ApiResponse({ status: 401, description: "Invalid 2FA code" })
+  async completeTwoFactor(@Body(ValidationPipe) dto: CompleteTwoFactorDto) {
+    try {
+      // Validate verification token
+      const userId = await this.twoFactorService.validateVerificationToken(
+        dto.verificationToken
+      );
+
+      if (!userId) {
+        throw new HttpException(
+          "Invalid or expired verification token",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Check rate limiting for 2FA attempts
+      this.checkRateLimit(`2fa_${userId}`);
+
+      // Verify the TOTP code
+      const isValid = await this.twoFactorService.verifyToken(userId, dto.code);
+
+      if (!isValid) {
+        this.updateRateLimit(`2fa_${userId}`, false);
+        throw new HttpException(
+          "Invalid 2FA code",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Success - clear rate limiting
+      this.updateRateLimit(`2fa_${userId}`, true);
+
+      // Get user and generate JWT
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+      }
+
+      const token = this.generateToken(user);
+
+      return {
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name
+        }
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to complete 2FA verification",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post("2fa/backup")
+  @ApiOperation({ summary: "Complete login with backup code" })
+  @ApiResponse({ status: 200, description: "Login successful" })
+  @ApiResponse({ status: 401, description: "Invalid backup code" })
+  async verifyBackupCode(@Body(ValidationPipe) dto: VerifyBackupCodeDto) {
+    try {
+      // Validate verification token
+      const userId = await this.twoFactorService.validateVerificationToken(
+        dto.verificationToken
+      );
+
+      if (!userId) {
+        throw new HttpException(
+          "Invalid or expired verification token",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Verify the backup code
+      const isValid = await this.twoFactorService.verifyBackupCode(
+        userId,
+        dto.code
+      );
+
+      if (!isValid) {
+        throw new HttpException(
+          "Invalid backup code",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Get user and generate JWT
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+      }
+
+      const token = this.generateToken(user);
+
+      return {
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name
+        },
+        warning: "Backup code used. Please generate new backup codes."
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to verify backup code",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post("2fa/disable")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Disable two-factor authentication" })
+  @ApiResponse({ status: 200, description: "2FA disabled successfully" })
+  @ApiResponse({ status: 400, description: "Invalid credentials" })
+  async disableTwoFactor(
+    @Body(ValidationPipe) dto: DisableTwoFactorDto,
+    @Req() req: { user: AuthUser }
+  ) {
+    try {
+      // Verify password
+      const user = await this.prisma.user.findUnique({
+        where: { id: req.user.id }
+      });
+
+      if (!user || !user.password) {
+        throw new HttpException(
+          "Password verification required",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      const isPasswordValid = await compare(dto.password, user.password);
+      if (!isPasswordValid) {
+        throw new HttpException(
+          "Invalid password",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Verify TOTP code
+      const isCodeValid = await this.twoFactorService.verifyToken(
+        req.user.id,
+        dto.code
+      );
+
+      if (!isCodeValid) {
+        throw new HttpException(
+          "Invalid 2FA code",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Disable 2FA
+      await this.twoFactorService.disable(req.user.id);
+
+      return { success: true };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to disable 2FA",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Get("2fa/status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get 2FA status for current user" })
+  @ApiResponse({ status: 200, description: "2FA status retrieved" })
+  async getTwoFactorStatus(@Req() req: { user: AuthUser }) {
+    try {
+      return await this.twoFactorService.getStatus(req.user.id);
+    } catch (error) {
+      throw new HttpException(
+        "Failed to get 2FA status",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post("2fa/regenerate-backup")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Regenerate backup codes" })
+  @ApiResponse({ status: 200, description: "Backup codes regenerated" })
+  @ApiResponse({ status: 400, description: "Invalid credentials" })
+  async regenerateBackupCodes(
+    @Body(ValidationPipe) dto: RegenerateBackupCodesDto,
+    @Req() req: { user: AuthUser }
+  ) {
+    try {
+      // Verify password
+      const user = await this.prisma.user.findUnique({
+        where: { id: req.user.id }
+      });
+
+      if (!user || !user.password) {
+        throw new HttpException(
+          "Password verification required",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      const isPasswordValid = await compare(dto.password, user.password);
+      if (!isPasswordValid) {
+        throw new HttpException(
+          "Invalid password",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Verify TOTP code
+      const isCodeValid = await this.twoFactorService.verifyToken(
+        req.user.id,
+        dto.code
+      );
+
+      if (!isCodeValid) {
+        throw new HttpException(
+          "Invalid 2FA code",
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      // Regenerate backup codes
+      const backupCodes = await this.twoFactorService.regenerateBackupCodes(
+        req.user.id
+      );
+
+      return {
+        success: true,
+        backupCodes
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to regenerate backup codes",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 }

@@ -11,6 +11,7 @@ import { useTheme } from "@/providers/theme-provider";
 import { useRouter } from "next/navigation";
 import { logger } from "@/lib/logger";
 import { SettingsSkeleton } from "@/components/ui/skeleton";
+import { TwoFactorStatus } from "@/components/settings/security/TwoFactorStatus";
 
 interface Tab {
   id: string;
@@ -739,24 +740,7 @@ const SecurityTab = ({
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Two-Factor Authentication
         </h3>
-        <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-900 dark:text-white font-medium">
-                Authenticator App
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Use an authenticator app to generate codes
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10"
-            >
-              Enable
-            </Button>
-          </div>
-        </EnhancedGlassCard>
+        <TwoFactorStatus />
       </div>
     </div>
   );

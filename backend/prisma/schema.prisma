@@ -47,6 +47,7 @@ model User {
   assignedRoleChanges RoleChange[]   @relation("AdminRoleChanges")
   roleChanges         RoleChange[]   @relation("UserRoleChanges")
   settings            Settings?
+  twoFactorAuth       TwoFactorAuth?
 }
 
 model RoleChange {
@@ -409,4 +410,43 @@ enum NotificationPriority {
   NORMAL
   HIGH
   URGENT
+}
+
+model TwoFactorAuth {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  secret         String   // Encrypted TOTP secret
+  enabled        Boolean  @default(false)
+  verifiedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  backupCodes    TwoFactorBackupCode[]
+  
+  @@index([userId, enabled])
+}
+
+model TwoFactorBackupCode {
+  id             String   @id @default(uuid())
+  twoFactorId    String
+  code           String   // Hashed backup code
+  usedAt         DateTime?
+  createdAt      DateTime @default(now())
+  
+  twoFactor      TwoFactorAuth @relation(fields: [twoFactorId], references: [id], onDelete: Cascade)
+  
+  @@unique([twoFactorId, code])
+  @@index([twoFactorId])
+}
+
+model TwoFactorVerification {
+  id             String   @id @default(uuid())
+  userId         String
+  token          String   // Temporary verification token
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  
+  @@index([token])
+  @@index([userId, expiresAt])
 }
