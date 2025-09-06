@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
+import { AppController } from "./app.controller";
 import { UsersModule } from "@/app/api/admin/users/users.module";
 import { PrismaService } from "@/common/prisma.service";
 import { SettingsModule } from "@/app/api/settings/settings.module";
@@ -34,6 +35,7 @@ import { BillingModule } from "@/app/api/billing/billing.module";
     SetupModule,
     BillingModule,
   ],
+  controllers: [AppController],
   providers: [PrismaService],
   exports: [PrismaService],
 })
