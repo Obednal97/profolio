@@ -10,6 +10,7 @@ import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 import { logger } from "@/lib/logger";
 import { handleGoogleRedirectResult } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import { TwoFactorVerification } from "@/components/settings/security/TwoFactorVerification";
 
 function SignInPage() {
   const {
@@ -27,6 +28,8 @@ function SignInPage() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showEmailForm, setShowEmailForm] = useState(authMode === "local"); // Expanded by default in self-hosted mode
+  const [show2FA, setShow2FA] = useState(false);
+  const [verificationToken, setVerificationToken] = useState<string | null>(null);
 
   const isFormValid =
     formData.email.trim() !== "" && formData.password.trim() !== "";
@@ -79,9 +82,31 @@ function SignInPage() {
     setLoading(true);
 
     try {
-      await signIn(formData.email, formData.password);
-      // Redirect with signing in indicator
-      router.push("/app/dashboard");
+      // Try to sign in
+      const result = await signIn(formData.email, formData.password);
+      
+      // Check if 2FA is required (this would need to be returned from signIn)
+      // For now, we'll check the response from the API
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.requiresTwoFactor) {
+        // Show 2FA verification
+        setVerificationToken(data.verificationToken);
+        setShow2FA(true);
+        setLoading(false);
+      } else {
+        // Normal sign-in flow
+        router.push("/app/dashboard");
+      }
     } catch (err: unknown) {
       logger.auth("Sign in error:", err);
       const errorMessage =
@@ -89,6 +114,24 @@ function SignInPage() {
       setError(errorMessage);
       setLoading(false);
     }
+  };
+
+  const handle2FASuccess = (data: any) => {
+    // Handle successful 2FA verification
+    logger.auth("2FA verification successful");
+    if (data.token) {
+      // Store token if needed
+      localStorage.setItem("token", data.token);
+    }
+    // Redirect to dashboard
+    router.push("/app/dashboard");
+  };
+
+  const handle2FACancel = () => {
+    // Reset to sign-in form
+    setShow2FA(false);
+    setVerificationToken(null);
+    setFormData({ email: "", password: "" });
   };
 
   const handleGoogleSignIn = async () => {
@@ -168,6 +211,21 @@ function SignInPage() {
             <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
           </div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // Show 2FA verification if needed
+  if (show2FA && verificationToken) {
+    return (
+      <AuthLayout>
+        <div className="w-full max-w-md mx-auto">
+          <TwoFactorVerification
+            verificationToken={verificationToken}
+            onSuccess={handle2FASuccess}
+            onCancel={handle2FACancel}
+          />
         </div>
       </AuthLayout>
     );
