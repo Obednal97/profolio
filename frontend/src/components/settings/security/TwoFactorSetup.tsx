@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 // Using standard HTML input instead of missing UI component
 // Using inline alert styling instead of missing UI component
@@ -28,8 +28,8 @@ export function TwoFactorSetup({ onComplete }: { onComplete?: () => void }) {
   // Setup mutation
   const setupMutation = useMutation({
     mutationFn: async (password: string) => {
-      const response = await apiClient.post('/api/auth/2fa/setup', { password });
-      return response.data;
+      const response = await apiClient.post<SetupResponse>('/api/auth/2fa/setup', { password });
+      return response;
     },
     onSuccess: (data: SetupResponse) => {
       setSetupData(data);
@@ -44,8 +44,8 @@ export function TwoFactorSetup({ onComplete }: { onComplete?: () => void }) {
   // Verify mutation
   const verifyMutation = useMutation({
     mutationFn: async (code: string) => {
-      const response = await apiClient.post('/api/auth/2fa/verify', { code });
-      return response.data;
+      const response = await apiClient.post<{ success: boolean }>('/api/auth/2fa/verify', { code });
+      return response;
     },
     onSuccess: () => {
       setStep('backup');
@@ -120,9 +120,9 @@ ${setupData.backupCodes.join('\n')}`;
       </div>
 
       {error && (
-        <Alert className="mb-4 border-red-200 bg-red-50">
-          <AlertDescription className="text-red-800">{error}</AlertDescription>
-        </Alert>
+        <div className="mb-4 p-4 rounded-lg border border-red-200 bg-red-50">
+          <p className="text-red-800">{error}</p>
+        </div>
       )}
 
       {/* Step 1: Password Verification */}
@@ -141,12 +141,11 @@ ${setupData.backupCodes.join('\n')}`;
             </label>
             <input
               id="password"
-              className="mt-1 block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="mt-1 mb-4 block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               type="password"
               value={password}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              className="mb-4"
               data-testid="2fa-password-input"
               required
             />
@@ -289,11 +288,11 @@ ${setupData.backupCodes.join('\n')}`;
       {step === 'backup' && setupData && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Save Your Backup Codes</h2>
-          <Alert className="mb-4 border-yellow-200 bg-yellow-50">
-            <AlertDescription className="text-yellow-800">
+          <div className="mb-4 p-4 rounded-lg border border-yellow-200 bg-yellow-50">
+            <p className="text-yellow-800">
               ⚠️ Save these codes in a secure place. You'll need them if you lose access to your authenticator app.
-            </AlertDescription>
-          </Alert>
+            </p>
+          </div>
           
           <div className="grid grid-cols-2 gap-2 p-4 bg-gray-50 rounded-lg mb-4" data-testid="2fa-backup-codes">
             {setupData.backupCodes.map((code, index) => (

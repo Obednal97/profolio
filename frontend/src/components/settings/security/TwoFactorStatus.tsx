@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
-import GlassCard from '@/components/cards/GlassCard';
+import { GlassCard } from '@/components/cards/GlassCard';
 // Using inline alert styling instead of missing UI component
 import { Shield, ShieldCheck, ShieldOff, RefreshCw, Key } from 'lucide-react';
 import { TwoFactorSetup } from './TwoFactorSetup';
@@ -26,19 +26,19 @@ export function TwoFactorStatus() {
   const { data: status, isLoading } = useQuery<TwoFactorStatusData>({
     queryKey: ['2fa-status'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/auth/2fa/status');
-      return response.data;
+      const response = await apiClient.get<TwoFactorStatusData>('/api/auth/2fa/status');
+      return response;
     },
   });
 
   // Disable 2FA mutation
   const disableMutation = useMutation({
     mutationFn: async ({ password, code }: { password: string; code: string }) => {
-      const response = await apiClient.post('/api/auth/2fa/disable', {
+      const response = await apiClient.post<{ success: boolean }>('/api/auth/2fa/disable', {
         password,
         code,
       });
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
@@ -49,11 +49,11 @@ export function TwoFactorStatus() {
   // Regenerate backup codes mutation
   const regenerateMutation = useMutation({
     mutationFn: async ({ password, code }: { password: string; code: string }) => {
-      const response = await apiClient.post('/api/auth/2fa/regenerate-backup', {
+      const response = await apiClient.post<{ backupCodes: string[] }>('/api/auth/2fa/regenerate-backup', {
         password,
         code,
       });
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
@@ -62,14 +62,12 @@ export function TwoFactorStatus() {
 
   if (isLoading) {
     return (
-      <Card className="liquid-glass-card">
-        <CardContent className="p-6">
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <GlassCard className="p-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        </div>
+      </GlassCard>
     );
   }
 
@@ -85,24 +83,24 @@ export function TwoFactorStatus() {
   }
 
   return (
-    <Card className="liquid-glass-card" data-testid="2fa-status-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <GlassCard className="p-6" data-testid="2fa-status-card">
+      <div className="mb-4">
+        <div className="flex items-center gap-2 text-lg font-semibold mb-2">
           {status?.enabled ? (
             <ShieldCheck className="w-6 h-6 text-green-600" />
           ) : (
             <ShieldOff className="w-6 h-6 text-gray-400" />
           )}
           Two-Factor Authentication
-        </CardTitle>
-        <CardDescription>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           {status?.enabled
             ? 'Your account is protected with 2FA'
             : 'Add an extra layer of security to your account'}
-        </CardDescription>
-      </CardHeader>
+        </p>
+      </div>
       
-      <CardContent className="space-y-4">
+      <div className="space-y-4">
         {status?.enabled ? (
           <>
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
@@ -129,12 +127,12 @@ export function TwoFactorStatus() {
             </div>
 
             {status.backupCodesRemaining < 3 && (
-              <Alert className="border-yellow-200 bg-yellow-50">
-                <AlertDescription className="text-yellow-800">
+              <div className="p-4 rounded-lg border border-yellow-200 bg-yellow-50">
+                <p className="text-yellow-800">
                   You have only {status.backupCodesRemaining} backup codes remaining.
                   Consider regenerating your backup codes.
-                </AlertDescription>
-              </Alert>
+                </p>
+              </div>
             )}
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -188,11 +186,11 @@ export function TwoFactorStatus() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="liquid-glass-card p-6 max-w-md w-full mx-4">
               <h3 className="text-xl font-semibold mb-4">Disable 2FA</h3>
-              <Alert className="mb-4 border-red-200 bg-red-50">
-                <AlertDescription className="text-red-800">
+              <div className="mb-4 p-4 rounded-lg border border-red-200 bg-red-50">
+                <p className="text-red-800">
                   Warning: Disabling 2FA will make your account less secure.
-                </AlertDescription>
-              </Alert>
+                </p>
+              </div>
               
               <form
                 onSubmit={(e) => {
@@ -253,7 +251,7 @@ export function TwoFactorStatus() {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </GlassCard>
   );
 }
