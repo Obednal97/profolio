@@ -34,16 +34,18 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
     return super.canActivate(context);
   }
 
-  handleRequest(
+  handleRequest<TUser = any>(
     err: Error | null,
-    user: { id: string; email?: string; name?: string; isDemo?: boolean } | null,
-    info: { message?: string } | null,
-    context: ExecutionContext
-  ) {
-    const request = context.switchToHttp().getRequest();
+    user: TUser,
+    info: any,
+    context?: ExecutionContext,
+    status?: any
+  ): TUser {
+    const request = context?.switchToHttp ? context.switchToHttp().getRequest() : null;
 
     // Handle demo user case
-    if (user && user.id === "demo-user-id" && user.isDemo) {
+    const userObj = user as any;
+    if (userObj && userObj.id === "demo-user-id" && userObj.isDemo) {
       return user;
     }
 

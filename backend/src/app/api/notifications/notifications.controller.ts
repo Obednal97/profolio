@@ -15,6 +15,7 @@ import {
 import { NotificationsService, CreateNotificationDto, NotificationFilters } from './notifications.service';
 import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
 import { AuthenticatedRequest, UnknownObject } from '@/types/common';
+import { NotificationType, NotificationPriority, Prisma } from '@prisma/client';
 
 export interface CreateNotificationRequestDto {
   type: string;
@@ -50,8 +51,8 @@ export class NotificationsController {
       
       const filters: NotificationFilters = {
         ...(query.isRead !== undefined && { isRead: query.isRead === 'true' }),
-        ...(query.type && { type: query.type as 'SYSTEM_UPDATE' | 'ASSET_SYNC' | 'API_KEY_EXPIRY' | 'PORTFOLIO_ALERT' | 'BILLING' | 'SECURITY' }),
-        ...(query.priority && { priority: query.priority as 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' }),
+        ...(query.type && { type: query.type as NotificationType }),
+        ...(query.priority && { priority: query.priority as NotificationPriority }),
         ...(query.limit && { limit: parseInt(query.limit, 10) }),
         ...(query.offset && { offset: parseInt(query.offset, 10) })
       };
@@ -95,11 +96,11 @@ export class NotificationsController {
       
       const notificationData: CreateNotificationDto = {
         userId,
-        type: body.type,
+        type: body.type as NotificationType,
         title: body.title,
         message: body.message,
-        data: body.data,
-        priority: body.priority
+        data: body.data as Prisma.JsonValue | undefined,
+        priority: body.priority as NotificationPriority | undefined
       };
 
       return await this.notificationsService.createNotification(notificationData);
@@ -211,22 +212,22 @@ export class NotificationsController {
       
       const testNotifications = [
         {
-          type: 'SYSTEM_UPDATE',
+          type: 'SYSTEM_UPDATE' as NotificationType,
           title: 'System Update Available',
           message: 'A new version of Profolio is available. Click to learn more.',
-          priority: 'NORMAL'
+          priority: 'NORMAL' as NotificationPriority
         },
         {
-          type: 'ASSET_SYNC',
+          type: 'ASSET_SYNC' as NotificationType,
           title: 'Asset Sync Complete',
           message: 'Your portfolio has been updated with the latest market data.',
-          priority: 'LOW'
+          priority: 'LOW' as NotificationPriority
         },
         {
-          type: 'API_KEY_EXPIRY',
+          type: 'API_KEY_EXPIRY' as NotificationType,
           title: 'API Key Expiring Soon',
           message: 'Your Alpha Vantage API key will expire in 7 days. Please renew it to continue syncing data.',
-          priority: 'HIGH'
+          priority: 'HIGH' as NotificationPriority
         }
       ];
 

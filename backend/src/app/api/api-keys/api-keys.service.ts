@@ -390,12 +390,12 @@ export class ApiKeysService {
       user_api_key_environment: apiKey.user_api_key_environment,
       user_api_key_masked_value: maskedKey,
       isActive: apiKey.isActive,
-      testedAt: apiKey.testedAt,
-      testResult: apiKey.testResult,
+      testedAt: apiKey.testedAt || undefined,
+      testResult: apiKey.testResult || undefined,
       createdAt: apiKey.createdAt,
-      expiresAt: apiKey.expiresAt,
+      expiresAt: apiKey.expiresAt || undefined,
       permissions: apiKey.permissions || [],
-      rateLimitInfo: apiKey.rateLimitInfo,
+      rateLimitInfo: apiKey.rateLimitInfo as { remainingCalls?: number; resetTime?: Date; dailyLimit?: number } | undefined,
     };
   }
 

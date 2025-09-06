@@ -3,7 +3,7 @@ import { PrismaService } from '@/common/prisma.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { MoneyUtils } from '@/common/utils/money.utils';
-import { Prisma } from '@prisma/client';
+import { Prisma, AssetType } from '@prisma/client';
 import { MarketDataService } from '../market-data/market-data.service';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class AssetsService {
 
   async create(createAssetDto: CreateAssetDto & { userId: string }) {
     // Validate monetary inputs
-    const validations = this.validateMonetaryFields(createAssetDto);
+    const validations = this.validateMonetaryFields(createAssetDto as unknown as Record<string, unknown>);
     if (!validations.isValid) {
       throw new Error(`Invalid monetary input: ${validations.errors.join(', ')}`);
     }
@@ -48,6 +48,7 @@ export class AssetsService {
         purchaseDate: purchase_date ? new Date(purchase_date) : null,
         vesting_start_date: vesting_start_date ? new Date(vesting_start_date) : null,
         vesting_end_date: vesting_end_date ? new Date(vesting_end_date) : null,
+        vesting_schedule: data.vesting_schedule ? (data.vesting_schedule as Prisma.InputJsonValue) : undefined,
       },
       select: this.getAssetSelect(),
     });
@@ -63,7 +64,7 @@ export class AssetsService {
   async findAllByUser(userId: string, type?: string) {
     const where: Prisma.AssetWhereInput = { userId };
     if (type) {
-      where.type = type as 'STOCK' | 'CRYPTO' | 'PROPERTY' | 'BOND' | 'COMMODITY' | 'SAVINGS' | 'EQUITY' | 'OTHER';
+      where.type = type as AssetType;
     }
 
     const assets = await this.prisma.asset.findMany({
@@ -98,7 +99,7 @@ export class AssetsService {
     await this.findOne(id, userId);
 
     // Validate monetary inputs
-    const validations = this.validateMonetaryFields(updateAssetDto);
+    const validations = this.validateMonetaryFields(updateAssetDto as unknown as Record<string, unknown>);
     if (!validations.isValid) {
       throw new Error(`Invalid monetary input: ${validations.errors.join(', ')}`);
     }
@@ -116,20 +117,30 @@ export class AssetsService {
       ...data 
     } = updateAssetDto;
     
+    const updateData: any = {};
+    
+    // Only include fields that are defined
+    Object.keys(data).forEach(key => {
+      if ((data as any)[key] !== undefined) {
+        updateData[key] = (data as any)[key];
+      }
+    });
+    
+    if (quantity !== undefined) updateData.quantity = quantity;
+    if (current_value !== undefined) updateData.current_value = MoneyUtils.toCents(current_value);
+    if (valueOverride !== undefined) updateData.valueOverride = MoneyUtils.toCents(valueOverride);
+    if (purchase_price !== undefined) updateData.purchasePrice = MoneyUtils.toCents(purchase_price);
+    if (initialAmount !== undefined) updateData.initialAmount = MoneyUtils.toCents(initialAmount);
+    if (interestRate !== undefined) updateData.interestRate = MoneyUtils.toBasisPoints(interestRate);
+    
+    if (purchase_date !== undefined) updateData.purchaseDate = purchase_date ? new Date(purchase_date) : null;
+    if (vesting_start_date !== undefined) updateData.vesting_start_date = vesting_start_date ? new Date(vesting_start_date) : null;
+    if (vesting_end_date !== undefined) updateData.vesting_end_date = vesting_end_date ? new Date(vesting_end_date) : null;
+    if (updateData.vesting_schedule !== undefined) updateData.vesting_schedule = updateData.vesting_schedule || null;
+    
     const updated = await this.prisma.asset.update({
       where: { id },
-      data: {
-        ...data,
-        quantity: quantity !== undefined ? quantity : undefined,
-        current_value: current_value !== undefined ? MoneyUtils.toCents(current_value) : undefined,
-        valueOverride: valueOverride !== undefined ? MoneyUtils.toCents(valueOverride) : undefined,
-        purchasePrice: purchase_price !== undefined ? MoneyUtils.toCents(purchase_price) : undefined,
-        initialAmount: initialAmount !== undefined ? MoneyUtils.toCents(initialAmount) : undefined,
-        interestRate: interestRate !== undefined ? MoneyUtils.toBasisPoints(interestRate) : undefined,
-        purchaseDate: purchase_date !== undefined ? (purchase_date ? new Date(purchase_date) : null) : undefined,
-        vesting_start_date: vesting_start_date !== undefined ? (vesting_start_date ? new Date(vesting_start_date) : null) : undefined,
-        vesting_end_date: vesting_end_date !== undefined ? (vesting_end_date ? new Date(vesting_end_date) : null) : undefined,
-      },
+      data: updateData,
       select: this.getAssetSelect(),
     });
 
@@ -320,7 +331,7 @@ export class AssetsService {
     
     for (const field of fieldsToValidate) {
       if (dto[field] !== undefined && dto[field] !== null) {
-        const validation = MoneyUtils.validateMonetaryInput(dto[field]);
+        const validation = MoneyUtils.validateMonetaryInput(dto[field] as string | number);
         if (!validation.isValid) {
           errors.push(`${field}: ${validation.error}`);
         }
@@ -362,28 +373,21 @@ export class AssetsService {
     };
   }
 
-  private async transformAsset(asset: {
-    quantity?: number | bigint | Prisma.Decimal | null;
-    current_value?: number | null;
-    valueOverride?: number | null;
-    purchasePrice?: number | null;
-    initialAmount?: number | null;
-    interestRate?: number | null;
-    purchaseDate?: Date | null;
-    [key: string]: unknown;
-  }) {
-    const transformed = {
+  private async transformAsset(asset: any) {
+    const transformed: any = {
       ...asset,
       quantity: Number(asset.quantity) || 0, // Convert Decimal to number
       current_value: asset.current_value ? MoneyUtils.fromCents(asset.current_value) : null,
       valueOverride: asset.valueOverride ? MoneyUtils.fromCents(asset.valueOverride) : null,
       purchase_price: asset.purchasePrice ? MoneyUtils.fromCents(asset.purchasePrice) : null,
-      purchasePrice: undefined, // Remove old field name
       initialAmount: asset.initialAmount ? MoneyUtils.fromCents(asset.initialAmount) : null,
       interestRate: asset.interestRate ? MoneyUtils.fromBasisPoints(asset.interestRate) : null,
       purchase_date: asset.purchaseDate?.toISOString?.().split('T')[0] || null,
-      purchaseDate: undefined, // Remove old field name
     };
+    
+    // Remove the old field names
+    delete transformed.purchasePrice;
+    delete transformed.purchaseDate;
 
     // Simplified current value calculation - just use what's stored
     if (!transformed.current_value && transformed.purchase_price && transformed.quantity) {

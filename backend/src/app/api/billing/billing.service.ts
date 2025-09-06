@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/common/prisma.service';
 import Stripe from 'stripe';
 import { PriceTier } from './dto/create-checkout-session.dto';
+import type { StripeSubscriptionExtended } from '@/types/stripe';
 
 @Injectable()
 export class BillingService {
@@ -183,7 +184,7 @@ export class BillingService {
     // Fetch latest subscription data from Stripe if needed
     if (user.subscriptionId && this.stripe) {
       try {
-        const subscription = await this.stripe.subscriptions.retrieve(user.subscriptionId);
+        const subscription = await this.stripe.subscriptions.retrieve(user.subscriptionId) as StripeSubscriptionExtended;
         
         // Update local database with latest status
         const currentPeriodEnd = subscription.current_period_end;
@@ -217,8 +218,8 @@ export class BillingService {
       } catch (error) {
         this.logger.error('Error fetching subscription from Stripe:', error);
         return {
-          status: user.subscriptionStatus,
-          tier: user.subscriptionTier,
+          status: user.subscriptionStatus || '',
+          tier: user.subscriptionTier || '',
           currentPeriodEnd: user.subscriptionEndDate,
           trialEnd: user.trialEndDate,
         };
@@ -226,8 +227,8 @@ export class BillingService {
     }
 
     return {
-      status: user.subscriptionStatus,
-      tier: user.subscriptionTier,
+      status: user.subscriptionStatus || '',
+      tier: user.subscriptionTier || '',
       currentPeriodEnd: user.subscriptionEndDate,
       trialEnd: user.trialEndDate,
     };
@@ -284,7 +285,7 @@ export class BillingService {
       return;
     }
 
-    const subscription = await this.stripe!.subscriptions.retrieve(session.subscription as string);
+    const subscription = await this.stripe!.subscriptions.retrieve(session.subscription as string) as StripeSubscriptionExtended;
     
     // Determine tier based on price ID
     let tier = 'cloud_monthly';
@@ -315,7 +316,7 @@ export class BillingService {
   /**
    * Handle subscription updates
    */
-  private async handleSubscriptionUpdate(subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionUpdate(subscription: StripeSubscriptionExtended): Promise<void> {
     const userId = subscription.metadata?.userId;
     if (!userId) {
       this.logger.error('No userId in subscription metadata');
@@ -350,7 +351,7 @@ export class BillingService {
   /**
    * Handle subscription deletion
    */
-  private async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionDeleted(subscription: StripeSubscriptionExtended): Promise<void> {
     const userId = subscription.metadata?.userId;
     if (!userId) {
       this.logger.error('No userId in subscription metadata');

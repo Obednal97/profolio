@@ -10,7 +10,7 @@ export class PropertiesService {
 
   async create(dto: CreatePropertyDto & { userId: string }) {
     const createData: Prisma.PropertyCreateInput = {
-      userId: dto.userId,
+      user: { connect: { id: dto.userId } },
       address: dto.address,
       street: dto.street,
       city: dto.city,

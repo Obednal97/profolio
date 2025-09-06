@@ -209,7 +209,7 @@ export class RbacService {
     performedBy?: { email: string; name?: string | null };
   }>> {
     try {
-      return await this.prisma.roleChange.findMany({
+      const roleChanges = await this.prisma.roleChange.findMany({
         where: { userId },
         include: {
           admin: {
@@ -218,6 +218,17 @@ export class RbacService {
         },
         orderBy: { timestamp: "desc" },
       });
+      
+      return roleChanges.map(change => ({
+        id: change.id,
+        userId: change.userId,
+        fromRole: change.previousRole,
+        toRole: change.newRole,
+        reason: change.reason,
+        performedById: change.adminId,
+        createdAt: change.timestamp,
+        performedBy: change.admin
+      }));
     } catch (error) {
       this.logger.error(
         `Failed to get role history for user ${userId}:`,
