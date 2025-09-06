@@ -96,6 +96,7 @@ jobs:
         run: |
           cd backend && pnpm install --frozen-lockfile
           cd ../frontend && pnpm install --frozen-lockfile
+          pnpm exec playwright install chromium
 
       - name: 🗄️ Setup test database
         run: |
@@ -131,7 +132,7 @@ jobs:
           echo $! > backend.pid
           echo "Backend PID: $(cat backend.pid)"
           sleep 20
-          
+
           # Verify backend is still running
           if ! kill -0 $(cat backend.pid) 2>/dev/null; then
             echo "❌ Backend failed to start. Logs:"
@@ -151,10 +152,10 @@ jobs:
           # Create in public folder for production build
           mkdir -p frontend/public
           echo '{"apiKey":"mock-api-key","authDomain":"mock.firebaseapp.com","projectId":"mock-project","storageBucket":"mock.appspot.com","messagingSenderId":"123456789","appId":"1:123456789:web:abc123"}' > frontend/public/firebase-config.json
-          
+
           # Also create in root for dev server (which e2e tests use)
           echo '{"apiKey":"mock-api-key","authDomain":"mock.firebaseapp.com","projectId":"mock-project","storageBucket":"mock.appspot.com","messagingSenderId":"123456789","appId":"1:123456789:web:abc123"}' > frontend/firebase-config.json
-          
+
           echo "✅ Created mock firebase configs in both locations"
           ls -la frontend/ | grep firebase
           ls -la frontend/public/ | grep firebase
@@ -166,7 +167,7 @@ jobs:
           echo $! > frontend.pid
           echo "Frontend PID: $(cat frontend.pid)"
           sleep 20
-          
+
           # Verify frontend is still running
           if ! kill -0 $(cat frontend.pid) 2>/dev/null; then
             echo "❌ Frontend failed to start. Logs:"
@@ -197,7 +198,7 @@ jobs:
               exit 1
             fi
           done
-          
+
           # Final health check
           if ! curl -f http://localhost:3001/health; then
             echo "❌ Backend health check failed after 20 attempts"
@@ -205,7 +206,7 @@ jobs:
             cat backend/backend.log
             exit 1
           fi
-          
+
           echo "Checking frontend health..."
           for i in {1..20}; do
             if curl -f http://localhost:3000 2>/dev/null; then
@@ -222,7 +223,7 @@ jobs:
               exit 1
             fi
           done
-          
+
           # Final health check
           if ! curl -f http://localhost:3000; then
             echo "❌ Frontend health check failed after 20 attempts"

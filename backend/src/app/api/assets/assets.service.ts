@@ -117,12 +117,13 @@ export class AssetsService {
       ...data 
     } = updateAssetDto;
     
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     // Only include fields that are defined
     Object.keys(data).forEach(key => {
-      if ((data as any)[key] !== undefined) {
-        updateData[key] = (data as any)[key];
+      const value = (data as Record<string, unknown>)[key];
+      if (value !== undefined) {
+        updateData[key] = value;
       }
     });
     
@@ -140,7 +141,7 @@ export class AssetsService {
     
     const updated = await this.prisma.asset.update({
       where: { id },
-      data: updateData,
+      data: updateData as Prisma.AssetUpdateInput,
       select: this.getAssetSelect(),
     });
 
@@ -210,13 +211,13 @@ export class AssetsService {
   async getUserAssetSummary(userId: string) {
     const assets = await this.findAllByUser(userId);
     
-    const totalValue = MoneyUtils.safeAdd(...assets.map(asset => asset.current_value || 0));
+    const totalValue = MoneyUtils.safeAdd(...assets.map(asset => (asset.current_value as number) || 0));
 
     const assetsByType = assets.reduce((acc, asset) => {
-      const type = asset.type;
+      const type = asset.type as string;
       if (!acc[type]) acc[type] = { count: 0, value: 0, allocation: 0 };
       acc[type].count++;
-      acc[type].value = MoneyUtils.safeAdd(acc[type].value, asset.current_value || 0);
+      acc[type].value = MoneyUtils.safeAdd(acc[type].value, (asset.current_value as number) || 0);
       return acc;
     }, {} as Record<string, { count: number; value: number; allocation: number }>);
 
@@ -228,10 +229,10 @@ export class AssetsService {
 
     // Calculate total gains/losses with precision
     const totalInvested = MoneyUtils.safeAdd(...assets.map(asset => {
-      if (asset.type === 'SAVINGS') {
-        return asset.initialAmount || 0;
+      if ((asset.type as string) === 'SAVINGS') {
+        return (asset.initialAmount as number) || 0;
       }
-      return MoneyUtils.safeMultiply(asset.purchase_price || 0, asset.quantity || 0);
+      return MoneyUtils.safeMultiply((asset.purchase_price as number) || 0, (asset.quantity as number) || 0);
     }));
 
     const gainLossData = MoneyUtils.calculateGainLoss(totalInvested, totalValue);
@@ -240,10 +241,10 @@ export class AssetsService {
     const topPerformers = assets
       .filter(asset => asset.purchase_price && asset.current_value)
       .map(asset => {
-        const invested = asset.type === 'SAVINGS' 
-          ? asset.initialAmount || 0
-          : MoneyUtils.safeMultiply(asset.purchase_price || 0, asset.quantity || 0);
-        const assetGainLoss = MoneyUtils.calculateGainLoss(invested, asset.current_value || 0);
+        const invested = (asset.type as string) === 'SAVINGS' 
+          ? (asset.initialAmount as number) || 0
+          : MoneyUtils.safeMultiply((asset.purchase_price as number) || 0, (asset.quantity as number) || 0);
+        const assetGainLoss = MoneyUtils.calculateGainLoss(invested, (asset.current_value as number) || 0);
         
         return {
           ...asset,
@@ -374,7 +375,7 @@ export class AssetsService {
   }
 
   private async transformAsset(asset: any) {
-    const transformed: any = {
+    const transformed = {
       ...asset,
       quantity: Number(asset.quantity) || 0, // Convert Decimal to number
       current_value: asset.current_value ? MoneyUtils.fromCents(asset.current_value) : null,
@@ -383,11 +384,10 @@ export class AssetsService {
       initialAmount: asset.initialAmount ? MoneyUtils.fromCents(asset.initialAmount) : null,
       interestRate: asset.interestRate ? MoneyUtils.fromBasisPoints(asset.interestRate) : null,
       purchase_date: asset.purchaseDate?.toISOString?.().split('T')[0] || null,
+      purchasePrice: undefined as undefined,
+      purchaseDate: undefined as undefined,
     };
     
-    // Remove the old field names
-    delete transformed.purchasePrice;
-    delete transformed.purchaseDate;
 
     // Simplified current value calculation - just use what's stored
     if (!transformed.current_value && transformed.purchase_price && transformed.quantity) {

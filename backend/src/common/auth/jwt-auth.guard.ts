@@ -34,17 +34,17 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
     return super.canActivate(context);
   }
 
-  handleRequest<TUser = any>(
+  handleRequest<TUser = unknown>(
     err: Error | null,
     user: TUser,
-    info: any,
+    info: unknown,
     context?: ExecutionContext,
-    status?: any
+    _status?: unknown
   ): TUser {
     const request = context?.switchToHttp ? context.switchToHttp().getRequest() : null;
 
     // Handle demo user case
-    const userObj = user as any;
+    const userObj = user as { id?: string; isDemo?: boolean };
     if (userObj && userObj.id === "demo-user-id" && userObj.isDemo) {
       return user;
     }
@@ -54,14 +54,14 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
       // Enhanced error logging for security monitoring (but no rate limiting here)
       this.logger.warn(`JWT validation failed`, {
         error: err?.message,
-        info: info?.message,
+        info: (info as { message?: string })?.message,
         timestamp: new Date().toISOString(),
         userAgent: request.headers["user-agent"],
       });
 
       // Provide specific error message for debugging (in development only)
       if (process.env.NODE_ENV === "development") {
-        const errorDetail = err?.message || info?.message || "Unknown error";
+        const errorDetail = err?.message || (info as { message?: string })?.message || "Unknown error";
         throw new UnauthorizedException(
           `JWT validation failed: ${errorDetail}`
         );
@@ -79,7 +79,7 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
    */
   private isValidDemoToken(
     authHeader: string | undefined,
-    request: AuthenticatedRequest
+    _request: AuthenticatedRequest
   ): boolean {
     if (!authHeader) return false;
 
