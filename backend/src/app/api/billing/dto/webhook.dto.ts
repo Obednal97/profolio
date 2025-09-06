@@ -5,5 +5,5 @@ export class StripeWebhookDto {
   signature!: string;
 
   @IsObject()
-  body: any;
+  body: Buffer | Record<string, unknown>;
 }

@@ -198,7 +198,16 @@ export class RbacService {
   /**
    * Get role change history for a user
    */
-  async getRoleHistory(userId: string): Promise<any[]> {
+  async getRoleHistory(userId: string): Promise<Array<{
+    id: string;
+    userId: string;
+    fromRole: string;
+    toRole: string;
+    reason?: string | null;
+    performedById: string;
+    createdAt: Date;
+    performedBy?: { email: string; name?: string | null };
+  }>> {
     try {
       return await this.prisma.roleChange.findMany({
         where: { userId },

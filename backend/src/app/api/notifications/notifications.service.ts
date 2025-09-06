@@ -7,7 +7,7 @@ export interface CreateNotificationDto {
   type: NotificationType;
   title: string;
   message: string;
-  data?: any;
+  data?: Prisma.JsonValue;
   priority?: NotificationPriority;
 }
 

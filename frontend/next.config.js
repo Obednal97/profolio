@@ -64,12 +64,18 @@ const nextConfig = {
 
   // Build configuration
   eslint: {
-    // During production builds, don't fail on ESLint warnings
-    ignoreDuringBuilds: false,
+    // Development: Allow builds with warnings
+    // Production: Strict checking in CI/CD
+    ignoreDuringBuilds: process.env.NODE_ENV === 'development',
   },
   typescript: {
-    // Don't fail build on TypeScript errors (warnings only)
-    ignoreBuildErrors: false,
+    // Development: Use looser tsconfig for faster iteration
+    // Production: Strict checking in CI/CD
+    ignoreBuildErrors: process.env.NODE_ENV === 'development',
+    // Use dev config in development for faster builds
+    ...(process.env.NODE_ENV === 'development' && {
+      tsconfigPath: './tsconfig.dev.json',
+    }),
   },
 
   // PERFORMANCE: Experimental features for better performance

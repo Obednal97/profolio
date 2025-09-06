@@ -229,7 +229,13 @@ export class PrismaService
     connected: boolean;
     latency?: number;
     error?: string;
-    resourceStats?: any;
+    resourceStats?: {
+      totalUsers: number;
+      activeConnections: number;
+      maxConnectionsPerUser: number;
+      circuitBreakerStatus: string;
+      userConnectionBreakdown: Record<string, number>;
+    };
   }> {
     try {
       const start = Date.now();

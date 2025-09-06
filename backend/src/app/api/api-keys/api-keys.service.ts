@@ -32,7 +32,11 @@ export interface ApiKeyResponse {
   createdAt: Date;
   expiresAt?: Date;
   permissions: string[];
-  rateLimitInfo?: any;
+  rateLimitInfo?: {
+    remainingCalls?: number;
+    resetTime?: Date;
+    dailyLimit?: number;
+  };
 }
 
 export interface TestApiKeyResult {
@@ -247,7 +251,7 @@ export class ApiKeysService {
   private async testAlphaVantage(apiKey: string): Promise<TestApiKeyResult> {
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${apiKey}`;
     const response = await fetch(url);
-    const data = await response.json() as any;
+    const data = await response.json() as { 'Error Message'?: string; 'Global Quote'?: unknown };
 
     if (data['Error Message']) {
       return {
@@ -294,7 +298,7 @@ export class ApiKeysService {
   private async testTwelveData(apiKey: string): Promise<TestApiKeyResult> {
     const url = `https://api.twelvedata.com/stocks?apikey=${apiKey}`;
     const response = await fetch(url);
-    const data = await response.json() as any;
+    const data = await response.json() as { status?: string; message?: string; data?: unknown };
 
     if (data.status === 'error') {
       return {
@@ -362,7 +366,20 @@ export class ApiKeysService {
     }
   }
 
-  private toResponse(apiKey: any): ApiKeyResponse {
+  private toResponse(apiKey: {
+    id: string;
+    provider: ApiProvider;
+    user_api_key_display_name: string;
+    user_api_key_environment: string;
+    user_api_key_encrypted_value: string;
+    isActive: boolean;
+    testedAt?: Date | null;
+    testResult?: string | null;
+    createdAt: Date;
+    expiresAt?: Date | null;
+    permissions?: string[];
+    rateLimitInfo?: unknown;
+  }): ApiKeyResponse {
     // Mask the API key for display (show first 4 and last 4 characters)
     const maskedKey = this.maskApiKey(apiKey.user_api_key_encrypted_value);
 

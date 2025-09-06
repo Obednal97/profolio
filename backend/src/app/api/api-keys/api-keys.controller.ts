@@ -18,6 +18,17 @@ import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
 import { ApiProvider } from '@prisma/client';
 import { AuthUser } from '@/common/auth/jwt.strategy';
 
+interface ProviderInfo {
+  id: string;
+  name: string;
+  description: string;
+  website: string;
+  signupUrl: string;
+  docs: string;
+  rateLimit: string;
+  supports: string[];
+}
+
 @ApiTags('api-keys')
 @Controller('api-keys')
 @UseGuards(JwtAuthGuard)
@@ -76,7 +87,7 @@ export class ApiKeysController {
   @Get('providers/info')
   @ApiOperation({ summary: 'Get information about supported API providers' })
   @ApiResponse({ status: 200, description: 'Provider information retrieved' })
-  async getProviderInfo(): Promise<any> {
+  async getProviderInfo(): Promise<{ providers: ProviderInfo[] }> {
     return {
       providers: [
         {

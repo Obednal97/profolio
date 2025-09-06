@@ -18,7 +18,8 @@ export class BillingService {
     if (!stripeSecretKey) {
       this.logger.warn('Stripe secret key not configured - billing features disabled');
       // Initialize with null to indicate Stripe is not configured
-      this.stripe = null as any;
+      // @ts-expect-error Stripe not initialized when billing disabled
+      this.stripe = null;
     } else {
       this.stripe = new Stripe(stripeSecretKey, {
         apiVersion: '2025-08-27.basil',
@@ -155,7 +156,14 @@ export class BillingService {
   /**
    * Get subscription details for a user
    */
-  async getSubscription(userId: string): Promise<any> {
+  async getSubscription(userId: string): Promise<{
+    id?: string;
+    status: string;
+    tier: string | null;
+    currentPeriodEnd: Date | null;
+    trialEnd?: Date | null;
+    cancelAtPeriodEnd?: boolean;
+  } | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -178,9 +186,9 @@ export class BillingService {
         const subscription = await this.stripe.subscriptions.retrieve(user.subscriptionId);
         
         // Update local database with latest status
-        const currentPeriodEnd = (subscription as any).current_period_end;
-        const trialEnd = (subscription as any).trial_end;
-        const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
+        const currentPeriodEnd = subscription.current_period_end;
+        const trialEnd = subscription.trial_end;
+        const cancelAtPeriodEnd = subscription.cancel_at_period_end;
         
         if (subscription.status !== user.subscriptionStatus) {
           await this.prisma.user.update({
@@ -285,8 +293,8 @@ export class BillingService {
       tier = 'cloud_annual';
     }
 
-    const currentPeriodEnd = (subscription as any).current_period_end;
-    const trialEnd = (subscription as any).trial_end;
+    const currentPeriodEnd = subscription.current_period_end;
+    const trialEnd = subscription.trial_end;
     
     await this.prisma.user.update({
       where: { id: userId },
@@ -321,8 +329,8 @@ export class BillingService {
       tier = 'cloud_annual';
     }
 
-    const currentPeriodEnd = (subscription as any).current_period_end;
-    const trialEnd = (subscription as any).trial_end;
+    const currentPeriodEnd = subscription.current_period_end;
+    const trialEnd = subscription.trial_end;
     
     await this.prisma.user.update({
       where: { id: userId },
@@ -349,7 +357,7 @@ export class BillingService {
       return;
     }
 
-    const currentPeriodEnd = (subscription as any).current_period_end;
+    const currentPeriodEnd = subscription.current_period_end;
     
     await this.prisma.user.update({
       where: { id: userId },
