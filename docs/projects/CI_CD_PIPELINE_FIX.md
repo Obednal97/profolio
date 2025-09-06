@@ -272,6 +272,38 @@ Full CI simulation run locally with the following results:
 - ✅ Health endpoint responds correctly
 - ✅ No crypto errors in Node.js 18
 
+### Round 12 (2025-09-06 - Playwright Server Conflict Fix)
+
+**GitHub Actions CI failure:**
+
+```
+Error: http://localhost:3000 is already used, make sure that nothing is running on the port/url or set reuseExistingServer:true in config.webServer.
+```
+
+**Root cause:**
+
+- CI workflow starts frontend server manually on port 3000
+- Playwright config has `reuseExistingServer: !process.env.CI` (false in CI)
+- Playwright tries to start another server on same port, causing conflict
+
+**Fix applied:**
+
+Updated `playwright.ci.config.ts` to reuse existing server:
+
+```typescript
+webServer: {
+  ...baseConfig.webServer,
+  command: "echo 'Using existing server'",
+  reuseExistingServer: true,
+},
+```
+
+**Why this works:**
+
+- `reuseExistingServer: true` tells Playwright to use the already-running server
+- Dummy command prevents Playwright from trying to start anything
+- Server is already started and health-checked by CI workflow
+
 ---
 
 ## Permanent Solutions Required
@@ -428,6 +460,7 @@ strategy:
 8. [x] Improved backend startup reliability in CI
 9. [x] Downgraded @nestjs/schedule to v4.1.2 for Node.js 18 compatibility
 10. [x] Fixed firebase-config.json placement for production server
+11. [x] Fixed Playwright server conflict with reuseExistingServer
 
 ### Immediate (Today)
 

@@ -8,6 +8,13 @@ import baseConfig from "./playwright.config";
 export default defineConfig({
   ...baseConfig,
   
+  /* Override webServer config for CI - use existing server */
+  webServer: {
+    ...baseConfig.webServer,
+    command: "echo 'Using existing server'",
+    reuseExistingServer: true,
+  },
+  
   /* Always run headless in CI */
   use: {
     ...baseConfig.use,
