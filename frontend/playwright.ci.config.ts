@@ -11,8 +11,9 @@ export default defineConfig({
   /* Override webServer config for CI - use existing server */
   webServer: {
     ...baseConfig.webServer,
-    command: "echo 'Using existing server'",
+    command: "sleep infinity", // Keep process running for Playwright
     reuseExistingServer: true,
+    timeout: 1000, // Very short timeout since server is already running
   },
   
   /* Always run headless in CI */

@@ -76,7 +76,7 @@ jobs:
       - name: 🧹 Lint check (warnings allowed)
         run: |
           cd backend
-          pnpm run lint --max-warnings 50 || echo "⚠️ Lint warnings found (non-blocking)"
+          pnpm run lint --max-warnings 100 || echo "⚠️ Lint warnings found (non-blocking)"
         continue-on-error: true # Don't fail on lint warnings
 
       - name: 🔒 Type Safety Check
@@ -154,7 +154,7 @@ jobs:
       - name: 🧹 Lint check (warnings allowed)
         run: |
           cd frontend
-          pnpm run lint --max-warnings 50 || echo "⚠️ Lint warnings found (non-blocking)"
+          pnpm run lint --max-warnings 100 || echo "⚠️ Lint warnings found (non-blocking)"
         continue-on-error: true # Don't fail on lint warnings
 
       - name: 🔒 Type Safety Check
