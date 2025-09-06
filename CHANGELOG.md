@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.16.0] - 2025-09-06
+
+### 🚀 **Features**
+
+- **Headless Testing Mode**: Configure tests to run in headless mode by default for better CI/CD performance
+- **Optimized CI/CD Pipeline**: Reduced runtime from 20+ minutes to ~2-3 minutes with focused testing
+- **Testing Infrastructure**: New test environment setup scripts with comprehensive troubleshooting guide
+
+### 🐛 **Bug Fixes**
+
+- **Auth Tests**: Updated test selectors to match actual page elements with proper data-testid attributes
+- **Framer Motion**: Fixed TypeScript compatibility for ease animations across all pages
+- **Installer Rollback**: Improved rollback mechanism to handle build failures gracefully
+- **ESLint Configuration**: Added ESLint v9 flat config for backend
+- **Prisma Client**: Fixed generation in monorepo structure
+- **Lockfile Warnings**: Removed individual backend/frontend lockfiles in favor of workspace root
+- **CI/CD Permissions**: Fixed security scanning permissions
+- **Playwright Config**: Enable dev server auto-start for CI environments
+- **TypeScript Errors**: Resolved all TypeScript compilation errors blocking CI
+- **Security Vulnerability**: Fixed CVE-2025-54798 with tmp package update
+- **Liquid Glass Components**: Fixed animation TypeScript errors
+- **Backend Scripts**: Added missing test scripts
+
+### 🏗️ **Infrastructure**
+
+- **Monorepo Structure**: Proper pnpm workspace configuration with unified dependency management
+- **Test Scripts**: Added run-tests.sh and setup-test-environment.sh for automated testing
+- **CI Configuration**: Optimized playwright.ci.config.ts with minimal browser set
+- **File Organization**: Created installer/ directory, moved secondary scripts
+- **Documentation**: Added comprehensive test troubleshooting guide
+- **Dependency Updates**: Next.js updated to 15.5.2
+
+### 🧹 **Code Cleanup**
+
+- Removed 4 deprecated pages (portfolio, properties, expenses/import, offline)
+- Removed redundant lockfiles (backend and frontend individual lockfiles)
+- Removed obsolete test scripts (test_*.sh files)
+- Removed legacy setup and validation scripts
+- Total: 1,573 lines of deprecated code removed
+
+### 📊 **Summary**
+
+- **Commits**: 20 since v1.15.4
+- **Files Changed**: 41
+- **Additions**: 24,797 lines (includes test reports and consolidated lockfile)
+- **Deletions**: 17,311 lines
+- **Net Change**: +7,486 lines
+- **Key Achievement**: CI/CD runtime reduced by 90%, monorepo properly configured
+
 ## [v1.15.3] - 2025-09-01
 
 ### 🐛 **Bug Fixes**
