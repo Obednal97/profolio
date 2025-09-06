@@ -374,16 +374,16 @@ export class AssetsService {
     };
   }
 
-  private async transformAsset(asset: Prisma.AssetGetPayload<{ select: ReturnType<typeof this.getAssetSelect> }>) {
+  private async transformAsset(asset: Record<string, unknown>) {
     const transformed = {
       ...asset,
       quantity: Number(asset.quantity) || 0, // Convert Decimal to number
-      current_value: asset.current_value ? MoneyUtils.fromCents(asset.current_value) : null,
-      valueOverride: asset.valueOverride ? MoneyUtils.fromCents(asset.valueOverride) : null,
-      purchase_price: asset.purchasePrice ? MoneyUtils.fromCents(asset.purchasePrice) : null,
-      initialAmount: asset.initialAmount ? MoneyUtils.fromCents(asset.initialAmount) : null,
-      interestRate: asset.interestRate ? MoneyUtils.fromBasisPoints(asset.interestRate) : null,
-      purchase_date: asset.purchaseDate?.toISOString?.().split('T')[0] || null,
+      current_value: asset.current_value ? MoneyUtils.fromCents(asset.current_value as number) : null,
+      valueOverride: asset.valueOverride ? MoneyUtils.fromCents(asset.valueOverride as number) : null,
+      purchase_price: asset.purchasePrice ? MoneyUtils.fromCents(asset.purchasePrice as number) : null,
+      initialAmount: asset.initialAmount ? MoneyUtils.fromCents(asset.initialAmount as number) : null,
+      interestRate: asset.interestRate ? MoneyUtils.fromBasisPoints(asset.interestRate as number) : null,
+      purchase_date: (asset.purchaseDate as Date | null)?.toISOString?.().split('T')[0] || null,
       purchasePrice: undefined as undefined,
       purchaseDate: undefined as undefined,
     };
