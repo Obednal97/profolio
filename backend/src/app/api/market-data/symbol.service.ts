@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma.service';
 import { MoneyUtils } from '@/common/utils/money.utils';
-import { AssetType } from '@prisma/client';
+import { AssetType, Symbol } from '@prisma/client';
 
 export interface SymbolData {
   symbol: string;
@@ -395,7 +395,7 @@ export class SymbolService {
     }
   }
 
-  async findBySymbol(symbol: string): Promise<any> {
+  async findBySymbol(symbol: string): Promise<Symbol | null> {
     try {
       return await this.prisma.symbol.findFirst({
         where: {

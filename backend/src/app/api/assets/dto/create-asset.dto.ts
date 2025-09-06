@@ -23,7 +23,7 @@ export class CreateAssetDto {
   @ApiProperty({ minLength: 1, maxLength: 200 })
   @IsString()
   @Length(1, 200, { message: 'Asset name must be between 1 and 200 characters' })
-  @Transform(({ value }: { value: any }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   name!: string;
 
   @ApiProperty({ enum: AssetType })
@@ -35,7 +35,7 @@ export class CreateAssetDto {
   @IsString()
   @Length(1, 20, { message: 'Symbol must be between 1 and 20 characters' })
   @Matches(/^[A-Z0-9.-]+$/, { message: 'Symbol must contain only uppercase letters, numbers, dots, and hyphens' })
-  @Transform(({ value }: { value: any }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   symbol?: string;
 
   @ApiProperty({ minimum: 0 })
@@ -49,21 +49,21 @@ export class CreateAssetDto {
   @IsString()
   @Length(3, 3, { message: 'Currency must be exactly 3 characters (ISO 4217)' })
   @Matches(/^[A-Z]{3}$/, { message: 'Currency must be a valid ISO 4217 code (e.g., USD, EUR, GBP)' })
-  @Transform(({ value }: { value: any }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   currency?: string;
 
   @ApiProperty({ required: false, maxLength: 100 })
   @IsOptional()
   @IsString()
   @Length(1, 100, { message: 'Source must be between 1 and 100 characters' })
-  @Transform(({ value }: { value: any }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   source?: string;
 
   @ApiProperty({ required: false, maxLength: 100 })
   @IsOptional()
   @IsString()
   @Length(1, 100, { message: 'External ID must be between 1 and 100 characters' })
-  @Transform(({ value }: { value: any }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   externalId?: string;
 
   // Current value field (maps to frontend current_value)
@@ -153,7 +153,7 @@ export class CreateAssetDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @ValidateIf(o => o.type === AssetType.EQUITY)
-  @Transform(({ value }: { value: any }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
       try {
         return JSON.parse(value);
@@ -163,14 +163,14 @@ export class CreateAssetDto {
     }
     return value;
   })
-  vesting_schedule?: any; // JSON data - would need custom validator in production
+  vesting_schedule?: Record<string, unknown>; // JSON data - would need custom validator in production
 
   // Additional fields
   @ApiProperty({ required: false, maxLength: 1000 })
   @IsOptional()
   @IsString()
   @Length(0, 1000, { message: 'Notes cannot exceed 1000 characters' })
-  @Transform(({ value }: { value: any }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   notes?: string;
 
   // Performance tracking

@@ -2,13 +2,14 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '@/common/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-properties.dto';
+import { Prisma, Property } from '@prisma/client';
 
 @Injectable()
 export class PropertiesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreatePropertyDto & { userId: string }) {
-    const createData: any = {
+    const createData: Prisma.PropertyCreateInput = {
       userId: dto.userId,
       address: dto.address,
       street: dto.street,
@@ -68,7 +69,7 @@ export class PropertiesService {
       throw new ForbiddenException('You can only update your own properties');
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.PropertyUpdateInput = {};
     
     // Only update provided fields with proper type handling
     if (dto.address !== undefined) updateData.address = dto.address;
@@ -168,7 +169,7 @@ export class PropertiesService {
   }
 
   // Convert cent values to dollars for frontend consumption
-  private convertCentsToDollars(property: any) {
+  private convertCentsToDollars(property: Property) {
     return {
       ...property,
       // Convert financial fields from cents to dollars

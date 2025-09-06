@@ -124,7 +124,7 @@ export class MarketDataController {
     @Query('limit') limit?: number,
   ) {
     try {
-      const assetType = type?.toUpperCase() as any || 'STOCK';
+      const assetType = (type?.toUpperCase() || 'STOCK') as 'STOCK' | 'CRYPTO' | 'BOND';
       const maxResults = limit ? Math.min(Number(limit), 50) : 20;
 
       const symbols = await this.symbolService.getTopSymbolsByType(assetType, maxResults);
@@ -301,7 +301,11 @@ export class MarketDataController {
     }
   }
 
-  private async getPortfolioHistoricalData(userId: string, days: number): Promise<any[]> {
+  private async getPortfolioHistoricalData(userId: string, days: number): Promise<Array<{
+    date: string;
+    total_value: number;
+    assets_count: number;
+  }>> {
     try {
       // Get user's assets with their symbols and purchase info
       const userAssets = await this.prisma.asset.findMany({
@@ -331,7 +335,7 @@ export class MarketDataController {
 
       const priceHistory = await this.prisma.priceHistory.findMany({
         where: {
-          assetId: { in: userAssets.map((a: any) => a.id) },
+          assetId: { in: userAssets.map(a => a.id) },
           timestamp: { gte: startDate },
           source: { in: ['YAHOO_FINANCE_HISTORICAL', 'YAHOO_FINANCE'] }
         },
@@ -348,7 +352,7 @@ export class MarketDataController {
       const historicalData = new Map<string, Map<string, number>>();
 
       // Process price history
-      priceHistory.forEach((price: any) => {
+      priceHistory.forEach(price => {
         const dateKey = price.timestamp.toISOString().split('T')[0]; // YYYY-MM-DD
         if (!historicalData.has(dateKey)) {
           historicalData.set(dateKey, new Map());
@@ -358,14 +362,18 @@ export class MarketDataController {
       });
 
       // Calculate portfolio value for each date
-      const portfolioValues: any[] = [];
+      const portfolioValues: Array<{
+        date: string;
+        total_value: number;
+        assets_count: number;
+      }> = [];
       const sortedDates = Array.from(historicalData.keys()).sort();
 
       for (const date of sortedDates) {
         const dayPrices = historicalData.get(date)!;
         let totalValue = 0;
 
-        userAssets.forEach((asset: any) => {
+        userAssets.forEach(asset => {
           // Only include asset if it was purchased before this date
           if (asset.purchaseDate && new Date(asset.purchaseDate) <= new Date(date)) {
             const assetPrice = dayPrices.get(asset.id);
@@ -380,7 +388,7 @@ export class MarketDataController {
         portfolioValues.push({
           date: date,
           total_value: Math.round(totalValue * 100), // Store in cents for consistency
-          assets_count: userAssets.filter((a: any) => 
+          assets_count: userAssets.filter(a => 
             a.purchaseDate && new Date(a.purchaseDate) <= new Date(date)
           ).length
         });
@@ -388,7 +396,7 @@ export class MarketDataController {
 
       // If we don't have historical data, create a single point with current values
       if (portfolioValues.length === 0) {
-        const currentValue = userAssets.reduce((sum: number, asset: any) => {
+        const currentValue = userAssets.reduce((sum: number, asset) => {
           return sum + (asset.current_value || 0);
         }, 0);
 

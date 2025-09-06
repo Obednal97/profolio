@@ -21,7 +21,16 @@
     "test:frontend": "cd frontend && pnpm test",
     "update": "./install.sh",
     "deploy": "./deploy.sh",
-    "setup": "./setup.sh"
+    "setup": "./setup.sh",
+    "prepare": "husky",
+    "check:all": "pnpm run check:backend && pnpm run check:frontend",
+    "check:backend": "cd backend && pnpm run lint && pnpm run type-check",
+    "check:frontend": "cd frontend && pnpm run lint && pnpm run type-check",
+    "fix:all": "pnpm run fix:backend && pnpm run fix:frontend",
+    "fix:backend": "cd backend && pnpm run lint:fix",
+    "fix:frontend": "cd frontend && pnpm run lint:fix",
+    "type-check": "node scripts/check-any-types.js",
+    "type-check:strict": "node scripts/check-any-types.js --strict"
   },
   "repository": {
     "type": "git",
@@ -67,6 +76,21 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "http-proxy": "^1.18.1"
+    "http-proxy": "^1.18.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0"
+  },
+  "lint-staged": {
+    "frontend/**/*.{ts,tsx}": [
+      "cd frontend && pnpm run lint:fix",
+      "cd frontend && pnpm run type-check:dev"
+    ],
+    "backend/**/*.ts": [
+      "cd backend && pnpm run lint:fix",
+      "cd backend && pnpm run type-check"
+    ],
+    "**/*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

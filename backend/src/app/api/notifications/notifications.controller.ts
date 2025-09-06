@@ -14,12 +14,13 @@ import {
 } from '@nestjs/common';
 import { NotificationsService, CreateNotificationDto, NotificationFilters } from './notifications.service';
 import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
+import { AuthenticatedRequest, UnknownObject } from '@/types/common';
 
 export interface CreateNotificationRequestDto {
   type: string;
   title: string;
   message: string;
-  data?: any;
+  data?: UnknownObject;
   priority?: string;
 }
 
@@ -41,16 +42,16 @@ export class NotificationsController {
    */
   @Get()
   async getUserNotifications(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query() query: NotificationQueryDto
   ) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       
       const filters: NotificationFilters = {
         ...(query.isRead !== undefined && { isRead: query.isRead === 'true' }),
-        ...(query.type && { type: query.type as any }),
-        ...(query.priority && { priority: query.priority as any }),
+        ...(query.type && { type: query.type as 'SYSTEM_UPDATE' | 'ASSET_SYNC' | 'API_KEY_EXPIRY' | 'PORTFOLIO_ALERT' | 'BILLING' | 'SECURITY' }),
+        ...(query.priority && { priority: query.priority as 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' }),
         ...(query.limit && { limit: parseInt(query.limit, 10) }),
         ...(query.offset && { offset: parseInt(query.offset, 10) })
       };
@@ -68,9 +69,9 @@ export class NotificationsController {
    * Get unread notification count
    */
   @Get('unread-count')
-  async getUnreadCount(@Request() req: any) {
+  async getUnreadCount(@Request() req: AuthenticatedRequest) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       const count = await this.notificationsService.getUnreadCount(userId);
       return { count };
     } catch (error) {
@@ -86,19 +87,19 @@ export class NotificationsController {
    */
   @Post()
   async createNotification(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() body: CreateNotificationRequestDto
   ) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       
       const notificationData: CreateNotificationDto = {
         userId,
-        type: body.type as any,
+        type: body.type,
         title: body.title,
         message: body.message,
         data: body.data,
-        priority: body.priority as any
+        priority: body.priority
       };
 
       return await this.notificationsService.createNotification(notificationData);
@@ -114,12 +115,12 @@ export class NotificationsController {
    * Mark a notification as read
    */
   @Put(':id/read')
-  async markAsRead(@Request() req: any, @Param('id') notificationId: string) {
+  async markAsRead(@Request() req: AuthenticatedRequest, @Param('id') notificationId: string) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       return await this.notificationsService.markAsRead(notificationId, userId);
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
         throw new HttpException(
           'Notification not found',
           HttpStatus.NOT_FOUND
@@ -136,9 +137,9 @@ export class NotificationsController {
    * Mark all notifications as read
    */
   @Put('mark-all-read')
-  async markAllAsRead(@Request() req: any) {
+  async markAllAsRead(@Request() req: AuthenticatedRequest) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       const result = await this.notificationsService.markAllAsRead(userId);
       return {
         success: true,
@@ -157,16 +158,16 @@ export class NotificationsController {
    * Delete a notification
    */
   @Delete(':id')
-  async deleteNotification(@Request() req: any, @Param('id') notificationId: string) {
+  async deleteNotification(@Request() req: AuthenticatedRequest, @Param('id') notificationId: string) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       await this.notificationsService.deleteNotification(notificationId, userId);
       return {
         success: true,
         message: 'Notification deleted successfully'
       };
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
         throw new HttpException(
           'Notification not found',
           HttpStatus.NOT_FOUND
@@ -183,9 +184,9 @@ export class NotificationsController {
    * Delete all read notifications
    */
   @Delete('read')
-  async deleteAllRead(@Request() req: any) {
+  async deleteAllRead(@Request() req: AuthenticatedRequest) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       const result = await this.notificationsService.deleteAllRead(userId);
       return {
         success: true,
@@ -204,28 +205,28 @@ export class NotificationsController {
    * Create a test notification (for development/testing)
    */
   @Post('test')
-  async createTestNotification(@Request() req: any) {
+  async createTestNotification(@Request() req: AuthenticatedRequest) {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id || '';
       
       const testNotifications = [
         {
-          type: 'SYSTEM_UPDATE' as any,
+          type: 'SYSTEM_UPDATE',
           title: 'System Update Available',
           message: 'A new version of Profolio is available. Click to learn more.',
-          priority: 'NORMAL' as any
+          priority: 'NORMAL'
         },
         {
-          type: 'ASSET_SYNC' as any,
+          type: 'ASSET_SYNC',
           title: 'Asset Sync Complete',
           message: 'Your portfolio has been updated with the latest market data.',
-          priority: 'LOW' as any
+          priority: 'LOW'
         },
         {
-          type: 'API_KEY_EXPIRY' as any,
+          type: 'API_KEY_EXPIRY',
           title: 'API Key Expiring Soon',
           message: 'Your Alpha Vantage API key will expire in 7 days. Please renew it to continue syncing data.',
-          priority: 'HIGH' as any
+          priority: 'HIGH'
         }
       ];
 

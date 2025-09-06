@@ -12,6 +12,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { AuthenticatedRequest } from '@/types/common';
 import { BillingService } from './billing.service';
 import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
@@ -27,9 +28,9 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   async createCheckoutSession(
     @Body() dto: CreateCheckoutSessionDto,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ): Promise<{ url: string }> {
-    const userId = (req as any).user.userId;
+    const userId = req.user?.id || '';
     
     // Default URLs if not provided
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -51,8 +52,8 @@ export class BillingController {
    */
   @Post('portal')
   @UseGuards(JwtAuthGuard)
-  async createPortalSession(@Req() req: Request): Promise<{ url: string }> {
-    const userId = (req as any).user.userId;
+  async createPortalSession(@Req() req: AuthenticatedRequest): Promise<{ url: string }> {
+    const userId = req.user?.id || '';
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const returnUrl = `${baseUrl}/app/billing`;
 
@@ -65,8 +66,8 @@ export class BillingController {
    */
   @Get('subscription')
   @UseGuards(JwtAuthGuard)
-  async getSubscription(@Req() req: Request) {
-    const userId = (req as any).user.userId;
+  async getSubscription(@Req() req: AuthenticatedRequest) {
+    const userId = req.user?.id || '';
     return this.billingService.getSubscription(userId);
   }
 
@@ -75,8 +76,8 @@ export class BillingController {
    */
   @Delete('subscription')
   @UseGuards(JwtAuthGuard)
-  async cancelSubscription(@Req() req: Request): Promise<{ message: string }> {
-    const userId = (req as any).user.userId;
+  async cancelSubscription(@Req() req: AuthenticatedRequest): Promise<{ message: string }> {
+    const userId = req.user?.id || '';
     await this.billingService.cancelSubscription(userId);
     return { message: 'Subscription will be canceled at the end of the billing period' };
   }

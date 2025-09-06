@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { Observable } from "rxjs";
+import { AuthenticatedRequest } from "../../types/common";
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard("jwt") {
@@ -33,7 +34,12 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
     return super.canActivate(context);
   }
 
-  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+  handleRequest(
+    err: Error | null,
+    user: { id: string; email?: string; name?: string; isDemo?: boolean } | null,
+    info: { message?: string } | null,
+    context: ExecutionContext
+  ) {
     const request = context.switchToHttp().getRequest();
 
     // Handle demo user case
@@ -71,7 +77,7 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
    */
   private isValidDemoToken(
     authHeader: string | undefined,
-    request: any
+    request: AuthenticatedRequest
   ): boolean {
     if (!authHeader) return false;
 

@@ -137,7 +137,7 @@ export class MarketDataService {
     apiKey?: string
   ): Promise<PriceData | null> {
     try {
-      const headers: any = {};
+      const headers: Record<string, string> = {};
       if (apiKey) {
         headers["x-cg-demo-api-key"] = apiKey;
       }
@@ -151,7 +151,13 @@ export class MarketDataService {
         throw new Error(`CoinGecko API error: ${response.status}`);
       }
 
-      const data = (await response.json()) as any;
+      interface CoinGeckoResponse {
+        [key: string]: {
+          usd: number;
+          last_updated_at: number;
+        };
+      }
+      const data = (await response.json()) as CoinGeckoResponse;
       const coinData = data[symbol.toLowerCase()];
 
       if (!coinData) {
@@ -180,7 +186,14 @@ export class MarketDataService {
         `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`
       );
 
-      const data = (await response.json()) as any;
+      interface AlphaVantageResponse {
+        "Global Quote"?: {
+          "05. price": string;
+        };
+        "Error Message"?: string;
+        Note?: string;
+      }
+      const data = (await response.json()) as AlphaVantageResponse;
 
       if (data["Error Message"] || data["Note"]) {
         throw new Error(
@@ -215,7 +228,12 @@ export class MarketDataService {
         `https://api.twelvedata.com/price?symbol=${symbol}&apikey=${apiKey}`
       );
 
-      const data = (await response.json()) as any;
+      interface TwelveDataResponse {
+        price?: string;
+        status?: string;
+        message?: string;
+      }
+      const data = (await response.json()) as TwelveDataResponse;
 
       if (data.status === "error") {
         throw new Error(`Twelve Data API error: ${data.message}`);
@@ -223,7 +241,7 @@ export class MarketDataService {
 
       return {
         symbol: symbol.toUpperCase(),
-        price: parseFloat(data.price),
+        price: parseFloat(data.price || '0'),
         timestamp: new Date(),
         source: "TWELVE_DATA",
         currency: "USD",
@@ -243,7 +261,17 @@ export class MarketDataService {
         `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`
       );
 
-      const data = (await response.json()) as any;
+      interface YahooFinanceResponse {
+        chart?: {
+          result?: Array<{
+            meta?: {
+              regularMarketPrice?: number;
+              currency?: string;
+            };
+          }>;
+        };
+      }
+      const data = (await response.json()) as YahooFinanceResponse;
       const result = data.chart?.result?.[0];
 
       if (!result) {
@@ -279,7 +307,7 @@ export class MarketDataService {
     );
 
     try {
-      const headers: any = {};
+      const headers: Record<string, string> = {};
       if (coinGeckoKey) {
         headers["x-cg-demo-api-key"] = coinGeckoKey;
       }
@@ -289,13 +317,16 @@ export class MarketDataService {
         { headers }
       );
 
-      const data = (await response.json()) as any;
+      interface CoinGeckoMarketChartResponse {
+        prices?: Array<[number, number]>;
+      }
+      const data = (await response.json()) as CoinGeckoMarketChartResponse;
 
       if (!data.prices) {
         return null;
       }
 
-      const historicalData = data.prices.map((item: any) => ({
+      const historicalData = data.prices.map((item: [number, number]) => ({
         timestamp: new Date(item[0]),
         open: item[1],
         high: item[1],
@@ -337,7 +368,18 @@ export class MarketDataService {
         `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${alphaVantageKey}&outputsize=compact`
       );
 
-      const data = (await response.json()) as any;
+      interface AlphaVantageTimeSeriesResponse {
+        "Time Series (Daily)"?: {
+          [date: string]: {
+            "1. open": string;
+            "2. high": string;
+            "3. low": string;
+            "4. close": string;
+            "5. volume": string;
+          };
+        };
+      }
+      const data = (await response.json()) as AlphaVantageTimeSeriesResponse;
       const timeSeries = data["Time Series (Daily)"];
 
       if (!timeSeries) {
@@ -346,7 +388,7 @@ export class MarketDataService {
 
       const historicalData = Object.entries(timeSeries)
         .slice(0, days)
-        .map(([date, prices]: [string, any]) => ({
+        .map(([date, prices]) => ({
           timestamp: new Date(date),
           open: parseFloat(prices["1. open"]),
           high: parseFloat(prices["2. high"]),
@@ -372,7 +414,7 @@ export class MarketDataService {
   async getCryptoPriceFromCoinGecko(
     userId: string,
     symbol: string
-  ): Promise<any> {
+  ): Promise<PriceData | null> {
     const coinGeckoKey = await this.apiKeysService.findActiveByProvider(
       userId,
       "COINGECKO"
@@ -383,7 +425,7 @@ export class MarketDataService {
   async getStockPriceFromAlphaVantage(
     userId: string,
     symbol: string
-  ): Promise<any> {
+  ): Promise<PriceData | null> {
     const alphaVantageKey = await this.apiKeysService.findActiveByProvider(
       userId,
       "ALPHA_VANTAGE"
@@ -395,7 +437,7 @@ export class MarketDataService {
   async getStockPriceFromTwelveData(
     userId: string,
     symbol: string
-  ): Promise<any> {
+  ): Promise<PriceData | null> {
     const twelveDataKey = await this.apiKeysService.findActiveByProvider(
       userId,
       "TWELVE_DATA"
@@ -408,7 +450,14 @@ export class MarketDataService {
     userId: string,
     symbol: string,
     days: number = 30
-  ): Promise<any[]> {
+  ): Promise<Array<{
+    timestamp: Date;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume?: number;
+  }>> {
     const historicalData = await this.getCryptoHistoricalData(
       userId,
       symbol,
@@ -420,7 +469,14 @@ export class MarketDataService {
   async getHistoricalPricesFromAlphaVantage(
     userId: string,
     symbol: string
-  ): Promise<any[]> {
+  ): Promise<Array<{
+    timestamp: Date;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume?: number;
+  }>> {
     const historicalData = await this.getStockHistoricalData(
       userId,
       symbol,

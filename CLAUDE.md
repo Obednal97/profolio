@@ -43,6 +43,75 @@ sudo ./install.sh --rollback                # Manual rollback
 - LXC container creation wizard for Proxmox hosts
 ```
 
+## Code Quality & Linting Strategy
+
+### Error Handling Philosophy
+
+- **Development**: Warnings don't block, focus on rapid iteration
+- **Pre-commit**: Auto-fix issues, allow warnings
+- **CI/CD**: Strict for critical errors, tolerant for style warnings
+- **Production**: Full strict checking
+
+## ⚠️ CRITICAL: Type Safety Requirements
+
+### NEVER Use `any` Types
+
+- **BANNED**: Direct use of `any` type
+- **BANNED**: Type assertions with `as any`
+- **BANNED**: Implicit any (missing type annotations)
+
+### Instead, ALWAYS Use:
+
+1. **Proper interfaces/types** - Define exact shape of data
+2. **`unknown`** - For truly unknown types with type guards
+3. **Generics** - For flexible, reusable types
+4. **`SafeAny<"reason">`** - ONLY for documented temporary migration
+
+### Type Safety Checklist for ALL Code:
+
+- ✅ All function parameters have explicit types
+- ✅ All API responses have defined interfaces
+- ✅ No `any` types (use `unknown` + type guards)
+- ✅ Express requests use `AuthenticatedRequest`
+- ✅ Array operations have typed items
+- ✅ Transform decorators use proper type checking
+
+### Import Type Utilities:
+
+```typescript
+// Backend
+import { SafeAny, AuthenticatedRequest, isObject } from "@/types/common";
+
+// Frontend
+import { ApiResponse, PropsWithClassName } from "@/types/common";
+```
+
+### Pre-commit Check:
+
+The system will automatically check for `any` types and warn you.
+Current limit: 43 (decreasing to 0)
+
+### Quick Fixes
+
+```bash
+# Auto-fix all issues
+pnpm fix:all              # Fix both frontend and backend
+
+# Check without blocking
+pnpm check:all            # Run all checks with warnings allowed
+
+# Development type checking (loose)
+cd frontend && pnpm type-check:dev
+cd backend && pnpm type-check
+```
+
+### When to Run Checks
+
+- **Before major changes**: Run `pnpm check:all`
+- **Before commits**: Automatic via husky (non-blocking)
+- **Before releases**: Run strict checks with `pnpm lint:strict`
+- **During development**: Warnings are OK, fix critical errors only
+
 ## Development Commands
 
 ### Quick Start (from root directory)
@@ -86,8 +155,11 @@ pnpm test:performance # Run Lighthouse performance tests
 pnpm test:all         # Run all tests (unit + E2E + performance)
 
 # Code Quality
-pnpm lint             # Run ESLint
-pnpm type-check       # TypeScript type checking
+pnpm lint             # Run ESLint (allows up to 50 warnings)
+pnpm lint:fix         # Auto-fix ESLint issues
+pnpm lint:strict      # Strict ESLint (no warnings)
+pnpm type-check       # TypeScript type checking (strict)
+pnpm type-check:dev   # TypeScript checking (development, loose)
 pnpm audit            # Security vulnerability check
 ```
 
@@ -109,7 +181,9 @@ pnpm prisma:generate  # Generate Prisma client
 pnpm prisma:migrate   # Run database migrations
 
 # Code Quality
-pnpm lint             # Run ESLint
+pnpm lint             # Run ESLint (allows up to 50 warnings)
+pnpm lint:fix         # Auto-fix ESLint issues
+pnpm lint:strict      # Strict ESLint (no warnings)
 pnpm format           # Format with Prettier
 ```
 

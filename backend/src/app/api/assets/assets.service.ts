@@ -63,7 +63,7 @@ export class AssetsService {
   async findAllByUser(userId: string, type?: string) {
     const where: Prisma.AssetWhereInput = { userId };
     if (type) {
-      where.type = type as any;
+      where.type = type as 'STOCK' | 'CRYPTO' | 'PROPERTY' | 'BOND' | 'COMMODITY' | 'SAVINGS' | 'EQUITY' | 'OTHER';
     }
 
     const assets = await this.prisma.asset.findMany({
@@ -240,7 +240,7 @@ export class AssetsService {
           gainLossPercent: assetGainLoss.percentage
         };
       })
-      .sort((a: any, b: any) => b.gainLossPercent - a.gainLossPercent)
+      .sort((a, b) => b.gainLossPercent - a.gainLossPercent)
       .slice(0, 5);
 
     return {
@@ -283,7 +283,14 @@ export class AssetsService {
     return history;
   }
 
-  async calculateSavingsValue(asset: any): Promise<number> {
+  async calculateSavingsValue(asset: {
+    type: string;
+    initialAmount?: number | null;
+    interestRate?: number | null;
+    createdAt: Date;
+    interestType?: string;
+    paymentFrequency?: string;
+  }): Promise<number> {
     if (asset.type !== 'SAVINGS') {
       return 0;
     }
@@ -307,7 +314,7 @@ export class AssetsService {
     }
   }
 
-  private validateMonetaryFields(dto: any): { isValid: boolean; errors: string[] } {
+  private validateMonetaryFields(dto: Record<string, unknown>): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
     const fieldsToValidate = ['current_value', 'valueOverride', 'purchase_price', 'initialAmount'];
     
@@ -355,7 +362,16 @@ export class AssetsService {
     };
   }
 
-  private async transformAsset(asset: any) {
+  private async transformAsset(asset: {
+    quantity?: number | bigint | Prisma.Decimal | null;
+    current_value?: number | null;
+    valueOverride?: number | null;
+    purchasePrice?: number | null;
+    initialAmount?: number | null;
+    interestRate?: number | null;
+    purchaseDate?: Date | null;
+    [key: string]: unknown;
+  }) {
     const transformed = {
       ...asset,
       quantity: Number(asset.quantity) || 0, // Convert Decimal to number
