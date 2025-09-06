@@ -156,16 +156,16 @@ Advanced Settings
 | | Storage Pool Selection | ✅ | ❌ | Low |
 | | GPU Passthrough | ✅ | ❌ | Low |
 | **Network Configuration** |
-| | Auto-detect Bridges | ✅ | ❌ | High |
+| | Auto-detect Bridges | ✅ | ✅ | High |
 | | IPv4 Configuration | ✅ | ✅ | - |
-| | IPv6 Configuration | ✅ | ❌ | Medium |
-| | MTU Customization | ✅ | ❌ | Low |
-| | APT Proxy Support | ✅ | ❌ | Medium |
-| | DNS Configuration | ✅ | ⚠️ | Medium |
+| | IPv6 Configuration | ✅ | ✅ | Medium |
+| | MTU Customization | ✅ | ✅ | Low |
+| | APT Proxy Support | ✅ | ✅ | Medium |
+| | DNS Configuration | ✅ | ✅ | Medium |
 | **Installation Features** |
-| | Resource Validation | ✅ | ❌ | High |
-| | Config Import/Export | ✅ | ❌ | High |
-| | Service Health Checks | ✅ | ❌ | High |
+| | Resource Validation | ✅ | ✅ | High |
+| | Config Import/Export | ✅ | ✅ | High |
+| | Service Health Checks | ✅ | ✅ | High |
 | | Automatic Backup | ✅ | ✅ | - |
 | | Database Migration | ✅ | ✅ | - |
 | | Secret Generation | ✅ | ✅ | - |
@@ -188,11 +188,12 @@ Advanced Settings
 
 ## Implementation Roadmap
 
-### Phase 1: Core Enhancements (Week 1)
+### Phase 1: Core Enhancements (Week 1) ✅ COMPLETE
 - [x] Document analysis and roadmap
-- [ ] Implement config file import/export
-- [ ] Add resource validation
-- [ ] Implement network auto-detection
+- [x] Implement config file import/export
+- [x] Add resource validation
+- [x] Implement network auto-detection
+- [x] Add service health checks
 
 ### Phase 2: TUI Improvements (Week 2)
 - [ ] Add back navigation to menus
@@ -203,7 +204,7 @@ Advanced Settings
 ### Phase 3: Network & Services (Week 3)
 - [ ] Add IPv6 configuration
 - [ ] Implement APT proxy support
-- [ ] Add service health checks
+- [x] Add service health checks ✅
 - [ ] Enhanced DNS configuration
 
 ### Phase 4: Diagnostics & Monitoring (Week 4)
@@ -312,11 +313,11 @@ check_ssl()         # SSL certificate validity
 - [ ] Prioritize features
 
 ### Implementation Phase
-- [ ] Create library modules
-  - [ ] `lib/config-manager.sh`
-  - [ ] `lib/resource-validator.sh`
-  - [ ] `lib/network-detector.sh`
-  - [ ] `lib/health-checks.sh`
+- [x] Create library modules
+  - [x] `lib/config-manager.sh` ✅
+  - [x] `lib/resource-validator.sh` ✅
+  - [x] `lib/network-detector.sh` ✅
+  - [x] `lib/health-checks.sh` ✅
   - [ ] `lib/diagnostics.sh`
 - [ ] Update main installer
 - [ ] Update TUI interface

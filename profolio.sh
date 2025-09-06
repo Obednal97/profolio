@@ -73,25 +73,33 @@ function install_no_tui {
 
 # TUI Main Menu
 function main_menu {
-    local choice
-    choice=$($TUI_TOOL --title "Profolio Installer" \
-        --menu "Select an installation option:" 15 60 6 \
-        "1" "Install Profolio (Recommended)" \
-        "2" "Update Existing Installation" \
-        "3" "Advanced Installation" \
-        "4" "System Requirements" \
-        "5" "About Profolio" \
-        "6" "Exit" 3>&1 1>&2 2>&3)
-    
-    case $choice in
-        1) install_profolio ;;
-        2) update_profolio ;;
-        3) advanced_install ;;
-        4) show_requirements ;;
-        5) show_about ;;
-        6) exit 0 ;;
-        *) exit 0 ;;
-    esac
+    while true; do
+        local choice
+        choice=$($TUI_TOOL --title "🚀 Profolio Installer v1.16.0" \
+            --menu "Select an option:" 20 70 12 \
+            "1" "🔧 Install Profolio (Recommended)" \
+            "2" "🔄 Update Existing Installation" \
+            "3" "⚙️  Advanced Installation" \
+            "4" "📋 System Tools & Diagnostics ▶" \
+            "5" "🔍 Health Check" \
+            "6" "💾 Config Management ▶" \
+            "7" "📊 System Requirements" \
+            "8" "📖 About Profolio" \
+            "9" "🔙 Exit" 3>&1 1>&2 2>&3)
+        
+        case $choice in
+            1) install_profolio ;;
+            2) update_profolio ;;
+            3) advanced_install ;;
+            4) system_tools_menu ;;
+            5) run_health_check ;;
+            6) config_menu ;;
+            7) show_requirements ;;
+            8) show_about ;;
+            9) exit 0 ;;
+            *) exit 0 ;;
+        esac
+    done
 }
 
 # Standard Installation
@@ -265,6 +273,267 @@ function show_about {
         --msgbox "Profolio - Professional Portfolio Management\n\nVersion: 1.14.16\nLicense: MIT\nAuthor: Obednal97\n\nA privacy-focused, self-hosted portfolio management system with:\n- Real-time portfolio tracking\n- Multi-asset support\n- Expense management\n- Property tracking\n- Bank account integration\n\nGitHub: github.com/Obednal97/profolio" 18 60
     
     main_menu
+}
+
+# System Tools & Diagnostics Menu
+function system_tools_menu {
+    while true; do
+        local choice
+        choice=$($TUI_TOOL --title "System Tools & Diagnostics" \
+            --menu "Select a tool:" 18 60 8 \
+            "1" "🔍 Validate System Resources" \
+            "2" "🌐 Detect Network Configuration" \
+            "3" "📊 Collect Diagnostics" \
+            "4" "🔧 Run Health Check" \
+            "5" "📝 Generate Reports" \
+            "6" "🔙 Back to Main Menu" 3>&1 1>&2 2>&3)
+        
+        case $choice in
+            1) validate_resources ;;
+            2) detect_network ;;
+            3) collect_diagnostics ;;
+            4) run_health_check ;;
+            5) generate_reports ;;
+            6) return ;;
+            *) return ;;
+        esac
+    done
+}
+
+# Config Management Menu
+function config_menu {
+    while true; do
+        local choice
+        choice=$($TUI_TOOL --title "Configuration Management" \
+            --menu "Select an option:" 16 60 7 \
+            "1" "📤 Export Current Config" \
+            "2" "📥 Import Config File" \
+            "3" "✅ Validate Config" \
+            "4" "📝 Generate Sample Config" \
+            "5" "📋 List Saved Configs" \
+            "6" "🔙 Back to Main Menu" 3>&1 1>&2 2>&3)
+        
+        case $choice in
+            1) export_configuration ;;
+            2) import_configuration ;;
+            3) validate_configuration ;;
+            4) generate_sample ;;
+            5) list_configurations ;;
+            6) return ;;
+            *) return ;;
+        esac
+    done
+}
+
+# Validate Resources
+function validate_resources {
+    clear
+    echo "Validating system resources..."
+    
+    # Source the resource validator
+    if [ -f "$SCRIPT_DIR/lib/resource-validator.sh" ]; then
+        source "$SCRIPT_DIR/lib/resource-validator.sh"
+        validate_all
+    else
+        # Fallback to basic check
+        echo "CPU Cores: $(nproc)"
+        echo "Memory: $(free -h | awk '/^Mem:/{print $2}')"
+        echo "Disk Space: $(df -h /opt | awk 'NR==2{print $4}')"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Detect Network Configuration
+function detect_network {
+    clear
+    echo "Detecting network configuration..."
+    
+    # Source the network detector
+    if [ -f "$SCRIPT_DIR/lib/network-detector.sh" ]; then
+        source "$SCRIPT_DIR/lib/network-detector.sh"
+        detect_all
+    else
+        # Fallback to basic detection
+        echo "IP Address: $(ip -4 addr show | grep inet | grep -v 127.0.0.1 | head -1 | awk '{print $2}')"
+        echo "Gateway: $(ip route | grep default | awk '{print $3}')"
+        echo "DNS: $(grep nameserver /etc/resolv.conf | head -1 | awk '{print $2}')"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Collect Diagnostics
+function collect_diagnostics {
+    clear
+    
+    if [ -f "$SCRIPT_DIR/lib/diagnostics.sh" ]; then
+        source "$SCRIPT_DIR/lib/diagnostics.sh"
+        run_diagnostics
+    else
+        echo "Diagnostics module not available"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Run Health Check
+function run_health_check {
+    clear
+    echo "Running health check..."
+    
+    if [ -f "$SCRIPT_DIR/lib/health-checks.sh" ]; then
+        source "$SCRIPT_DIR/lib/health-checks.sh"
+        check_all
+    else
+        # Basic health check
+        echo "Checking services..."
+        systemctl is-active --quiet profolio-backend && echo "✓ Backend: Running" || echo "✗ Backend: Not running"
+        systemctl is-active --quiet profolio-frontend && echo "✓ Frontend: Running" || echo "✗ Frontend: Not running"
+        systemctl is-active --quiet postgresql && echo "✓ Database: Running" || echo "✗ Database: Not running"
+        systemctl is-active --quiet nginx && echo "✓ Nginx: Running" || echo "✗ Nginx: Not running"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Export Configuration
+function export_configuration {
+    clear
+    
+    if [ -f "$SCRIPT_DIR/lib/config-manager.sh" ]; then
+        source "$SCRIPT_DIR/lib/config-manager.sh"
+        export_config
+        echo -e "\nConfiguration exported successfully!"
+    else
+        echo "Config manager not available"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Import Configuration
+function import_configuration {
+    local config_file
+    config_file=$($TUI_TOOL --title "Import Configuration" \
+        --inputbox "Enter config file path:" 8 60 "/opt/profolio/config/profolio.conf" 3>&1 1>&2 2>&3)
+    
+    if [ -n "$config_file" ] && [ -f "$config_file" ]; then
+        if [ -f "$SCRIPT_DIR/lib/config-manager.sh" ]; then
+            source "$SCRIPT_DIR/lib/config-manager.sh"
+            import_config "$config_file"
+            echo -e "\nConfiguration imported successfully!"
+        else
+            echo "Config manager not available"
+        fi
+    else
+        echo "Config file not found: $config_file"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Validate Configuration
+function validate_configuration {
+    local config_file
+    config_file=$($TUI_TOOL --title "Validate Configuration" \
+        --inputbox "Enter config file path:" 8 60 "/opt/profolio/config/profolio.conf" 3>&1 1>&2 2>&3)
+    
+    if [ -n "$config_file" ] && [ -f "$config_file" ]; then
+        if [ -f "$SCRIPT_DIR/lib/config-manager.sh" ]; then
+            source "$SCRIPT_DIR/lib/config-manager.sh"
+            validate_config "$config_file"
+        else
+            echo "Config manager not available"
+        fi
+    else
+        echo "Config file not found: $config_file"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Generate Sample Configuration
+function generate_sample {
+    clear
+    
+    if [ -f "$SCRIPT_DIR/lib/config-manager.sh" ]; then
+        source "$SCRIPT_DIR/lib/config-manager.sh"
+        generate_sample_config
+        echo -e "\nSample configuration generated!"
+    else
+        echo "Config manager not available"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# List Configurations
+function list_configurations {
+    clear
+    
+    if [ -f "$SCRIPT_DIR/lib/config-manager.sh" ]; then
+        source "$SCRIPT_DIR/lib/config-manager.sh"
+        list_configs
+    else
+        echo "Config manager not available"
+    fi
+    
+    read -p "Press Enter to continue..."
+}
+
+# Generate Reports
+function generate_reports {
+    local report_type
+    report_type=$($TUI_TOOL --title "Generate Reports" \
+        --menu "Select report type:" 14 50 5 \
+        "1" "Resource Report" \
+        "2" "Health Report" \
+        "3" "Network Report" \
+        "4" "Full Diagnostic Report" \
+        "5" "Back" 3>&1 1>&2 2>&3)
+    
+    case $report_type in
+        1)
+            if [ -f "$SCRIPT_DIR/lib/resource-validator.sh" ]; then
+                source "$SCRIPT_DIR/lib/resource-validator.sh"
+                generate_report "/tmp/profolio-resource-report.txt"
+                echo "Report saved to: /tmp/profolio-resource-report.txt"
+            fi
+            ;;
+        2)
+            if [ -f "$SCRIPT_DIR/lib/health-checks.sh" ]; then
+                source "$SCRIPT_DIR/lib/health-checks.sh"
+                generate_report "/tmp/profolio-health-report.txt"
+                echo "Report saved to: /tmp/profolio-health-report.txt"
+            fi
+            ;;
+        3)
+            if [ -f "$SCRIPT_DIR/lib/network-detector.sh" ]; then
+                source "$SCRIPT_DIR/lib/network-detector.sh"
+                detect_all
+                generate_network_config "/tmp/profolio-network-report.txt"
+                echo "Report saved to: /tmp/profolio-network-report.txt"
+            fi
+            ;;
+        4)
+            if [ -f "$SCRIPT_DIR/lib/diagnostics.sh" ]; then
+                source "$SCRIPT_DIR/lib/diagnostics.sh"
+                COLLECT_SYSTEM=true
+                COLLECT_NETWORK=true
+                COLLECT_SERVICES=true
+                COLLECT_LOGS=true
+                COLLECT_CONFIG=true
+                COLLECT_PERFORMANCE=true
+                run_diagnostics
+            fi
+            ;;
+        5)
+            return
+            ;;
+    esac
+    
+    read -p "Press Enter to continue..."
 }
 
 # Main execution
