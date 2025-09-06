@@ -76,17 +76,17 @@ function install_no_tui {
 function main_menu {
     while true; do
         local choice
-        choice=$($TUI_TOOL --title "🚀 Profolio Installer v1.16.0" \
+        choice=$($TUI_TOOL --title "Profolio Installer v1.16.0" \
             --menu "Select an option:" 20 70 12 \
-            "1" "🔧 Install Profolio (Recommended)" \
-            "2" "🔄 Update Existing Installation" \
-            "3" "⚙️  Advanced Installation" \
-            "4" "📋 System Tools & Diagnostics ▶" \
-            "5" "🔍 Health Check" \
-            "6" "💾 Config Management ▶" \
-            "7" "📊 System Requirements" \
-            "8" "📖 About Profolio" \
-            "9" "🔙 Exit" 3>&1 1>&2 2>&3)
+            1 "Install Profolio (Recommended)" \
+            2 "Update Existing Installation" \
+            3 "Advanced Installation" \
+            4 "System Tools & Diagnostics >" \
+            5 "Health Check" \
+            6 "Config Management >" \
+            7 "System Requirements" \
+            8 "About Profolio" \
+            9 "Exit" 3>&1 1>&2 2>&3)
         
         case $choice in
             1) install_profolio ;;
@@ -282,12 +282,12 @@ function system_tools_menu {
         local choice
         choice=$($TUI_TOOL --title "System Tools & Diagnostics" \
             --menu "Select a tool:" 18 60 8 \
-            "1" "🔍 Validate System Resources" \
-            "2" "🌐 Detect Network Configuration" \
-            "3" "📊 Collect Diagnostics" \
-            "4" "🔧 Run Health Check" \
-            "5" "📝 Generate Reports" \
-            "6" "🔙 Back to Main Menu" 3>&1 1>&2 2>&3)
+            1 "Validate System Resources" \
+            2 "Detect Network Configuration" \
+            3 "Collect Diagnostics" \
+            4 "Run Health Check" \
+            5 "Generate Reports" \
+            6 "Back to Main Menu" 3>&1 1>&2 2>&3)
         
         case $choice in
             1) validate_resources ;;
@@ -307,12 +307,12 @@ function config_menu {
         local choice
         choice=$($TUI_TOOL --title "Configuration Management" \
             --menu "Select an option:" 16 60 7 \
-            "1" "📤 Export Current Config" \
-            "2" "📥 Import Config File" \
-            "3" "✅ Validate Config" \
-            "4" "📝 Generate Sample Config" \
-            "5" "📋 List Saved Configs" \
-            "6" "🔙 Back to Main Menu" 3>&1 1>&2 2>&3)
+            1 "Export Current Config" \
+            2 "Import Config File" \
+            3 "Validate Config" \
+            4 "Generate Sample Config" \
+            5 "List Saved Configs" \
+            6 "Back to Main Menu" 3>&1 1>&2 2>&3)
         
         case $choice in
             1) export_configuration ;;
@@ -488,11 +488,11 @@ function generate_reports {
     local report_type
     report_type=$($TUI_TOOL --title "Generate Reports" \
         --menu "Select report type:" 14 50 5 \
-        "1" "Resource Report" \
-        "2" "Health Report" \
-        "3" "Network Report" \
-        "4" "Full Diagnostic Report" \
-        "5" "Back" 3>&1 1>&2 2>&3)
+        1 "Resource Report" \
+        2 "Health Report" \
+        3 "Network Report" \
+        4 "Full Diagnostic Report" \
+        5 "Back" 3>&1 1>&2 2>&3)
     
     case $report_type in
         1)
