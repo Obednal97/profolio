@@ -96,7 +96,8 @@ jobs:
         run: |
           cd backend && pnpm install --frozen-lockfile
           cd ../frontend && pnpm install --frozen-lockfile
-          pnpm exec playwright install chromium
+          # Install Playwright browsers with dependencies right after frontend install
+          cd frontend && pnpm exec playwright install --with-deps chromium
 
       - name: 🗄️ Setup test database
         run: |
@@ -113,6 +114,32 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
           JWT_SECRET: e2e-test-jwt-secret
           API_ENCRYPTION_KEY: e2e-test-encryption-key
+
+      - name: 🔍 Strict TypeScript type checking
+        run: |
+          echo "Checking backend for TypeScript errors..."
+          cd backend && pnpm tsc --noEmit --strict
+          echo "✅ Backend TypeScript check passed"
+
+          echo "Checking frontend for TypeScript errors..."
+          cd ../frontend && pnpm tsc --noEmit --strict
+          echo "✅ Frontend TypeScript check passed"
+
+      - name: 🚫 Check for 'any' types
+        run: |
+          echo "Checking for 'any' types in backend..."
+          if grep -r ": any" backend/src --include="*.ts" --include="*.tsx"; then
+            echo "❌ Found 'any' types in backend! These must be removed."
+            exit 1
+          fi
+          echo "✅ No 'any' types found in backend"
+
+          echo "Checking for 'any' types in frontend..."
+          if grep -r ": any" frontend/src --include="*.ts" --include="*.tsx"; then
+            echo "❌ Found 'any' types in frontend! These must be removed."
+            exit 1
+          fi
+          echo "✅ No 'any' types found in frontend"
 
       - name: 🏗️ Build applications
         run: |
@@ -231,11 +258,6 @@ jobs:
             cat frontend/frontend.log
             exit 1
           fi
-
-      - name: 📦 Install Playwright browsers
-        run: |
-          cd frontend
-          pnpm dlx playwright install --with-deps
 
       - name: 🧪 Run E2E tests
         run: |

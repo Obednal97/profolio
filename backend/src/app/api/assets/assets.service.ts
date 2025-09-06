@@ -374,7 +374,7 @@ export class AssetsService {
     };
   }
 
-  private async transformAsset(asset: any) {
+  private async transformAsset(asset: Prisma.AssetGetPayload<{ select: ReturnType<typeof this.getAssetSelect> }>) {
     const transformed = {
       ...asset,
       quantity: Number(asset.quantity) || 0, // Convert Decimal to number

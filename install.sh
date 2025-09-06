@@ -59,7 +59,7 @@ show_spinner() {
     local i=0
     
     echo -n "$message "
-    while kill -0 $pid 2>/dev/null; do
+    while kill -0 "$pid" 2>/dev/null; do
         i=$(((i+1) % 4))
         printf "\r$message ${spin:$i:1}"
         sleep 0.1
@@ -365,7 +365,7 @@ create_rollback_point() {
     
     # Get current git commit
     if [ -d "/opt/profolio/.git" ]; then
-        cd /opt/profolio
+        cd /opt/profolio || exit 1
         ROLLBACK_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
         
         if [ -n "$ROLLBACK_COMMIT" ]; then
@@ -412,7 +412,7 @@ execute_rollback() {
     # Try git rollback first
     if [ -n "$ROLLBACK_COMMIT" ] && [ -d "/opt/profolio/.git" ]; then
         info "Rolling back to git commit: ${ROLLBACK_COMMIT:0:8}"
-        cd /opt/profolio
+        cd /opt/profolio || exit 1
         
         if sudo -u profolio git reset --hard "$ROLLBACK_COMMIT"; then
             success "Git rollback successful"
@@ -449,7 +449,7 @@ execute_rollback() {
     if [ "$rollback_success" = true ]; then
         # Rebuild with previous version
         info "Rebuilding previous version..."
-        cd /opt/profolio
+        cd /opt/profolio || exit 1
         setup_environment true  # Pass true to indicate rollback mode (prevents re-prompting)
         
         # Try to rebuild, but don't fail rollback if build fails
@@ -537,7 +537,7 @@ checkout_version() {
         info "Switching to version: $version"
     fi
     
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     
     # Fetch latest refs and tags
     if ! sudo -u profolio git fetch origin --tags; then
@@ -639,7 +639,7 @@ APP_SIZE=""
 
 # Enhanced database migration handler with P3005 baseline support
 run_database_migrations() {
-    cd /opt/profolio/backend
+    cd /opt/profolio/backend || exit 1
     
     info "Attempting database migration deployment..."
     
@@ -1834,12 +1834,12 @@ build_application() {
     chown -R profolio:profolio /opt/profolio
     
     local steps=(
-        "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio pnpm install"
-        "Generating Prisma client" "cd /opt/profolio/backend && sudo -u profolio pnpm prisma:generate"
+        "Installing backend dependencies (dev mode for build)" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm install"
+        "Generating Prisma client" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm prisma:generate"
                         "Running database migrations" "run_database_migrations"
-        "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio pnpm run build"
-        "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio pnpm install"
-        "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio pnpm run build"
+        "Building NestJS backend" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm run build"
+        "Installing frontend dependencies (dev mode for build)" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio pnpm install"
+        "Building Next.js frontend" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio pnpm run build"
         "Optimizing for production deployment" "optimize_production_deployment"
         "Cleaning build artifacts and cache" "cleanup_build_artifacts"
     )
@@ -1852,7 +1852,7 @@ build_application() {
 cleanup_build_artifacts() {
     info "Cleaning up build artifacts and cache..."
     
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     
     # Frontend cleanup - remove Next.js cache and unnecessary build files
     info "  → Cleaning frontend build artifacts..."
@@ -1907,7 +1907,7 @@ optimize_production_safe() {
     
     # Backend: Remove only packages that are in devDependencies
     info "  → Backend: Removing packages listed in devDependencies..."
-    cd /opt/profolio/backend
+    cd /opt/profolio/backend || exit 1
     
     # Extract devDependencies from package.json and remove them
     if [ -f "package.json" ]; then
@@ -1933,7 +1933,7 @@ optimize_production_safe() {
     
     # Frontend: Remove only packages that are in devDependencies  
     info "  → Frontend: Removing packages listed in devDependencies..."
-    cd /opt/profolio/frontend
+    cd /opt/profolio/frontend || exit 1
     
     # Extract devDependencies from package.json and remove them
     if [ -f "package.json" ]; then
@@ -1964,7 +1964,7 @@ optimize_production_safe() {
     sudo -u profolio pnpm store prune 2>/dev/null || true
     
     # Calculate and show results
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     local final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
     local frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
     local backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
@@ -1984,7 +1984,7 @@ optimize_production_aggressive() {
     info "  → Step 1: Safe removal of devDependencies..."
     optimize_production_safe
     
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     
     # Ultra-aggressive cleanup
     info "  → Step 2: Ultra-aggressive cleanup (Docker-style optimization)..."
@@ -2053,7 +2053,7 @@ optimize_production_aggressive() {
     sudo -u profolio find . -name "*.log" -delete 2>/dev/null || true
     
     # Final calculations and warnings
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     local final_size=$(du -sh . 2>/dev/null | cut -f1 || echo "unknown")
     local frontend_nm_size=$(du -sh frontend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
     local backend_nm_size=$(du -sh backend/node_modules 2>/dev/null | cut -f1 || echo "unknown")
@@ -2616,7 +2616,7 @@ show_completion_status() {
     
     # Count changed files
     if [ -d "/opt/profolio/.git" ]; then
-        cd /opt/profolio
+        cd /opt/profolio || exit 1
         FILES_CHANGED_COUNT=$(git diff --name-only HEAD~1 2>/dev/null | wc -l || echo "0")
         if [ "$FILES_CHANGED_COUNT" = "0" ]; then
             FILES_CHANGED_COUNT=$(find . -type f -not -path "./.git/*" -not -path "./node_modules/*" | wc -l || echo "0")
@@ -2926,7 +2926,7 @@ restore_from_backup() {
         
         # Reinstall dependencies if needed
         if [ -d "/opt/profolio" ]; then
-            cd /opt/profolio
+            cd /opt/profolio || exit 1
             
             if [ -f "pnpm-lock.yaml" ]; then
                 info "Reinstalling dependencies with pnpm..."
@@ -3498,7 +3498,7 @@ update_installation() {
     
     # Update code with version control
     info "Downloading updates..."
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     
     # Stash any local changes
     if ! sudo -u profolio git stash push -m "Auto-stash before update $(date)"; then
@@ -3676,7 +3676,7 @@ repair_installation() {
     execute_command "systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true" "Resetting service status"
     
     # Configuration update (preserving existing credentials)
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     setup_environment
     
     # CRITICAL FIX: Add missing build step for repairs
@@ -3952,7 +3952,7 @@ fresh_install() {
     success "Repository downloaded and optimized"
     
     # Environment setup (for fresh installs, will generate new credentials)
-    cd /opt/profolio
+    cd /opt/profolio || exit 1
     if ! setup_environment; then
         error "Failed to setup environment"
         OPERATION_SUCCESS=false
@@ -4140,7 +4140,7 @@ download_profolio_incremental() {
     if [ -d "/opt/profolio" ] && [ -d "/opt/profolio/.git" ] && [ "$force_fresh" != true ]; then
         # Existing repository - do incremental update
         info "🚀 Performing incremental update (downloading only changes)..."
-        cd /opt/profolio
+        cd /opt/profolio || exit 1
         
         # Stash any local changes
         sudo -u profolio git stash push -m "Auto-stash before incremental update $(date)" 2>/dev/null || true
@@ -4238,7 +4238,7 @@ download_profolio_incremental() {
         setup_sparse_checkout "/opt/profolio"
         
         # Remove unnecessary files that might still be there
-        cd /opt/profolio
+        cd /opt/profolio || exit 1
         info "Removing unnecessary files to save space..."
         rm -rf docs/ .github/ www/ policies/ scripts/ .cursor/ || true
         rm -f CONTRIBUTING.md SECURITY.md .DS_Store || true
