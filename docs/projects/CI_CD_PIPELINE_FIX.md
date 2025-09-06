@@ -543,13 +543,14 @@ strategy:
 
 ### Immediate (Today)
 
-1. [ ] Add required environment variables to GitHub Secrets:
-   - `JWT_SECRET`
-   - `API_ENCRYPTION_KEY` (32 characters)
-   - Verify `DATABASE_URL` is set correctly
-2. [ ] Commit and push changes to trigger CI
-3. [ ] Monitor CI for infrastructure fixes
-4. [ ] Fix auth test logic issues (separate from CI infrastructure)
+1. [x] Add required environment variables to GitHub Secrets (user confirmed added)
+2. [x] Commit and push changes to trigger CI (completed Round 14)
+3. [x] Monitor CI for infrastructure fixes (infrastructure working!)
+4. [ ] Fix auth test logic issues:
+   - [ ] Debug why auth API endpoints timeout in CI
+   - [ ] Fix CORS/proxy configuration for API calls
+   - [ ] Ensure backend is running when frontend tests execute
+   - [ ] Add test user data or mocks for CI environment
 
 ### Long-term (This Month)
 
@@ -602,15 +603,24 @@ Before considering this fixed:
 
 ## Success Metrics
 
+### Infrastructure (✅ ACHIEVED)
+
 - ✅ 0 `any` types in codebase - **ACHIEVED (excludes comments)**
 - ✅ Backend and frontend build without errors - **ACHIEVED**
 - ✅ Playwright browsers install correctly - **ACHIEVED**
 - ✅ Type checking passes - **ACHIEVED**
 - ✅ Health checks working correctly - **ACHIEVED (fixed endpoint URL)**
 - ✅ `any` type check excludes comments - **ACHIEVED**
-- ⏳ 0 CI failures in 7 days - **PENDING GitHub verification**
-- ⏳ 100% E2E test pass rate - **PENDING full test run**
-- ⏳ < 5 minute CI execution time - **TO BE MEASURED**
+- ✅ Frontend server starts in CI - **ACHIEVED (Round 14)**
+- ✅ Tests can connect to servers - **ACHIEVED (no CONNECTION_REFUSED)**
+
+### Application (❌ IN PROGRESS)
+
+- ❌ 100% E2E test pass rate - **25% pass rate (3/12 tests)**
+- ❌ Auth API responds in CI - **Timeouts after 30+ seconds**
+- ❌ Protected routes work - **Not redirecting properly**
+- ⏳ 0 CI failures in 7 days - **PENDING full fixes**
+- ⏳ < 5 minute CI execution time - **Currently ~8 minutes**
 
 ---
 
@@ -653,3 +663,137 @@ Before considering this fixed:
 - ✅ Added test artifact uploads for debugging
 
 This was a fundamental oversight - E2E tests need a running server!
+
+**2025-09-06 (Round 15 - Application Logic Issues)**: CI Infrastructure Working, App Tests Failing
+
+## Current Status: Infrastructure ✅ FIXED | Application ❌ FAILING
+
+### Infrastructure Success (Round 14 Results):
+
+- ✅ Frontend server starts successfully in CI
+- ✅ Tests connect to localhost:3000 without connection errors
+- ✅ 3 tests pass (proving infrastructure works)
+- ✅ Backend passes all tests with coverage
+
+### Application Logic Issues Discovered:
+
+#### Test Results Summary:
+
+- **Total Tests**: 12 (excluding skipped)
+- **Passed**: 3 tests ✅
+- **Failed**: 9 tests ❌
+- **Skipped**: 2 tests
+
+#### Passing Tests (Proving Infrastructure Works):
+
+1. ✅ "should display login form" - 779ms
+2. ✅ "should redirect unauthenticated users to sign-in" - 963ms
+3. ✅ "should authenticate with demo mode" - 2.2s
+
+#### Failing Tests (Application Issues):
+
+**1. Authentication API Issues (32+ second timeouts)**:
+
+- ❌ "should show validation errors for invalid credentials" - Times out after 32.5s
+- ❌ "should prevent SQL injection in login form" - Times out after 32.2s
+- ❌ "should redirect to dashboard after successful login" - Times out after 32.3s
+
+**Root Cause**: The login API endpoint is not responding or timing out. Tests expect specific error messages but get network timeouts instead.
+
+**2. Preloading & Session Storage Issues**:
+
+- ❌ "should only preload after authentication" - 5.0s
+- ❌ "should track preloading completion in session storage" - 5.0s
+- ❌ "should support manual preload cache clearing" - 5.2s
+
+**Root Cause**: The preloading mechanism isn't working correctly in test environment.
+
+**3. Protected Routes Issues**:
+
+- ❌ "should protect authenticated routes" - Times out after 30.6s
+
+**Root Cause**: Auth middleware might not be properly configured for test environment.
+
+### Action Items for Application Fixes:
+
+#### Immediate (High Priority):
+
+1. **Fix Authentication API Endpoint**:
+   - Check if backend auth routes are accessible from frontend in CI
+   - Verify CORS configuration allows localhost:3000 → localhost:3001
+   - Check if mock/test auth responses are needed for CI
+   - Investigate why requests timeout after 30+ seconds
+
+2. **Environment Configuration**:
+
+   ```bash
+   # Verify these are set in GitHub Secrets:
+   NEXT_PUBLIC_AUTH_MODE=local
+   NEXT_PUBLIC_API_URL=http://localhost:3001
+   JWT_SECRET=<secure-secret>
+   API_ENCRYPTION_KEY=<32-char-key>
+   ```
+
+3. **Debug Timeout Issues**:
+   - Add logging to auth endpoints
+   - Check if backend is actually receiving requests
+   - Verify API proxy routes in Next.js are working
+
+4. **Preloading Mechanism**:
+   - Check if preloading is disabled in test mode
+   - Verify session storage is accessible in Playwright tests
+   - Consider mocking preload responses for tests
+
+#### Test-Specific Fixes Needed:
+
+1. **auth.spec.ts:32** - Validation errors test:
+   - Expected: "Invalid email or password" message
+   - Actual: Request timeout
+   - Fix: Ensure `/api/auth/login` endpoint responds with proper error
+
+2. **auth.spec.ts:52** - SQL injection test:
+   - Expected: Sanitized input handling
+   - Actual: Request timeout
+   - Fix: Backend should handle malicious input gracefully
+
+3. **auth.spec.ts:91** - Dashboard redirect test:
+   - Expected: Successful login → redirect to /app/dashboard
+   - Actual: Login request timeout
+   - Fix: Mock successful auth response for test user
+
+4. **auth.spec.ts:154-229** - Preloading tests:
+   - Expected: Preload triggers after auth
+   - Actual: Preload mechanism not working
+   - Fix: Check preload service configuration
+
+5. **auth.spec.ts:260** - Protected routes test:
+   - Expected: Redirect to sign-in when unauthorized
+   - Actual: Timeout
+   - Fix: Verify auth guards are active
+
+### Debugging Commands for Local Testing:
+
+```bash
+# Test backend auth endpoint directly
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"wrong"}'
+
+# Check if API proxy works in frontend
+cd frontend
+NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm dev
+# Then test: curl http://localhost:3000/api/auth/login
+
+# Run specific failing test locally
+cd frontend
+pnpm playwright test auth.spec.ts:32 --headed --debug
+```
+
+### Success Criteria for Application Fixes:
+
+- [ ] All auth API endpoints respond within 5 seconds
+- [ ] Validation errors show proper messages (not timeouts)
+- [ ] Login flow completes successfully for test users
+- [ ] Protected routes redirect when unauthorized
+- [ ] Preloading mechanism works in test environment
+- [ ] All 12 E2E tests pass consistently
