@@ -105,6 +105,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
 
+      - name: 🧪 Run backend unit tests
+        run: |
+          cd backend && pnpm test:ci
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
+          JWT_SECRET: e2e-test-jwt-secret
+          API_ENCRYPTION_KEY: e2e-test-encryption-key
+
       - name: 🏗️ Build applications
         run: |
           cd backend && pnpm run build
@@ -117,8 +125,8 @@ jobs:
 
       - name: 🚀 Start backend service
         run: |
-          cd backend && pnpm run start:prod &
-          sleep 10
+          cd backend && pnpm start &
+          sleep 15
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
           JWT_SECRET: e2e-test-jwt-secret
@@ -128,13 +136,33 @@ jobs:
       - name: 🚀 Start frontend service
         run: |
           cd frontend && pnpm start &
-          sleep 10
+          sleep 15
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXT_PUBLIC_AUTH_MODE: local
 
       - name: 🧪 Health check services
         run: |
+          echo "Checking backend health..."
+          for i in {1..10}; do
+            if curl -f http://localhost:3001/health; then
+              echo "Backend is healthy"
+              break
+            fi
+            echo "Waiting for backend... (attempt $i/10)"
+            sleep 3
+          done
           curl -f http://localhost:3001/health || exit 1
+          
+          echo "Checking frontend health..."
+          for i in {1..10}; do
+            if curl -f http://localhost:3000; then
+              echo "Frontend is healthy"
+              break
+            fi
+            echo "Waiting for frontend... (attempt $i/10)"
+            sleep 3
+          done
           curl -f http://localhost:3000 || exit 1
 
       - name: 📦 Install Playwright browsers
@@ -145,9 +173,10 @@ jobs:
       - name: 🧪 Run E2E tests
         run: |
           cd frontend
-          pnpm run test:e2e
+          pnpm run test:ci
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
+          BACKEND_URL: http://localhost:3001
 
       - name: 📊 Upload test results
         uses: actions/upload-artifact@v4

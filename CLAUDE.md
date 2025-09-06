@@ -280,9 +280,11 @@ PORT=3001
 ### Modifying Database Schema
 
 1. Edit `backend/prisma/schema.prisma`
-2. Run `pnpm prisma:migrate` in backend
-3. Update DTOs in backend module
-4. Update TypeScript types in frontend
+2. Run `pnpm prisma migrate dev --name <migration_name>` in backend to generate proper migration files
+3. **IMPORTANT**: Never manually create migration SQL files - always use Prisma CLI
+4. Run `pnpm prisma:generate` to update Prisma Client
+5. Update DTOs in backend module
+6. Update TypeScript types in frontend
 
 ### CSS Architecture Guidelines
 
