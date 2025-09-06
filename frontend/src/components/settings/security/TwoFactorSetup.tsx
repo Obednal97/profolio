@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
+import { apiClient } from '@/lib/apiClient';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+// Using standard HTML input instead of missing UI component
+// Using inline alert styling instead of missing UI component
 import { Loader2, Shield, Copy, Download, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 
@@ -139,11 +139,12 @@ ${setupData.backupCodes.join('\n')}`;
             <label htmlFor="password" className="block text-sm font-medium mb-2">
               Verify your password to continue
             </label>
-            <Input
+            <input
               id="password"
+              className="mt-1 block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               placeholder="Enter your password"
               className="mb-4"
               data-testid="2fa-password-input"

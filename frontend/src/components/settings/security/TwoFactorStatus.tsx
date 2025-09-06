@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
+import { apiClient } from '@/lib/apiClient';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import GlassCard from '@/components/cards/GlassCard';
+// Using inline alert styling instead of missing UI component
 import { Shield, ShieldCheck, ShieldOff, RefreshCw, Key } from 'lucide-react';
 import { TwoFactorSetup } from './TwoFactorSetup';
-import { format } from 'date-fns';
+// Date formatting - will install date-fns
+// import { format } from 'date-fns';
 
 interface TwoFactorStatusData {
   enabled: boolean;
@@ -114,7 +115,7 @@ export function TwoFactorStatus() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-green-800">Enabled since</span>
                   <span className="text-sm text-green-700">
-                    {format(new Date(status.verifiedAt), 'dd MMM yyyy')}
+                    {new Date(status.verifiedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 </div>
               )}
@@ -241,7 +242,7 @@ export function TwoFactorStatus() {
                   </Button>
                   <Button
                     type="submit"
-                    variant="destructive"
+                    variant="danger"
                     className="flex-1"
                     disabled={disableMutation.isPending}
                   >

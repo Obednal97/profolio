@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
+import { apiClient } from '@/lib/apiClient';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+// Using inline alert styling instead of missing UI component
 import { Loader2, Shield, KeyRound } from 'lucide-react';
 
 interface TwoFactorVerificationProps {
