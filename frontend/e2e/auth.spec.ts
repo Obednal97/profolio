@@ -14,8 +14,11 @@ test.describe("Authentication @security", () => {
     // Navigate directly to sign-in page
     await page.goto('/auth/signIn');
     
-    // Wait for page to load
-    await page.waitForLoadState('networkidle');
+    // Wait for page to load (use domcontentloaded for faster CI)
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Wait for email input to be visible before checking other elements
+    await page.waitForSelector('#email', { state: 'visible', timeout: 30000 });
 
     // Check for form elements using actual IDs and data-testid
     await expect(page.locator('#email')).toBeVisible();
@@ -31,7 +34,8 @@ test.describe("Authentication @security", () => {
   }) => {
     // Navigate to sign-in page
     await page.goto('/auth/signIn');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForSelector('#email', { state: 'visible', timeout: 30000 });
 
     // Fill with invalid credentials
     await page.fill('#email', 'invalid@example.com');
@@ -50,7 +54,8 @@ test.describe("Authentication @security", () => {
   }) => {
     // Navigate to sign-in page
     await page.goto('/auth/signIn');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForSelector('#email', { state: 'visible', timeout: 30000 });
 
     // Attempt SQL injection
     await page.fill('#email', "admin'; DROP TABLE users; --");
@@ -100,7 +105,8 @@ test.describe("Authentication @security", () => {
 
     // Navigate to sign-in page
     await page.goto('/auth/signIn');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForSelector('#email', { state: 'visible', timeout: 30000 });
     
     await page.fill('#email', "test@example.com");
     await page.fill('#password', "correctpassword");
@@ -129,7 +135,8 @@ test.describe("Authentication @security", () => {
 
   test("should authenticate with demo mode", async ({ page }) => {
     await page.goto("/auth/signIn");
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForSelector('#email', { state: 'visible', timeout: 30000 });
 
     // Click the demo mode button
     await page.click('button:has-text("Try Demo")');

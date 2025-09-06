@@ -125,45 +125,104 @@ jobs:
 
       - name: 🚀 Start backend service
         run: |
-          cd backend && pnpm start &
-          sleep 15
+          cd backend
+          # Start backend with nohup and capture logs
+          nohup pnpm start > backend.log 2>&1 &
+          echo $! > backend.pid
+          echo "Backend PID: $(cat backend.pid)"
+          sleep 20
+          
+          # Verify backend is still running
+          if ! kill -0 $(cat backend.pid) 2>/dev/null; then
+            echo "❌ Backend failed to start. Logs:"
+            cat backend.log
+            exit 1
+          fi
+          echo "✅ Backend is running"
         env:
+          NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
           JWT_SECRET: e2e-test-jwt-secret
-          API_ENCRYPTION_KEY: e2e-test-encryption-key
+          API_ENCRYPTION_KEY: e2e-test-encryption-key-32-characters!
           PORT: 3001
+
+      - name: 📝 Create mock firebase config
+        run: |
+          mkdir -p frontend/public
+          echo '{"apiKey":"mock-api-key","authDomain":"mock.firebaseapp.com","projectId":"mock-project","storageBucket":"mock.appspot.com","messagingSenderId":"123456789","appId":"1:123456789:web:abc123"}' > frontend/public/firebase-config.json
+          echo "✅ Created mock firebase config"
 
       - name: 🚀 Start frontend service
         run: |
-          cd frontend && pnpm start &
-          sleep 15
+          cd frontend
+          nohup pnpm start > frontend.log 2>&1 &
+          echo $! > frontend.pid
+          echo "Frontend PID: $(cat frontend.pid)"
+          sleep 20
+          
+          # Verify frontend is still running
+          if ! kill -0 $(cat frontend.pid) 2>/dev/null; then
+            echo "❌ Frontend failed to start. Logs:"
+            cat frontend.log
+            exit 1
+          fi
+          echo "✅ Frontend is running"
         env:
+          NODE_ENV: test
           NEXT_PUBLIC_API_URL: http://localhost:3001
           NEXT_PUBLIC_AUTH_MODE: local
 
       - name: 🧪 Health check services
         run: |
           echo "Checking backend health..."
-          for i in {1..10}; do
-            if curl -f http://localhost:3001/health; then
-              echo "Backend is healthy"
+          for i in {1..20}; do
+            if curl -f http://localhost:3001/health 2>/dev/null; then
+              echo "✅ Backend is healthy"
               break
             fi
-            echo "Waiting for backend... (attempt $i/10)"
+            echo "Waiting for backend... (attempt $i/20)"
             sleep 3
+            
+            # Check if backend process is still running
+            if [ -f backend/backend.pid ] && ! kill -0 $(cat backend/backend.pid) 2>/dev/null; then
+              echo "❌ Backend process died. Logs:"
+              cat backend/backend.log
+              exit 1
+            fi
           done
-          curl -f http://localhost:3001/health || exit 1
+          
+          # Final health check
+          if ! curl -f http://localhost:3001/health; then
+            echo "❌ Backend health check failed after 20 attempts"
+            echo "Backend logs:"
+            cat backend/backend.log
+            exit 1
+          fi
           
           echo "Checking frontend health..."
-          for i in {1..10}; do
-            if curl -f http://localhost:3000; then
-              echo "Frontend is healthy"
+          for i in {1..20}; do
+            if curl -f http://localhost:3000 2>/dev/null; then
+              echo "✅ Frontend is healthy"
               break
             fi
-            echo "Waiting for frontend... (attempt $i/10)"
+            echo "Waiting for frontend... (attempt $i/20)"
             sleep 3
+            
+            # Check if frontend process is still running
+            if [ -f frontend/frontend.pid ] && ! kill -0 $(cat frontend/frontend.pid) 2>/dev/null; then
+              echo "❌ Frontend process died. Logs:"
+              cat frontend/frontend.log
+              exit 1
+            fi
           done
-          curl -f http://localhost:3000 || exit 1
+          
+          # Final health check
+          if ! curl -f http://localhost:3000; then
+            echo "❌ Frontend health check failed after 20 attempts"
+            echo "Frontend logs:"
+            cat frontend/frontend.log
+            exit 1
+          fi
 
       - name: 📦 Install Playwright browsers
         run: |
@@ -175,8 +234,10 @@ jobs:
           cd frontend
           pnpm run test:ci
         env:
+          NODE_ENV: test
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           BACKEND_URL: http://localhost:3001
+          NEXT_PUBLIC_AUTH_MODE: local
 
       - name: 📊 Upload test results
         uses: actions/upload-artifact@v4
@@ -185,6 +246,16 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 30
+
+      - name: 📊 Upload service logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: service-logs
+          path: |
+            backend/backend.log
+            frontend/frontend.log
+          retention-days: 7
 
   security-tests:
     name: 🔒 Security E2E Tests

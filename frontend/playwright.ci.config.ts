@@ -18,6 +18,10 @@ export default defineConfig({
     trace: "retry-with-trace",
     /* Set base URL from environment or default */
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
+    /* Increase action timeout for CI */
+    actionTimeout: 30000,
+    /* Increase navigation timeout for CI */
+    navigationTimeout: 60000,
   },
 
   /* Minimal browser set for CI - just Chromium for speed */
@@ -31,8 +35,13 @@ export default defineConfig({
     },
   ],
 
-  /* Reasonable timeouts for CI */
-  timeout: 30 * 1000,
+  /* Increased timeouts for CI environment */
+  timeout: 60 * 1000,
+  
+  /* Expect timeout for assertions */
+  expect: {
+    timeout: 30 * 1000,
+  },
   
   /* Allow one retry in CI for flaky tests */
   retries: 1,
@@ -44,7 +53,7 @@ export default defineConfig({
   workers: 1,
   
   /* Global test timeout */
-  globalTimeout: 10 * 60 * 1000,
+  globalTimeout: 15 * 60 * 1000,
   
   /* Reporter configuration for CI */
   reporter: [
