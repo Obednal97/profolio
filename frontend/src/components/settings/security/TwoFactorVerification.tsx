@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 // Using inline alert styling instead of missing UI component
 import { Loader2, Shield, KeyRound } from 'lucide-react';
@@ -28,12 +28,12 @@ export function TwoFactorVerification({
         ? '/api/auth/2fa/backup'
         : '/api/auth/2fa/complete';
       
-      const response = await apiClient.post(endpoint, {
+      const response = await apiClient.post<{ token?: string; success?: boolean }>(endpoint, {
         verificationToken,
         code: useBackupCode ? code : code.replace(/\s/g, ''),
       });
       
-      return response.data;
+      return response;
     },
     onSuccess: (data) => {
       if (data.token) {
@@ -86,9 +86,9 @@ export function TwoFactorVerification({
       </p>
 
       {error && (
-        <Alert className="mb-4 border-red-200 bg-red-50">
-          <AlertDescription className="text-red-800">{error}</AlertDescription>
-        </Alert>
+        <div className="mb-4 p-4 rounded-lg border border-red-200 bg-red-50">
+          <p className="text-red-800">{error}</p>
+        </div>
       )}
 
       <form onSubmit={handleSubmit}>
