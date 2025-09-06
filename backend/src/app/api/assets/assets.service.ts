@@ -375,8 +375,9 @@ export class AssetsService {
   }
 
   private async transformAsset(asset: Record<string, unknown>) {
-    const transformed = {
+    const transformed: Record<string, unknown> = {
       ...asset,
+      type: asset.type, // Preserve type property explicitly
       quantity: Number(asset.quantity) || 0, // Convert Decimal to number
       current_value: asset.current_value ? MoneyUtils.fromCents(asset.current_value as number) : null,
       valueOverride: asset.valueOverride ? MoneyUtils.fromCents(asset.valueOverride as number) : null,
@@ -392,9 +393,16 @@ export class AssetsService {
     // Simplified current value calculation - just use what's stored
     if (!transformed.current_value && transformed.purchase_price && transformed.quantity) {
       // Fallback to purchase price * quantity
-      transformed.current_value = MoneyUtils.safeMultiply(transformed.purchase_price, transformed.quantity);
+      transformed.current_value = MoneyUtils.safeMultiply(transformed.purchase_price as number, transformed.quantity as number);
     }
 
-    return transformed;
+    return transformed as {
+      [key: string]: unknown;
+      type: unknown;
+      quantity: number;
+      current_value: number | null;
+      purchase_price: number | null;
+      initialAmount: number | null;
+    };
   }
 }

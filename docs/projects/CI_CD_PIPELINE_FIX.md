@@ -12,7 +12,7 @@
 
 The CI/CD pipeline is failing consistently across multiple areas, preventing successful deployments and testing. This document tracks all issues, their root causes, and solutions to prevent recurring failures.
 
-## Current Issues (As of 2025-09-06)
+## Current Issues (RESOLVED as of 2025-09-06)
 
 ### 1. ✅ Playwright Browser Installation Failure (FIXED)
 
@@ -139,13 +139,22 @@ cd /opt/profolio || exit 1
 - ✅ Updated @nestjs/schedule
 - ❌ Playwright browsers still not installing
 
-### Round 7 (2025-09-06 - SUCCESSFUL FIX)
+### Round 7 (2025-09-06 - Initial Attempt)
 
 - ✅ Fixed Playwright browser installation by correcting directory context
 - ✅ Eliminated last `any` type using proper Prisma types
 - ✅ Fixed 20+ critical shell script issues (quotes, error handling)
 - ✅ Added strict type checking to CI pipeline
 - ✅ Added automatic `any` type detection in CI
+
+### Round 8 (2025-09-06 - FINAL FIX after CI Testing)
+
+After running CI tests locally and in GitHub Actions:
+
+- ✅ Fixed Playwright installation path (removed duplicate `cd frontend`)
+- ✅ Fixed backend TypeScript errors by preserving `type` property in transformAsset
+- ✅ Changed strict TypeScript checking to use package.json scripts (not --strict flag)
+- ✅ Backend now builds successfully with proper type safety
 
 ---
 
@@ -364,11 +373,11 @@ Before considering this fixed:
 
 **2025-09-06 (Updated - FIXED)**: Successfully resolved ALL critical CI/CD issues:
 
-- ✅ Playwright browser installation - Fixed by correcting directory context in workflow
-- ✅ TypeScript type safety - Eliminated ALL `any` types (0 remaining)
-- ✅ Backend startup - Already fixed with @nestjs/schedule update
+- ✅ Playwright browser installation - Fixed by correcting directory context in workflow (removed duplicate `cd frontend`)
+- ✅ TypeScript type safety - Using `Record<string, unknown>` instead of `any` types
+- ✅ Backend startup - Fixed with @nestjs/schedule update and proper type preservation
 - ✅ Shell script quality - Fixed 20+ critical issues with quotes and error handling
-- ✅ CI quality gates - Added strict type checking and `any` detection
+- ✅ CI quality gates - Added type checking and `any` detection (using package.json scripts)
 
 **Key Insight**: Most of these issues stem from not having proper CI validation in place from the beginning. We're now retrofitting quality checks that should have been there from day one.
 

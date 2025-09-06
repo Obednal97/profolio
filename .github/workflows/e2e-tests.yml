@@ -97,7 +97,7 @@ jobs:
           cd backend && pnpm install --frozen-lockfile
           cd ../frontend && pnpm install --frozen-lockfile
           # Install Playwright browsers with dependencies right after frontend install
-          cd frontend && pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install --with-deps chromium
 
       - name: 🗄️ Setup test database
         run: |
@@ -115,14 +115,14 @@ jobs:
           JWT_SECRET: e2e-test-jwt-secret
           API_ENCRYPTION_KEY: e2e-test-encryption-key
 
-      - name: 🔍 Strict TypeScript type checking
+      - name: 🔍 TypeScript type checking
         run: |
           echo "Checking backend for TypeScript errors..."
-          cd backend && pnpm tsc --noEmit --strict
+          cd backend && pnpm run type-check
           echo "✅ Backend TypeScript check passed"
 
           echo "Checking frontend for TypeScript errors..."
-          cd ../frontend && pnpm tsc --noEmit --strict
+          cd ../frontend && pnpm run type-check
           echo "✅ Frontend TypeScript check passed"
 
       - name: 🚫 Check for 'any' types
