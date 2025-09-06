@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Get the token from cookies
     const cookieStore = await cookies();

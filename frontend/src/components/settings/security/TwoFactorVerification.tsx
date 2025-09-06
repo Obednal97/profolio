@@ -9,7 +9,7 @@ import { Loader2, Shield, KeyRound } from 'lucide-react';
 
 interface TwoFactorVerificationProps {
   verificationToken: string;
-  onSuccess: (data: any) => void;
+  onSuccess: (data: { token?: string; success?: boolean }) => void;
   onCancel?: () => void;
 }
 
@@ -42,7 +42,7 @@ export function TwoFactorVerification({
       }
       onSuccess(data);
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
       setError(error.response?.data?.error || 'Invalid code. Please try again.');
     },
   });

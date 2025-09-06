@@ -83,7 +83,7 @@ function SignInPage() {
 
     try {
       // Try to sign in
-      const result = await signIn(formData.email, formData.password);
+      await signIn(formData.email, formData.password);
       
       // Check if 2FA is required (this would need to be returned from signIn)
       // For now, we'll check the response from the API
@@ -116,7 +116,7 @@ function SignInPage() {
     }
   };
 
-  const handle2FASuccess = (data: any) => {
+  const handle2FASuccess = (data: { token?: string; success?: boolean }) => {
     // Handle successful 2FA verification
     logger.auth("2FA verification successful");
     if (data.token) {
