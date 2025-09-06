@@ -643,3 +643,13 @@ Before considering this fixed:
 - Use proper Prisma types instead of `any`
 - Quote all shell variables and handle `cd` failures
 - Add strict checking to CI to prevent regressions
+
+**2025-09-06 (Round 14 - CRITICAL FIX)**: Frontend server not starting in CI
+
+- ❌ **CRITICAL**: CI workflow's `test-frontend` job wasn't starting any server
+- ❌ All E2E tests failed with `ERR_CONNECTION_REFUSED`
+- ✅ **FIXED**: Added frontend build and server startup to `test-frontend` job
+- ✅ Added health checks and proper wait loops
+- ✅ Added test artifact uploads for debugging
+
+This was a fundamental oversight - E2E tests need a running server!

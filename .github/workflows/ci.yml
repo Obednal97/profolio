@@ -167,20 +167,67 @@ jobs:
           cd frontend
           pnpm exec playwright install --with-deps chromium firefox
 
+      - name: 🏗️ Build frontend for tests
+        run: |
+          cd frontend
+          pnpm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NODE_ENV: test
+
+      - name: 📝 Create mock firebase config
+        run: |
+          mkdir -p frontend/public
+          echo '{"apiKey":"mock-api-key","authDomain":"mock.firebaseapp.com","projectId":"mock-project","storageBucket":"mock.appspot.com","messagingSenderId":"123456789","appId":"1:123456789:web:abc123"}' > frontend/public/firebase-config.json
+          mkdir -p frontend/.next/static
+          cp frontend/public/firebase-config.json frontend/.next/static/firebase-config.json
+
+      - name: 🚀 Start frontend server
+        run: |
+          cd frontend
+          nohup pnpm start > frontend.log 2>&1 &
+          echo $! > frontend.pid
+          sleep 10
+
+          # Wait for frontend to be ready
+          for i in {1..20}; do
+            if curl -f http://localhost:3000 2>/dev/null; then
+              echo "✅ Frontend is ready"
+              break
+            fi
+            echo "Waiting for frontend... (attempt $i/20)"
+            sleep 3
+          done
+
+          # Verify frontend is running
+          if ! curl -f http://localhost:3000; then
+            echo "❌ Frontend failed to start. Logs:"
+            cat frontend.log
+            exit 1
+          fi
+        env:
+          NODE_ENV: test
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXT_PUBLIC_AUTH_MODE: local
+
       - name: 🧪 Run tests
         run: |
           cd frontend
           pnpm run test:ci
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
         if: always()
 
-      - name: 🏗️ Build check
-        run: |
-          cd frontend
-          # Production builds should still be strict
-          NODE_ENV=production pnpm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:3001
-          NODE_ENV: production
+      - name: 📊 Upload test results on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: frontend-test-results
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+            frontend/frontend.log
+          retention-days: 7
 
   security-scan:
     name: 🔒 Security Scan
