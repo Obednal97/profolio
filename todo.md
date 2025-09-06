@@ -1,250 +1,141 @@
-# Profolio TODO List
+# Profolio Development Overview
+*Last updated: September 2025*
 
-## 🔴 **CRITICAL PRIORITY** (Security & Production Blockers)
+## 📁 Organization Structure
 
-- [x] ✅ **COMPLETED** - **CRITICAL FIX** - Mock API hardcoded to true, preventing real backend usage even with production env vars (environment-based detection implemented)
-- [x] ✅ **COMPLETED** - **CRITICAL FIX** - Multiple hardcoded configurations preventing proper environment-based deployment:
-  - BYPASS_AUTH hardcoded to false instead of environment-based (now uses NEXT_PUBLIC_BYPASS_AUTH)
-  - API client defaulting to frontend port 3000 instead of backend port 3001 (corrected)
-  - Backend CORS origin pointing to backend port 3001 instead of frontend port 3000 (corrected)
-- [x] ✅ **COMPLETED** - **CRITICAL FIX** - Missing API proxy routes causing 404 errors after mock API disable:
-  - Created `/api/properties/*` proxy routes (create, update, delete)
-  - Created `/api/expenses/*` proxy routes
-  - Created `/api/assets/summary` and `/api/assets/history` for dashboard
-  - Fixed request/response format transformation (mock API → REST API)
-  - Fixed authentication token extraction from httpOnly cookies
-- [x] ✅ **COMPLETED** - **CRITICAL FIX** - API authentication and format mismatch between frontend and backend:
-  - Fixed MarketDataWidget using wrong API format (POST with mock format → GET with REST format)
-  - Added defensive error handling for malformed API requests
-  - Standardized authentication header passing between proxy routes and backend
-- [x] ✅ **COMPLETED** - **CRITICAL FIX** - Backend module registration and dependency injection errors:
-  - Fixed PropertiesModule and ExpensesModule missing PrismaService dependencies
-  - Fixed MarketDataWidget using mock API format on real proxy routes
-  - Added defensive error handling for malformed API requests
-  - All endpoints now properly registered and functional
-- [x] ✅ **COMPLETED** - **CRITICAL FIX** - Google Places API CORS errors and postcode search limitations:
-  - Created server-side proxy routes for Google Places Autocomplete and Details APIs
-  - Implemented smart postcode detection with helpful user guidance
-  - Added support for UK, US, Canadian, and Australian postcode formats
-  - Enhanced UX with contextual tips when users enter postcodes only
-  - Maintained fallback to OpenStreetMap for users without Google API keys
-- [x] ✅ **COMPLETED** - FIX - Production Firebase Admin SDK verification implementation (`backend/src/app/api/auth/auth.controller.ts`)
-- [x] ✅ **COMPLETED** - FIX - Role-based access control for admin endpoints (`backend/src/updates/updates.controller.ts` & `backend/src/app/api/admin/users/users.controller.ts`)
-- [x] ✅ **COMPLETED** - FIX - Replace in-memory API key storage with secure database storage (`frontend/src/app/api/user/api-keys/route.ts`)
-- [x] ✅ **COMPLETED** - FIX - Mixed Content Security Errors - HTTP resources loaded over HTTPS causing browser blocking
-- [x] ✅ **COMPLETED** - FIX - Missing static assets causing 404 errors (`desktop-dashboard.png`, `mobile-dashboard.png`)
-- [x] ✅ **COMPLETED** - FIX - Failed notification API calls (`Failed to fetch notifications`, `Failed to refresh unread count`)
-- [x] ✅ **COMPLETED** - FIX - Delete account should be disabled in Demo mode, clicking delete account returns a blank white page, can only be solved right now by clearing the cache and refreshing
+This project uses a three-tier organization system:
 
-## 🟡 **HIGH PRIORITY** (User Experience & Features)
+1. **[PROJECTS.md](PROJECTS.md)** - Major features requiring planning and specification
+2. **[TASKS.md](TASKS.md)** - Simple tasks completable in <4 hours  
+3. **Project Specs** - Detailed technical specifications in `docs/projects/`
 
-- [x] ✅ **COMPLETED** - FIX - Development-only logs showing in production (preloading, cache skip, PWA, auth state), use logger.ts
-- [x] ✅ **COMPLETED** - FIX - Excessive console logging impacting performance and exposing debug info, use logger.ts
-- [x] ✅ **COMPLETED** - FIX - Authentication state logging exposing sensitive information in console, use logger.ts
-- [x] ✅ **COMPLETED** - FIX - Updates page doesn't have the latest release selected by default (dependency cycle fixed)
-- [x] ✅ **COMPLETED** - FIX - Saving theme preference in settings doesn't have any affect (setTheme integration fixed)
-- [x] ✅ **COMPLETED** - FIX - Updates page version detection incorrect - showing wrong current version (mock data version fixed to use package.json version)
-- [x] ✅ **COMPLETED** - FIX - Preloading conditions not met after authentication (improved detection logic for post-auth state)
-- [x] ✅ **COMPLETED** - FIX - Updates API 404 errors due to double /api/api/ in URLs (fixed all endpoint paths)
-- [x] ✅ **COMPLETED** - FIX - Network requests taking multiple seconds due to API delays and dynamic imports (reduced API delay to 50ms, moved imports to top level)
-- [x] ✅ **COMPLETED** - FIX - Excessive User Menu console logging causing performance impact (optimized to only log on data changes)
-- [x] ✅ **COMPLETED** - FIX - API config modal should be height limited to below the header and above the footer on web or mobile nav bar on mobile. Like the add an asset modal (proper height calc implemented)
-- [x] ✅ **COMPLETED** - UPDATE - Mobile login and signup buttons to be same size as logo and square (h-11 w-11 consistency)
-- [x] ✅ **COMPLETED** - UPDATE - When on mobile, enable the theme toggle in header before signup & signin buttons (already enabled)
-- [x] ✅ **COMPLETED** - **FIX** - Loading page background should use site-wide animated color background (Impact Score: 8)
-  - Updated AuthLoadingState component to use consistent animated gradient background
-  - Now matches site-wide pattern with proper blob animations (animate-blob vs animate-pulse)
-  - Consistent visual experience during auth transitions and page loading
-- [x] ✅ **COMPLETED** - **FIX** - Preloading ineffective - still 1-4 second delays when navigating between pages (Impact Score: 8)
-  - ✅ **Dynamic imports implemented** for heavy components (framer-motion, recharts, react-confetti)
-  - ✅ **Enhanced preloading strategy** - now preloads component chunks and critical assets, not just routes
-  - ✅ **Optimized webpack configuration** with targeted chunk splitting for heavy libraries
-  - ✅ **Improved bundle organization** - separate chunks for framer-motion, recharts, firebase, and react
-  - ✅ **Better loading states** with route-specific skeletons during transitions
-  - ✅ **Comprehensive resource preloading** including static assets and JavaScript bundles
-  - ✅ **Result**: Eliminated 1-4 second delays through bundle optimization and enhanced preloading
-- [x] ✅ **COMPLETED** - **FIX** - Market data error fetching price on dashboard (Impact Score: 7)
-  - ✅ Fixed PropertyManager and ExpenseManager legacy API format causing 401/400 errors
-  - ✅ Converted POST+method to proper REST API calls (GET, POST, PATCH, DELETE)
-  - ✅ Eliminated JSON parsing errors and authentication issues
-  - ✅ Created missing `/api/expenses/[id]` route for PATCH/DELETE operations
-  - ✅ All components now use proper authentication headers and request formats
-- [ ] **NEW** - Google auth users should be able to set password for email auth (Impact Score: 8)
-  - Currently asks for current password but none exists for Google auth users
-  - Allow setting initial password for account security
-- [x] ✅ **COMPLETED** - **FIX** - Google auth with PWA doesn't work - refreshes and stays on login page (Impact Score: 8)
-  - ✅ **PWA Detection implemented** - Added isPWAStandalone() function to detect PWA standalone mode across multiple contexts
-  - ✅ **Redirect-based auth for PWA** - Using signInWithRedirect instead of signInWithPopup in PWA mode to bypass popup restrictions
-  - ✅ **Redirect result handling** - Added handleGoogleRedirectResult() function to process auth redirects on page load
-  - ✅ **Error handling enhanced** - Special handling for "REDIRECT_INITIATED" error to prevent false error messages
-  - ✅ **Type safety improved** - Added NavigatorWithStandalone interface for iOS Safari standalone detection
-  - ✅ **Result**: Google authentication now works in both browser and PWA standalone mode with proper redirect flow
-- [ ] **NEW** - Add 2FA properly using otplib (Impact Score: 8)
-  - Implement TOTP-based two-factor authentication
-  - QR code generation for authenticator apps
-  - Backup codes for account recovery
-- [ ] **UPDATE** - Implement failed password rate limiting (Impact Score: 8)
-  - Enhance existing rate limiting for password attempts
-  - Progressive lockout duration (15min → 1hr → 24hr)
-  - Account security monitoring and alerts
-- [ ] **UPDATE** - Utilise bcrypt for password hashing and secure storage (Impact Score: 7)
-  - Verify bcrypt salt rounds (currently 12, industry standard)
-  - Audit password storage security practices
-  - Ensure proper password validation flows
-- [ ] **UPDATE** - NextAuth migration (Impact Score: 7)
-  - Migrate from Firebase + custom backend auth to NextAuth.js
-  - Unified provider management (Google + credentials)
-  - Improved session handling and security features
-- [ ] **FIX** - Animation stutter on mobile and PWA (Impact Score: 6)
-  - Optimize animations for mobile performance
-  - Reduce frame drops and improve smoothness
+---
 
-## 🟢 **MEDIUM PRIORITY** (Features & Improvements)
+## 🎯 Current Focus
 
-- [ ] **NEW** - Separate app performance from user actions (Impact Score: 9) **📋 PLANNED**
-  - ✅ **Technical specification completed** - Comprehensive fault isolation architecture designed
-  - ✅ **Implementation roadmap ready** - 4-week development plan with specific code examples
-  - ✅ **Resource isolation strategy** - Database connections, memory, rate limiting, background jobs
-  - ✅ **Monitoring & alerting designed** - Real-time resource usage tracking and automatic response
-  - 🔄 **Ready for development** - All technical details, configuration, and deployment procedures documented
-  - **Specification**: `docs/architecture/APPLICATION_FAULT_ISOLATION_SPEC.md`
-- [ ] **NEW** - User management (Impact Score: 8)
-  - Admin interface for managing users
-  - User roles and permissions system
-- [ ] **NEW** - Stripe integration (Impact Score: 8)
-  - Payment processing for premium features
-  - Subscription management
-- [x] ✅ **COMPLETED** - **FIX** - 404 error page background display issue (Impact Score: 6)
-  - ✅ **Root cause diagnosed** - 404 page not in `/app` path so no layout animated background rendered
-  - ✅ **Header compatibility fixed** - Added proper background with transparent top (from-transparent from-20%)
-  - ✅ **Glass blur effects working** - Header backdrop-blur now has proper background to blur over
-  - ✅ **Visual consistency restored** - 404 page now integrates properly with layout system
-  - ✅ **Animated background added** - Motion orbs for visual interest matching site design patterns
-  - ✅ **Result**: Eliminated hard solid color behind header - now seamless header transparency
-- [x] ✅ **COMPLETED** - **FIX** - Loading spinner appears instead of skeleton loading during page transitions (Impact Score: 5)
-  - ✅ **Settings page spinner replaced** - Converted basic spinner to SettingsSkeleton with proper profile form skeleton structure
-  - ✅ **PropertyManager skeleton implemented** - Replaced loading spinner with PropertyManagerSkeleton showing realistic content layout
-  - ✅ **AssetManager chart loading** - Replaced chart spinner with ChartLoadingSkeleton for better visual feedback during data loading
-  - ✅ **Skeleton components enhanced** - Added comprehensive SettingsSkeleton, PropertyManagerSkeleton, and ChartLoadingSkeleton components
-  - ✅ **Consistent loading patterns** - All page transitions now use proper skeleton loading instead of generic spinners
-  - ✅ **Result**: Eliminated loading spinner inconsistencies - all pages now show skeleton loading for better perceived performance
-- [x] ✅ **COMPLETED** - **FIX** - Duplicate API calls with cancelled requests (Impact Score: 8)
-  - ✅ Fixed unstable dependency arrays in useEffect and useCallback hooks causing rapid re-renders
-  - ✅ Created useStableUser hook to provide stable user references that only change when essential fields change
-  - ✅ Updated PropertyManager, ExpenseManager, and MarketDataWidget to use stable dependencies
-  - ✅ Eliminated object reference changes in currentUser useMemo that were triggering excessive API calls
-  - ✅ Reduced useEffect dependency arrays to only essential primitive values (userId, authToken, isDemoMode)
-  - ✅ Added proper request debouncing (100ms) to prevent rapid successive calls
-  - ✅ **Result**: Eliminated duplicate cancelled→successful request pattern visible in network tab
-- [x] ✅ **COMPLETED** - **FIX** - Duplicate assets calls from MarketDataWidget with cancellation (Impact Score: 6)
-  - ✅ Fixed race condition in useEffect dependency array that was causing duplicate API requests
-  - ✅ Moved stable values (defaultSymbols, demoMockPrices) to refs to prevent unnecessary re-renders
-  - ✅ Added 100ms debouncing to prevent rapid successive calls
-  - ✅ Simplified dependency array to only essential values (currentUser?.id, isDemoMode, token)
-  - ✅ Eliminated cancelled requests visible in network tab - now only one successful request per trigger
-- [ ] **NEW** - Apple Liquid Glass Design Language Implementation (Impact Score: 5) **🔄 IN PROGRESS**
-  - ✅ **Research & documentation completed** - Comprehensive exploration of Apple's Liquid Glass design language
-  - ✅ **CSS system implemented** - Complete Liquid Glass material system with performance-based tinting
-  - ✅ **Design showcase created** - Interactive demo page at `/design-styles` with all components
-  - ✅ **Portfolio-specific features** - Dynamic glass tinting based on financial performance (green/red)
-  - ✅ **Component library ready** - Glass cards, buttons, navigation, modals, and typography
-  - 🔄 **Integration in progress** - Applying Liquid Glass to main Profolio components
-  - **Demo URL**: `/design-styles` - Test the complete implementation
-- [ ] **NEW** - Reports page (Impact Score: 7)
-  - Generate and export portfolio reports
-  - PDF/CSV export functionality
-- [ ] **NEW** - Email notifications setup (Impact Score: 7)
-  - Configure email service for notifications
-  - User preferences for email alerts
-- [ ] **NEW** - Guides documentation page (Impact Score: 6)
-  - User guides and tutorials
-  - Help documentation
-- [ ] **NEW** - Captcha integration (Impact Score: 6)
-  - Add captcha to signup/login forms
-  - Prevent automated abuse
-- [ ] **NEW** - Billing menu in settings (Impact Score: 6)
-  - Subscription management interface
-  - Payment history and invoices
-- [ ] **UPDATE** - Improved settings page (Impact Score: 6)
-  - Enhanced UI/UX for settings
-  - Better organization of options
-- [ ] **UPDATE** - Make account deletion more challenging (Impact Score: 6)
-  - Add confirmation steps
-  - Require password verification
-- [ ] **NEW** - Welcome notification 60s after signup (Impact Score: 5)
-  - Automated welcome message for new users
-  - Onboarding flow improvement
-- [ ] **NEW** - Set PWA status bar to CSS blur effect (Impact Score: 5)
-  - PWA status bar styling (`frontend/src/app/globals.css`)
-- [ ] **NEW** - Modals should have glass effect with blur (Impact Score: 5)
-  - Enhanced visual design for modals
-  - Glassmorphism UI effects
-- [ ] **UPDATE** - Improved forgot password page (Impact Score: 5)
-  - Better UX for password recovery
-  - Clear instructions and feedback
-- [ ] **UPDATE** - Improved policy hub (Impact Score: 4)
-  - Enhanced privacy policy and terms pages
-  - Better formatting and navigation
+### Active Development
+- None currently active - choose from priorities below
 
-## 🔵 **LOW PRIORITY** (Polish & Nice-to-Have)
+### Next Up (Recommended Order)
+1. **OAuth Password Management** - Quick win, high security impact
+2. **2FA Implementation** - Critical security feature
+3. **Stripe Completion** - Revenue generation
 
-- [ ] **UPDATE** - Enhanced dashboard performance optimizations (Impact Score: 5)
-  - Further optimize dashboard loading (`frontend/src/app/app/dashboard/page.tsx`)
-- [ ] **UPDATE** - API security & validation improvements (Impact Score: 6)
-  - Enhanced input validation and security (`frontend/src/app/api/market-data/portfolio-history/[userId]/route.ts`)
-- [ ] **UPDATE** - PWA management enhancements (Impact Score: 4)
-  - Improve PWA features (`frontend/src/components/PWAManager.tsx`)
-- [ ] **NEW** - Get feedback (Impact Score: 4)
-  - User feedback collection system
-  - Feature request management
-- [ ] **UPDATE** - Put screenshots in GitHub readme.md (Impact Score: 3)
-  - Add visual documentation to repository
-- [ ] **UPDATE** - Adjust padding on public pages (Impact Score: 3)
-  - Fine-tune spacing on landing pages
-- [ ] **UPDATE** - Add back scroll snap to section on public pages (Impact Score: 3)
-  - Smooth scrolling between sections
-- [ ] **UPDATE** - Remove links in footer (Impact Score: 2)
-  - Clean up footer navigation
+---
 
-## 🧹 **TECHNICAL DEBT** (Development Cleanup)
+## 📊 High-Level Status
 
-- [x] ✅ **COMPLETED** - **UPDATE** - Phase out mock API usage where appropriate (Impact Score: 4)
-  - ✅ Replaced direct mock API imports with unified API service in Asset Manager
-  - ✅ Replaced direct mock API imports with proper API proxy in Expense Manager
-  - ✅ Replaced direct mock API imports with proper API proxy in Portfolio page
-  - ✅ Properties page and Expenses import page already modernized
-  - ✅ LayoutWrapper modernized (using localStorage fallbacks for user preferences)
-  - ✅ PropertyManager completely modernized (3 mockApi calls replaced with proper API proxy)
-  - ✅ **RESULT**: Zero mockApi imports remaining in codebase - complete elimination achieved
-- [x] ✅ **COMPLETED** - **UPDATE** - Replace placeholder implementations with real ones (Impact Score: 4)
-  - ✅ Replaced console.log statements with proper logger usage in API services
-  - ✅ Modernized API call patterns across all major components
-  - ✅ All critical components now use proper authentication and error handling
-- [x] ✅ **COMPLETED** - **UPDATE** - Remove development artifacts and improve maintainability (Impact Score: 4)
-  - ✅ Cleaned up console.log statements in key API files and components
-  - ✅ Modernized API patterns across AssetManager, ExpenseManager, Portfolio, Properties, LayoutWrapper, PropertyManager
-  - ✅ All components now follow consistent authentication and API proxy patterns
-  - ✅ Enhanced error handling and request cancellation across all components
-- [x] ✅ **COMPLETED** - **UPDATE** - Clean up temporary market data generation (Impact Score: 3)
-  - ✅ Assessed market data generators - confirmed they serve legitimate demo mode purpose
-  - ✅ Streamlined mock data generation logic
-  - ✅ Maintained necessary functionality for development and demo environments
-- [x] ✅ **COMPLETED** - **UPDATE** - Complete market data type migration (Impact Score: 7)
-  - ✅ Migrated backend market data service to use proper Prisma-generated `ApiProvider` enum
-  - ✅ Removed temporary type definitions and established consistent type usage
-  - ✅ Enhanced type safety and database schema consistency
-  - ✅ All market data API calls now use standardized provider enums
-- [x] ✅ **COMPLETED** - **UPDATE** - Complete ApiKeysService integration in setup service (Impact Score: 6)
-  - ✅ Integrated ApiKeysService into SetupService with proper dependency injection
-  - ✅ Created SetupModule to manage dependencies and exports
-  - ✅ Replaced TODO comment with fully functional API key creation during setup
-  - ✅ Added provider validation, error handling, and default permissions mapping
-  - ✅ Enhanced setup flow to properly store and manage external service API keys
+### 🔴 Security & Authentication (3 projects)
+- **2FA Implementation** - Not started, needs spec
+- **OAuth Password Management** - Not started, needs spec
+- **Enhanced Rate Limiting** - Partial implementation exists
 
-## 📝 Notes
+### 🟡 Platform & Infrastructure (3 projects)
+- **NextAuth Migration** - Package installed, not configured
+- **Stripe Integration** - ~40% complete, needs finishing
+- **Admin Dashboard** - Backend ready, needs UI
 
-- **Major Issues Resolved**: All critical authentication, API connectivity, 404 routing, and backend module registration issues have been fixed
-- **System Status**: Ready for production testing - all endpoints now functional with proper error handling
-- **Recent Completions**: Fixed Properties/Expenses 404s, Assets API format mismatch, backend dependency injection, and Google Places API CORS issues
-- **Next Steps**: Focus on enhancement features and testing coverage
-- **Total API Routes Created**: 17 proxy routes covering all frontend→backend communication
+### 🟢 Features (3 projects)
+- **Email System** - Not started
+- **Reports System** - Not started
+- **Help System** - Not started
+
+### 🔵 UI/UX (2 projects)
+- **Mobile Performance** - Issues identified
+- **Glass Design System** - ~70% complete
+
+### ✨ Simple Tasks
+- ~15 quick polish tasks available in [TASKS.md](TASKS.md)
+
+---
+
+## 📈 Progress Metrics
+
+### Completed (Since v1.0)
+- ✅ **40+ critical issues** resolved
+- ✅ **All API routes** working properly
+- ✅ **Authentication** stabilized
+- ✅ **Performance** significantly improved
+- ✅ **Mock API** completely eliminated
+
+### Remaining Work
+- 📦 **11 Projects** to be specified and implemented
+- 📝 **~15 Simple tasks** for polish
+- 🔒 **3 Security projects** (highest priority)
+
+---
+
+## 🚀 How to Contribute
+
+### Starting a Project
+1. Choose a project from [PROJECTS.md](PROJECTS.md)
+2. Create specification in `docs/projects/[PROJECT_NAME]_SPEC.md`
+3. Get specification reviewed and approved
+4. Implement following the specification
+5. Update project status in PROJECTS.md
+
+### Completing a Task
+1. Choose a task from [TASKS.md](TASKS.md)
+2. Verify it's truly a simple task (<4 hours)
+3. Complete implementation
+4. Test thoroughly
+5. Mark as complete in TASKS.md
+
+### Creating a Specification
+Use the template in [PROJECTS.md](PROJECTS.md#next-steps) which includes:
+- Executive Summary
+- Current State Analysis
+- Proposed Solution
+- Technical Architecture
+- Implementation Plan
+- Success Metrics
+
+---
+
+## 📅 Suggested Timeline
+
+### Q4 2025 (Security Focus)
+- OAuth Password Management (1 week)
+- 2FA Implementation (3 weeks)
+- Enhanced Rate Limiting (2 weeks)
+
+### Q1 2026 (Revenue & Growth)
+- Complete Stripe Integration (3 weeks)
+- Admin Dashboard (2 weeks)
+- Email System (2 weeks)
+
+### Q2 2026 (Platform & Polish)
+- NextAuth Migration (4 weeks)
+- Reports System (3 weeks)
+- Mobile Performance (2 weeks)
+
+---
+
+## 🏆 Success Criteria
+
+A project/task is considered complete when:
+- ✅ All functionality works as specified
+- ✅ Tests are written and passing
+- ✅ Documentation is updated
+- ✅ Code review is complete
+- ✅ No performance regression
+- ✅ Security review passed (if applicable)
+
+---
+
+## 📝 Quick Links
+
+- **Projects**: [PROJECTS.md](PROJECTS.md)
+- **Tasks**: [TASKS.md](TASKS.md)
+- **Specifications**: `docs/projects/`
+- **Architecture Docs**: `docs/architecture/`
+- **Testing Guide**: `docs/testing/`
+
+---
+
+## 💡 Notes
+
+- **Projects vs Tasks**: If it takes >4 hours or involves multiple systems, it's a project
+- **Specifications First**: All projects need specs before implementation
+- **Security Priority**: Security projects should be completed first
+- **Quality over Speed**: Better to do fewer things well than many things poorly
