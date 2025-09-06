@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Profolio Installer
+# Copyright (c) 2024-2025 Ollie Bednal. All rights reserved.
+# Licensed under the Profolio License. See LICENSE file for details.
+# This is proprietary software. Redistribution is prohibited.
+
 # 🚀 Profolio Comprehensive Installer v2.1
 # Universal installer with Proxmox LXC support, rollback protection, and version control
 # Supports: Linux servers, Proxmox hosts, LXC containers, and regular installations

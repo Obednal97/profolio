@@ -386,9 +386,17 @@ For production deployments and enterprise requirements:
 
 ## 📄 **License & Legal**
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Profolio License** - see the [LICENSE](LICENSE) file for full details.
 
-**Open source commitment**: Core features will always remain free and open source. Premium cloud features and professional support services help fund continued development.
+**Important License Terms**:
+- ✅ **Free for personal use** - Use and self-host for personal, non-commercial purposes
+- ✅ **Source available** - View and study the code for learning
+- ❌ **No redistribution** - Cannot distribute modified versions
+- ❌ **No commercial use** - Commercial use requires a license
+- 📝 **Contributions only** - Modifications must be submitted as pull requests
+- 🔒 **This is the only official version** - Forks are only for contributing back
+
+**Note**: This is proprietary software with source code availability, not traditional open source. Premium features and commercial licenses help fund continued development.
 
 ---
 

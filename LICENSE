@@ -1,21 +1,70 @@
-MIT License
+Profolio License
+Copyright (c) 2024-2025 Ollie Bednal. All rights reserved.
 
-Copyright (c) 2024-2025 Ollie Bednal
+Version 1.0, September 2025
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+IMPORTANT: This is NOT open source software. This is proprietary software with source code made available for specific purposes.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. DEFINITIONS
+   "Software" refers to Profolio, including all source code, documentation, scripts, and associated files.
+   "Commercial Use" means any use of the Software that directly or indirectly generates revenue, monetary compensation, or commercial advantage.
+   "Official Repository" means the repository located at https://github.com/Obednal97/profolio
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE. 
+2. GRANT OF RIGHTS
+   Subject to the terms and conditions of this license, you are granted the following rights:
+   a) You may use this Software free of charge for personal, non-commercial purposes
+   b) You may view, download, and study the source code for personal education
+   c) You may self-host the Software for your own personal or internal business use
+   d) You may create issues and submit bug reports to the Official Repository
+
+3. RESTRICTIONS
+   You are expressly prohibited from:
+   a) Selling, reselling, licensing, or commercializing the Software or any portion thereof
+   b) Distributing modified versions of the Software under any name or brand
+   c) Offering the Software as a hosted service to third parties (SaaS) without written permission
+   d) Removing, altering, or obscuring any proprietary notices, labels, or this license
+   e) Creating derivative works for distribution outside of the Official Repository
+   f) Using the Software's name, logo, or branding for any unauthorized purpose
+   g) Claiming authorship or ownership of the Software or any portion thereof
+   h) Redistributing the Software through any package manager or distribution channel
+
+4. CONTRIBUTIONS
+   a) All modifications must be submitted as pull requests to the Official Repository
+   b) You may not distribute your modifications separately or as a competing product
+   c) By submitting contributions, you grant Ollie Bednal an irrevocable, worldwide, royalty-free license to use, modify, and distribute your contributions
+   d) This is the ONLY authorized and official version of the Software
+   e) Forks on GitHub are permitted solely for the purpose of submitting pull requests
+
+5. COMMERCIAL USE AND PAID FEATURES
+   a) Commercial use requires a separate commercial license agreement
+   b) Certain features may be restricted to paid license holders
+   c) Contact the author for commercial licensing options
+
+6. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR OR COPYRIGHT HOLDERS BE LIABLE
+   FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
+   OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+7. TERMINATION
+   a) This license automatically terminates if you violate any of its terms
+   b) Upon termination, you must cease all use of the Software and destroy all copies
+   c) The author reserves the right to revoke this license at any time for any reason
+
+8. GOVERNING LAW
+   This license shall be governed by the laws of the United Kingdom, without regard to
+   conflict of law principles.
+
+9. ENTIRE AGREEMENT
+   This license constitutes the entire agreement between you and the author concerning
+   the Software and supersedes all prior agreements.
+
+10. CONTACT
+    For commercial licensing, questions, or permission requests, contact:
+    - GitHub: https://github.com/Obednal97
+    - Repository: https://github.com/Obednal97/profolio
+
+BY USING, DOWNLOADING, OR ACCESSING THIS SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ,
+UNDERSTOOD, AND AGREE TO BE BOUND BY THE TERMS OF THIS LICENSE.

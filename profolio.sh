@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
-# Profolio Installation Wrapper - Proxmox Community Script Style
-# This script downloads and executes the main installer with TUI options
+# Profolio Installation Wrapper
+# Copyright (c) 2024-2025 Ollie Bednal. All rights reserved.
+# Licensed under the Profolio License. See LICENSE file for details.
+# This is proprietary software. Redistribution is prohibited.
+
+# Proxmox Community Script Style TUI wrapper
 # Usage: bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/profolio.sh)"
 
 # Exit on error
