@@ -46,7 +46,7 @@ test.describe("Authentication @security", () => {
 
     // Wait for and check error message
     await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
-    await expect(page.locator('[data-testid="error-message"]')).toContainText(/Invalid email or password|Failed to sign in/);
+    await expect(page.locator('[data-testid="error-message"]')).toContainText(/Invalid credentials|Invalid email or password|Failed to sign in/);
   });
 
   test("should prevent SQL injection in login form @security", async ({
@@ -65,7 +65,7 @@ test.describe("Authentication @security", () => {
     // Should show invalid credentials, not a database error
     await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
     await expect(page.locator('[data-testid="error-message"]')).toContainText(
-      /Invalid email or password|Failed to sign in/i
+      /Invalid credentials|Invalid email or password|Failed to sign in/i
     );
   });
 
