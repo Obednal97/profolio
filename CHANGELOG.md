@@ -59,6 +59,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ESLint**: Migrated to v9 flat config format
 - **CI/CD**: Strict type checking enforced in pipeline
 
+## [v1.16.3] - 2025-09-06
+
+### 📄 **License Update**
+
+- **CHANGED: License Model**: Transitioned from MIT to proprietary Profolio License
+- **UPDATED: License Terms**: New commercial licensing terms for enterprise deployments
+- **CLARIFIED: Usage Rights**: Personal use remains free, commercial use requires license
+
+### 📊 **Summary**
+
+- **Files Changed**: 1 (LICENSE)
+- **Type**: License update
+- **Impact**: No functional changes, licensing terms updated
+
+## [v1.16.2] - 2025-09-06
+
+### 🐛 **Bug Fixes**
+
+- **FIXED: TUI Menu Display**: Removed emojis that caused character encoding issues in some terminals
+- **FIXED: Menu Item Selection**: Unquoted menu item numbers for proper whiptail/dialog compatibility
+- **FIXED: Terminal Compatibility**: Enhanced cross-platform terminal support
+
+### 🔧 **Improvements**
+
+- **TUI Compatibility**: Better support for limited terminal environments
+- **Menu Navigation**: More reliable menu item selection
+- **Character Encoding**: Removed special characters that could cause display issues
+
+### 📊 **Summary**
+
+- **Files Changed**: 1 (profolio.sh)
+- **Type**: Hotfix for TUI compatibility
+- **Impact**: Improved installer reliability across different terminal types
+
+## [v1.16.1] - 2025-09-06
+
+### ✨ **Features**
+
+- **Installer Testing Infrastructure**: Comprehensive test suite for installer validation
+- **Homarr-Inspired Enhancements**: Professional TUI improvements based on Homarr community scripts
+- **Enhanced Diagnostics**: Improved error reporting and system compatibility checks
+
+### 🔧 **Improvements**
+
+#### Installer
+
+- **Test Coverage**: Added comprehensive installer testing framework
+- **Validation Suite**: Automated testing for all installer functions
+- **Compatibility Testing**: Cross-platform validation for different environments
+- **Error Recovery**: Enhanced rollback and recovery mechanisms
+
+#### TUI Enhancements
+
+- **Professional Interface**: Homarr-inspired UI improvements
+- **Better Navigation**: Enhanced menu system with clear options
+- **Visual Feedback**: Improved progress indicators and status messages
+- **User Experience**: Streamlined installation flow
+
+### 📊 **Summary**
+
+- **Files Changed**: Multiple installer-related files
+- **Type**: Feature enhancement
+- **Testing**: Comprehensive installer test suite added
+- **Inspiration**: Homarr community script patterns
+
 ## [v1.16.0] - 2025-09-06
 
 ### 🚀 **Features**
