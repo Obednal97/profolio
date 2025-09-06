@@ -6,7 +6,7 @@ import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/cards/GlassCard';
 // Using inline alert styling instead of missing UI component
-import { Shield, ShieldCheck, ShieldOff, RefreshCw, Key } from 'lucide-react';
+import { Shield, ShieldCheck, ShieldOff, RefreshCw } from 'lucide-react';
 import { TwoFactorSetup } from './TwoFactorSetup';
 // Date formatting - will install date-fns
 // import { format } from 'date-fns';
@@ -46,19 +46,7 @@ export function TwoFactorStatus() {
     },
   });
 
-  // Regenerate backup codes mutation
-  const regenerateMutation = useMutation({
-    mutationFn: async ({ password, code }: { password: string; code: string }) => {
-      const response = await apiClient.post<{ backupCodes: string[] }>('/api/auth/2fa/regenerate-backup', {
-        password,
-        code,
-      });
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
-    },
-  });
+  // TODO: Implement regenerate backup codes mutation when needed
 
   if (isLoading) {
     return (

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 // Using standard HTML input instead of missing UI component
 // Using inline alert styling instead of missing UI component
 import { Loader2, Shield, Copy, Download, CheckCircle } from 'lucide-react';
-import Image from 'next/image';
 
 type SetupStep = 'password' | 'qr' | 'verify' | 'backup' | 'complete';
 
@@ -36,7 +35,7 @@ export function TwoFactorSetup({ onComplete }: { onComplete?: () => void }) {
       setStep('qr');
       setError(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
       setError(error.response?.data?.error || 'Failed to setup 2FA');
     },
   });
@@ -51,7 +50,7 @@ export function TwoFactorSetup({ onComplete }: { onComplete?: () => void }) {
       setStep('backup');
       setError(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
       setError(error.response?.data?.error || 'Invalid verification code');
     },
   });
@@ -194,7 +193,7 @@ ${setupData.backupCodes.join('\n')}`;
             </div>
             
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">Can't scan? Enter this code manually:</p>
+              <p className="text-sm text-gray-600 mb-2">Can&apos;t scan? Enter this code manually:</p>
               <div className="flex items-center gap-2">
                 <code 
                   className="text-xs font-mono bg-white px-2 py-1 rounded"
@@ -290,7 +289,7 @@ ${setupData.backupCodes.join('\n')}`;
           <h2 className="text-2xl font-semibold mb-4">Save Your Backup Codes</h2>
           <div className="mb-4 p-4 rounded-lg border border-yellow-200 bg-yellow-50">
             <p className="text-yellow-800">
-              ⚠️ Save these codes in a secure place. You'll need them if you lose access to your authenticator app.
+              ⚠️ Save these codes in a secure place. You&apos;ll need them if you lose access to your authenticator app.
             </p>
           </div>
           
