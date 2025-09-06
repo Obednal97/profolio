@@ -143,14 +143,21 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
           JWT_SECRET: e2e-test-jwt-secret
-          API_ENCRYPTION_KEY: e2e-test-encryption-key-32-characters!
+          API_ENCRYPTION_KEY: test-encryption-key-32-chars-ok
           PORT: 3001
 
       - name: 📝 Create mock firebase config
         run: |
+          # Create in public folder for production build
           mkdir -p frontend/public
           echo '{"apiKey":"mock-api-key","authDomain":"mock.firebaseapp.com","projectId":"mock-project","storageBucket":"mock.appspot.com","messagingSenderId":"123456789","appId":"1:123456789:web:abc123"}' > frontend/public/firebase-config.json
-          echo "✅ Created mock firebase config"
+          
+          # Also create in root for dev server (which e2e tests use)
+          echo '{"apiKey":"mock-api-key","authDomain":"mock.firebaseapp.com","projectId":"mock-project","storageBucket":"mock.appspot.com","messagingSenderId":"123456789","appId":"1:123456789:web:abc123"}' > frontend/firebase-config.json
+          
+          echo "✅ Created mock firebase configs in both locations"
+          ls -la frontend/ | grep firebase
+          ls -la frontend/public/ | grep firebase
 
       - name: 🚀 Start frontend service
         run: |
