@@ -6,7 +6,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 export async function GET(req: NextRequest) {
   try {
     // Get the token from cookies
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
 
     if (!token) {
