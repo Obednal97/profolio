@@ -1,6 +1,6 @@
 # Homarr Installer Analysis & Profolio Enhancement Roadmap
 
-**Document Version:** 1.0.0  
+**Document Version:** 1.2.0  
 **Analysis Date:** September 6, 2025  
 **Analyst:** Development Team  
 **Purpose:** Comprehensive analysis of Homarr/Proxmox VE installer architecture and feature comparison with Profolio
@@ -146,8 +146,8 @@ Advanced Settings
 |-----------------|---------|---------|----------|----------|
 | **TUI Interface** |
 | | Whiptail/Dialog Support | ✅ | ✅ | - |
-| | Nested Menus | ✅ | ⚠️ | High |
-| | Back Navigation | ✅ | ❌ | High |
+| | Nested Menus | ✅ | ✅ | High |
+| | Back Navigation | ✅ | ✅ | High |
 | | Progress Indicators | ✅ | ✅ | - |
 | | Context Help | ✅ | ❌ | Medium |
 | **Container Management** |
@@ -158,10 +158,10 @@ Advanced Settings
 | **Network Configuration** |
 | | Auto-detect Bridges | ✅ | ✅ | High |
 | | IPv4 Configuration | ✅ | ✅ | - |
-| | IPv6 Configuration | ✅ | ✅ | Medium |
+| | IPv6 Configuration | ✅ | ✅ | - |
 | | MTU Customization | ✅ | ✅ | Low |
-| | APT Proxy Support | ✅ | ✅ | Medium |
-| | DNS Configuration | ✅ | ✅ | Medium |
+| | APT Proxy Support | ✅ | ✅ | - |
+| | DNS Configuration | ✅ | ✅ | - |
 | **Installation Features** |
 | | Resource Validation | ✅ | ✅ | High |
 | | Config Import/Export | ✅ | ✅ | High |
@@ -175,10 +175,10 @@ Advanced Settings
 | | Rollback on Failure | ⚠️ | ✅ | - |
 | | Node.js Management | ✅ | ❌ | Low |
 | **Diagnostics** |
-| | Diagnostic Mode | ✅ | ❌ | Medium |
-| | Telemetry (Opt-in) | ✅ | ❌ | Low |
+| | Diagnostic Mode | ✅ | ✅ | Medium |
+| | Telemetry (Opt-in) | ✅ | ✅ | Low |
 | | Error Reporting | ✅ | ✅ | - |
-| | Log Aggregation | ✅ | ⚠️ | Medium |
+| | Log Aggregation | ✅ | ✅ | Medium |
 | **Unique Profolio Features** |
 | | Git-based Rollback | ❌ | ✅ | - |
 | | Multiple Installer Variants | ❌ | ✅ | - |
@@ -195,22 +195,22 @@ Advanced Settings
 - [x] Implement network auto-detection
 - [x] Add service health checks
 
-### Phase 2: TUI Improvements (Week 2)
-- [ ] Add back navigation to menus
-- [ ] Implement nested menu system
+### Phase 2: TUI Improvements (Week 2) ✅ MOSTLY COMPLETE
+- [x] Add back navigation to menus ✅
+- [x] Implement nested menu system ✅
 - [ ] Add context-sensitive help
-- [ ] Improve progress indicators
+- [x] Improve progress indicators ✅
 
-### Phase 3: Network & Services (Week 3)
-- [ ] Add IPv6 configuration
-- [ ] Implement APT proxy support
+### Phase 3: Network & Services (Week 3) ✅ COMPLETE
+- [x] Add IPv6 configuration ✅
+- [x] Implement APT proxy support ✅
 - [x] Add service health checks ✅
-- [ ] Enhanced DNS configuration
+- [x] Enhanced DNS configuration ✅
 
-### Phase 4: Diagnostics & Monitoring (Week 4)
-- [ ] Implement diagnostic mode
-- [ ] Add opt-in telemetry
-- [ ] Improve log aggregation
+### Phase 4: Diagnostics & Monitoring (Week 4) ✅ MOSTLY COMPLETE
+- [x] Implement diagnostic mode ✅
+- [x] Add opt-in telemetry ✅
+- [x] Improve log aggregation ✅
 - [ ] Create troubleshooting wizard
 
 ## Technical Specifications
@@ -318,9 +318,9 @@ check_ssl()         # SSL certificate validity
   - [x] `lib/resource-validator.sh` ✅
   - [x] `lib/network-detector.sh` ✅
   - [x] `lib/health-checks.sh` ✅
-  - [ ] `lib/diagnostics.sh`
-- [ ] Update main installer
-- [ ] Update TUI interface
+  - [x] `lib/diagnostics.sh` ✅
+- [x] Update main installer ✅
+- [x] Update TUI interface ✅
 - [ ] Add unit tests
 - [ ] Create integration tests
 
@@ -406,6 +406,8 @@ detect_bridges() {
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2025-09-06 | Dev Team | Initial analysis and roadmap |
+| 1.1.0 | 2025-09-06 | Dev Team | Phase 2 & 4 implementation complete |
+| 1.2.0 | 2025-09-06 | Dev Team | Phase 3 complete - all network features |
 
 ---
 

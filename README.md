@@ -37,8 +37,11 @@ Take control of your financial data with complete privacy and sovereignty. Built
 ### 🚀 **Universal One-Command Installation**
 
 ```bash
-# Complete installation in under 5 minutes - works everywhere!
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install-wrapper.sh)"
+# Interactive installation with enhanced TUI menu (recommended)
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/profolio.sh)"
+
+# Or direct installation (non-interactive, fastest)
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 
 **What happens automatically:**
@@ -48,6 +51,14 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/
 - ✅ **Application deployment** - Database, backend, frontend
 - ✅ **Service management** - Systemd services with auto-restart
 - ✅ **SSL-ready** - Production configuration out of the box
+
+**Enhanced TUI Features (profolio.sh):**
+
+- 📋 **System validation** - Pre-flight checks before installation
+- 🌐 **Network auto-detection** - Automatic network configuration
+- 💾 **Config import/export** - Save and reuse configurations
+- 🔍 **Health monitoring** - Built-in service health checks
+- 🔧 **Diagnostics** - Troubleshooting and support tools
 
 ### 🏠 **Smart Environment Detection**
 
@@ -70,11 +81,16 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/
 ### 📥 **Alternative Installation Methods**
 
 ```bash
-# Method 1: Download and execute (if you prefer to review the script first)
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh -o install.sh
-sudo bash install.sh
+# Method 1: Download and review before running
+curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/profolio.sh -o profolio.sh
+sudo bash profolio.sh
 
-# Method 2: Using wget instead of curl
+# Method 2: Clone repository and run locally
+git clone https://github.com/Obednal97/profolio.git
+cd profolio
+sudo ./profolio.sh
+
+# Method 3: Using wget instead of curl
 wget -qO- https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
 ```
 

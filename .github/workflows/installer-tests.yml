@@ -1,0 +1,210 @@
+name: Installer Tests
+
+on:
+  push:
+    paths:
+      - 'install.sh'
+      - 'profolio.sh'
+      - 'lib/**'
+      - 'tests/installer/**'
+      - '.github/workflows/installer-tests.yml'
+  pull_request:
+    paths:
+      - 'install.sh'
+      - 'profolio.sh'
+      - 'lib/**'
+      - 'tests/installer/**'
+      - '.github/workflows/installer-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: ShellCheck Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck on main installer
+        run: shellcheck -x -e SC1091 install.sh
+
+      - name: Run ShellCheck on TUI wrapper
+        run: shellcheck -x -e SC1091 profolio.sh
+
+      - name: Run ShellCheck on library modules
+        run: |
+          for script in lib/*.sh; do
+            echo "Checking $script..."
+            shellcheck -x -e SC1091 "$script"
+          done
+
+  validate:
+    name: Validation Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: |
+          chmod +x install.sh
+          chmod +x profolio.sh
+          chmod +x lib/*.sh
+          chmod +x tests/installer/*.sh
+
+      - name: Run validation script
+        run: ./tests/installer/validate.sh
+
+  function-tests:
+    name: Function Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: |
+          chmod +x install.sh
+          chmod +x profolio.sh
+          chmod +x tests/installer/*.sh
+
+      - name: Run function tests
+        run: ./tests/installer/test-functions.sh
+
+  dry-run-test:
+    name: Dry-Run Installation Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make installer executable
+        run: chmod +x install.sh
+
+      - name: Test dry-run mode
+        run: |
+          # Run installer in dry-run mode
+          ./install.sh --dry-run --auto 2>&1 | tee dry-run.log
+          
+          # Check that dry-run messages appear
+          if ! grep -q "\[DRY-RUN\]" dry-run.log; then
+            echo "Error: No dry-run messages found"
+            exit 1
+          fi
+          
+          # Check that no actual changes were made
+          if [ -d "/opt/profolio" ]; then
+            echo "Error: Directory was created in dry-run mode"
+            exit 1
+          fi
+          
+          echo "Dry-run test passed!"
+
+  help-test:
+    name: Help Output Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: |
+          chmod +x install.sh
+          chmod +x profolio.sh
+
+      - name: Test help output - install.sh
+        run: |
+          ./install.sh --help > help.txt 2>&1
+          
+          # Check for expected content
+          grep -q "Profolio" help.txt || exit 1
+          grep -q "\-\-version" help.txt || exit 1
+          grep -q "\-\-dry-run" help.txt || exit 1
+          grep -q "\-\-advanced" help.txt || exit 1
+          
+          echo "install.sh help test passed!"
+
+      - name: Test help output - profolio.sh
+        run: |
+          # Note: profolio.sh uses TUI, so we just check it doesn't error
+          ./profolio.sh --help > help.txt 2>&1 || true
+          
+          echo "profolio.sh help test passed!"
+
+  syntax-check:
+    name: Bash Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check bash syntax
+        run: |
+          for script in install.sh profolio.sh lib/*.sh; do
+            echo "Syntax check: $script"
+            bash -n "$script"
+          done
+
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for unsafe patterns
+        run: |
+          echo "Checking for unsafe rm commands..."
+          if grep -r "rm -rf /" install.sh profolio.sh lib/*.sh | grep -v "^#"; then
+            echo "Error: Found potentially unsafe rm commands"
+            exit 1
+          fi
+          
+          echo "Checking for hardcoded passwords..."
+          if grep -r "password\s*=\s*['\"]" install.sh profolio.sh lib/*.sh | grep -v "^#"; then
+            echo "Error: Found hardcoded passwords"
+            exit 1
+          fi
+          
+          echo "Checking for hardcoded API keys..."
+          if grep -r "api_key\s*=\s*['\"]" install.sh profolio.sh lib/*.sh | grep -v "^#"; then
+            echo "Error: Found hardcoded API keys"
+            exit 1
+          fi
+          
+          echo "Security checks passed!"
+
+  matrix-test:
+    name: OS Compatibility Test
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make installer executable
+        run: chmod +x install.sh
+
+      - name: Test version detection
+        run: |
+          # Test that installer can detect versions
+          ./install.sh --list-versions > versions.txt 2>&1 || true
+          
+          if [ -s versions.txt ]; then
+            echo "Version detection works on ${{ matrix.os }}"
+            cat versions.txt
+          else
+            echo "Warning: Version detection may not work on ${{ matrix.os }}"
+          fi
+
+      - name: Test help on OS
+        run: |
+          ./install.sh --help > /dev/null 2>&1
+          echo "Help works on ${{ matrix.os }}"

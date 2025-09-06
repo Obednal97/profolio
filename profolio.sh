@@ -8,9 +8,10 @@
 set -e
 
 # Variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GITHUB_RAW="https://raw.githubusercontent.com/Obednal97/profolio/main"
 TEMP_DIR="/tmp/profolio-installer-$$"
-INSTALLER_SCRIPT="install-v2.sh"
+INSTALLER_SCRIPT="install.sh"
 TUI_ENABLED=true
 
 # Colors
@@ -536,8 +537,138 @@ function generate_reports {
     read -p "Press Enter to continue..."
 }
 
+# Parse command line arguments
+function parse_arguments {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            --import-config)
+                shift
+                if [ -f "$SCRIPT_DIR/lib/config-manager.sh" ]; then
+                    source "$SCRIPT_DIR/lib/config-manager.sh"
+                    import_config "$1"
+                    echo -e "${GN}Configuration imported successfully${CL}"
+                    exit 0
+                else
+                    echo -e "${RD}Config manager not found${CL}"
+                    exit 1
+                fi
+                ;;
+            --export-config)
+                shift
+                if [ -f "$SCRIPT_DIR/lib/config-manager.sh" ]; then
+                    source "$SCRIPT_DIR/lib/config-manager.sh"
+                    export_config "$1"
+                    echo -e "${GN}Configuration exported to $1${CL}"
+                    exit 0
+                else
+                    echo -e "${RD}Config manager not found${CL}"
+                    exit 1
+                fi
+                ;;
+            --validate-only)
+                if [ -f "$SCRIPT_DIR/lib/resource-validator.sh" ]; then
+                    source "$SCRIPT_DIR/lib/resource-validator.sh"
+                    validate_all
+                    exit $?
+                else
+                    echo -e "${RD}Resource validator not found${CL}"
+                    exit 1
+                fi
+                ;;
+            --health-check)
+                if [ -f "$SCRIPT_DIR/lib/health-checks.sh" ]; then
+                    source "$SCRIPT_DIR/lib/health-checks.sh"
+                    run_all_checks
+                    exit $?
+                else
+                    echo -e "${RD}Health check module not found${CL}"
+                    exit 1
+                fi
+                ;;
+            --diagnostics)
+                if [ -f "$SCRIPT_DIR/lib/diagnostics.sh" ]; then
+                    source "$SCRIPT_DIR/lib/diagnostics.sh"
+                    COLLECT_SYSTEM=true
+                    COLLECT_NETWORK=true
+                    COLLECT_SERVICES=true
+                    COLLECT_LOGS=true
+                    COLLECT_CONFIG=true
+                    COLLECT_PERFORMANCE=true
+                    run_diagnostics
+                    exit $?
+                else
+                    echo -e "${RD}Diagnostics module not found${CL}"
+                    exit 1
+                fi
+                ;;
+            --network-detect)
+                if [ -f "$SCRIPT_DIR/lib/network-detector.sh" ]; then
+                    source "$SCRIPT_DIR/lib/network-detector.sh"
+                    detect_all
+                    print_summary
+                    exit 0
+                else
+                    echo -e "${RD}Network detector not found${CL}"
+                    exit 1
+                fi
+                ;;
+            *)
+                echo -e "${RD}Unknown option: $1${CL}"
+                show_help
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+# Show help message
+function show_help {
+    cat << EOF
+${CY}Profolio Installer v1.16.0${CL}
+
+${YW}Usage:${CL}
+  sudo $0 [OPTIONS]
+
+${YW}Options:${CL}
+  --help, -h              Show this help message
+  --import-config FILE    Import configuration from JSON file
+  --export-config FILE    Export current configuration to JSON file
+  --validate-only         Run system validation without installing
+  --health-check          Run health checks on existing installation
+  --diagnostics           Collect diagnostic information
+  --network-detect        Run network auto-detection
+
+${YW}Examples:${CL}
+  # Interactive installation with TUI
+  sudo $0
+
+  # Automated installation with config file
+  sudo $0 --import-config production.json
+
+  # Check system before installation
+  sudo $0 --validate-only
+
+  # Monitor existing installation
+  sudo $0 --health-check
+
+${YW}For more information:${CL}
+  https://github.com/Obednal97/profolio
+
+EOF
+}
+
 # Main execution
 function main {
+    # Parse command-line arguments first
+    if [ $# -gt 0 ]; then
+        parse_arguments "$@"
+    fi
+    
     header_info
     check_root
     

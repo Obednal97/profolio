@@ -44,6 +44,9 @@ BACKUP_DIR="/opt"
 SKIP_BACKUP=false
 AVAILABLE_BACKUPS=()
 
+# Dry-run mode for testing
+DRY_RUN=false
+
 # Simple progress spinner - using basic ASCII characters for compatibility
 SPINNER_CHARS="/-\|"
 SPINNER_PID=""
@@ -214,6 +217,50 @@ end_service_downtime() {
     fi
 }
 
+# Dry-run wrapper for system-modifying commands
+execute_command() {
+    local cmd="$1"
+    local description="${2:-Executing command}"
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${CYAN}[DRY-RUN]${NC} Would execute: $description"
+        echo -e "         Command: $cmd"
+        return 0
+    else
+        eval "$cmd"
+        return $?
+    fi
+}
+
+# Dry-run wrapper for file operations
+execute_file_op() {
+    local op="$1"
+    local target="$2"
+    local description="${3:-File operation}"
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${CYAN}[DRY-RUN]${NC} Would perform: $description"
+        echo -e "         Operation: $op $target"
+        return 0
+    else
+        case "$op" in
+            mkdir)
+                mkdir -p "$target"
+                ;;
+            rm)
+                rm -rf "$target"
+                ;;
+            cp)
+                cp -r $target  # Note: target includes source and dest
+                ;;
+            *)
+                eval "$op $target"
+                ;;
+        esac
+        return $?
+    fi
+}
+
 # Rollback and version control functions
 # =====================================
 
@@ -357,8 +404,8 @@ execute_rollback() {
     
     # Stop services
     info "Stopping services..."
-    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
-    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    execute_command "systemctl stop profolio-frontend profolio-backend 2>/dev/null || true" "Stopping Profolio services"
+    execute_command "systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true" "Resetting service status"
     
     local rollback_success=false
     
@@ -3169,6 +3216,11 @@ main() {
                 show_help
                 exit 0
                 ;;
+            --dry-run)
+                DRY_RUN=true
+                echo -e "${YELLOW}🧪 DRY-RUN MODE: No changes will be made to the system${NC}"
+                shift
+                ;;
             *)
                 error "Unknown option: $1"
                 show_help
@@ -3377,6 +3429,7 @@ show_help() {
     echo -e "  ${GREEN}--auto, --unattended${NC}     Run with default configuration"
     echo -e "  ${GREEN}--advanced${NC}               Force advanced setup mode"
     echo -e "  ${GREEN}--list-versions${NC}          Show available versions and exit"
+    echo -e "  ${GREEN}--dry-run${NC}                Test installation without making changes"
     echo ""
     echo -e "${WHITE}VERSION CONTROL:${NC}"
     echo -e "  ${GREEN}--version VERSION${NC}        Install/update to specific version"
@@ -3439,8 +3492,8 @@ update_installation() {
     # Stop services properly
     info "Stopping services for update..."
     start_service_downtime
-    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
-    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    execute_command "systemctl stop profolio-frontend profolio-backend 2>/dev/null || true" "Stopping Profolio services"
+    execute_command "systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true" "Resetting service status"
     success "Services stopped"
     
     # Update code with version control
@@ -3619,8 +3672,8 @@ repair_installation() {
     # Stop any running services first
     info "Stopping any running services..."
     start_service_downtime
-    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
-    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    execute_command "systemctl stop profolio-frontend profolio-backend 2>/dev/null || true" "Stopping Profolio services"
+    execute_command "systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true" "Resetting service status"
     
     # Configuration update (preserving existing credentials)
     cd /opt/profolio
