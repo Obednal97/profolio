@@ -408,7 +408,9 @@ PORT=3001
 ### Git Commit Format
 
 ```bash
-# Do NOT include Co-Authored-By for pair programming
+# CRITICAL: NEVER add Claude attribution or co-authoring
+# NEVER add "🤖 Generated with Claude Code"
+# NEVER add "Co-Authored-By: Claude <noreply@anthropic.com>"
 git commit -m "feat: Add new feature"
 ```
 
@@ -416,6 +418,7 @@ git commit -m "feat: Add new feature"
 
 ```bash
 # Use GitHub CLI
+# IMPORTANT: Do NOT add any Claude attribution in PR body
 gh pr create --title "feat: Title" --body "$(cat <<'EOF'
 ## Summary
 - Change 1
@@ -425,8 +428,6 @@ gh pr create --title "feat: Title" --body "$(cat <<'EOF'
 - [ ] E2E tests pass
 - [ ] Security tests pass
 - [ ] Performance metrics met
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
 EOF
 )"
 ```
