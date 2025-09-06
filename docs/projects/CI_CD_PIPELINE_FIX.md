@@ -187,7 +187,7 @@ Full CI simulation run locally with the following results:
 - Backend properly handles type preservation in `transformAsset`
 - Playwright browsers properly installed in frontend context
 
-### Round 10 (2025-09-06 - Final CI Fixes)
+### Round 10 (2025-09-06 - CI Fixes for Comments and Health)
 
 **GitHub Actions CI failures discovered:**
 
@@ -233,6 +233,44 @@ Full CI simulation run locally with the following results:
 - ✅ `any` type check correctly ignores comments
 - ✅ Health endpoint responds at `/api/health`
 - ✅ Backend starts and passes health checks
+
+### Round 11 (2025-09-06 - Critical Backend and Firebase Fixes)
+
+**GitHub Actions CI still failing with:**
+
+1. **@nestjs/schedule crypto error persisting**: Backend crashes with `ReferenceError: crypto is not defined`
+2. **Firebase config 404 errors**: Mock file not being found during tests
+
+**Root causes identified:**
+
+1. **@nestjs/schedule v6.0.0 incompatible with Node.js 18**: Uses `crypto.randomUUID()` without proper import
+2. **Firebase config served from wrong location**: Next.js production server needs it in `.next/static`
+
+**Fixes applied:**
+
+1. **Downgraded @nestjs/schedule to v4.1.2**:
+
+   ```json
+   // Before:
+   "@nestjs/schedule": "^6.0.0",
+
+   // After:
+   "@nestjs/schedule": "^4.1.2",
+   ```
+
+   - Version 4.1.2 is compatible with Node.js 18
+   - Tested locally and backend starts successfully
+
+2. **Fixed firebase-config.json placement**:
+   - Moved creation AFTER build step
+   - Creates in both `public/` and `.next/static/`
+   - Ensures file is available for production server
+
+**Local verification:**
+
+- ✅ Backend starts with @nestjs/schedule v4.1.2
+- ✅ Health endpoint responds correctly
+- ✅ No crypto errors in Node.js 18
 
 ---
 
@@ -388,12 +426,15 @@ strategy:
 6. [x] Fixed `any` type check to exclude comments
 7. [x] Fixed health endpoint URL in CI workflow
 8. [x] Improved backend startup reliability in CI
+9. [x] Downgraded @nestjs/schedule to v4.1.2 for Node.js 18 compatibility
+10. [x] Fixed firebase-config.json placement for production server
 
 ### Immediate (Today)
 
 1. [ ] Commit and push changes to trigger CI
 2. [ ] Monitor CI for successful runs
 3. [ ] Document in release notes if CI passes
+4. [ ] Consider upgrading to Node.js 20 to use latest @nestjs/schedule
 
 ### Long-term (This Month)
 
