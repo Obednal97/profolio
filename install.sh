@@ -381,14 +381,17 @@ create_rollback_point() {
     
     if [ -d "/opt/profolio" ]; then
         info "Creating rollback backup..."
-        cp -r /opt/profolio "$ROLLBACK_BACKUP_DIR" 2>/dev/null || {
-            warn "Failed to create rollback backup"
-            ROLLBACK_BACKUP_DIR=""
-        }
-        
-        if [ -n "$ROLLBACK_BACKUP_DIR" ]; then
+        if cp -r /opt/profolio "$ROLLBACK_BACKUP_DIR" 2>/dev/null; then
             success "Rollback backup created: $ROLLBACK_BACKUP_DIR"
+        else
+            warn "Failed to create rollback backup - continuing without rollback protection"
+            ROLLBACK_BACKUP_DIR=""
+            ROLLBACK_ENABLED=false
         fi
+    else
+        warn "No existing installation found for rollback backup"
+        ROLLBACK_BACKUP_DIR=""
+        ROLLBACK_ENABLED=false
     fi
 }
 
@@ -404,8 +407,8 @@ execute_rollback() {
     
     # Stop services
     info "Stopping services..."
-    execute_command "systemctl stop profolio-frontend profolio-backend 2>/dev/null || true" "Stopping Profolio services"
-    execute_command "systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true" "Resetting service status"
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
     
     local rollback_success=false
     
@@ -496,7 +499,11 @@ execute_rollback() {
     echo ""
     echo -e "${RED}Manual intervention required:${NC}"
     echo -e "   ${WHITE}1.${NC} Check service logs: journalctl -u profolio-backend -u profolio-frontend -f"
-    echo -e "   ${WHITE}2.${NC} Restore manually from: $ROLLBACK_BACKUP_DIR"
+    if [ -n "$ROLLBACK_BACKUP_DIR" ] && [ -d "$ROLLBACK_BACKUP_DIR" ]; then
+        echo -e "   ${WHITE}2.${NC} Restore manually from: $ROLLBACK_BACKUP_DIR"
+    else
+        echo -e "   ${WHITE}2.${NC} No rollback backup available - reinstall may be required"
+    fi
     echo -e "   ${WHITE}3.${NC} Contact support if needed"
     
     return 1
@@ -1835,7 +1842,7 @@ build_application() {
     
     local steps=(
         "Installing backend dependencies (dev mode for build)" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm install"
-        "Generating Prisma client" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm prisma:generate"
+        "Generating Prisma client" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm run prisma:generate"
                         "Running database migrations" "run_database_migrations"
         "Building NestJS backend" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm run build"
         "Installing frontend dependencies (dev mode for build)" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio pnpm install"
@@ -3578,8 +3585,8 @@ update_installation_legacy() {
     # Stop services properly
     info "Stopping services for update..."
     start_service_downtime
-    execute_command "systemctl stop profolio-frontend profolio-backend 2>/dev/null || true" "Stopping Profolio services"
-    execute_command "systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true" "Resetting service status"
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
     success "Services stopped"
     
     # Update code with version control
@@ -3758,8 +3765,8 @@ repair_installation() {
     # Stop any running services first
     info "Stopping any running services..."
     start_service_downtime
-    execute_command "systemctl stop profolio-frontend profolio-backend 2>/dev/null || true" "Stopping Profolio services"
-    execute_command "systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true" "Resetting service status"
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
     
     # Configuration update (preserving existing credentials)
     cd /opt/profolio || exit 1
