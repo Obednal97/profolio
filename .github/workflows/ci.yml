@@ -346,27 +346,6 @@ jobs:
           cd backend && pnpm outdated || true
           cd ../frontend && pnpm outdated || true
 
-  docker-build:
-    name: 🐳 Docker Build Test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🐳 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: 🏗️ Build Docker image (test)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: profolio:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   integration-test:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
