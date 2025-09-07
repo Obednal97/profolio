@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ interface PasswordStrength {
   };
 }
 
-export default function SetupPasswordPage() {
+function SetupPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -488,5 +488,26 @@ export default function SetupPasswordPage() {
         </form>
       </EnhancedGlassCard>
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function SetupPasswordLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false} className="w-full max-w-md text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+        <p className="text-muted-foreground">Loading...</p>
+      </EnhancedGlassCard>
+    </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function SetupPasswordPage() {
+  return (
+    <Suspense fallback={<SetupPasswordLoading />}>
+      <SetupPasswordContent />
+    </Suspense>
   );
 }
