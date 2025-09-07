@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/unifiedAuth";
-import { useAuth as useAuthHook } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/layout/authLayout";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -19,8 +18,8 @@ function SignInPage() {
     user,
     loading: authLoading,
     authMode,
+    signInWithDemo,
   } = useAuth();
-  const { signInWithDemo } = useAuthHook();
   const router = useRouter();
 
   const [formData, setFormData] = useState({ email: "", password: "" });

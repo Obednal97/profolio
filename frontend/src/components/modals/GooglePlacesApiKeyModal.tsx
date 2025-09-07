@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button/button";
+import { RadixButton as Button } from '@/components/ui/button';
 import { 
   EnhancedGlassModal, 
   EnhancedGlassModalContent,

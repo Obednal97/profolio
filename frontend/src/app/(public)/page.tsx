@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, useAnimationFrame } from "framer-motion";
-import { Button } from "@/components/ui/button/button";
+import { RadixButton as Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAuthModeSync } from "@/lib/authConfig";

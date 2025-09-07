@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button/button';
+import { RadixButton as Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 const container = {

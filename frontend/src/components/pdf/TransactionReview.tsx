@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ParsedTransaction, ParseResult } from '@/lib/pdfParser';
-import { Button } from '@/components/ui/button/button';
+import { RadixButton as Button } from '@/components/ui/button';
 import { useAppContext } from '@/components/layout/layoutWrapper';
 import { getAllCategories, getSubcategories } from '@/lib/transactionClassifier';
 

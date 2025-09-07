@@ -54,7 +54,7 @@ interface UnifiedAuthContextType {
   signInWithGoogleProvider?: () => Promise<unknown>;
   signOut: () => Promise<void>;
   resetUserPassword?: (email: string) => Promise<void>;
-  signInWithDemo: () => Promise<void>;
+  signInWithDemo: (options?: { callbackUrl?: string; redirect?: boolean }) => Promise<void>;
   token: string | null;
   refreshUserProfile: () => Promise<void>;
 }
@@ -711,8 +711,16 @@ export function UnifiedAuthProvider({
         }
       : undefined;
 
-  const signInWithDemo = async () => {
+  const signInWithDemo = async (options?: { callbackUrl?: string; redirect?: boolean }) => {
     await localAuth.signInWithDemo();
+    
+    // Handle redirect if requested (matching old useAuth behavior)
+    if (options?.redirect !== false) {
+      const callbackUrl = options?.callbackUrl || "/app/dashboard";
+      if (typeof window !== "undefined") {
+        window.location.href = callbackUrl;
+      }
+    }
   };
 
   const refreshUserProfile = async () => {

@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/unifiedAuth";
-import { useAuth as useAuthHook } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/layout/authLayout";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,8 +18,8 @@ function SignUpPage() {
     signInWithGoogleProvider,
     authMode,
     config,
+    signInWithDemo,
   } = useAuth();
-  const { signInWithDemo } = useAuthHook();
   const router = useRouter();
   const [showEmailForm, setShowEmailForm] = useState(authMode === "local"); // Expanded by default in self-hosted mode
   const [formData, setFormData] = useState({
