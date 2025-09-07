@@ -3476,6 +3476,92 @@ show_help() {
 # Improved update installation with proper completion tracking
 update_installation() {
     OPERATION_TYPE="UPDATE"
+    info "🚀 Starting comprehensive update process"
+    
+    # Execute update steps with visual progress
+    local update_steps=(
+        "1|8|Creating rollback point|create_rollback_point"
+        "2|8|Creating system backup|manage_backups update"
+        "3|8|Updating installer script|update_installer_script"
+        "4|8|Stopping services|stop_services_for_update"
+        "5|8|Downloading latest code|download_updates"
+        "6|8|Setting up environment|setup_environment"
+        "7|8|Building application|build_application"
+        "8|8|Starting services|start_updated_services"
+    )
+    
+    echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║${NC}          ${WHITE}Profolio Update Progress${NC}         ${BLUE}║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    for step_info in "${update_steps[@]}"; do
+        IFS='|' read -r step total message command <<< "$step_info"
+        
+        if ! show_progress "$step" "$total" "$message" "$command"; then
+            error "Update failed at step: $message"
+            if [ "$ROLLBACK_ENABLED" = true ]; then
+                info "🔄 Initiating automatic rollback..."
+                execute_rollback
+            fi
+            OPERATION_SUCCESS=false
+            show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+            return 1
+        fi
+        
+        # Add small delay for better UX
+        sleep 0.5
+    done
+    
+    OPERATION_SUCCESS=true
+    show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+    return 0
+}
+
+# Helper function to stop services during update
+stop_services_for_update() {
+    start_service_downtime
+    systemctl stop profolio-frontend profolio-backend 2>/dev/null || true
+    systemctl reset-failed profolio-frontend profolio-backend 2>/dev/null || true
+    return 0
+}
+
+# Helper function to download updates
+download_updates() {
+    cd /opt/profolio || return 1
+    
+    # Stash any local changes
+    if ! sudo -u profolio git stash push -m "Auto-stash before update $(date)" 2>/dev/null; then
+        # Ignore stash failures if no changes to stash
+        true
+    fi
+    
+    # Update code with version control
+    if [ -n "$TARGET_VERSION" ]; then
+        checkout_version "$TARGET_VERSION"
+    else
+        # Fetch latest changes and reset to match remote
+        sudo -u profolio git fetch origin main --tags && \
+        sudo -u profolio git reset --hard origin/main
+    fi
+    
+    # Optimize installation size
+    rm -rf docs/ .github/ www/ policies/ scripts/ || true
+    rm -f CONTRIBUTING.md SECURITY.md README.md .DS_Store || true
+    return 0
+}
+
+# Helper function to start services after update  
+start_updated_services() {
+    setup_services
+    systemctl start profolio-backend profolio-frontend 2>/dev/null || true
+    systemctl enable profolio-backend profolio-frontend 2>/dev/null || true
+    return 0
+}
+
+# Legacy update_installation function (keeping original logic as backup)
+update_installation_legacy() {
+    OPERATION_TYPE="UPDATE"
     info "Starting update process"
     
     # Create rollback point before making any changes
