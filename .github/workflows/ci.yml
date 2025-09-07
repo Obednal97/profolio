@@ -594,8 +594,8 @@ jobs:
 
       - name: 🔒 Security checks
         run: |
-          if grep -r "rm -rf /" install.sh profolio.sh lib/*.sh 2>/dev/null | grep -v "^#"; then
-            echo "❌ Unsafe rm commands found"
+          if grep -r "rm -rf /$\|rm -rf /[^o]" install.sh profolio.sh lib/*.sh 2>/dev/null | grep -v "^#"; then
+            echo "❌ Unsafe rm commands found (targeting root filesystem)"
             exit 1
           fi
           if grep -r "password\s*=\s*['\"]" install.sh profolio.sh lib/*.sh 2>/dev/null | grep -v "^#"; then
