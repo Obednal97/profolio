@@ -1,4 +1,5 @@
 name: Rate Limiting CI Tests
+# Updated to fix deprecated actions and improve test architecture
 
 on:
   push:
