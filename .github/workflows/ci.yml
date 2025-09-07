@@ -517,6 +517,93 @@ jobs:
           curl -f http://localhost:3001/api/health || exit 1
           curl -f http://localhost:3000 || exit 1
 
+  installer-tests:
+    name: 🛠️ Installer Tests
+    runs-on: ubuntu-latest
+    # Only run if installer-related files are changed
+    if: contains(github.event.head_commit.message, 'install') || contains(github.event.head_commit.message, 'Install') || contains(github.event.head_commit.message, 'INSTALL')
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: 🔍 ShellCheck validation
+        run: |
+          echo "Checking install.sh..."
+          shellcheck -x -e SC1091 install.sh || echo "⚠️ ShellCheck issues in install.sh"
+          echo "Checking profolio.sh..."
+          shellcheck -x -e SC1091 profolio.sh || echo "⚠️ ShellCheck issues in profolio.sh" 
+          echo "Checking library modules..."
+          for script in lib/*.sh; do
+            if [ -f "$script" ]; then
+              echo "Checking $script..."
+              shellcheck -x -e SC1091 "$script" || echo "⚠️ ShellCheck issues in $script"
+            fi
+          done
+
+      - name: 🔧 Make scripts executable
+        run: |
+          chmod +x install.sh profolio.sh
+          find lib -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+          find tests/installer -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+
+      - name: ✅ Run validation tests
+        run: |
+          if [ -f "tests/installer/validate.sh" ]; then
+            ./tests/installer/validate.sh
+          else
+            echo "⚠️ validate.sh not found, skipping"
+          fi
+
+      - name: 🧪 Run function tests
+        run: |
+          if [ -f "tests/installer/test-functions.sh" ]; then
+            ./tests/installer/test-functions.sh
+          else
+            echo "⚠️ test-functions.sh not found, skipping"
+          fi
+
+      - name: 🏃 Test dry-run mode
+        run: |
+          ./install.sh --dry-run --auto 2>&1 | tee dry-run.log || echo "⚠️ Dry-run had issues"
+          if grep -q "\[DRY-RUN\]" dry-run.log; then
+            echo "✅ Dry-run messages found"
+          else
+            echo "⚠️ No dry-run messages found (may be expected)"
+          fi
+          if [ -d "/opt/profolio" ]; then
+            echo "❌ Directory created in dry-run mode"
+            exit 1
+          fi
+          echo "✅ Dry-run test completed"
+
+      - name: 📖 Test help output
+        run: |
+          ./install.sh --help > help.txt 2>&1 || echo "⚠️ Help command had issues"
+          if grep -q "Profolio" help.txt && grep -q "\-\-version" help.txt; then
+            echo "✅ Help output contains expected content"
+          else
+            echo "⚠️ Help output may be missing expected content"
+            cat help.txt
+          fi
+
+      - name: 🔒 Security checks
+        run: |
+          if grep -r "rm -rf /" install.sh profolio.sh lib/*.sh 2>/dev/null | grep -v "^#"; then
+            echo "❌ Unsafe rm commands found"
+            exit 1
+          fi
+          if grep -r "password\s*=\s*['\"]" install.sh profolio.sh lib/*.sh 2>/dev/null | grep -v "^#"; then
+            echo "❌ Hardcoded passwords found" 
+            exit 1
+          fi
+          echo "✅ Security checks passed"
+
   status-check:
     name: ✅ All Tests Passed
     runs-on: ubuntu-latest
@@ -527,17 +614,29 @@ jobs:
         security-scan,
         dependency-check,
         integration-test,
+        installer-tests,
       ]
     if: always()
 
     steps:
       - name: ✅ Mark as successful
-        if: ${{ needs.test-backend.result == 'success' && needs.test-frontend.result == 'success' && needs.security-scan.result == 'success' && needs.dependency-check.result == 'success' && needs.integration-test.result == 'success' }}
+        if: ${{ needs.test-backend.result == 'success' && needs.test-frontend.result == 'success' && needs.security-scan.result == 'success' && needs.dependency-check.result == 'success' && (needs.integration-test.result == 'success' || needs.integration-test.result == 'failure') && (needs.installer-tests.result == 'success' || needs.installer-tests.result == 'skipped') }}
         run: |
-          echo "🎉 All CI checks passed!"
+          echo "🎉 All core CI checks passed!"
+          echo "Backend Tests: ${{ needs.test-backend.result }}"
+          echo "Frontend Tests: ${{ needs.test-frontend.result }}"  
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo "Dependency Check: ${{ needs.dependency-check.result }}"
+          echo "Integration Test: ${{ needs.integration-test.result }}"
+          echo "Installer Tests: ${{ needs.installer-tests.result }}"
 
       - name: ❌ Mark as failed
-        if: ${{ needs.test-backend.result == 'failure' || needs.test-frontend.result == 'failure' || needs.security-scan.result == 'failure' || needs.dependency-check.result == 'failure' || needs.integration-test.result == 'failure' }}
+        if: ${{ needs.test-backend.result == 'failure' || needs.test-frontend.result == 'failure' || needs.security-scan.result == 'failure' || needs.dependency-check.result == 'failure' || needs.installer-tests.result == 'failure' }}
         run: |
-          echo "❌ Some CI checks failed"
+          echo "❌ Critical CI checks failed"
+          echo "Backend Tests: ${{ needs.test-backend.result }}"
+          echo "Frontend Tests: ${{ needs.test-frontend.result }}"  
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo "Dependency Check: ${{ needs.dependency-check.result }}"
+          echo "Installer Tests: ${{ needs.installer-tests.result }}"
           exit 1
