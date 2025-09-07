@@ -6,6 +6,7 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { FirebaseService } from "./firebase.service";
 import { TwoFactorService } from "./two-factor.service";
+import { OAuthPasswordService } from "./oauth-password.service";
 import { PrismaService } from "@/common/prisma.service";
 import { EncryptionService } from "@/common/encryption.service";
 import { AuthGuard } from "./guards/auth.guard";
@@ -30,12 +31,13 @@ import { JwtAuthGuard } from "@/common/auth/jwt-auth.guard";
     AuthService,
     FirebaseService,
     TwoFactorService,
+    OAuthPasswordService,
     PrismaService,
     EncryptionService,
     AuthGuard,
     JwtStrategy,
     JwtAuthGuard,
   ],
-  exports: [AuthService, FirebaseService, TwoFactorService, JwtStrategy, JwtAuthGuard, JwtModule],
+  exports: [AuthService, FirebaseService, TwoFactorService, OAuthPasswordService, JwtStrategy, JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

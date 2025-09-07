@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { logger } from "@/lib/logger";
 import { SettingsSkeleton } from "@/components/ui/skeleton";
 import { TwoFactorStatus } from "@/components/settings/security/TwoFactorStatus";
+import { OAuthPasswordSetup } from "@/components/settings/security/OAuthPasswordSetup";
 
 interface Tab {
   id: string;
@@ -415,8 +416,8 @@ const SecurityTab = ({
     confirmPassword: string;
   }) => Promise<void>;
   loading: boolean;
-  userProfile?: { provider?: string; email?: string };
-  isDemoMode: boolean;
+  userProfile?: { provider?: string; email?: string; password?: string };
+  isDemoMode: boolean
 }): React.ReactElement => {
   const [tokenExpiration, setTokenExpiration] = useState(() => {
     if (typeof window !== "undefined") {
@@ -434,9 +435,11 @@ const SecurityTab = ({
   });
 
   // Determine if user is a Google/Firebase user
-  const isGoogleUser =
-    userProfile?.provider === "firebase" || userProfile?.email?.includes("@");
-  const hasPassword = !isGoogleUser; // For now, assume non-Google users have passwords
+  const isOAuthUser = userProfile?.provider === "firebase" || userProfile?.provider === "google" || userProfile?.provider === "github";
+  // Check if user has a password set (backend should return this info)
+  const hasPassword = userProfile?.password && userProfile.password.length > 0;
+  // For OAuth users without password, show setup option
+  const needsPasswordSetup = isOAuthUser && !hasPassword;
 
   // Password validation
   const validatePassword = (password: string) => {
@@ -457,10 +460,10 @@ const SecurityTab = ({
   const passwordsMatch =
     passwordData.newPassword === passwordData.confirmPassword;
   const isFormValid = () => {
-    // For Google users (setting password), no current password needed
+    // For OAuth users without password (setting password), no current password needed
     // For existing users (changing password), current password required
     const currentPasswordValid =
-      isGoogleUser || passwordData.currentPassword.length > 0;
+      needsPasswordSetup || passwordData.currentPassword.length > 0;
     const newPasswordValid = passwordRequirements.every((req) => req.met);
     const confirmPasswordValid =
       passwordsMatch && passwordData.confirmPassword.length > 0;
@@ -473,7 +476,7 @@ const SecurityTab = ({
     if (!isFormValid()) return;
 
     await handlePasswordUpdate({
-      currentPassword: isGoogleUser ? undefined : passwordData.currentPassword,
+      currentPassword: needsPasswordSetup ? undefined : passwordData.currentPassword,
       newPassword: passwordData.newPassword,
       confirmPassword: passwordData.confirmPassword,
     });
@@ -516,7 +519,7 @@ const SecurityTab = ({
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              {isGoogleUser ? (
+              {isOAuthUser ? (
                 <span className="text-green-500 text-sm">✓ Connected</span>
               ) : (
                 <span className="text-gray-400 text-sm">○ Not Connected</span>
@@ -541,14 +544,24 @@ const SecurityTab = ({
         </div>
       </EnhancedGlassCard>
 
-      {/* Password Form */}
+      {/* OAuth Password Setup for users without password */}
+      {needsPasswordSetup && (
+        <OAuthPasswordSetup
+          userEmail={userProfile?.email}
+          provider={userProfile?.provider}
+          hasPassword={hasPassword}
+        />
+      )}
+
+      {/* Password Form - only show if user has a password or is not OAuth */}
+      {(hasPassword || !isOAuthUser) && (
       <form onSubmit={handleSubmit} className="space-y-6">
         <EnhancedGlassCard variant="prominent" padding="lg" hoverable={false} enableLensing={false}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {isGoogleUser ? "Set Password" : "Change Password"}
+            Change Password
           </h3>
 
-          {isGoogleUser && (
+          {false && (
             <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-blue-700 dark:text-blue-300 text-sm">
                 <i className="fas fa-info-circle mr-2"></i>
@@ -558,7 +571,7 @@ const SecurityTab = ({
             </div>
           )}
 
-          {!isGoogleUser && (
+          {hasPassword && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Current Password
@@ -573,7 +586,7 @@ const SecurityTab = ({
                   })
                 }
                 className="w-full bg-gray-50 dark:bg-white/5 backdrop-blur-sm border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500/50 focus:bg-white dark:focus:bg-white/10 transition-all duration-200"
-                required={!isGoogleUser}
+                required={hasPassword}
                 disabled={isDemoMode}
                 placeholder={
                   isDemoMode
@@ -666,11 +679,7 @@ const SecurityTab = ({
             disabled={loading || !isFormValid() || isDemoMode}
             className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium px-6 py-3"
           >
-            {loading
-              ? "Updating..."
-              : isGoogleUser
-              ? "Set Password"
-              : "Update Password"}
+            {loading ? "Updating..." : "Update Password"}
           </Button>
 
           {isDemoMode && (
@@ -680,6 +689,7 @@ const SecurityTab = ({
           )}
         </EnhancedGlassCard>
       </form>
+      )}
 
       {/* Session Management */}
       <div className="border-t border-gray-200 dark:border-white/10 pt-6">

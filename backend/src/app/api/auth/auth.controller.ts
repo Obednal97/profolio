@@ -48,6 +48,11 @@ import {
   VerifyBackupCodeDto,
   RegenerateBackupCodesDto,
 } from "./dto/two-factor.dto";
+import { OAuthPasswordService } from "./oauth-password.service";
+import {
+  SetPasswordDto,
+  VerifySetupTokenDto,
+} from "./dto/oauth-password.dto";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -72,7 +77,8 @@ export class AuthController {
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly firebaseService: FirebaseService,
-    private readonly twoFactorService: TwoFactorService
+    private readonly twoFactorService: TwoFactorService,
+    private readonly oauthPasswordService: OAuthPasswordService
   ) {}
 
   /**
@@ -769,6 +775,102 @@ export class AuthController {
       }
       throw new HttpException(
         "Failed to regenerate backup codes",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // ============= OAuth Password Setup Endpoints =============
+
+  @Post("oauth/request-password-setup")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Request password setup for OAuth users" })
+  @ApiResponse({ status: 200, description: "Password setup email sent" })
+  @ApiResponse({ status: 400, description: "User already has password or not OAuth user" })
+  @ApiResponse({ status: 429, description: "Too many requests" })
+  async requestPasswordSetup(@Req() req: { user: AuthUser }) {
+    try {
+      // Check rate limiting
+      const rateLimitKey = `password_setup_request_${req.user.id}`;
+      this.checkRateLimit(rateLimitKey);
+
+      const result = await this.oauthPasswordService.requestPasswordSetup(req.user.id);
+      
+      // Update rate limiting on success
+      this.updateRateLimit(rateLimitKey, true);
+      
+      return result;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to process password setup request",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post("oauth/verify-setup-token")
+  @ApiOperation({ summary: "Verify password setup token" })
+  @ApiResponse({ status: 200, description: "Token is valid" })
+  @ApiResponse({ status: 400, description: "Invalid or expired token" })
+  @ApiResponse({ status: 429, description: "Too many verification attempts" })
+  async verifySetupToken(@Body(ValidationPipe) dto: VerifySetupTokenDto) {
+    try {
+      // Rate limiting per token (to prevent brute force)
+      const rateLimitKey = `verify_token_${dto.token.substring(0, 8)}`;
+      this.checkRateLimit(rateLimitKey);
+
+      const result = await this.oauthPasswordService.verifySetupToken(dto.token);
+      
+      // Update rate limiting on success
+      this.updateRateLimit(rateLimitKey, true);
+      
+      return result;
+    } catch (error) {
+      // Update rate limiting on failure
+      const rateLimitKey = `verify_token_${dto.token.substring(0, 8)}`;
+      this.updateRateLimit(rateLimitKey, false);
+      
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to verify token",
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Post("oauth/set-password")
+  @ApiOperation({ summary: "Set password using setup token" })
+  @ApiResponse({ status: 200, description: "Password set successfully" })
+  @ApiResponse({ status: 400, description: "Invalid token or password requirements not met" })
+  @ApiResponse({ status: 409, description: "Password already set" })
+  async setPasswordWithToken(@Body(ValidationPipe) dto: SetPasswordDto) {
+    try {
+      // Rate limiting per token
+      const rateLimitKey = `set_password_${dto.token.substring(0, 8)}`;
+      this.checkRateLimit(rateLimitKey);
+
+      const result = await this.oauthPasswordService.setPassword(dto);
+      
+      // Clear rate limiting on success
+      this.updateRateLimit(rateLimitKey, true);
+      
+      return result;
+    } catch (error) {
+      // Update rate limiting on failure
+      const rateLimitKey = `set_password_${dto.token.substring(0, 8)}`;
+      this.updateRateLimit(rateLimitKey, false);
+      
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        "Failed to set password",
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

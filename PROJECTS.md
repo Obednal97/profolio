@@ -42,43 +42,53 @@ Each project should have:
 
 ### P1.2: OAuth Users Password Management
 
-**Status**: Not Started | **Estimated Effort**: 1 week | **Complexity**: Medium
+**Status**: ✅ COMPLETE | **Actual Effort**: 2 days | **Complexity**: Medium
 
-**Scope Requirements**:
+**Completed Features**:
 
-- [ ] Design "Set Password" flow for OAuth users
-- [ ] Plan database schema updates
-- [ ] Define security requirements
-- [ ] Create UI mockups
+- [x] Design "Set Password" flow for OAuth users
+- [x] Database schema with PasswordSetupToken model
+- [x] Security requirements with rate limiting
+- [x] Full UI implementation with React components
+- [x] Backend service with token-based verification
+- [x] Email integration for secure setup links
+- [x] Frontend pages for password setup flow
+- [x] E2E test suite with 11 test scenarios
+- [x] Type safety with zero `any` types
 
-**Key Decisions Needed**:
+**Implementation Details**:
 
-- Password requirements for OAuth users
-- Migration strategy for existing users
-- Security verification before allowing password set
+- Backend: `oauth-password.service.ts` with full token management
+- Frontend: `OAuthPasswordSetup.tsx` component and setup page
+- API routes: `/auth/oauth/request-password-setup`, `/auth/oauth/verify-setup-token`, `/auth/oauth/set-password`
+- Security: Rate limiting, token expiry (1 hour), bcrypt hashing, single-use tokens
+- Testing: Comprehensive E2E tests including security scenarios
 
-**Specification**: `docs/projects/OAUTH_PASSWORD_SPEC.md` (To be created)
+**Documentation**: `docs/projects/OAUTH_PASSWORD_MANAGEMENT.md` (✅ Complete)
 
 ---
 
 ### P1.3: Enhanced Rate Limiting System
 
-**Status**: Partial Implementation | **Estimated Effort**: 1-2 weeks | **Complexity**: Medium
+**Status**: ✅ SPECIFICATION COMPLETE | **Estimated Effort**: 1-2 weeks | **Complexity**: Medium
 
 **Scope Requirements**:
 
-- [ ] Audit existing rate limiting
-- [ ] Design progressive lockout system
-- [ ] Plan monitoring and alerting
-- [ ] Define admin override capabilities
+- [x] Audit existing rate limiting (basic in-memory implementation found)
+- [x] Design progressive lockout system (exponential backoff proposed)
+- [x] Plan monitoring and alerting (Redis + audit logs architecture)
+- [x] Define admin override capabilities (full admin API designed)
 
 **Key Decisions Needed**:
 
-- Rate limiting storage (Redis vs database)
-- Lockout duration strategy
-- IP-based vs account-based limiting
+- Storage backend: Redis (recommended) vs PostgreSQL vs Hybrid
+- Implementation: @nestjs/throttler vs express-rate-limit
+- Strategy: IP-based vs User-based vs Hybrid approach
+- Default limits and progressive penalty patterns
 
-**Specification**: `docs/projects/RATE_LIMITING_SPEC.md` (To be created)
+**Specification**: `docs/projects/RATE_LIMITING_SPEC.md` (✅ Completed)
+**Decision Guide**: `docs/projects/RATE_LIMITING_DECISIONS.md` (✅ Created)
+**Implementation Checklist**: `docs/projects/RATE_LIMITING_IMPLEMENTATION_CHECKLIST.md` (✅ Ready)
 
 ---
 
@@ -133,23 +143,31 @@ Each project should have:
 
 ### P2.3: Admin User Management Dashboard
 
-**Status**: Backend Ready | **Estimated Effort**: 2 weeks | **Complexity**: Medium
+**Status**: ✅ SPECIFICATION COMPLETE, Backend Ready | **Estimated Effort**: 2 weeks | **Complexity**: Medium
 
 **Scope Requirements**:
 
-- [ ] UI/UX design for admin dashboard
-- [ ] Define admin capabilities
-- [ ] Audit logging requirements
-- [ ] Bulk operations design
+- [x] UI/UX design for admin dashboard (Glass design system)
+- [x] Define admin capabilities (USER, ADMIN, SUPER_ADMIN roles)
+- [x] Audit logging requirements (RoleChange tracking ready)
+- [x] Bulk operations design (Multi-select with actions)
 
-**Key Decisions Needed**:
+**Backend Complete**:
 
-- Admin role hierarchy
-- Permitted actions per role
-- Audit trail retention
-- UI framework for admin panel
+- RBAC system with role guards
+- User management APIs (`/admin/users`)
+- Audit logging with RoleChange model
+- Permission verification services
 
-**Specification**: `docs/projects/ADMIN_DASHBOARD_SPEC.md` (To be created)
+**Frontend Required**:
+
+- User management table with search/filter/pagination
+- User detail modals with role management
+- Bulk operations interface
+- Audit log viewer
+- Admin statistics dashboard
+
+**Specification**: `docs/projects/ADMIN_DASHBOARD_SPEC.md` (✅ Completed)
 
 ---
 
