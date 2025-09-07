@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, MiddlewareConsumer } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AppController } from "./app.controller";
@@ -16,11 +16,17 @@ import { ExpensesModule } from "@/app/api/expenses/expenses.module";
 import { RbacModule } from "@/common/rbac/rbac.module";
 import { SetupModule } from "@/setup/setup.module";
 import { BillingModule } from "@/app/api/billing/billing.module";
+import { RedisModule } from "@/common/redis/redis.module";
+import { RateLimitModule } from "@/common/rate-limit/rate-limit.module";
+import { RateLimitMiddleware } from "@/common/rate-limit/rate-limit.middleware";
+import { RateLimitAdminModule } from "@/app/api/admin/rate-limit/rate-limit-admin.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    RedisModule,
+    RateLimitModule,
     RbacModule,
     AuthModule,
     SettingsModule,
@@ -34,9 +40,16 @@ import { BillingModule } from "@/app/api/billing/billing.module";
     ExpensesModule,
     SetupModule,
     BillingModule,
+    RateLimitAdminModule,
   ],
   controllers: [AppController],
   providers: [PrismaService],
   exports: [PrismaService],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(RateLimitMiddleware)
+      .forRoutes('*'); // Apply to all routes
+  }
+}

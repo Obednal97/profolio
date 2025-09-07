@@ -467,3 +467,59 @@ model PasswordSetupToken {
   @@index([userId])
   @@index([expiresAt])
 }
+
+// Rate Limiting Tables
+model RateLimitRule {
+  id              String   @id @default(uuid())
+  endpoint        String?  // null = global rule
+  method          String?  // GET, POST, etc. null = all methods
+  maxAttempts     Int
+  windowMs        Int      // Time window in milliseconds
+  blockDurationMs Int      // Block duration in milliseconds
+  skipIps         String[] // IPs to skip rate limiting
+  skipUserIds     String[] // User IDs to skip rate limiting
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([endpoint, method])
+  @@index([isActive])
+  @@index([endpoint])
+}
+
+model RateLimitEvent {
+  id           String    @id @default(uuid())
+  identifier   String    // IP address or user ID
+  identifierType String  // 'ip' or 'user'
+  endpoint     String
+  method       String
+  attempts     Int       @default(1)
+  blocked      Boolean   @default(false)
+  blockedUntil DateTime?
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  @@index([identifier, endpoint, method, createdAt])
+  @@index([identifier, blocked, blockedUntil])
+  @@index([createdAt])
+  @@index([blocked, blockedUntil])
+}
+
+model BotDetectionEvent {
+  id              String   @id @default(uuid())
+  identifier      String   // IP address or user ID
+  identifierType  String   // 'ip' or 'user'
+  detectionType   String   // 'user_agent', 'timing', 'pattern', 'fingerprint'
+  score           Int      // Bot probability score 0-100
+  details         Json?    // Additional detection details
+  blocked         Boolean  @default(false)
+  userAgent       String?
+  headers         Json?
+  createdAt       DateTime @default(now())
+  
+  @@index([identifier, detectionType, createdAt])
+  @@index([score, blocked])
+  @@index([createdAt])
+  @@index([identifier, blocked])
+}
