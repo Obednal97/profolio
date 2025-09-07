@@ -257,6 +257,7 @@ jobs:
           NODE_ENV: test
           NEXT_PUBLIC_API_URL: http://localhost:3001
           NEXT_PUBLIC_AUTH_MODE: local
+          NEXT_PUBLIC_FIREBASE_CONFIG: "{}"
 
       - name: 🧪 Health check frontend
         run: |
@@ -303,6 +304,7 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           BACKEND_URL: http://localhost:3001
           NEXT_PUBLIC_AUTH_MODE: local
+          NEXT_PUBLIC_FIREBASE_CONFIG: "{}"
 
       - name: 📊 Upload test results
         uses: actions/upload-artifact@v4
