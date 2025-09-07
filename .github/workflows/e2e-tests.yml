@@ -67,6 +67,16 @@ jobs:
         ports:
           - 5432:5432
 
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -114,6 +124,9 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
           JWT_SECRET: e2e-test-jwt-secret
           API_ENCRYPTION_KEY: e2e-test-encryption-key
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          RATE_LIMIT_ENABLED: true
 
       - name: 🔍 TypeScript type checking
         run: |
@@ -204,6 +217,9 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_e2e
           JWT_SECRET: e2e-test-jwt-secret
           API_ENCRYPTION_KEY: test-encryption-key-32-chars-ok
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          RATE_LIMIT_ENABLED: true
           PORT: 3001
 
       - name: 🚀 Start frontend service
