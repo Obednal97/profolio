@@ -144,7 +144,24 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
     throw new Error("REDIRECT_INITIATED"); // Special error to indicate redirect started
   }
 
-  return signInWithPopup(auth, provider);
+  const result = await signInWithPopup(auth, provider);
+  
+  // Wait for auth state to be fully updated
+  await new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && user.uid === result.user.uid) {
+        unsubscribe();
+        resolve(user);
+      }
+    });
+    // Timeout after 5 seconds
+    setTimeout(() => {
+      unsubscribe();
+      resolve(result.user);
+    }, 5000);
+  });
+  
+  return result;
 };
 
 /**

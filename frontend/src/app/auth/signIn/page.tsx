@@ -61,6 +61,11 @@ function SignInPage() {
 
   // 🔧 PWA FIX: Check for Google auth redirect result on page load
   useEffect(() => {
+    // Only check on mount, not on every render
+    if (hasHandledRedirect) {
+      return;
+    }
+
     const checkRedirectResult = async () => {
       try {
         setHasHandledRedirect(true);
@@ -86,10 +91,8 @@ function SignInPage() {
       }
     };
 
-    // Only check on mount, not on every render
-    if (!hasHandledRedirect) {
-      checkRedirectResult();
-    }
+    checkRedirectResult();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - only run once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {

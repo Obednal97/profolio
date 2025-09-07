@@ -425,9 +425,9 @@ jobs:
 
       - name: 🚀 Start services
         run: |
-          cd backend && pnpm run start:prod &
+          cd backend && pnpm run start &
           sleep 10
-          cd ../frontend && pnpm start &
+          cd frontend && pnpm start &
           sleep 10
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
@@ -437,7 +437,7 @@ jobs:
 
       - name: 🧪 Health check
         run: |
-          curl -f http://localhost:3001/health || exit 1
+          curl -f http://localhost:3001/api/health || exit 1
           curl -f http://localhost:3000 || exit 1
 
   status-check:

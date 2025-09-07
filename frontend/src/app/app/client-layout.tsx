@@ -43,24 +43,33 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (!isClient) return;
 
     try {
+      // Check if we're coming from a Google auth redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAuthRedirect = urlParams.has('auth-action') || 
+                             window.location.pathname.includes('/__/auth/');
+
       // Determine authentication flow state - optimized for instant navigation
-      if (loading) {
+      if (loading || isAuthRedirect) {
         setAuthFlow('loading');
       } else if ((user && user.id) || isDemoMode) {
         // Authenticated - show content immediately
         setAuthFlow('authenticated');
         
         // Clean up any lingering auth-action parameters without delay
-        const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('auth-action')) {
           const url = new URL(window.location.href);
           url.searchParams.delete('auth-action');
           window.history.replaceState({}, '', url.toString());
         }
       } else {
-        setAuthFlow('unauthenticated');
-        // Redirect to sign-in page where user can choose demo mode
-        router.push('/auth/signIn');
+        // Add a small delay before redirecting to avoid race conditions
+        const redirectTimer = setTimeout(() => {
+          setAuthFlow('unauthenticated');
+          // Redirect to sign-in page where user can choose demo mode
+          router.push('/auth/signIn');
+        }, 500);
+        
+        return () => clearTimeout(redirectTimer);
       }
     } catch (redirectError) {
       console.error('Redirect error:', redirectError);
