@@ -154,6 +154,12 @@ profolio-logo-*px.svg
 frontend/public/temp-bank-file-examples-to-be-deleted
 
 # ===============================================
+# CLAUDE CODE UTILITIES
+# ===============================================
+# Claude Code limit tracker and other utilities
+claude-code-limit-tracker/
+
+# ===============================================
 # BACKUPS & MISC
 # ===============================================
 *.backup
