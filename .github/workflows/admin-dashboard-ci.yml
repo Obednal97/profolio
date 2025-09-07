@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload backend coverage
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-admin-coverage
           path: backend/coverage/
@@ -148,7 +148,7 @@ jobs:
 
       - name: Upload frontend coverage
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-admin-coverage
           path: frontend/coverage/
@@ -272,7 +272,7 @@ jobs:
 
       - name: Upload E2E test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: admin-e2e-results
           path: |
@@ -444,7 +444,7 @@ jobs:
 
       - name: Upload performance results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: admin-performance-results
           path: admin-load-report.*
