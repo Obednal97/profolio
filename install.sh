@@ -1831,8 +1831,90 @@ detect_installation_state() {
     fi
 }
 
-# Build application with production optimizations and space efficiency
-build_application() {
+# Enhanced build with auto-recovery capabilities
+build_application_with_recovery() {
+    local max_attempts=2
+    local attempt=1
+    
+    info "Building application with auto-recovery support..."
+    
+    while [ $attempt -le $max_attempts ]; do
+        if [ $attempt -gt 1 ]; then
+            warn "Build attempt $attempt of $max_attempts (applying recovery measures)"
+            
+            # Recovery steps for failed builds
+            info "🔄 Applying automatic recovery measures..."
+            
+            # Clean all build artifacts and dependencies
+            rm -rf /opt/profolio/frontend/.next /opt/profolio/backend/dist 2>/dev/null || true
+            rm -rf /opt/profolio/frontend/node_modules /opt/profolio/backend/node_modules 2>/dev/null || true
+            
+            # Verify dependencies exist before building
+            verify_build_dependencies || {
+                error "Dependency verification failed after recovery"
+                return 1
+            }
+        fi
+        
+        # Attempt the build
+        if build_application_internal; then
+            success "✅ Build completed successfully on attempt $attempt"
+            return 0
+        else
+            warn "❌ Build failed on attempt $attempt"
+            
+            if [ $attempt -eq $max_attempts ]; then
+                error "Build failed after $max_attempts attempts"
+                echo ""
+                echo -e "${RED}🔧 Manual Recovery Commands:${NC}"
+                echo -e "${WHITE}1. Clean dependencies:${NC}"
+                echo "   cd /opt/profolio/backend && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
+                echo "   cd /opt/profolio/frontend && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
+                echo ""
+                echo -e "${WHITE}2. Generate Prisma client:${NC}"
+                echo "   cd /opt/profolio/backend && sudo -u profolio pnpm run prisma:generate"
+                echo ""
+                echo -e "${WHITE}3. Build manually:${NC}"
+                echo "   cd /opt/profolio/backend && sudo -u profolio pnpm run build"
+                echo "   cd /opt/profolio/frontend && sudo -u profolio pnpm run build"
+                return 1
+            fi
+        fi
+        
+        ((attempt++))
+    done
+    
+    return 1
+}
+
+# Verify build dependencies are properly installed
+verify_build_dependencies() {
+    info "🔍 Verifying build dependencies..."
+    
+    # Check backend dependencies
+    if [ ! -f "/opt/profolio/backend/package.json" ]; then
+        error "Backend package.json not found"
+        return 1
+    fi
+    
+    # Check if required scripts exist in package.json
+    if ! grep -q "prisma:generate" /opt/profolio/backend/package.json; then
+        error "prisma:generate script not found in backend package.json"
+        return 1
+    fi
+    
+    # Check frontend dependencies
+    if [ ! -f "/opt/profolio/frontend/package.json" ]; then
+        error "Frontend package.json not found"
+        return 1
+    fi
+    
+    success "✅ Build dependencies verified"
+    return 0
+}
+
+# Internal build function (original logic)
+build_application_internal() {
     # Clean up any existing build artifacts with permission issues
     info "Cleaning build directories..."
     rm -rf /opt/profolio/frontend/.next /opt/profolio/backend/dist 2>/dev/null || true
@@ -1853,6 +1935,11 @@ build_application() {
     
     execute_steps "Building Profolio Application (Production Optimized)" "${steps[@]}"
     return $?  # Ensure we return the exit code from execute_steps
+}
+
+# Alias for backwards compatibility
+build_application() {
+    build_application_with_recovery
 }
 
 # Clean up build artifacts and unnecessary cache
@@ -2976,130 +3063,311 @@ restore_from_backup() {
     fi
 }
 
-# Run advanced setup wizard
-run_advanced_setup() {
-    # Skip wizard entirely in silent/auto mode
-    if [ "$SILENT_MODE" = true ] || [ "$AUTO_INSTALL" = true ]; then
-        return
+# TUI-aware advanced menu system
+show_advanced_menu() {
+    local menu_title="$1"
+    local menu_options=("${@:2}")
+    local choice
+    
+    if [ "$SILENT_MODE" = true ]; then
+        # For TUI mode, return a default choice
+        return 1
     fi
     
     echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                    Advanced Setup Options                     ║${NC}"
+    echo -e "${CYAN}║$(printf "%*s" $(((66-${#menu_title})/2)) "")${WHITE}$menu_title${NC}$(printf "%*s" $(((66-${#menu_title})/2)) "")${CYAN}║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     
-    # Rollback protection
-    echo -e "${WHITE}Rollback Protection:${NC}"
-    echo -e "  ${GREEN}[1]${NC} Enable (recommended) - Auto-rollback on failure"
-    echo -e "  ${GREEN}[2]${NC} Disable - No automatic rollback"
-    echo ""
-    read -p "Select rollback protection [1]: " rollback_choice
-    rollback_choice=${rollback_choice:-1}
+    local i=1
+    for option in "${menu_options[@]}"; do
+        echo -e "  ${GREEN}[$i]${NC} $option"
+        ((i++))
+    done
     
-    if [ "$rollback_choice" = "2" ]; then
-        ROLLBACK_ENABLED=false
-        warn "⚠️ Automatic rollback disabled"
-    else
-        ROLLBACK_ENABLED=true
-        success "✅ Automatic rollback enabled"
+    echo ""
+    read -p "Select option [1]: " choice
+    choice=${choice:-1}
+    
+    return $choice
+}
+
+# Run advanced setup wizard
+run_advanced_setup() {
+    # Skip wizard entirely in silent/auto mode but handle TUI mode specially
+    if [ "$AUTO_INSTALL" = true ] && [ "$TUI_CONFIG" != true ]; then
+        return
     fi
     
-    # Version selection
-    echo ""
-    echo -e "${WHITE}Version Selection:${NC}"
-    echo -e "  ${GREEN}[1]${NC} Latest stable release (recommended)"
-    echo -e "  ${GREEN}[2]${NC} Latest development (main branch)"
-    echo -e "  ${GREEN}[3]${NC} Specific version"
-    echo -e "  ${GREEN}[4]${NC} List available versions"
-    echo ""
-    read -p "Select version option [1]: " version_choice
-    version_choice=${version_choice:-1}
+    # Handle TUI mode - use structured data instead of interactive menus
+    if [ "$SILENT_MODE" = true ] && [ "$TUI_CONFIG" = true ]; then
+        # TUI mode - configuration comes from environment variables or defaults
+        setup_advanced_from_tui
+        return
+    fi
     
-    case $version_choice in
+    # Main advanced setup menu loop
+    local main_menu=true
+    local submenu_return=""
+    
+    while [ "$main_menu" = true ]; do
+        # Show main configuration menu
+        show_advanced_menu "Advanced Setup Options" \
+            "Version Control Settings" \
+            "Environment Configuration" \
+            "Optimization Settings" \
+            "Rollback Protection" \
+            "Backup Configuration" \
+            "Review & Apply Settings" \
+            "Return to Default Mode"
+        
+        local main_choice=$?
+        
+        case $main_choice in
+            1)
+                configure_version_control
+                ;;
+            2)
+                configure_environment_settings
+                ;;
+            3)
+                configure_optimization
+                ;;
+            4)
+                configure_rollback_protection
+                ;;
+            5)
+                configure_backup_options
+                ;;
+            6)
+                show_configuration_summary
+                if confirm_configuration; then
+                    main_menu=false
+                fi
+                ;;
+            7)
+                info "Returning to default mode"
+                return 0
+                ;;
+            *)
+                warn "Invalid selection, please try again"
+                ;;
+        esac
+    done
+}
+
+# Configure version control settings
+configure_version_control() {
+    show_advanced_menu "Version Control Settings" \
+        "Latest Stable Release (recommended)" \
+        "Latest Development (main branch)" \
+        "Specific Version" \
+        "List Available Versions" \
+        "Back to Main Menu"
+    
+    local choice=$?
+    
+    case $choice in
+        1)
+            TARGET_VERSION="latest"
+            success "✅ Will install latest stable release"
+            ;;
         2)
             TARGET_VERSION="main"
-            info "📦 Will install from main branch"
+            success "✅ Will install from main branch"
             ;;
         3)
-            read -p "Enter version (e.g., v1.13.1): " TARGET_VERSION
-            if ! validate_version "$TARGET_VERSION"; then
+            echo ""
+            read -p "Enter version (e.g., v1.18.0): " TARGET_VERSION
+            if validate_version "$TARGET_VERSION"; then
+                success "✅ Will install version $TARGET_VERSION"
+            else
                 error "Invalid version format"
-                exit 1
+                TARGET_VERSION="latest"
             fi
-            info "📦 Will install version $TARGET_VERSION"
             ;;
         4)
             get_available_versions
             echo ""
             read -p "Enter version from list: " TARGET_VERSION
-            if ! validate_version "$TARGET_VERSION"; then
-                error "Invalid version format"
-                exit 1
+            if validate_version "$TARGET_VERSION"; then
+                success "✅ Will install version $TARGET_VERSION"
+            else
+                error "Invalid version format, using latest"
+                TARGET_VERSION="latest"
             fi
-            info "📦 Will install version $TARGET_VERSION"
             ;;
-        *)
-            TARGET_VERSION="latest"
-            info "📦 Will install latest stable release"
+        5)
+            return 0
             ;;
     esac
     
-    # File optimization
     echo ""
-    echo -e "${WHITE}File Optimization:${NC}"
-    echo -e "  ${GREEN}[1]${NC} Standard optimization (recommended)"
-    echo -e "  ${GREEN}[2]${NC} Aggressive optimization (smaller size, slower build)"
-    echo -e "  ${GREEN}[3]${NC} No optimization (faster install, larger size)"
-    echo ""
-    read -p "Select optimization level [1]: " optimize_choice
-    optimize_choice=${optimize_choice:-1}
+    read -p "Press Enter to continue..."
+}
+
+# Configure rollback protection
+configure_rollback_protection() {
+    show_advanced_menu "Rollback Protection" \
+        "Enable (recommended) - Auto-rollback on failure" \
+        "Disable - No automatic rollback" \
+        "Back to Main Menu"
     
-    case $optimize_choice in
+    local choice=$?
+    
+    case $choice in
+        1)
+            ROLLBACK_ENABLED=true
+            success "✅ Automatic rollback enabled"
+            ;;
         2)
-            OPTIMIZE_FILES=true
-            AGGRESSIVE_OPTIMIZE=true
-            info "🗜️ Aggressive optimization enabled"
+            ROLLBACK_ENABLED=false
+            warn "⚠️ Automatic rollback disabled"
             ;;
         3)
-            OPTIMIZE_FILES=false
-            info "⏩ Optimization disabled for faster install"
-            ;;
-        *)
-            OPTIMIZE_FILES=true
-            AGGRESSIVE_OPTIMIZE=false
-            info "⚡ Standard optimization enabled"
+            return 0
             ;;
     esac
     
-    # Backup directory
     echo ""
-    echo -e "${WHITE}Backup Configuration:${NC}"
-    read -p "Custom backup directory (press Enter for /opt): " custom_backup
-    if [ -n "$custom_backup" ]; then
-        BACKUP_DIR="$custom_backup"
-        info "📁 Backup directory: $BACKUP_DIR"
-    else
-        BACKUP_DIR="/opt"
-        info "📁 Using default backup directory: /opt"
-    fi
+    read -p "Press Enter to continue..."
+}
+
+# Configure optimization settings
+configure_optimization() {
+    show_advanced_menu "Optimization Settings" \
+        "Safe Optimization (recommended)" \
+        "Aggressive Optimization (smaller size)" \
+        "No Optimization (faster install)" \
+        "Back to Main Menu"
     
-    # Summary
+    local choice=$?
+    
+    case $choice in
+        1)
+            OPTIMIZATION_LEVEL="safe"
+            success "✅ Safe optimization enabled"
+            ;;
+        2)
+            OPTIMIZATION_LEVEL="aggressive" 
+            warn "⚠️ Aggressive optimization enabled (may affect debugging)"
+            ;;
+        3)
+            OPTIMIZATION_LEVEL="none"
+            info "ℹ️ Optimization disabled for faster install"
+            ;;
+        4)
+            return 0
+            ;;
+    esac
+    
     echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Configure environment settings  
+configure_environment_settings() {
+    show_advanced_menu "Environment Configuration" \
+        "Preserve Existing Config (recommended)" \
+        "Fresh Configuration" \
+        "Back to Main Menu"
+    
+    local choice=$?
+    
+    case $choice in
+        1)
+            PRESERVE_ENV="yes"
+            success "✅ Will preserve existing configuration"
+            ;;
+        2)
+            PRESERVE_ENV="no"
+            warn "⚠️ Will create fresh configuration"
+            ;;
+        3)
+            return 0
+            ;;
+    esac
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Configure backup options
+configure_backup_options() {
+    show_advanced_menu "Backup Configuration" \
+        "Default Location (/opt)" \
+        "Custom Directory" \
+        "Skip Backup (not recommended)" \
+        "Back to Main Menu"
+    
+    local choice=$?
+    
+    case $choice in
+        1)
+            BACKUP_DIR="/opt"
+            success "✅ Using default backup location"
+            ;;
+        2)
+            echo ""
+            read -p "Enter custom backup directory: " custom_backup
+            if [ -n "$custom_backup" ]; then
+                BACKUP_DIR="$custom_backup"
+                success "✅ Using custom backup location: $BACKUP_DIR"
+            fi
+            ;;
+        3)
+            SKIP_BACKUP=true
+            warn "⚠️ Backup will be skipped (not recommended)"
+            ;;
+        4)
+            return 0
+            ;;
+    esac
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Show configuration summary
+show_configuration_summary() {
     echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                    Configuration Summary                      ║${NC}"
+    echo -e "${CYAN}║                  Configuration Summary                        ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -e "  Rollback Protection: $([ "$ROLLBACK_ENABLED" = true ] && echo "✅ Enabled" || echo "❌ Disabled")"
-    echo -e "  Version: $TARGET_VERSION"
-    echo -e "  Optimization: $([ "$OPTIMIZE_FILES" = true ] && echo "✅ Enabled" || echo "❌ Disabled")"
-    [ "$AGGRESSIVE_OPTIMIZE" = true ] && echo -e "  Optimization Level: Aggressive"
-    echo -e "  Backup Directory: $BACKUP_DIR"
     echo ""
     
-    read -p "Proceed with these settings? [Y/n]: " confirm
-    if [[ "$confirm" =~ ^[Nn] ]]; then
-        warn "Installation cancelled by user"
-        exit 0
-    fi
+    echo -e "${WHITE}Target Version:${NC} ${TARGET_VERSION:-latest}"
+    echo -e "${WHITE}Rollback Protection:${NC} ${ROLLBACK_ENABLED:-true}"
+    echo -e "${WHITE}Optimization Level:${NC} ${OPTIMIZATION_LEVEL:-safe}"
+    echo -e "${WHITE}Environment Preservation:${NC} ${PRESERVE_ENV:-yes}"
+    echo -e "${WHITE}Backup Directory:${NC} ${BACKUP_DIR:-/opt}"
+    echo -e "${WHITE}Skip Backup:${NC} ${SKIP_BACKUP:-false}"
+    echo ""
+}
+
+# Confirm configuration
+confirm_configuration() {
+    echo -e "${WHITE}Proceed with these settings?${NC}"
+    echo -e "  ${GREEN}[1]${NC} Yes, apply configuration"
+    echo -e "  ${GREEN}[2]${NC} No, modify settings"
+    echo ""
+    read -p "Select option [1]: " confirm_choice
+    confirm_choice=${confirm_choice:-1}
+    
+    [ "$confirm_choice" = "1" ]
+}
+
+# Setup advanced configuration from TUI (non-interactive)
+setup_advanced_from_tui() {
+    # Use environment variables or sensible defaults for TUI mode
+    TARGET_VERSION="${TUI_TARGET_VERSION:-latest}"
+    ROLLBACK_ENABLED="${TUI_ROLLBACK_ENABLED:-true}"
+    OPTIMIZATION_LEVEL="${TUI_OPTIMIZATION_LEVEL:-safe}"
+    PRESERVE_ENV="${TUI_PRESERVE_ENV:-yes}"
+    BACKUP_DIR="${TUI_BACKUP_DIR:-/opt}"
+    SKIP_BACKUP="${TUI_SKIP_BACKUP:-false}"
+    
+    info "Advanced configuration applied from TUI settings"
+    success "✅ TUI advanced configuration ready"
 }
 
 # Main execution logic with improved terminology
