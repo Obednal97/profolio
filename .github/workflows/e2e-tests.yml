@@ -91,22 +91,38 @@ jobs:
         with:
           version: 9.14.4
 
+      - name: 📦 Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
       - name: 📦 Cache dependencies
         uses: actions/cache@v4
         with:
           path: |
-            ~/.pnpm-store
-            frontend/node_modules
-            backend/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+            ${{ env.STORE_PATH }}
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-pnpm-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
+            ${{ runner.os }}-pnpm-playwright-
             ${{ runner.os }}-pnpm-
 
       - name: 📚 Install dependencies
         run: |
           cd backend && pnpm install --frozen-lockfile
           cd ../frontend && pnpm install --frozen-lockfile
-          # Install Playwright browsers with dependencies right after frontend install
+
+      - name: 📦 Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('frontend/package.json') }}
+
+      - name: 📦 Install Playwright browsers (if not cached)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          cd frontend
           pnpm exec playwright install --with-deps chromium
 
       - name: 🗄️ Setup test database
@@ -326,14 +342,29 @@ jobs:
         with:
           version: 9.14.4
 
+      - name: 📦 Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 📦 Cache dependencies and browsers
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-pnpm-playwright-security-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-playwright-
+
       - name: 📚 Install dependencies
         run: |
           cd frontend && pnpm install --frozen-lockfile
 
-      - name: 📦 Install Playwright browsers
+      - name: 📦 Install Playwright browsers (if needed)
         run: |
           cd frontend
-          pnpm dlx playwright install --with-deps
+          pnpm exec playwright install --with-deps chromium
 
       - name: 🔒 Run security-focused E2E tests
         run: |
@@ -415,14 +446,29 @@ jobs:
         with:
           version: 9.14.4
 
+      - name: 📦 Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 📦 Cache dependencies and browsers
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-pnpm-playwright-accessibility-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-playwright-
+
       - name: 📚 Install dependencies
         run: |
           cd frontend && pnpm install --frozen-lockfile
 
-      - name: 📦 Install Playwright browsers
+      - name: 📦 Install Playwright browsers (if needed)
         run: |
           cd frontend
-          pnpm dlx playwright install --with-deps
+          pnpm exec playwright install --with-deps chromium
 
       - name: ♿ Run accessibility audit with axe-core
         run: |

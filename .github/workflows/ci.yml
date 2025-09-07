@@ -143,6 +143,16 @@ jobs:
         ports:
           - 5432:5432
 
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -200,29 +210,47 @@ jobs:
           cd backend
           nohup pnpm start > backend.log 2>&1 &
           echo $! > backend.pid
+          echo "Backend PID: $(cat backend.pid)"
 
-          # Wait for backend to be ready
-          for i in {1..30}; do
+          # Wait for backend to be ready with better diagnostics
+          echo "Waiting for backend to start..."
+          for i in {1..45}; do
+            # Check if process is still alive
+            if ! kill -0 $(cat backend.pid) 2>/dev/null; then
+              echo "❌ Backend process died. Logs:"
+              cat backend.log
+              exit 1
+            fi
+            
             if curl -f http://localhost:3001/api/health 2>/dev/null; then
-              echo "✅ Backend is ready"
+              echo "✅ Backend is healthy and responding"
               break
             fi
-            echo "Waiting for backend... (attempt $i/30)"
+            echo "Waiting for backend... (attempt $i/45)"
             sleep 2
           done
 
-          # Verify backend is running
+          # Final verification
           if ! curl -f http://localhost:3001/api/health; then
-            echo "❌ Backend failed to start. Logs:"
+            echo "❌ Backend failed to start after 90 seconds. Logs:"
             cat backend.log
+            echo "Process status:"
+            ps aux | grep node || echo "No node processes found"
+            echo "Port 3001 status:"
+            netstat -tlnp | grep 3001 || echo "Port 3001 not listening"
             exit 1
           fi
+
+          echo "✅ Backend is running and healthy"
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
           JWT_SECRET: test-jwt-secret
           API_ENCRYPTION_KEY: test-encryption-key-32-chars-ok
           PORT: 3001
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          RATE_LIMIT_ENABLED: true
 
       - name: 🔍 TypeScript check
         run: |
@@ -324,7 +352,7 @@ jobs:
           output: "trivy-results.sarif"
 
       - name: 📊 Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: "trivy-results.sarif"
