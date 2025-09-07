@@ -1841,11 +1841,11 @@ build_application() {
     chown -R profolio:profolio /opt/profolio
     
     local steps=(
-        "Installing backend dependencies (dev mode for build)" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm install"
+        "Installing backend dependencies (dev mode for build)" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
         "Generating Prisma client" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm run prisma:generate"
                         "Running database migrations" "run_database_migrations"
         "Building NestJS backend" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm run build"
-        "Installing frontend dependencies (dev mode for build)" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio pnpm install"
+        "Installing frontend dependencies (dev mode for build)" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
         "Building Next.js frontend" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio pnpm run build"
         "Optimizing for production deployment" "optimize_production_deployment"
         "Cleaning build artifacts and cache" "cleanup_build_artifacts"
