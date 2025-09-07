@@ -124,7 +124,7 @@ jobs:
       - name: 🛡️ Run RBAC tests
         run: |
           cd backend
-          pnpm test:ci -- --testPathPattern="rbac" --coverage --passWithNoTests
+          pnpm test:ci --testPathPattern="rbac" --coverage --passWithNoTests
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
@@ -134,7 +134,7 @@ jobs:
       - name: 👨‍💼 Run admin API tests
         run: |
           cd backend
-          pnpm test:ci -- --testPathPattern="admin" --coverage --passWithNoTests
+          pnpm test:ci --testPathPattern="admin" --coverage --passWithNoTests
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
@@ -144,7 +144,7 @@ jobs:
       - name: 🚫 Run basic rate limiting tests
         run: |
           cd backend
-          pnpm test:ci -- --testPathPattern="rate-limit.*\.spec\.ts$" --coverage
+          pnpm test:ci --testPathPattern="rate-limit.*\.spec\.ts$" --coverage
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
