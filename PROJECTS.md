@@ -35,8 +35,7 @@ Each project should have:
 - Backup codes: 10 codes, bcrypt hashed
 - Recovery flow: Backup codes or admin disable
 
-**Specification**: `docs/projects/TWO_FACTOR_AUTH_SPEC.md` (Completed)
-**Summary**: `docs/projects/2FA_IMPLEMENTATION_SUMMARY.md`
+**Documentation**: `docs/projects/TWO_FACTOR_AUTH_IMPLEMENTATION.md` (✅ Complete)
 
 ---
 
