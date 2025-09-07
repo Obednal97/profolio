@@ -38,13 +38,26 @@ RD=$(echo "\033[31m")
 GN=$(echo "\033[32m")
 CL=$(echo "\033[0m")
 
-# Check for whiptail/dialog
+# Check for whiptail/dialog with tailbox support
 if command -v whiptail >/dev/null 2>&1; then
     TUI_TOOL="whiptail"
+    # Test if tailbox is supported
+    if ! whiptail --help 2>&1 | grep -q "tailbox" 2>/dev/null; then
+        TUI_TAILBOX_SUPPORTED=false
+    else
+        TUI_TAILBOX_SUPPORTED=true
+    fi
 elif command -v dialog >/dev/null 2>&1; then
     TUI_TOOL="dialog"
+    # Test if tailbox is supported
+    if ! dialog --help 2>&1 | grep -q "tailbox" 2>/dev/null; then
+        TUI_TAILBOX_SUPPORTED=false
+    else
+        TUI_TAILBOX_SUPPORTED=true
+    fi
 else
     TUI_ENABLED=false
+    TUI_TAILBOX_SUPPORTED=false
 fi
 
 # Get installer version (static)
@@ -563,10 +576,24 @@ function monitor_installation_progress {
     > "$milestone_file" 2>/dev/null || echo "Warning: Cannot write to milestone file"
     > "$status_file" 2>/dev/null || echo "Warning: Cannot write to status file"
     
-    # Show progress monitoring dialog
-    $TUI_TOOL --title "$operation_type Progress" \
-        --tailbox "$PROGRESS_FILE" 20 80 &
-    local tailbox_pid=$!
+    # Show progress monitoring dialog (with fallback for unsupported tailbox)
+    local tailbox_pid=0
+    if [ "$TUI_ENABLED" = true ] && [ "$TUI_TAILBOX_SUPPORTED" = true ]; then
+        $TUI_TOOL --title "$operation_type Progress" \
+            --tailbox "$PROGRESS_FILE" 20 80 &
+        tailbox_pid=$!
+    elif [ "$TUI_ENABLED" = true ]; then
+        # Fallback: Show a simple progress message dialog
+        $TUI_TOOL --title "$operation_type Progress" \
+            --infobox "$operation_type is running...\n\nPlease wait for completion.\nThis may take several minutes.\n\nProgress will be shown in the terminal." 10 60 &
+        tailbox_pid=$!
+    else
+        # Complete fallback: terminal-only progress monitoring
+        echo -e "${YW}$operation_type Progress:${CL}"
+        echo "Progress will be shown below (this may take several minutes)..."
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        tailbox_pid=0
+    fi
     
     # Monitor progress in background with timeout
     (
@@ -671,7 +698,10 @@ function install_with_progress {
     # Cleanup monitoring processes
     if [ ${#monitor_pids[@]} -gt 0 ]; then
         for pid in "${monitor_pids[@]}"; do
-            kill "$pid" 2>/dev/null || true
+            # Only kill non-zero PIDs
+            if [ "$pid" -gt 0 ] 2>/dev/null; then
+                kill "$pid" 2>/dev/null || true
+            fi
         done
     fi
     
