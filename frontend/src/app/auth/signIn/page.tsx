@@ -30,50 +30,66 @@ function SignInPage() {
   const [showEmailForm, setShowEmailForm] = useState(authMode === "local"); // Expanded by default in self-hosted mode
   const [show2FA, setShow2FA] = useState(false);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
+  const [hasHandledRedirect, setHasHandledRedirect] = useState(false);
 
   const isFormValid =
     formData.email.trim() !== "" && formData.password.trim() !== "";
 
   // Redirect if already authenticated (unified user or demo mode)
   useEffect(() => {
+    // Skip auth checks if Google sign-in is in progress or we just handled a redirect
+    if (isGoogleSignInInProgress || hasHandledRedirect) {
+      return;
+    }
+
     logger.auth("Auth state check:", {
       user: user?.id,
       authLoading,
       authMode,
+      isGoogleSignInInProgress,
     });
 
     // Only redirect if we have a valid user AND we're not in a loading state
     if (!authLoading && user && user.id) {
       logger.auth("Redirecting to dashboard...");
-
-      // Use a small delay to ensure the auth state is fully settled
-      const redirectTimer = setTimeout(() => {
-        window.location.href = "/app/dashboard";
-      }, 100);
-
-      return () => clearTimeout(redirectTimer);
+      
+      // Use replace to prevent back button issues
+      router.replace("/app/dashboard");
     }
-  }, [user, authLoading, authMode]);
+  }, [user, authLoading, authMode, isGoogleSignInInProgress, hasHandledRedirect, router]);
 
   // 🔧 PWA FIX: Check for Google auth redirect result on page load
   useEffect(() => {
     const checkRedirectResult = async () => {
       try {
+        setHasHandledRedirect(true);
         const result = await handleGoogleRedirectResult();
-        if (result) {
+        if (result && result.user) {
           logger.auth(
-            "Google auth redirect successful, redirecting to dashboard"
+            "Google auth redirect successful, user authenticated:",
+            result.user.uid
           );
-          router.push("/app/dashboard");
+          
+          // Mark that we're handling the redirect to prevent premature auth checks
+          setIsGoogleSignInInProgress(true);
+          
+          // Force a small delay to ensure auth state propagates
+          setTimeout(() => {
+            router.replace("/app/dashboard");
+          }, 500);
         }
       } catch (error) {
         logger.auth("Failed to handle redirect result:", error);
         // Don't show error to user unless it's critical
+        setHasHandledRedirect(false);
       }
     };
 
     // Only check on mount, not on every render
-    checkRedirectResult();
+    if (!hasHandledRedirect) {
+      checkRedirectResult();
+    }
   }, []); // Empty dependency array - only run once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,21 +158,16 @@ function SignInPage() {
 
     setError(null);
     setLoading(true);
+    setIsGoogleSignInInProgress(true);
 
     try {
       const result = await signInWithGoogleProvider();
       logger.auth("Google sign-in successful:", result);
 
-      // Primary redirect attempt with signing in indicator
-      router.push("/app/dashboard");
-
-      // Fallback redirect in case the primary one doesn't work
+      // Wait a moment for auth state to propagate
       setTimeout(() => {
-        if (window.location.pathname === "/auth/signIn") {
-          logger.auth("Fallback redirect triggered");
-          router.push("/app/dashboard");
-        }
-      }, 1000);
+        router.replace("/app/dashboard");
+      }, 500);
     } catch (err: unknown) {
       logger.auth("Google sign in error:", err);
 
@@ -172,6 +183,7 @@ function SignInPage() {
         err instanceof Error ? err.message : "Failed to sign in with Google";
       setError(errorMessage);
       setLoading(false);
+      setIsGoogleSignInInProgress(false);
     }
   };
 
@@ -191,8 +203,8 @@ function SignInPage() {
     }
   };
 
-  // Show loading while checking auth state
-  if (authLoading) {
+  // Show loading while checking auth state (but not if Google sign-in is in progress)
+  if (authLoading && !isGoogleSignInInProgress && !hasHandledRedirect) {
     return (
       <AuthLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -203,7 +215,7 @@ function SignInPage() {
   }
 
   // If user is authenticated, show a message and redirect
-  if (!authLoading && user && user.id) {
+  if (!authLoading && user && user.id && !isGoogleSignInInProgress) {
     return (
       <AuthLayout>
         <div className="flex items-center justify-center min-h-[400px]">

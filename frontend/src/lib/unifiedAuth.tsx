@@ -433,14 +433,25 @@ export function UnifiedAuthProvider({
                     clearTimeout(authClearTimeoutRef.current);
                   }
 
-                  // Debounce auth clearing to prevent clearing during navigation
-                  authClearTimeoutRef.current = setTimeout(() => {
-                    if (mountedRef.current) {
-                      setUser(null);
-                      setToken(null);
-                      setUserProfile(null);
-                    }
-                  }, 1000); // 1 second delay to allow for navigation-related temporary nulls
+                  // Check if we're in the middle of a redirect or sign-in process
+                  const isRedirecting = typeof window !== "undefined" && 
+                    (window.location.pathname.includes("/auth/signIn") || 
+                     window.location.search.includes("auth-action"));
+
+                  if (isRedirecting) {
+                    // Don't clear auth state if we're on the sign-in page or handling a redirect
+                    logger.auth("Skipping auth clear - redirect in progress");
+                    setLoading(false);
+                  } else {
+                    // Debounce auth clearing to prevent clearing during navigation
+                    authClearTimeoutRef.current = setTimeout(() => {
+                      if (mountedRef.current) {
+                        setUser(null);
+                        setToken(null);
+                        setUserProfile(null);
+                      }
+                    }, 1000); // 1 second delay to allow for navigation-related temporary nulls
+                  }
 
                   // SECURITY: No client-side cache clearing needed - server manages cookies
                 }

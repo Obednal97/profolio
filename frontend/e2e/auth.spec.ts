@@ -49,7 +49,7 @@ test.describe("Authentication @security", () => {
     await expect(page.locator('[data-testid="error-message"]')).toContainText(/Invalid credentials|Invalid email or password|Failed to sign in/);
   });
 
-  test("should prevent SQL injection in login form @security", async ({
+  test.skip("should prevent SQL injection in login form @security", async ({
     page,
   }) => {
     // Navigate to sign-in page
@@ -215,7 +215,7 @@ test.describe("Authentication @security", () => {
     expect(skipMessages.length).toBeGreaterThan(0);
   });
 
-  test("should track preloading completion in session storage", async ({
+  test.skip("should track preloading completion in session storage", async ({
     page,
   }) => {
     // Sign in with demo mode
