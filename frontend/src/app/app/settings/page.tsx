@@ -437,7 +437,7 @@ const SecurityTab = ({
   // Determine if user is a Google/Firebase user
   const isOAuthUser = userProfile?.provider === "firebase" || userProfile?.provider === "google" || userProfile?.provider === "github";
   // Check if user has a password set (backend should return this info)
-  const hasPassword = userProfile?.password && userProfile.password.length > 0;
+  const hasPassword = Boolean(userProfile?.password && userProfile.password.length > 0);
   // For OAuth users without password, show setup option
   const needsPasswordSetup = isOAuthUser && !hasPassword;
 

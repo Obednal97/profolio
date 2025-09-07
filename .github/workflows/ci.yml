@@ -228,7 +228,7 @@ jobs:
       - name: 🎭 Install Playwright browsers
         run: |
           cd frontend
-          pnpm exec playwright install --with-deps chromium firefox
+          pnpm exec playwright install --with-deps chromium
 
       - name: 🏗️ Build frontend for tests
         run: |
