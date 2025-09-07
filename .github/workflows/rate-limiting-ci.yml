@@ -66,12 +66,19 @@ jobs:
         run: |
           echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - name: Setup pnpm cache
+      - name: Setup comprehensive cache
         uses: actions/cache@v4
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+            ~/.cache/ms-playwright
+            backend/node_modules/.cache
+            backend/dist
+            frontend/node_modules/.cache
+            frontend/.next/cache
+          key: ${{ runner.os }}-comprehensive-${{ hashFiles('**/pnpm-lock.yaml', 'backend/src/**', 'frontend/src/**') }}
           restore-keys: |
+            ${{ runner.os }}-comprehensive-
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies

@@ -72,6 +72,14 @@ jobs:
           cd backend
           pnpm install --frozen-lockfile
 
+      - name: 📦 Cache Prisma Client
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules/.prisma
+          key: ${{ runner.os }}-prisma-${{ hashFiles('backend/prisma/schema.prisma', 'backend/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-prisma-
+
       - name: 🗄️ Generate Prisma Client
         run: |
           cd backend
@@ -435,6 +443,19 @@ jobs:
           pnpm prisma db push
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+
+      - name: 📦 Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/dist
+            backend/tsconfig.tsbuildinfo
+            frontend/.next
+            frontend/tsconfig.tsbuildinfo
+            frontend/.swc
+          key: ${{ runner.os }}-build-artifacts-${{ hashFiles('backend/src/**', 'frontend/src/**', 'frontend/package.json', 'backend/package.json', '**/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-artifacts-
 
       - name: 🏗️ Build applications
         run: |
