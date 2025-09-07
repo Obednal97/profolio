@@ -412,7 +412,7 @@ export class BotDetectionService {
                 Object.entries(d.details).filter(([_, value]) => value !== undefined)
               )
             })),
-          } as any,
+          } as Record<string, unknown>,
           blocked,
           userAgent: context.userAgent,
           headers: context.headers,
@@ -430,7 +430,7 @@ export class BotDetectionService {
     return BOT_USER_AGENTS.some(botAgent => lowerUserAgent.includes(botAgent));
   }
 
-  async getBotScore(identifier: string): Promise<{ score: number; detections: any[] }> {
+  async getBotScore(identifier: string): Promise<{ score: number; detections: Array<{ score: number; detectionType: string; timestamp: Date; blocked: boolean }> }> {
     try {
       const recent = await this.prisma.botDetectionEvent.findMany({
         where: {

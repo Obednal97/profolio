@@ -50,13 +50,14 @@ export class CaptchaService {
           answer = num1 + num2;
           question = `What is ${num1} + ${num2}?`;
           break;
-        case '-':
+        case '-': {
           // Ensure positive result
           const larger = Math.max(num1, num2);
           const smaller = Math.min(num1, num2);
           answer = larger - smaller;
           question = `What is ${larger} - ${smaller}?`;
           break;
+        }
         default:
           answer = num1 + num2;
           question = `What is ${num1} + ${num2}?`;
@@ -196,7 +197,14 @@ export class CaptchaService {
     return randomBytes(16).toString('hex');
   }
 
-  async getCaptchaStats(identifier?: string): Promise<any> {
+  async getCaptchaStats(identifier?: string): Promise<{
+    identifier?: string;
+    failedAttempts?: number;
+    captchaRequired?: boolean;
+    enabled?: boolean;
+    ttlSeconds?: number;
+    error?: string;
+  }> {
     try {
       if (identifier) {
         const failedAttemptsKey = `captcha_failed:${identifier}`;
