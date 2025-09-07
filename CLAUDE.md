@@ -411,6 +411,11 @@ PORT=3001
 # CRITICAL: NEVER add Claude attribution or co-authoring
 # NEVER add "🤖 Generated with Claude Code"
 # NEVER add "Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# IMPORTANT: Only commit files you've explicitly modified
+# NEVER use git commit -a or git add -A unless explicitly instructed
+# Always use git add <specific-file> for files you've changed
+git add <specific-file-you-changed>
 git commit -m "feat: Add new feature"
 ```
 
