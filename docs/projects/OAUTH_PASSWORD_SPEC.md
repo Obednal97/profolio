@@ -136,6 +136,36 @@ After implementation, users will have these provider states:
 
 ## 4. Technical Architecture
 
+### 4.0 Type Safety & Code Quality Requirements
+
+**CRITICAL: All code must be 100% type-safe with ZERO `any` types**
+
+#### Type Safety Requirements:
+
+- **NO `any` types** - Use `unknown` with type guards or proper interfaces
+- All function parameters must have explicit types
+- All API responses must have defined interfaces
+- All event handlers must be properly typed
+- Use strict TypeScript configuration (`strict: true`)
+- Enable all ESLint rules for type checking
+
+#### ESLint Compliance:
+
+- Code must pass `pnpm lint:strict` with zero warnings
+- Use `AuthenticatedRequest` interface for all authenticated endpoints
+- Import type utilities from `@/types/common`
+- Follow existing patterns in codebase
+
+#### Race Condition Prevention:
+
+Based on recent Google sign-in fix, implement:
+
+- **State flags** to prevent premature auth checks during operations
+- **Proper delays** to ensure auth state propagation
+- **Replace vs Push** routing to prevent back button issues
+- **Abort controllers** for cancellable operations
+- **Mounted refs** to prevent state updates on unmounted components
+
 ### 4.1 New Database Tables
 
 ```prisma
@@ -159,14 +189,73 @@ model PasswordSetupToken {
 ### 4.2 Service Architecture
 
 ```typescript
-// New service: OAuthPasswordService
-class OAuthPasswordService {
-  async requestPasswordSetup(userId: string): Promise<void>;
-  async verifySetupToken(token: string): Promise<boolean>;
-  async setPassword(token: string, password: string): Promise<void>;
-  private generateSecureToken(): string;
-  private hashToken(token: string): string;
-  private validatePasswordStrength(password: string): boolean;
+import { Injectable, HttpException, HttpStatus } from "@nestjs/common";
+import { PrismaService } from "@/common/prisma.service";
+import { EmailService } from "@/common/email.service";
+import { hash } from "bcrypt";
+import { randomBytes } from "crypto";
+import { AuthenticatedRequest } from "@/types/common";
+
+interface PasswordSetupTokenData {
+  id: string;
+  userId: string;
+  token: string;
+  expiresAt: Date;
+  used: boolean;
+  attempts: number;
+}
+
+interface SetupTokenValidation {
+  valid: boolean;
+  email: string;
+  expiresIn: number;
+}
+
+interface PasswordSetupResult {
+  success: boolean;
+  message: string;
+  provider: "dual";
+}
+
+@Injectable()
+export class OAuthPasswordService {
+  private readonly MAX_ATTEMPTS = 5;
+  private readonly TOKEN_EXPIRY_HOURS = 1;
+  private readonly BCRYPT_ROUNDS = 12;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
+
+  async requestPasswordSetup(userId: string): Promise<void> {
+    // Implementation with proper types
+  }
+
+  async verifySetupToken(token: string): Promise<SetupTokenValidation> {
+    // Implementation with proper types
+  }
+
+  async setPassword(
+    token: string,
+    password: string,
+    confirmPassword: string,
+  ): Promise<PasswordSetupResult> {
+    // Implementation with proper types
+  }
+
+  private generateSecureToken(): string {
+    return randomBytes(32).toString("hex");
+  }
+
+  private async hashToken(token: string): Promise<string> {
+    return hash(token, 10);
+  }
+
+  private validatePasswordStrength(password: string, email: string): boolean {
+    // zxcvbn integration with proper typing
+    return true;
+  }
 }
 ```
 
@@ -192,6 +281,68 @@ Security tip: Choose a unique password you don't use elsewhere.
 
 Best regards,
 The Profolio Team
+```
+
+## 5. API Endpoints & DTOs
+
+### 5.0 Data Transfer Objects (DTOs)
+
+```typescript
+// backend/src/app/api/auth/dto/oauth-password.dto.ts
+
+import {
+  IsString,
+  MinLength,
+  IsEmail,
+  Matches,
+  IsNotEmpty,
+} from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+
+export class RequestPasswordSetupDto {
+  // No body needed - user identified by JWT
+}
+
+export class VerifySetupTokenDto {
+  @ApiProperty({ description: "Setup token from email" })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class SetPasswordDto {
+  @ApiProperty({ description: "Setup token from email" })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @ApiProperty({ description: "New password", minimum: 12 })
+  @IsString()
+  @MinLength(12)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+    message:
+      "Password must contain uppercase, lowercase, number and special character",
+  })
+  password: string;
+
+  @ApiProperty({ description: "Password confirmation" })
+  @IsString()
+  @IsNotEmpty()
+  confirmPassword: string;
+}
+
+// Response DTOs
+export class TokenValidationResponse {
+  valid: boolean;
+  email: string;
+  expiresIn: number; // seconds
+}
+
+export class PasswordSetupResponse {
+  success: boolean;
+  message: string;
+  provider: "dual";
+}
 ```
 
 ## 5. API Endpoints
@@ -303,44 +454,179 @@ The Profolio Team
 }
 ```
 
-### 6.2 Password Setup Flow
+### 6.2 Password Setup Flow (with Race Condition Prevention)
 
 ```tsx
-// New page: /auth/setup-password?token=xxx
-const SetupPasswordPage = () => {
-  const [token] = useSearchParams(["token"]);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [strength, setStrength] = useState(0);
+"use client";
 
-  // Verify token on mount
-  useEffect(() => {
-    verifyToken(token);
-  }, [token]);
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { apiClient } from "@/lib/api-client";
 
-  // Real-time password strength indicator
+interface TokenValidation {
+  valid: boolean;
+  email: string;
+  expiresIn: number;
+}
+
+const SetupPasswordPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+  const router = useRouter();
+
+  // State management with proper types
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [strength, setStrength] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tokenValid, setTokenValid] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+
+  // Race condition prevention
+  const [isPasswordSetupInProgress, setIsPasswordSetupInProgress] =
+    useState<boolean>(false);
+  const [hasCompletedSetup, setHasCompletedSetup] = useState<boolean>(false);
+  const mountedRef = useRef<boolean>(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount
   useEffect(() => {
-    setStrength(calculateStrength(password));
-  }, [password]);
+    return () => {
+      mountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Verify token on mount with proper error handling
+  useEffect(() => {
+    const verifyToken = async (): Promise<void> => {
+      if (!token || hasCompletedSetup) return;
+
+      try {
+        // Cancel any existing request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+
+        const response = await apiClient.get<TokenValidation>(
+          `/auth/oauth/verify-setup-token/${token}`,
+          { signal: abortControllerRef.current.signal },
+        );
+
+        if (mountedRef.current && response.valid) {
+          setTokenValid(true);
+          setEmail(response.email);
+        } else if (mountedRef.current) {
+          setError("Invalid or expired token");
+        }
+      } catch (err) {
+        if (
+          mountedRef.current &&
+          err instanceof Error &&
+          err.name !== "AbortError"
+        ) {
+          setError("Failed to verify token");
+        }
+      }
+    };
+
+    verifyToken();
+  }, [token, hasCompletedSetup]);
+
+  // Real-time password strength with proper typing
+  useEffect(() => {
+    if (password) {
+      // Import zxcvbn dynamically to reduce bundle size
+      import("zxcvbn").then(({ default: zxcvbn }) => {
+        const result = zxcvbn(password, [email]);
+        setStrength(result.score);
+      });
+    } else {
+      setStrength(0);
+    }
+  }, [password, email]);
+
+  const handleSetPassword = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
+    e.preventDefault();
+
+    if (isPasswordSetupInProgress || hasCompletedSetup) return;
+
+    setError(null);
+    setLoading(true);
+    setIsPasswordSetupInProgress(true);
+
+    try {
+      const response = await apiClient.post<PasswordSetupResult>(
+        "/auth/oauth/set-password",
+        {
+          token,
+          password,
+          confirmPassword,
+        },
+      );
+
+      if (response.success) {
+        setHasCompletedSetup(true);
+
+        // Add delay to ensure auth state propagates
+        setTimeout(() => {
+          // Use replace to prevent back button to setup page
+          router.replace("/app/settings/security?passwordSetupSuccess=true");
+        }, 500);
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : "Failed to set password");
+        setIsPasswordSetupInProgress(false);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  };
+
+  if (!tokenValid) {
+    return <TokenInvalidView error={error} />;
+  }
 
   return (
-    <form onSubmit={handleSetPassword}>
+    <form onSubmit={handleSetPassword} className="space-y-4">
       <PasswordInput
         value={password}
-        onChange={setPassword}
-        showStrength
-        requirements
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          setPassword(e.target.value)
+        }
+        strength={strength}
+        showRequirements
+        disabled={loading || hasCompletedSetup}
       />
       <PasswordInput
         value={confirmPassword}
-        onChange={setConfirmPassword}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          setConfirmPassword(e.target.value)
+        }
         label="Confirm Password"
+        disabled={loading || hasCompletedSetup}
       />
+      {error && <ErrorAlert message={error} />}
       <Button
         type="submit"
-        disabled={strength < 3 || password !== confirmPassword}
+        disabled={
+          loading ||
+          hasCompletedSetup ||
+          strength < 3 ||
+          password !== confirmPassword ||
+          password.length < 12
+        }
       >
-        Set Password
+        {loading ? "Setting Password..." : "Set Password"}
       </Button>
     </form>
   );
@@ -627,8 +913,69 @@ After successful implementation, consider:
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Created:** January 2025
 **Last Updated:** January 2025
 **Author:** Profolio Engineering Team
-**Status:** Ready for Review
+**Status:** Ready for Implementation
+
+## 16. Implementation Checklist
+
+### Backend Tasks (NestJS)
+
+- [ ] Create database migration for PasswordSetupToken table
+- [ ] Create oauth-password.dto.ts with proper validation
+- [ ] Implement OAuthPasswordService with type-safe methods
+- [ ] Add rate limiting middleware for password setup endpoints
+- [ ] Create email templates for password setup
+- [ ] Add API endpoints in auth.controller.ts
+- [ ] Write unit tests for OAuthPasswordService
+- [ ] Write integration tests for API endpoints
+- [ ] Add audit logging for security events
+- [ ] Implement token cleanup job (remove expired tokens)
+
+### Frontend Tasks (Next.js)
+
+- [ ] Create password setup page (/auth/setup-password)
+- [ ] Add "Set Password" card to security settings
+- [ ] Implement PasswordInput component with strength meter
+- [ ] Add race condition prevention (state flags, abort controllers)
+- [ ] Implement token verification flow
+- [ ] Add success/error messaging
+- [ ] Write E2E tests for complete flow
+- [ ] Add loading states and error boundaries
+- [ ] Implement proper TypeScript types for all components
+- [ ] Add accessibility features (ARIA labels, keyboard navigation)
+
+### Security Tasks
+
+- [ ] Implement zxcvbn for password strength validation
+- [ ] Add CSRF protection to endpoints
+- [ ] Implement rate limiting (3 requests/hour)
+- [ ] Add security headers to email links
+- [ ] Penetration testing for token security
+- [ ] Review and validate all error messages (no info leakage)
+
+### Documentation Tasks
+
+- [ ] Create user help article
+- [ ] Update API documentation
+- [ ] Add troubleshooting guide
+- [ ] Create security audit document
+
+### Deployment Tasks
+
+- [ ] Deploy to staging with feature flag
+- [ ] Run security scan
+- [ ] Performance testing
+- [ ] Gradual rollout (10% → 50% → 100%)
+- [ ] Monitor error rates and metrics
+- [ ] Production deployment
+
+## Key Implementation Notes
+
+1. **Type Safety**: ZERO `any` types allowed. All code must pass `pnpm lint:strict`
+2. **Race Conditions**: Use state flags and abort controllers as per Google sign-in fix
+3. **Security**: Email verification required, tokens hashed, single-use only
+4. **User Experience**: Clear messaging, proper loading states, graceful error handling
+5. **Testing**: Comprehensive unit, integration, and E2E tests required
