@@ -121,6 +121,39 @@ jobs:
           REDIS_PORT: 6379
           RATE_LIMIT_ENABLED: true
 
+      - name: 🛡️ Run RBAC tests
+        run: |
+          cd backend
+          pnpm test:ci -- --testPathPattern="rbac" --coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+          JWT_SECRET: test-jwt-secret
+          API_ENCRYPTION_KEY: test-encryption-key
+
+      - name: 👨‍💼 Run admin API tests
+        run: |
+          cd backend
+          pnpm test:ci -- --testPathPattern="admin" --coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+          JWT_SECRET: test-jwt-secret
+          API_ENCRYPTION_KEY: test-encryption-key
+
+      - name: 🚫 Run basic rate limiting tests
+        run: |
+          cd backend
+          pnpm test:ci -- --testPathPattern="rate-limit.*\.spec\.ts$" --coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/profolio_test
+          JWT_SECRET: test-jwt-secret
+          API_ENCRYPTION_KEY: test-encryption-key
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          RATE_LIMIT_ENABLED: true
+
       - name: 📊 Test coverage
         run: |
           cd backend

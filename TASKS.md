@@ -1,8 +1,11 @@
 # Profolio Simple Tasks
-*For quick wins that don't require project planning*
+
+_For quick wins that don't require project planning_
 
 ## ✅ Task Criteria
+
 A task (not a project) should be:
+
 - Completable in < 4 hours
 - Single file or component change
 - No database schema changes
@@ -15,19 +18,13 @@ A task (not a project) should be:
 ## 🎨 UI/UX Polish Tasks
 
 ### Landing Page
+
 - [ ] Adjust padding consistency on public pages
   - Review: `/app/page.tsx`, `/app/pricing/page.tsx`
   - Ensure consistent spacing tokens
 
-- [ ] Add scroll snap behavior
-  - File: `/app/page.tsx`
-  - Add CSS scroll-snap to main sections
-
-- [ ] Clean up footer links
-  - File: `/components/Footer.tsx`
-  - Remove redundant or broken links
-
 ### Visual Enhancements
+
 - [ ] PWA status bar blur effect
   - File: `/app/globals.css`
   - Add proper meta theme-color with transparency
@@ -41,6 +38,7 @@ A task (not a project) should be:
 ## 📝 Content Tasks
 
 ### Documentation
+
 - [ ] Add screenshots to README.md
   - Capture: Dashboard, Portfolio, Settings
   - Optimize images for GitHub
@@ -51,20 +49,11 @@ A task (not a project) should be:
   - Clearer instructions
   - Better error messages
 
-- [ ] Enhance policy pages formatting
-  - Files: `/app/privacy/page.tsx`, `/app/terms/page.tsx`
-  - Better typography
-  - Add table of contents
-
 ---
 
 ## 🔧 Minor Fixes
 
 ### Settings
-- [ ] Add "Set Password" button for OAuth users
-  - File: `/app/app/settings/page.tsx`
-  - Show only for users without password
-  - Link to new password set flow
 
 - [ ] Enhance account deletion confirmation
   - File: `/components/DeleteAccountDialog.tsx`
@@ -73,6 +62,7 @@ A task (not a project) should be:
   - Require password entry
 
 ### Notifications
+
 - [ ] Add welcome notification
   - Trigger: 60 seconds after signup
   - Simple welcome message
@@ -83,12 +73,12 @@ A task (not a project) should be:
 ## 🧪 Testing Tasks
 
 ### E2E Tests
-- [ ] Add test for OAuth password setting
+
 - [ ] Add test for account deletion flow
 - [ ] Add test for theme persistence
 
 ### Unit Tests
-- [ ] Test rate limiting logic
+
 - [ ] Test password validation
 - [ ] Test session management
 
@@ -97,12 +87,15 @@ A task (not a project) should be:
 ## 📊 Task Tracking
 
 ### Completed Today
+
 - [x] Example: Fixed button alignment
 
 ### In Progress
+
 - [ ] Currently working on: [Task name]
 
 ### Blocked
+
 - [ ] Waiting for: [Blocker description]
 
 ---
@@ -110,6 +103,7 @@ A task (not a project) should be:
 ## 🏃 Quick Win Checklist
 
 Before starting a task, verify:
+
 - [ ] It's truly a task (not a hidden project)
 - [ ] You understand the full scope
 - [ ] No hidden dependencies
@@ -121,6 +115,7 @@ Before starting a task, verify:
 ## 💡 Task Ideas Parking Lot
 
 Ideas that need more definition:
+
 - Improve loading animations
 - Add keyboard shortcuts
 - Enhance tab navigation
