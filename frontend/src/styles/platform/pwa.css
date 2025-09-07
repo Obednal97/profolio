@@ -110,23 +110,15 @@ NEXT STEPS: Research iOS PWA backdrop-filter limitations or alternative approach
 @supports (-webkit-touch-callout: none) {
   /* iOS status bar handling */
   @media (display-mode: standalone) {
-    /* Prevent bounce scrolling */
-    body {
-      position: fixed;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    /* Main app container with iOS scroll */
+    /* Removed body position fixing that was breaking scrolling on public pages */
+    /* The app-root wrapper doesn't exist on public pages, causing scroll to fail */
+    /* Using overscroll-behavior: none (line 14) instead to prevent bounce scrolling */
+    
+    /* If app-root wrapper exists, enhance its scrolling */
     .app-root {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      min-height: 100vh;
     }
   }
 }
