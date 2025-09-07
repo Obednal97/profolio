@@ -19,7 +19,7 @@ export class VerifySetupTokenDto {
   })
   @IsString()
   @IsNotEmpty()
-  token: string;
+  token!: string;
 }
 
 /**
@@ -32,7 +32,7 @@ export class SetPasswordDto {
   })
   @IsString()
   @IsNotEmpty()
-  token: string;
+  token!: string;
 
   @ApiProperty({ 
     description: "New password (min 12 characters, must contain uppercase, lowercase, number and special character)",
@@ -47,7 +47,7 @@ export class SetPasswordDto {
       message: "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
     }
   )
-  password: string;
+  password!: string;
 
   @ApiProperty({ 
     description: "Password confirmation (must match password)",
@@ -55,7 +55,7 @@ export class SetPasswordDto {
   })
   @IsString()
   @IsNotEmpty()
-  confirmPassword: string;
+  confirmPassword!: string;
 }
 
 /**
@@ -66,19 +66,19 @@ export class TokenValidationResponse {
     description: "Whether the token is valid",
     example: true
   })
-  valid: boolean;
+  valid!: boolean;
 
   @ApiProperty({ 
     description: "Email address associated with the token",
     example: "user@example.com"
   })
-  email: string;
+  email!: string;
 
   @ApiProperty({ 
     description: "Seconds until token expires",
     example: 3542
   })
-  expiresIn: number;
+  expiresIn!: number;
 }
 
 /**
@@ -89,20 +89,20 @@ export class PasswordSetupResponse {
     description: "Whether the operation was successful",
     example: true
   })
-  success: boolean;
+  success!: boolean;
 
   @ApiProperty({ 
     description: "Success message",
     example: "Password set successfully. You can now sign in with email and password."
   })
-  message: string;
+  message!: string;
 
   @ApiProperty({ 
     description: "Updated provider status",
     example: "dual",
     enum: ["dual"]
   })
-  provider: "dual";
+  provider!: "dual";
 }
 
 /**
@@ -113,13 +113,13 @@ export class PasswordSetupRequestResponse {
     description: "Whether the operation was successful",
     example: true
   })
-  success: boolean;
+  success!: boolean;
 
   @ApiProperty({ 
     description: "Message to display to user",
     example: "Password setup email sent to your registered email address"
   })
-  message: string;
+  message!: string;
 }
 
 /**
@@ -130,13 +130,13 @@ export class OAuthPasswordErrorResponse {
     description: "HTTP status code",
     example: 400
   })
-  statusCode: number;
+  statusCode!: number;
 
   @ApiProperty({ 
     description: "Error message",
     example: "User already has a password"
   })
-  message: string;
+  message!: string;
 
   @ApiPropertyOptional({ 
     description: "Detailed error information",
