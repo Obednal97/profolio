@@ -74,8 +74,21 @@ show_progress() {
     local message=$3
     local command="$4"
     
-    # Report progress for TUI
-    report_progress "$step" "$total" "$message"
+    # Report progress for TUI with stage information
+    local current_stage="build"
+    if [[ "$message" =~ [Dd]ownload ]]; then
+        current_stage="download"
+    elif [[ "$message" =~ [Ii]nstall ]]; then
+        current_stage="install"
+    elif [[ "$message" =~ [Bb]uild ]]; then
+        current_stage="build"
+    elif [[ "$message" =~ [Ss]tart|[Ss]ervice ]]; then
+        current_stage="service"
+    elif [[ "$message" =~ [Bb]ackup|[Rr]ollback ]]; then
+        current_stage="backup"
+    fi
+    
+    report_progress "$step" "$total" "$message" "$current_stage"
     
     # In silent mode, execute command without visual output
     if [ "$SILENT_MODE" = true ]; then
@@ -193,15 +206,53 @@ success() {
     fi
 }
 
-# Report progress for TUI
+# Report progress for TUI with enhanced structured data
 report_progress() {
     local current="$1"
     local total="$2"
     local message="$3"
+    local stage="${4:-installation}"
     
     if [ "$SILENT_MODE" = true ]; then
-        echo "PROGRESS:$current:$total:$message" > "$PROGRESS_FILE.tmp"
+        # Calculate percentage
+        local percentage=0
+        if [ "$total" -gt 0 ]; then
+            percentage=$((current * 100 / total))
+        fi
+        
+        # Enhanced structured progress data for TUI
+        # Format: PROGRESS:current:total:percentage:stage:message:timestamp
+        local timestamp=$(date +%s)
+        echo "PROGRESS:$current:$total:$percentage:$stage:$message:$timestamp" > "$PROGRESS_FILE.tmp"
         mv "$PROGRESS_FILE.tmp" "$PROGRESS_FILE"  # Atomic write
+        
+        # Also write to a detailed log for TUI consumption
+        echo "[$timestamp] [$current/$total] ($percentage%) [$stage] $message" >> "$PROGRESS_FILE.detailed"
+    fi
+}
+
+# Report major operation milestones for TUI
+report_milestone() {
+    local milestone="$1"
+    local description="$2"
+    local status="${3:-in_progress}"  # in_progress, completed, failed
+    
+    if [ "$SILENT_MODE" = true ]; then
+        local timestamp=$(date +%s)
+        echo "MILESTONE:$milestone:$status:$description:$timestamp" > "$PROGRESS_FILE.milestone"
+        echo "[$timestamp] MILESTONE: $milestone - $description ($status)" >> "$PROGRESS_FILE.detailed"
+    fi
+}
+
+# Report current operation status for TUI
+report_status() {
+    local operation="$1"
+    local status="$2" 
+    local details="$3"
+    
+    if [ "$SILENT_MODE" = true ]; then
+        local timestamp=$(date +%s)
+        echo "STATUS:$operation:$status:$details:$timestamp" > "$PROGRESS_FILE.status"
     fi
 }
 
@@ -3118,6 +3169,7 @@ run_advanced_setup() {
             "Optimization Settings" \
             "Rollback Protection" \
             "Backup Configuration" \
+            "Tools & Maintenance" \
             "Review & Apply Settings" \
             "Return to Default Mode"
         
@@ -3140,12 +3192,15 @@ run_advanced_setup() {
                 configure_backup_options
                 ;;
             6)
+                configure_tools_maintenance
+                ;;
+            7)
                 show_configuration_summary
                 if confirm_configuration; then
                     main_menu=false
                 fi
                 ;;
-            7)
+            8)
                 info "Returning to default mode"
                 return 0
                 ;;
@@ -3163,6 +3218,7 @@ configure_version_control() {
         "Latest Development (main branch)" \
         "Specific Version" \
         "List Available Versions" \
+        "Restore from Backup" \
         "Back to Main Menu"
     
     local choice=$?
@@ -3198,9 +3254,78 @@ configure_version_control() {
             fi
             ;;
         5)
+            configure_restore_from_backup
+            ;;
+        6)
             return 0
             ;;
     esac
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Configure restore from backup
+configure_restore_from_backup() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                   Restore from Backup                        ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    info "🔍 Scanning for available backups..."
+    
+    if list_available_backups; then
+        echo ""
+        echo -e "${WHITE}Select backup to restore:${NC}"
+        
+        local i=1
+        for backup_info in "${AVAILABLE_BACKUPS[@]}"; do
+            IFS='|' read -r backup_path version_info date_info size_info <<< "$backup_info"
+            echo -e "  ${GREEN}[$i]${NC} $(basename "$backup_path") - ${version_info:-Unknown Version} (${date_info:-Unknown Date})"
+            ((i++))
+        done
+        
+        echo -e "  ${GREEN}[$i]${NC} Cancel - Return to Version Control"
+        echo ""
+        
+        read -p "Select backup [1]: " backup_choice
+        backup_choice=${backup_choice:-1}
+        
+        if [ "$backup_choice" -ge 1 ] && [ "$backup_choice" -le ${#AVAILABLE_BACKUPS[@]} ]; then
+            local selected_backup="${AVAILABLE_BACKUPS[$((backup_choice-1))]}"
+            IFS='|' read -r backup_path version_info rest <<< "$selected_backup"
+            
+            echo ""
+            warn "⚠️  This will replace your current installation with the backup:"
+            echo -e "${WHITE}Backup:${NC} $(basename "$backup_path")"
+            echo -e "${WHITE}Version:${NC} ${version_info:-Unknown}"
+            echo ""
+            read -p "Are you sure you want to proceed? (yes/no) [no]: " confirm_restore
+            
+            if [[ "$confirm_restore" =~ ^[Yy][Ee][Ss]$ ]]; then
+                TARGET_VERSION="backup:$backup_path"
+                success "✅ Will restore from backup: $(basename "$backup_path")"
+                
+                # Set restore mode flag for later processing
+                RESTORE_FROM_BACKUP=true
+                SELECTED_BACKUP_PATH="$backup_path"
+            else
+                info "Restore cancelled"
+            fi
+        elif [ "$backup_choice" -eq "$i" ]; then
+            info "Returning to Version Control menu"
+        else
+            error "Invalid selection"
+        fi
+    else
+        warn "No backups found in backup directories"
+        echo ""
+        echo -e "${YELLOW}Backup locations checked:${NC}"
+        echo "  • /opt/profolio-*"
+        echo "  • ${BACKUP_DIR:-/opt}/profolio-*" 
+        echo ""
+        info "Backups are created automatically during updates and installs"
+    fi
     
     echo ""
     read -p "Press Enter to continue..."
@@ -3328,6 +3453,365 @@ configure_backup_options() {
     read -p "Press Enter to continue..."
 }
 
+# Configure tools and maintenance options
+configure_tools_maintenance() {
+    local tools_menu=true
+    
+    while [ "$tools_menu" = true ]; do
+        show_advanced_menu "Tools & Maintenance" \
+            "Clean Dependencies (node_modules)" \
+            "Reset Lock Files (pnpm-lock.yaml)" \
+            "Clear Build Artifacts" \
+            "Verify Installation Integrity" \
+            "Show System Information" \
+            "Run All Cleanup Tasks" \
+            "Back to Main Menu"
+        
+        local tools_choice=$?
+        
+        case $tools_choice in
+            1)
+                perform_dependency_cleanup
+                ;;
+            2)
+                perform_lockfile_reset
+                ;;
+            3)
+                perform_build_cleanup
+                ;;
+            4)
+                perform_integrity_check
+                ;;
+            5)
+                show_system_information
+                ;;
+            6)
+                perform_full_cleanup
+                ;;
+            7)
+                tools_menu=false
+                ;;
+            *)
+                warn "Invalid selection, please try again"
+                ;;
+        esac
+    done
+}
+
+# Perform dependency cleanup
+perform_dependency_cleanup() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                   Clean Dependencies                          ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    warn "⚠️  This will remove all node_modules directories"
+    echo -e "${WHITE}Locations:${NC}"
+    echo "  • /opt/profolio/frontend/node_modules"
+    echo "  • /opt/profolio/backend/node_modules"
+    echo ""
+    read -p "Continue with dependency cleanup? (y/N): " confirm_deps
+    
+    if [[ "$confirm_deps" =~ ^[Yy]$ ]]; then
+        info "🧹 Cleaning dependencies..."
+        
+        if [ -d "/opt/profolio/backend/node_modules" ]; then
+            rm -rf /opt/profolio/backend/node_modules
+            success "✅ Backend dependencies cleaned"
+        else
+            info "ℹ️ Backend dependencies already clean"
+        fi
+        
+        if [ -d "/opt/profolio/frontend/node_modules" ]; then
+            rm -rf /opt/profolio/frontend/node_modules  
+            success "✅ Frontend dependencies cleaned"
+        else
+            info "ℹ️ Frontend dependencies already clean"
+        fi
+        
+        success "🎉 Dependency cleanup completed"
+        echo ""
+        info "💡 Run 'pnpm install' in each directory to reinstall dependencies"
+    else
+        info "Dependency cleanup cancelled"
+    fi
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Perform lockfile reset
+perform_lockfile_reset() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                    Reset Lock Files                           ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    warn "⚠️  This will remove pnpm-lock.yaml files"
+    echo -e "${WHITE}This forces fresh dependency resolution on next install${NC}"
+    echo ""
+    read -p "Continue with lockfile reset? (y/N): " confirm_locks
+    
+    if [[ "$confirm_locks" =~ ^[Yy]$ ]]; then
+        info "🔄 Resetting lock files..."
+        
+        if [ -f "/opt/profolio/backend/pnpm-lock.yaml" ]; then
+            rm -f /opt/profolio/backend/pnpm-lock.yaml
+            success "✅ Backend lockfile removed"
+        else
+            info "ℹ️ Backend lockfile already missing"
+        fi
+        
+        if [ -f "/opt/profolio/frontend/pnpm-lock.yaml" ]; then
+            rm -f /opt/profolio/frontend/pnpm-lock.yaml
+            success "✅ Frontend lockfile removed"
+        else
+            info "ℹ️ Frontend lockfile already missing"
+        fi
+        
+        success "🎉 Lockfile reset completed"
+    else
+        info "Lockfile reset cancelled"
+    fi
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Perform build cleanup
+perform_build_cleanup() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                   Clear Build Artifacts                       ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    info "🧹 This will remove build artifacts and caches"
+    echo -e "${WHITE}Locations:${NC}"
+    echo "  • /opt/profolio/frontend/.next"
+    echo "  • /opt/profolio/backend/dist"
+    echo "  • Package manager caches"
+    echo ""
+    read -p "Continue with build cleanup? (Y/n): " confirm_build
+    confirm_build=${confirm_build:-y}
+    
+    if [[ "$confirm_build" =~ ^[Yy]$ ]]; then
+        info "🧹 Cleaning build artifacts..."
+        
+        # Frontend build cleanup
+        if [ -d "/opt/profolio/frontend/.next" ]; then
+            rm -rf /opt/profolio/frontend/.next
+            success "✅ Frontend build artifacts cleaned"
+        else
+            info "ℹ️ Frontend build artifacts already clean"
+        fi
+        
+        # Backend build cleanup
+        if [ -d "/opt/profolio/backend/dist" ]; then
+            rm -rf /opt/profolio/backend/dist
+            success "✅ Backend build artifacts cleaned"
+        else
+            info "ℹ️ Backend build artifacts already clean"
+        fi
+        
+        # Cache cleanup
+        sudo -u profolio pnpm store prune 2>/dev/null || true
+        rm -rf /opt/profolio/frontend/.next/cache /opt/profolio/backend/node_modules/.cache 2>/dev/null || true
+        
+        success "🎉 Build cleanup completed"
+    else
+        info "Build cleanup cancelled"
+    fi
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Perform integrity check
+perform_integrity_check() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                 Installation Integrity Check                  ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    info "🔍 Checking installation integrity..."
+    echo ""
+    
+    local issues=0
+    
+    # Check core files
+    echo -e "${WHITE}Core Files:${NC}"
+    if [ -f "/opt/profolio/frontend/package.json" ]; then
+        success "  ✅ Frontend package.json"
+    else
+        error "  ❌ Frontend package.json missing"
+        ((issues++))
+    fi
+    
+    if [ -f "/opt/profolio/backend/package.json" ]; then
+        success "  ✅ Backend package.json"
+    else
+        error "  ❌ Backend package.json missing"
+        ((issues++))
+    fi
+    
+    if [ -f "/opt/profolio/backend/prisma/schema.prisma" ]; then
+        success "  ✅ Prisma schema"
+    else
+        error "  ❌ Prisma schema missing"
+        ((issues++))
+    fi
+    
+    # Check dependencies
+    echo ""
+    echo -e "${WHITE}Dependencies:${NC}"
+    if [ -d "/opt/profolio/frontend/node_modules" ]; then
+        success "  ✅ Frontend dependencies installed"
+    else
+        warn "  ⚠️ Frontend dependencies missing"
+        ((issues++))
+    fi
+    
+    if [ -d "/opt/profolio/backend/node_modules" ]; then
+        success "  ✅ Backend dependencies installed"
+    else
+        warn "  ⚠️ Backend dependencies missing"
+        ((issues++))
+    fi
+    
+    # Check services
+    echo ""
+    echo -e "${WHITE}Services:${NC}"
+    if systemctl is-enabled profolio-backend >/dev/null 2>&1; then
+        if systemctl is-active profolio-backend >/dev/null 2>&1; then
+            success "  ✅ Backend service (running)"
+        else
+            warn "  ⚠️ Backend service (stopped)"
+        fi
+    else
+        error "  ❌ Backend service not installed"
+        ((issues++))
+    fi
+    
+    if systemctl is-enabled profolio-frontend >/dev/null 2>&1; then
+        if systemctl is-active profolio-frontend >/dev/null 2>&1; then
+            success "  ✅ Frontend service (running)"
+        else
+            warn "  ⚠️ Frontend service (stopped)"
+        fi
+    else
+        error "  ❌ Frontend service not installed"
+        ((issues++))
+    fi
+    
+    echo ""
+    if [ $issues -eq 0 ]; then
+        success "🎉 Installation integrity check passed!"
+    else
+        warn "⚠️ Found $issues issues that may need attention"
+    fi
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Show system information
+show_system_information() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                     System Information                        ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    # Version info
+    echo -e "${WHITE}Version Information:${NC}"
+    if [ -f "/opt/profolio/frontend/package.json" ]; then
+        local frontend_version=$(grep '"version"' /opt/profolio/frontend/package.json | cut -d'"' -f4 2>/dev/null)
+        echo "  Frontend: ${frontend_version:-Unknown}"
+    fi
+    
+    if [ -f "/opt/profolio/backend/package.json" ]; then
+        local backend_version=$(grep '"version"' /opt/profolio/backend/package.json | cut -d'"' -f4 2>/dev/null)
+        echo "  Backend: ${backend_version:-Unknown}"
+    fi
+    
+    # System info
+    echo ""
+    echo -e "${WHITE}System Information:${NC}"
+    echo "  OS: $(uname -s) $(uname -r)"
+    echo "  Architecture: $(uname -m)"
+    echo "  Node.js: $(node --version 2>/dev/null || echo 'Not installed')"
+    echo "  pnpm: $(pnpm --version 2>/dev/null || echo 'Not installed')"
+    
+    # Disk usage
+    echo ""
+    echo -e "${WHITE}Disk Usage:${NC}"
+    if [ -d "/opt/profolio" ]; then
+        local profolio_size=$(du -sh /opt/profolio 2>/dev/null | cut -f1)
+        echo "  Profolio Installation: ${profolio_size:-Unknown}"
+    fi
+    
+    local available_space=$(df -h /opt 2>/dev/null | tail -1 | awk '{print $4}' || echo "Unknown")
+    echo "  Available Space (/opt): $available_space"
+    
+    # Service status
+    echo ""
+    echo -e "${WHITE}Service Status:${NC}"
+    local backend_status=$(systemctl is-active profolio-backend 2>/dev/null || echo "inactive")
+    local frontend_status=$(systemctl is-active profolio-frontend 2>/dev/null || echo "inactive")
+    echo "  Backend: $backend_status"
+    echo "  Frontend: $frontend_status"
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Perform full cleanup
+perform_full_cleanup() {
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                      Full Cleanup                             ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    warn "⚠️  This will perform ALL cleanup operations:"
+    echo "  • Remove all node_modules directories"
+    echo "  • Remove all lock files"
+    echo "  • Clear all build artifacts"
+    echo "  • Clear package manager caches"
+    echo ""
+    echo -e "${RED}This is equivalent to a fresh installation state${NC}"
+    echo ""
+    read -p "Are you sure you want to continue? (yes/no): " confirm_full
+    
+    if [[ "$confirm_full" =~ ^[Yy][Ee][Ss]$ ]]; then
+        info "🧹 Performing full cleanup..."
+        
+        # Dependencies
+        rm -rf /opt/profolio/frontend/node_modules /opt/profolio/backend/node_modules 2>/dev/null || true
+        success "✅ Dependencies cleaned"
+        
+        # Lock files  
+        rm -f /opt/profolio/frontend/pnpm-lock.yaml /opt/profolio/backend/pnpm-lock.yaml 2>/dev/null || true
+        success "✅ Lock files removed"
+        
+        # Build artifacts
+        rm -rf /opt/profolio/frontend/.next /opt/profolio/backend/dist 2>/dev/null || true
+        success "✅ Build artifacts cleared"
+        
+        # Caches
+        sudo -u profolio pnpm store prune 2>/dev/null || true
+        rm -rf /opt/profolio/frontend/.next/cache /opt/profolio/backend/node_modules/.cache 2>/dev/null || true
+        success "✅ Caches cleared"
+        
+        success "🎉 Full cleanup completed successfully!"
+        echo ""
+        warn "💡 You will need to run 'pnpm install' and rebuild before services will work"
+    else
+        info "Full cleanup cancelled"
+    fi
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
 # Show configuration summary
 show_configuration_summary() {
     echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -3344,16 +3828,88 @@ show_configuration_summary() {
     echo ""
 }
 
-# Confirm configuration
+# Confirm configuration with detailed preview
 confirm_configuration() {
-    echo -e "${WHITE}Proceed with these settings?${NC}"
-    echo -e "  ${GREEN}[1]${NC} Yes, apply configuration"
+    echo -e "${WHITE}Review and confirm your configuration:${NC}"
+    echo ""
+    
+    # Show what will happen based on configuration
+    echo -e "${CYAN}Planned Actions:${NC}"
+    if [ "${TARGET_VERSION:-latest}" = "latest" ]; then
+        echo "  • Download and install latest stable version"
+    elif [ "${TARGET_VERSION}" = "main" ]; then
+        echo "  • Download and install development version (main branch)"
+    elif [[ "${TARGET_VERSION}" =~ ^backup: ]]; then
+        echo "  • Restore from selected backup"
+    else
+        echo "  • Download and install version ${TARGET_VERSION}"
+    fi
+    
+    if [ "${ROLLBACK_ENABLED:-true}" = "true" ]; then
+        echo "  • Create rollback point before changes"
+    else
+        echo "  • No rollback protection (changes are permanent)"
+    fi
+    
+    if [ "${OPTIMIZATION_LEVEL:-safe}" = "aggressive" ]; then
+        echo "  • Apply aggressive optimization (smaller size)"
+    elif [ "${OPTIMIZATION_LEVEL:-safe}" = "none" ]; then
+        echo "  • No optimization (preserve all files)"
+    else
+        echo "  • Apply safe optimization (recommended)"
+    fi
+    
+    if [ "${PRESERVE_ENV:-yes}" = "yes" ]; then
+        echo "  • Preserve existing configuration and credentials"
+    else
+        echo "  • Create fresh configuration (existing settings will be lost)"
+    fi
+    
+    echo ""
+    echo -e "${YELLOW}⚠️ Important Notices:${NC}"
+    echo "  • This operation will stop running services temporarily"
+    echo "  • Backup will be created before making changes"
+    if [ "${PRESERVE_ENV:-yes}" = "no" ]; then
+        echo -e "  • ${RED}Existing configuration will be replaced${NC}"
+    fi
+    if [ "${ROLLBACK_ENABLED:-true}" = "false" ]; then
+        echo -e "  • ${RED}No automatic rollback if operation fails${NC}"
+    fi
+    
+    echo ""
+    echo -e "${WHITE}Do you want to proceed with this configuration?${NC}"
+    echo -e "  ${GREEN}[1]${NC} Yes, proceed with installation/update"
     echo -e "  ${GREEN}[2]${NC} No, modify settings"
+    echo -e "  ${GREEN}[3]${NC} Cancel operation"
     echo ""
     read -p "Select option [1]: " confirm_choice
     confirm_choice=${confirm_choice:-1}
     
-    [ "$confirm_choice" = "1" ]
+    case "$confirm_choice" in
+        1)
+            echo ""
+            warn "⚠️ Final confirmation required"
+            read -p "Type 'yes' to confirm and start the operation: " final_confirm
+            if [[ "$final_confirm" = "yes" ]]; then
+                success "✅ Configuration confirmed - starting operation"
+                return 0
+            else
+                warn "Operation cancelled - confirmation not provided"
+                return 1
+            fi
+            ;;
+        2)
+            return 1
+            ;;
+        3)
+            info "Operation cancelled by user"
+            exit 0
+            ;;
+        *)
+            warn "Invalid selection - returning to configuration"
+            return 1
+            ;;
+    esac
 }
 
 # Setup advanced configuration from TUI (non-interactive)
@@ -3753,6 +4309,10 @@ update_installation() {
     OPERATION_TYPE="UPDATE"
     info "🚀 Starting comprehensive update process"
     
+    # Report major milestone
+    report_milestone "update_start" "Beginning comprehensive update process" "in_progress"
+    report_status "update" "starting" "Profolio system update initiated"
+    
     # Execute update steps with visual progress
     local update_steps=(
         "1|8|Creating rollback point|create_rollback_point"
@@ -3775,8 +4335,12 @@ update_installation() {
         
         if ! show_progress "$step" "$total" "$message" "$command"; then
             error "Update failed at step: $message"
+            report_milestone "update_failed" "Update failed at: $message" "failed"
+            report_status "update" "failed" "Step $step failed: $message"
+            
             if [ "$ROLLBACK_ENABLED" = true ]; then
                 info "🔄 Initiating automatic rollback..."
+                report_milestone "rollback_start" "Initiating automatic rollback" "in_progress"
                 execute_rollback
             fi
             OPERATION_SUCCESS=false
@@ -3789,6 +4353,8 @@ update_installation() {
     done
     
     OPERATION_SUCCESS=true
+    report_milestone "update_completed" "Update process completed successfully" "completed"
+    report_status "update" "completed" "All update steps completed successfully"
     show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
     return 0
 }
