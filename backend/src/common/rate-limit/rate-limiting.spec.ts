@@ -46,8 +46,8 @@ describe('Rate Limiting System', () => {
   };
 
   const mockConfigService = {
-    get: jest.fn((key: string, defaultValue?: any) => {
-      const config: Record<string, any> = {
+    get: jest.fn((key: string, defaultValue?: unknown) => {
+      const config: Record<string, unknown> = {
         'RATE_LIMIT_ENABLED': true,
         'BOT_DETECTION_ENABLED': true,
         'CAPTCHA_ENABLED': true,
@@ -240,7 +240,7 @@ describe('Rate Limiting System', () => {
 
         expect(challenge).toBeDefined();
         expect(challenge?.id).toBeDefined();
-        expect(challenge?.question).toMatch(/What is \d+ [+\-] \d+\?/);
+        expect(challenge?.question).toMatch(/What is \d+ [+\\-] \d+\?/);
         expect(challenge?.answer).toMatch(/^\d+$/);
         expect(mockRedisService.set).toHaveBeenCalled();
       });
@@ -248,7 +248,7 @@ describe('Rate Limiting System', () => {
       it('should return null when CAPTCHA is disabled', async () => {
         // Create a new service instance with CAPTCHA disabled
         const disabledConfigService = {
-          get: jest.fn((key: string, defaultValue?: any) => {
+          get: jest.fn((key: string, defaultValue?: unknown) => {
             if (key === 'CAPTCHA_ENABLED') return false;
             return true;
           }),
