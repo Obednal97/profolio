@@ -1,6 +1,6 @@
 {
   "name": "profolio",
-  "version": "1.16.0",
+  "version": "1.18.0",
   "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
   "main": "install.sh",
   "scripts": {
@@ -37,7 +37,10 @@
     "url": "https://github.com/Obednal97/profolio.git"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^9.1.2",
+    "http-proxy": "^1.18.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0"
   },
   "keywords": [
     "portfolio",
@@ -73,12 +76,6 @@
     "next": "^15.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.2",
-    "http-proxy": "^1.18.1",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.3.0"
   },
   "lint-staged": {
     "frontend/**/*.{ts,tsx}": [

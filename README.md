@@ -100,7 +100,7 @@ wget -qO- https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh |
 
 ```bash
 # Install specific version
-sudo ./install.sh --version v1.14.9
+sudo ./install.sh --version v1.18.0
 
 # Unattended installation for automation
 sudo ./install.sh --auto
@@ -290,7 +290,7 @@ sudo systemctl enable profolio-backend profolio-frontend
 sudo ./install.sh
 
 # Update to specific version
-sudo ./install.sh --version v1.14.8
+sudo ./install.sh --version v1.18.0
 
 # Check for updates
 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep tag_name
