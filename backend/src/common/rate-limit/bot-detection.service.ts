@@ -412,7 +412,7 @@ export class BotDetectionService {
                 Object.entries(d.details).filter(([_, value]) => value !== undefined)
               )
             })),
-          } as Record<string, unknown>,
+          },
           blocked,
           userAgent: context.userAgent,
           headers: context.headers,

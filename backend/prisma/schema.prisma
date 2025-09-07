@@ -8,47 +8,46 @@ datasource db {
 }
 
 model User {
-  id                  String         @id @default(uuid())
-  email               String         @unique
+  id                  String               @id @default(uuid())
+  email               String               @unique
   taxCountry          String?
   taxRate             Int?
-  createdAt           DateTime       @default(now())
+  createdAt           DateTime             @default(now())
   password            String
-  updatedAt           DateTime       @default(now()) @updatedAt
+  updatedAt           DateTime             @default(now()) @updatedAt
   name                String?
   bio                 String?
   country             String?
-  emailVerified       Boolean        @default(false)
-  language            String?        @default("en")
+  emailVerified       Boolean              @default(false)
+  language            String?              @default("en")
   lastSignIn          DateTime?
   location            String?
   phone               String?
   photoURL            String?
-  preferredCurrency   String?        @default("USD")
+  preferredCurrency   String?              @default("USD")
   provider            String?
-  theme               String?        @default("system")
-  timezone            String?        @default("UTC")
-  role                UserRole       @default(USER)
+  theme               String?              @default("system")
+  timezone            String?              @default("UTC")
+  role                UserRole             @default(USER)
   roleAssignedAt      DateTime?
   roleAssignedBy      String?
-  // Stripe subscription fields
-  stripeCustomerId    String?        @unique
-  subscriptionId      String?        @unique
-  subscriptionStatus  String?        // active, canceled, past_due, etc.
-  subscriptionTier    String?        // cloud_monthly, cloud_annual
+  stripeCustomerId    String?              @unique
   subscriptionEndDate DateTime?
+  subscriptionId      String?              @unique
+  subscriptionStatus  String?
+  subscriptionTier    String?
   trialEndDate        DateTime?
   apiKeys             ApiKey[]
   assets              Asset[]
   expenses            Expense[]
   liabilities         Liability[]
   notifications       Notification[]
+  passwordSetupTokens PasswordSetupToken[]
   properties          Property[]
-  assignedRoleChanges RoleChange[]   @relation("AdminRoleChanges")
-  roleChanges         RoleChange[]   @relation("UserRoleChanges")
+  assignedRoleChanges RoleChange[]         @relation("AdminRoleChanges")
+  roleChanges         RoleChange[]         @relation("UserRoleChanges")
   settings            Settings?
   twoFactorAuth       TwoFactorAuth?
-  passwordSetupTokens PasswordSetupToken[]
 }
 
 model RoleChange {
@@ -358,6 +357,113 @@ model SymbolQueue {
   @@index([created_at])
 }
 
+model TwoFactorAuth {
+  id          String                @id @default(uuid())
+  userId      String                @unique
+  secret      String
+  enabled     Boolean               @default(false)
+  verifiedAt  DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  backupCodes TwoFactorBackupCode[]
+
+  @@index([userId, enabled])
+}
+
+model TwoFactorBackupCode {
+  id          String        @id @default(uuid())
+  twoFactorId String
+  code        String
+  usedAt      DateTime?
+  createdAt   DateTime      @default(now())
+  twoFactor   TwoFactorAuth @relation(fields: [twoFactorId], references: [id], onDelete: Cascade)
+
+  @@unique([twoFactorId, code])
+  @@index([twoFactorId])
+}
+
+model TwoFactorVerification {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId, expiresAt])
+}
+
+model PasswordSetupToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model RateLimitRule {
+  id              String   @id @default(uuid())
+  endpoint        String?
+  method          String?
+  maxAttempts     Int
+  windowMs        Int
+  blockDurationMs Int
+  skipIps         String[]
+  skipUserIds     String[]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([endpoint, method])
+  @@index([isActive])
+  @@index([endpoint])
+}
+
+model RateLimitEvent {
+  id             String    @id @default(uuid())
+  identifier     String
+  identifierType String
+  endpoint       String
+  method         String
+  attempts       Int       @default(1)
+  blocked        Boolean   @default(false)
+  blockedUntil   DateTime?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([identifier, endpoint, method, createdAt])
+  @@index([identifier, blocked, blockedUntil])
+  @@index([createdAt])
+  @@index([blocked, blockedUntil])
+}
+
+model BotDetectionEvent {
+  id             String   @id @default(uuid())
+  identifier     String
+  identifierType String
+  detectionType  String
+  score          Int
+  details        Json?
+  blocked        Boolean  @default(false)
+  userAgent      String?
+  headers        Json?
+  createdAt      DateTime @default(now())
+
+  @@index([identifier, detectionType, createdAt])
+  @@index([score, blocked])
+  @@index([createdAt])
+  @@index([identifier, blocked])
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -411,115 +517,4 @@ enum NotificationPriority {
   NORMAL
   HIGH
   URGENT
-}
-
-model TwoFactorAuth {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  secret         String   // Encrypted TOTP secret
-  enabled        Boolean  @default(false)
-  verifiedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  backupCodes    TwoFactorBackupCode[]
-  
-  @@index([userId, enabled])
-}
-
-model TwoFactorBackupCode {
-  id             String   @id @default(uuid())
-  twoFactorId    String
-  code           String   // Hashed backup code
-  usedAt         DateTime?
-  createdAt      DateTime @default(now())
-  
-  twoFactor      TwoFactorAuth @relation(fields: [twoFactorId], references: [id], onDelete: Cascade)
-  
-  @@unique([twoFactorId, code])
-  @@index([twoFactorId])
-}
-
-model TwoFactorVerification {
-  id             String   @id @default(uuid())
-  userId         String
-  token          String   // Temporary verification token
-  expiresAt      DateTime
-  createdAt      DateTime @default(now())
-  
-  @@index([token])
-  @@index([userId, expiresAt])
-}
-
-model PasswordSetupToken {
-  id          String   @id @default(uuid())
-  userId      String
-  token       String   @unique // Hashed token
-  expiresAt   DateTime
-  used        Boolean  @default(false)
-  attempts    Int      @default(0)
-  createdAt   DateTime @default(now())
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([token])
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-// Rate Limiting Tables
-model RateLimitRule {
-  id              String   @id @default(uuid())
-  endpoint        String?  // null = global rule
-  method          String?  // GET, POST, etc. null = all methods
-  maxAttempts     Int
-  windowMs        Int      // Time window in milliseconds
-  blockDurationMs Int      // Block duration in milliseconds
-  skipIps         String[] // IPs to skip rate limiting
-  skipUserIds     String[] // User IDs to skip rate limiting
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@unique([endpoint, method])
-  @@index([isActive])
-  @@index([endpoint])
-}
-
-model RateLimitEvent {
-  id           String    @id @default(uuid())
-  identifier   String    // IP address or user ID
-  identifierType String  // 'ip' or 'user'
-  endpoint     String
-  method       String
-  attempts     Int       @default(1)
-  blocked      Boolean   @default(false)
-  blockedUntil DateTime?
-  userAgent    String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  
-  @@index([identifier, endpoint, method, createdAt])
-  @@index([identifier, blocked, blockedUntil])
-  @@index([createdAt])
-  @@index([blocked, blockedUntil])
-}
-
-model BotDetectionEvent {
-  id              String   @id @default(uuid())
-  identifier      String   // IP address or user ID
-  identifierType  String   // 'ip' or 'user'
-  detectionType   String   // 'user_agent', 'timing', 'pattern', 'fingerprint'
-  score           Int      // Bot probability score 0-100
-  details         Json?    // Additional detection details
-  blocked         Boolean  @default(false)
-  userAgent       String?
-  headers         Json?
-  createdAt       DateTime @default(now())
-  
-  @@index([identifier, detectionType, createdAt])
-  @@index([score, blocked])
-  @@index([createdAt])
-  @@index([identifier, blocked])
 }
