@@ -528,9 +528,9 @@ function execute_advanced_install {
     export TUI_BACKUP_DIR="$backup_dir"
     
     # Use enhanced installation with progress monitoring for advanced install
-    # Pass --tui-config to prevent install.sh from showing interactive prompts
+    # Pass --silent --tui-config to prevent install.sh from hanging in interactive mode
     local install_result
-    install_with_progress "Advanced Installation" "--tui-config --advanced"
+    install_with_progress "Advanced Installation" "--silent --tui-config --advanced"
     install_result=$?
     
     # Clean up environment variables after installation
