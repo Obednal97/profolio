@@ -297,7 +297,7 @@ EOF
 # Repair Installation
 function repair_installation {
     if $TUI_TOOL --title "Repair Installation" \
-        --yesno "This will attempt to repair your Profolio installation:\n\n• Rebuild application\n• Fix dependencies\n• Restart services\n• Verify functionality\n\nYour data will be preserved.\n\nDo you want to continue?" 14 60; then
+        --yesno "This will attempt to repair your Profolio installation:\n\n- Rebuild application\n- Fix dependencies\n- Restart services\n- Verify functionality\n\nYour data will be preserved.\n\nDo you want to continue?" 14 60; then
         
         # Use enhanced installation with progress monitoring for repair
         install_with_progress "Repair" "--repair"
@@ -494,13 +494,13 @@ function show_advanced_summary {
     local backup_dir="$5"
     
     $TUI_TOOL --title "Advanced Installation Summary" \
-        --msgbox "Configuration Summary:\n\n• Version: $version\n• Optimization: $optimization\n• Preserve Environment: $preserve_env\n• Rollback Protection: $rollback\n• Backup Location: $backup_dir\n\nReady to proceed with installation." 14 60
+        --msgbox "Configuration Summary:\n\n- Version: $version\n- Optimization: $optimization\n- Preserve Environment: $preserve_env\n- Rollback Protection: $rollback\n- Backup Location: $backup_dir\n\nReady to proceed with installation." 14 60
 }
 
 # Confirm Advanced Installation
 function confirm_advanced_install {
     $TUI_TOOL --title "Confirm Advanced Installation" \
-        --yesno "Proceed with advanced installation using the configured settings?\n\nThis will:\n• Download the installer\n• Apply all your customizations\n• Install Profolio with advanced options\n\nContinue?" 12 60
+        --yesno "Proceed with advanced installation using the configured settings?\n\nThis will:\n- Download the installer\n- Apply all your customizations\n- Install Profolio with advanced options\n\nContinue?" 12 60
 }
 
 # Execute Advanced Installation
@@ -734,7 +734,7 @@ function system_tools_menu {
             9 "Clear Build Artifacts" \
             10 "Installation Integrity Check" \
             11 "Run All Cleanup Tasks" \
-            12 "Update Installer" 3>&1 1>&2 2>&3)
+            12 "Update Installer" 3>&1 1>&2 2>&3) || return
         
         case $choice in
             1) validate_resources ;;
@@ -799,7 +799,7 @@ function update_installer {
     
     # Confirm update (no version comparison, always update)
     if ! $TUI_TOOL --title "Update Installer" \
-        --yesno "This will:\n\n• Backup existing installer as profolio-backup.sh\n• Download fresh installer from GitHub\n• Install to: $script_path\n\nProceed with installer update?" 12 70; then
+        --yesno "This will:\n\n- Backup existing installer as profolio-backup.sh\n- Download fresh installer from GitHub\n- Install to: $script_path\n\nProceed with installer update?" 12 70; then
         rm -f "$TEMP_DIR/profolio-new.sh"
         return 0
     fi
@@ -903,7 +903,7 @@ function integrity_check {
 # Run All Cleanup Tasks Function
 function run_all_cleanup {
     if $TUI_TOOL --title "Run All Cleanup Tasks" \
-        --yesno "This will run all maintenance tasks:\n\n• Clean Dependencies (node_modules)\n• Reset Lock Files\n• Clear Build Artifacts\n• Integrity Check\n\nThis may take several minutes.\n\nProceed with full cleanup?" 14 60; then
+        --yesno "This will run all maintenance tasks:\n\n- Clean Dependencies (node_modules)\n- Reset Lock Files\n- Clear Build Artifacts\n- Integrity Check\n\nThis may take several minutes.\n\nProceed with full cleanup?" 14 60; then
         
         clear
         echo "Running all cleanup tasks..."
@@ -926,7 +926,7 @@ function config_menu {
             2 "Import Config File" \
             3 "Validate Config" \
             4 "Generate Sample Config" \
-            5 "List Saved Configs" 3>&1 1>&2 2>&3)
+            5 "List Saved Configs" 3>&1 1>&2 2>&3) || return
         
         case $choice in
             1) export_configuration ;;
