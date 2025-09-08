@@ -297,7 +297,7 @@ EOF
 # Repair Installation
 function repair_installation {
     if $TUI_TOOL --title "Repair Installation" \
-        --yesno "This will attempt to repair your Profolio installation:\n\n✅ Rebuild application\n✅ Fix dependencies\n✅ Restart services\n✅ Verify functionality\n\nYour data will be preserved.\n\nDo you want to continue?" 14 60; then
+        --yesno "This will attempt to repair your Profolio installation:\n\n• Rebuild application\n• Fix dependencies\n• Restart services\n• Verify functionality\n\nYour data will be preserved.\n\nDo you want to continue?" 14 60; then
         
         # Use enhanced installation with progress monitoring for repair
         install_with_progress "Repair" "--repair"
@@ -365,7 +365,7 @@ function configure_version_control_tui {
         1 "Latest Stable (${latest_stable}) - Recommended" \
         2 "Latest Development (main branch)" \
         3 "Specific Version" \
-        4 "Restore from Backup" 3>&1 1>&2 2>&3) || return
+        4 "Restore from Backup" 3>&1 1>&2 2>&3) || return 0
     
     case $choice in
         1) version_var="$latest_stable" ;;
@@ -399,14 +399,14 @@ function configure_optimization_tui {
     choice=$($TUI_TOOL --title "Optimization Settings" \
         --menu "Choose optimization level:" 14 70 3 \
         1 "Safe Optimization (Recommended) - ~600MB" \
-        2 "Aggressive Optimization - ~400MB (⚠️  Use with caution)" \
-        3 "No Optimization - Full size" 3>&1 1>&2 2>&3) || return
+        2 "Aggressive Optimization - ~400MB (Use with caution)" \
+        3 "No Optimization - Full size" 3>&1 1>&2 2>&3) || return 0
     
     case $choice in
         1) opt_var="safe" ;;
         2) 
             if $TUI_TOOL --title "Aggressive Optimization Warning" \
-                --yesno "⚠️  Aggressive optimization removes additional packages and may affect debugging capabilities.\n\nThis is recommended only for production environments with storage constraints.\n\nProceed with aggressive optimization?" 12 70; then
+                --yesno "WARNING: Aggressive optimization removes additional packages and may affect debugging capabilities.\n\nThis is recommended only for production environments with storage constraints.\n\nProceed with aggressive optimization?" 12 70; then
                 opt_var="aggressive"
             else
                 opt_var="safe"
@@ -429,7 +429,7 @@ function configure_environment_tui {
         --menu "Environment options:" 12 70 3 \
         1 "Preserve existing environment (Recommended)" \
         2 "Reset environment completely" \
-        3 "Add custom environment variables" 3>&1 1>&2 2>&3) || return
+        3 "Add custom environment variables" 3>&1 1>&2 2>&3) || return 0
     
     case $choice in
         1) preserve_var="yes" ;;
@@ -469,7 +469,7 @@ function configure_backup_tui {
         --menu "Backup options:" 10 60 3 \
         1 "Default backup location (/opt)" \
         2 "Custom backup location" \
-        3 "Skip backup creation" 3>&1 1>&2 2>&3) || return
+        3 "Skip backup creation" 3>&1 1>&2 2>&3) || return 0
     
     case $choice in
         1) backup_var="/opt" ;;
@@ -756,15 +756,40 @@ function system_tools_menu {
 
 # Update Installer Function
 function update_installer {
-    local current_script="${BASH_SOURCE[0]}"
-    local script_path="$(realpath "$current_script" 2>/dev/null || echo "$current_script")"
-    local current_version=$(get_installer_version)
+    # Look for installer in install directory first, then common locations
+    local script_path=""
+    local found_installer=false
     
-    # Show current status
+    # Check install directory first
+    if [ -f "$INSTALL_DIR/profolio.sh" ]; then
+        script_path="$INSTALL_DIR/profolio.sh"
+        found_installer=true
+    elif [ -f "/usr/local/bin/profolio.sh" ]; then
+        script_path="/usr/local/bin/profolio.sh" 
+        found_installer=true
+    elif [ -f "/usr/bin/profolio.sh" ]; then
+        script_path="/usr/bin/profolio.sh"
+        found_installer=true
+    elif [ -f "/opt/profolio.sh" ]; then
+        script_path="/opt/profolio.sh"
+        found_installer=true
+    fi
+    
+    # If no installer found, offer to install one
+    if [ "$found_installer" = false ]; then
+        if $TUI_TOOL --title "No Installer Found" \
+            --yesno "No profolio.sh installer found in common locations.\n\nWould you like to install one to $INSTALL_DIR/profolio.sh?" 10 60; then
+            script_path="$INSTALL_DIR/profolio.sh"
+        else
+            return 0
+        fi
+    fi
+    
+    # Show target location
     $TUI_TOOL --title "Update Installer" \
-        --msgbox "Current installer information:\n\nVersion: $current_version\nLocation: $script_path\n\nChecking for updates..." 10 70
+        --msgbox "Target installer location:\n$script_path\n\nDownloading latest version..." 8 70
     
-    # Download latest version to temp file
+    # Download latest version
     mkdir -p "$TEMP_DIR"
     if ! curl -fsSL "$GITHUB_RAW/profolio.sh" -o "$TEMP_DIR/profolio-new.sh"; then
         $TUI_TOOL --title "Update Failed" \
@@ -772,51 +797,39 @@ function update_installer {
         return 1
     fi
     
-    # Extract version from downloaded file
-    local new_version
-    new_version=$(grep -m1 "echo \"v[0-9]" "$TEMP_DIR/profolio-new.sh" | grep -o "v[0-9][0-9]*\.[0-9][0-9]*" || echo "unknown")
-    
-    # Compare versions
-    if [ "$current_version" = "$new_version" ]; then
-        $TUI_TOOL --title "Already Up to Date" \
-            --msgbox "You already have the latest installer version ($current_version).\n\nNo update needed." 8 60
+    # Confirm update (no version comparison, always update)
+    if ! $TUI_TOOL --title "Update Installer" \
+        --yesno "This will:\n\n• Backup existing installer as profolio-backup.sh\n• Download fresh installer from GitHub\n• Install to: $script_path\n\nProceed with installer update?" 12 70; then
         rm -f "$TEMP_DIR/profolio-new.sh"
         return 0
     fi
     
-    # Confirm update
-    if ! $TUI_TOOL --title "Update Available" \
-        --yesno "Update available!\n\nCurrent version: $current_version\nNew version: $new_version\n\nDo you want to update the installer?\n\nThis will:\n• Backup current installer\n• Replace with new version\n• Preserve executable permissions" 16 60; then
-        rm -f "$TEMP_DIR/profolio-new.sh"
-        return 0
+    # Create directory if needed
+    mkdir -p "$(dirname "$script_path")"
+    
+    # Create backup with new naming scheme
+    if [ -f "$script_path" ]; then
+        local backup_path="$(dirname "$script_path")/profolio-backup.sh"
+        if ! mv "$script_path" "$backup_path"; then
+            $TUI_TOOL --title "Backup Failed" \
+                --msgbox "Failed to backup existing installer to:\n$backup_path\n\nUpdate cancelled for safety." 8 70
+            rm -f "$TEMP_DIR/profolio-new.sh"
+            return 1
+        fi
     fi
     
-    # Check write permissions
-    if [ ! -w "$script_path" ]; then
-        $TUI_TOOL --title "Permission Error" \
-            --msgbox "Cannot write to installer location:\n$script_path\n\nPlease run this installer with appropriate permissions (sudo) to update." 10 70
-        rm -f "$TEMP_DIR/profolio-new.sh"
-        return 1
-    fi
-    
-    # Create backup
-    local backup_path="${script_path}.backup.$(date +%Y%m%d-%H%M%S)"
-    if ! cp "$script_path" "$backup_path"; then
-        $TUI_TOOL --title "Backup Failed" \
-            --msgbox "Failed to create backup at:\n$backup_path\n\nUpdate cancelled for safety." 8 70
-        rm -f "$TEMP_DIR/profolio-new.sh"
-        return 1
-    fi
-    
-    # Replace installer
+    # Install new version
     if mv "$TEMP_DIR/profolio-new.sh" "$script_path" && chmod +x "$script_path"; then
         $TUI_TOOL --title "Update Complete" \
-            --msgbox "Installer updated successfully!\n\nOld version: $current_version\nNew version: $new_version\n\nBackup saved at:\n$backup_path\n\nRestart the installer to use the new version." 14 70
+            --msgbox "Installer updated successfully!\n\nLocation: $script_path\nBackup: $(dirname "$script_path")/profolio-backup.sh\n\nRestart the installer to use the new version." 12 70
     else
-        # Restore from backup if update failed
-        mv "$backup_path" "$script_path"
+        # Restore from backup if available and update failed
+        local backup_path="$(dirname "$script_path")/profolio-backup.sh"
+        if [ -f "$backup_path" ]; then
+            mv "$backup_path" "$script_path"
+        fi
         $TUI_TOOL --title "Update Failed" \
-            --msgbox "Failed to update installer.\n\nOriginal installer has been restored from backup." 8 60
+            --msgbox "Failed to update installer.\n\nOriginal installer has been restored if it existed." 8 60
         return 1
     fi
     
