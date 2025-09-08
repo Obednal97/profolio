@@ -330,14 +330,13 @@ function advanced_install {
     while [ "$main_menu" = true ]; do
         local choice
         choice=$($TUI_TOOL --title "Advanced Installation Setup" \
-            --menu "Configure your installation:" 18 70 8 \
+            --menu "Configure your installation:" 16 70 6 \
             1 "Version Control Settings >" \
             2 "Optimization Settings >" \
             3 "Environment Configuration >" \
             4 "Rollback Protection >" \
             5 "Backup Configuration >" \
-            6 "Review & Install" \
-            7 "Return to Main Menu" 3>&1 1>&2 2>&3) || main_menu
+            6 "Review & Install" 3>&1 1>&2 2>&3) || main_menu
         
         case $choice in
             1) configure_version_control_tui target_version ;;
@@ -352,7 +351,6 @@ function advanced_install {
                     main_menu=false
                 fi
                 ;;
-            7) main_menu; return ;;
             *) main_menu; return ;;
         esac
     done
@@ -365,12 +363,11 @@ function configure_version_control_tui {
     
     local choice
     choice=$($TUI_TOOL --title "Version Control Settings" \
-        --menu "Select version to install:" 16 70 6 \
+        --menu "Select version to install:" 14 70 4 \
         1 "Latest Stable (${latest_stable}) - Recommended" \
         2 "Latest Development (main branch)" \
         3 "Specific Version" \
-        4 "Restore from Backup" \
-        5 "Back" 3>&1 1>&2 2>&3) || return
+        4 "Restore from Backup" 3>&1 1>&2 2>&3) || return
     
     case $choice in
         1) version_var="$latest_stable" ;;
@@ -390,7 +387,6 @@ function configure_version_control_tui {
                 version_var="backup:$backup_selected"
             fi
             ;;
-        5) return ;;
     esac
     
     $TUI_TOOL --title "Version Selected" \
@@ -403,11 +399,10 @@ function configure_optimization_tui {
     
     local choice
     choice=$($TUI_TOOL --title "Optimization Settings" \
-        --menu "Choose optimization level:" 16 70 4 \
+        --menu "Choose optimization level:" 14 70 3 \
         1 "Safe Optimization (Recommended) - ~600MB" \
         2 "Aggressive Optimization - ~400MB (⚠️  Use with caution)" \
-        3 "No Optimization - Full size" \
-        4 "Back" 3>&1 1>&2 2>&3) || return
+        3 "No Optimization - Full size" 3>&1 1>&2 2>&3) || return
     
     case $choice in
         1) opt_var="safe" ;;
@@ -420,7 +415,6 @@ function configure_optimization_tui {
             fi
             ;;
         3) opt_var="none" ;;
-        4) return ;;
     esac
     
     $TUI_TOOL --title "Optimization Selected" \
@@ -434,11 +428,10 @@ function configure_environment_tui {
     
     local choice
     choice=$($TUI_TOOL --title "Environment Configuration" \
-        --menu "Environment options:" 14 70 4 \
+        --menu "Environment options:" 12 70 3 \
         1 "Preserve existing environment (Recommended)" \
         2 "Reset environment completely" \
-        3 "Add custom environment variables" \
-        4 "Back" 3>&1 1>&2 2>&3) || return
+        3 "Add custom environment variables" 3>&1 1>&2 2>&3) || return
     
     case $choice in
         1) preserve_var="yes" ;;
@@ -451,7 +444,6 @@ function configure_environment_tui {
                 env_var="$custom_env"
             fi
             ;;
-        4) return ;;
     esac
     
     $TUI_TOOL --title "Environment Configured" \
@@ -476,11 +468,10 @@ function configure_backup_tui {
     
     local choice
     choice=$($TUI_TOOL --title "Backup Configuration" \
-        --menu "Backup options:" 12 60 4 \
+        --menu "Backup options:" 10 60 3 \
         1 "Default backup location (/opt)" \
         2 "Custom backup location" \
-        3 "Skip backup creation" \
-        4 "Back" 3>&1 1>&2 2>&3) || return
+        3 "Skip backup creation" 3>&1 1>&2 2>&3) || return
     
     case $choice in
         1) backup_var="/opt" ;;
@@ -493,7 +484,6 @@ function configure_backup_tui {
             fi
             ;;
         3) backup_var="none" ;;
-        4) return ;;
     esac
 }
 
@@ -754,7 +744,7 @@ function system_tools_menu {
     while true; do
         local choice
         choice=$($TUI_TOOL --title "System Tools & Diagnostics" \
-            --menu "Select a tool:" 24 70 13 \
+            --menu "Select a tool:" 22 70 12 \
             1 "Validate System Resources" \
             2 "Detect Network Configuration" \
             3 "Collect Diagnostics" \
@@ -766,8 +756,7 @@ function system_tools_menu {
             9 "Clear Build Artifacts" \
             10 "Installation Integrity Check" \
             11 "Run All Cleanup Tasks" \
-            12 "Update Installer" \
-            13 "Back to Main Menu" 3>&1 1>&2 2>&3)
+            12 "Update Installer" 3>&1 1>&2 2>&3)
         
         case $choice in
             1) validate_resources ;;
@@ -782,7 +771,6 @@ function system_tools_menu {
             10) integrity_check ;;
             11) run_all_cleanup ;;
             12) update_installer ;;
-            13) return ;;
             *) return ;;
         esac
     done
@@ -942,13 +930,12 @@ function config_menu {
     while true; do
         local choice
         choice=$($TUI_TOOL --title "Configuration Management" \
-            --menu "Select an option:" 16 60 7 \
+            --menu "Select an option:" 14 60 5 \
             1 "Export Current Config" \
             2 "Import Config File" \
             3 "Validate Config" \
             4 "Generate Sample Config" \
-            5 "List Saved Configs" \
-            6 "Back to Main Menu" 3>&1 1>&2 2>&3)
+            5 "List Saved Configs" 3>&1 1>&2 2>&3)
         
         case $choice in
             1) export_configuration ;;
@@ -956,7 +943,6 @@ function config_menu {
             3) validate_configuration ;;
             4) generate_sample ;;
             5) list_configurations ;;
-            6) return ;;
             *) return ;;
         esac
     done
@@ -1123,12 +1109,11 @@ function list_configurations {
 function generate_reports {
     local report_type
     report_type=$($TUI_TOOL --title "Generate Reports" \
-        --menu "Select report type:" 14 50 5 \
+        --menu "Select report type:" 12 50 4 \
         1 "Resource Report" \
         2 "Health Report" \
         3 "Network Report" \
-        4 "Full Diagnostic Report" \
-        5 "Back" 3>&1 1>&2 2>&3)
+        4 "Full Diagnostic Report" 3>&1 1>&2 2>&3)
     
     case $report_type in
         1)
@@ -1164,9 +1149,6 @@ function generate_reports {
                 COLLECT_PERFORMANCE=true
                 run_diagnostics
             fi
-            ;;
-        5)
-            return
             ;;
     esac
     
