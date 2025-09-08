@@ -520,9 +520,17 @@ function execute_advanced_install {
     export PROFOLIO_BACKUP_DIR="$backup_dir"
     [ -n "$custom_env" ] && export PROFOLIO_CUSTOM_ENV="$custom_env"
     
+    # Set TUI environment variables that install.sh expects
+    export TUI_TARGET_VERSION="$version"
+    export TUI_ROLLBACK_ENABLED="$rollback"
+    export TUI_OPTIMIZATION_LEVEL="$optimization"
+    export TUI_PRESERVE_ENV="$preserve_env"
+    export TUI_BACKUP_DIR="$backup_dir"
+    
     # Use enhanced installation with progress monitoring for advanced install
+    # Pass --tui-config to prevent install.sh from showing interactive prompts
     local install_result
-    install_with_progress "Advanced Installation" "--advanced"
+    install_with_progress "Advanced Installation" "--tui-config --advanced"
     install_result=$?
     
     # Clean up environment variables after installation
@@ -660,6 +668,11 @@ function cleanup_environment_vars {
     unset PROFOLIO_ENABLE_ROLLBACK
     unset PROFOLIO_BACKUP_DIR
     unset PROFOLIO_CUSTOM_ENV
+    unset TUI_TARGET_VERSION
+    unset TUI_ROLLBACK_ENABLED
+    unset TUI_OPTIMIZATION_LEVEL
+    unset TUI_PRESERVE_ENV
+    unset TUI_BACKUP_DIR
 }
 
 # Cleanup function for temporary files
