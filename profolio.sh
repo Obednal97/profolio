@@ -174,36 +174,34 @@ function main_menu {
             repair_needed="no"
         fi
         
-        # Build menu items (repair option always shown)
-        local menu_items=(
-            1 "Install Profolio (Recommended)"
-            2 "Update Existing Installation"  
-            3 "Advanced Installation"
-            4 "System Tools & Diagnostics >"
-            5 "Health Check"
-            6 "Config Management >"
-        )
-        
-        # Add repair option with optional indicator
+        # Build menu with repair option always shown (avoid array expansion issues)
         if [ "$repair_needed" = "yes" ]; then
-            menu_items+=(7 "🔧 Repair Installation (Services Down)")
+            choice=$($TUI_TOOL --title "Profolio Installer $(get_installer_version)" \
+                --menu "Select an option:" 22 70 10 \
+                1 "Install Profolio (Recommended)" \
+                2 "Update Existing Installation" \
+                3 "Advanced Installation" \
+                4 "System Tools & Diagnostics >" \
+                5 "Health Check" \
+                6 "Config Management >" \
+                7 "Repair Installation (Services Down)" \
+                8 "System Requirements" \
+                9 "About Profolio" \
+                10 "Exit" 3>&1 1>&2 2>&3)
         else
-            menu_items+=(7 "🔧 Repair Installation")
+            choice=$($TUI_TOOL --title "Profolio Installer $(get_installer_version)" \
+                --menu "Select an option:" 22 70 10 \
+                1 "Install Profolio (Recommended)" \
+                2 "Update Existing Installation" \
+                3 "Advanced Installation" \
+                4 "System Tools & Diagnostics >" \
+                5 "Health Check" \
+                6 "Config Management >" \
+                7 "Repair Installation" \
+                8 "System Requirements" \
+                9 "About Profolio" \
+                10 "Exit" 3>&1 1>&2 2>&3)
         fi
-        
-        # Add remaining options
-        menu_items+=(8 "System Requirements")
-        menu_items+=(9 "About Profolio")
-        menu_items+=(10 "Exit")
-        
-        local menu_height=22
-        
-        # Calculate menu count dynamically from array
-        local menu_count=$((${#menu_items[@]}/2))
-        
-        choice=$($TUI_TOOL --title "Profolio Installer $(get_installer_version)" \
-            --menu "Select an option:" $menu_height 70 "$menu_count" \
-            "${menu_items[@]}" 3>&1 1>&2 2>&3)
         
         # Handle menu choices (repair always at option 7)
         case $choice in
@@ -537,52 +535,32 @@ function execute_advanced_install {
 # TUI-compatible Progress Display
 function show_installation_in_tui {
     local operation_type="$1"
-    local installer_script="$2"
+    local installer_script="$2" 
     local installer_args="$3"
     
-    # Check if programbox is supported (best option for showing output in TUI)
+    # Always try to stay within TUI using simple infobox + background process
     if [ "$TUI_ENABLED" = true ]; then
-        if $TUI_TOOL --help 2>&1 | grep -q "programbox" 2>/dev/null; then
-            # Use programbox to show installer output within TUI
-            if [ -n "$installer_args" ]; then
-                bash "$installer_script" "$installer_args" | \
-                $TUI_TOOL --title "$operation_type Progress" \
-                    --programbox "Installing Profolio... Please wait." 20 80
-            else
-                bash "$installer_script" | \
-                $TUI_TOOL --title "$operation_type Progress" \
-                    --programbox "Installing Profolio... Please wait." 20 80
-            fi
-            return $?
+        # Show initial progress message
+        $TUI_TOOL --title "$operation_type Progress" \
+            --infobox "$operation_type is running in the background...\n\nThis may take several minutes.\n\nPlease wait for completion dialog." 8 60 &
+        local infobox_pid=$!
+        
+        # Run installation in background
+        if [ -n "$installer_args" ]; then
+            bash "$installer_script" "$installer_args" > /tmp/profolio-install.log 2>&1 &
         else
-            # Fallback: Show installation with gauge simulation
-            (
-                if [ -n "$installer_args" ]; then
-                    bash "$installer_script" "$installer_args" &
-                else
-                    bash "$installer_script" &
-                fi
-                local install_pid=$!
-                
-                # Show progress gauge while installation runs
-                (
-                    for i in {1..100}; do
-                        echo $i
-                        sleep 3
-                        # Check if installation is still running
-                        if ! kill -0 $install_pid 2>/dev/null; then
-                            echo 100
-                            break
-                        fi
-                    done
-                ) | $TUI_TOOL --title "$operation_type Progress" \
-                    --gauge "Installing Profolio... Please wait." 8 60 0
-                
-                # Wait for installation to complete
-                wait $install_pid
-                return $?
-            )
+            bash "$installer_script" > /tmp/profolio-install.log 2>&1 &
         fi
+        local install_pid=$!
+        
+        # Wait for installation to complete
+        wait $install_pid
+        local install_result=$?
+        
+        # Kill the infobox
+        kill $infobox_pid 2>/dev/null || true
+        
+        return $install_result
     else
         # Fallback to terminal output
         echo -e "${YW}$operation_type Progress:${CL}"
