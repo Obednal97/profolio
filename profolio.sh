@@ -558,87 +558,37 @@ function execute_advanced_install {
     return $install_result
 }
 
-# Progress Monitoring Functions
+# Simplified Progress Monitoring (no TUI dialogs to avoid hanging)
 function monitor_installation_progress {
     local operation_type="$1"
-    local milestone_file="$PROGRESS_FILE.milestone"
-    local status_file="$PROGRESS_FILE.status"
     
-    # Clear previous progress files - with better error handling
-    if ! > "$PROGRESS_FILE" 2>/dev/null; then
-        echo "Warning: Cannot write to progress file $PROGRESS_FILE"
-        return 1
-    fi
-    if ! > "$ERROR_FILE" 2>/dev/null; then
-        echo "Warning: Cannot write to error file $ERROR_FILE"
-        return 1
-    fi
-    > "$milestone_file" 2>/dev/null || echo "Warning: Cannot write to milestone file"
-    > "$status_file" 2>/dev/null || echo "Warning: Cannot write to status file"
+    # Simple terminal-based progress monitoring
+    echo -e "${YW}$operation_type Progress:${CL}"
+    echo "Progress will be shown below (this may take several minutes)..."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
-    # Show progress monitoring dialog (with fallback for unsupported tailbox)
-    local tailbox_pid=0
-    if [ "$TUI_ENABLED" = true ] && [ "$TUI_TAILBOX_SUPPORTED" = true ]; then
-        $TUI_TOOL --title "$operation_type Progress" \
-            --tailbox "$PROGRESS_FILE" 20 80 &
-        tailbox_pid=$!
-    elif [ "$TUI_ENABLED" = true ]; then
-        # Fallback: Show a simple progress message dialog
-        $TUI_TOOL --title "$operation_type Progress" \
-            --infobox "$operation_type is running...\n\nPlease wait for completion.\nThis may take several minutes.\n\nProgress will be shown in the terminal." 10 60 &
-        tailbox_pid=$!
-    else
-        # Complete fallback: terminal-only progress monitoring
-        echo -e "${YW}$operation_type Progress:${CL}"
-        echo "Progress will be shown below (this may take several minutes)..."
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        tailbox_pid=0
-    fi
-    
-    # Monitor progress in background with timeout
+    # Start a simple background monitor that shows dots
     (
-        local last_progress=""
-        local current_stage="initializing"
-        local percentage=0
         local start_time
         start_time=$(date +%s)
         local timeout=1800  # 30 minutes timeout
+        local dot_count=0
         
-        while [ -f "$PROGRESS_FILE" ]; do
+        while true; do
             # Check for timeout
             local current_time
             current_time=$(date +%s)
             if [ $((current_time - start_time)) -gt $timeout ]; then
-                echo "TIMEOUT: Installation taking too long (>30min)" > "$ERROR_FILE"
+                echo -e "\n${RD}TIMEOUT: Installation taking too long (>30min)${CL}"
                 break
             fi
             
-            # Check for progress updates
-            if [ -f "$PROGRESS_FILE" ] && [ -s "$PROGRESS_FILE" ]; then
-                local latest_progress
-                latest_progress=$(tail -1 "$PROGRESS_FILE" 2>/dev/null || echo "")
-                
-                if [ "$latest_progress" != "$last_progress" ] && [ -n "$latest_progress" ]; then
-                    last_progress="$latest_progress"
-                    
-                    # Parse progress format: PROGRESS:current:total:percentage:stage:message:timestamp
-                    if [[ "$latest_progress" =~ ^PROGRESS: ]]; then
-                        IFS=':' read -ra PROGRESS_PARTS <<< "$latest_progress"
-                        if [ ${#PROGRESS_PARTS[@]} -ge 6 ]; then
-                            percentage="${PROGRESS_PARTS[3]}"
-                            current_stage="${PROGRESS_PARTS[4]}"
-                            
-                            # Update TUI title with progress
-                            echo "[$percentage%] $current_stage" > "${TMPDIR:-/tmp}/profolio-progress-title"
-                        fi
-                    fi
-                fi
-            fi
-            
-            # Check for completion or error
-            if [ -f "$ERROR_FILE" ] && [ -s "$ERROR_FILE" ]; then
-                echo "ERROR detected - check error file" > "${TMPDIR:-/tmp}/profolio-progress-title"
-                break
+            # Show progress dots
+            printf "."
+            dot_count=$((dot_count + 1))
+            if [ $dot_count -ge 60 ]; then
+                printf "\n"
+                dot_count=0
             fi
             
             sleep 1
@@ -646,8 +596,8 @@ function monitor_installation_progress {
     ) &
     local monitor_pid=$!
     
-    # Return PIDs as space-separated for proper splitting
-    echo "$tailbox_pid $monitor_pid"
+    # Return monitor PID (no tailbox PID needed)
+    echo "0 $monitor_pid"
 }
 
 # Enhanced installation with progress monitoring
@@ -676,34 +626,32 @@ function install_with_progress {
     
     chmod +x "$TEMP_DIR/$INSTALLER_SCRIPT"
     
-    # Start progress monitoring
+    # Start simple progress monitoring
     local monitor_pids_string
     monitor_pids_string=$(monitor_installation_progress "$operation_type")
     
-    if [ -z "$monitor_pids_string" ]; then
-        echo "Warning: Progress monitoring failed to start"
-    fi
-    
-    # Convert to array for proper handling
+    # Convert to array for cleanup
     read -ra monitor_pids <<< "$monitor_pids_string"
     
-    # Run installer with progress reporting  
+    # Run installer directly without complex TUI integration
+    clear
+    echo -e "${GN}Starting $operation_type...${CL}\n"
+    
     if [ -n "$installer_args" ]; then
-        bash "$TEMP_DIR/$INSTALLER_SCRIPT" "$installer_args" --tui-config
+        bash "$TEMP_DIR/$INSTALLER_SCRIPT" "$installer_args"
     else
-        bash "$TEMP_DIR/$INSTALLER_SCRIPT" --tui-config
+        bash "$TEMP_DIR/$INSTALLER_SCRIPT"
     fi
     local install_result=$?
     
     # Cleanup monitoring processes
-    if [ ${#monitor_pids[@]} -gt 0 ]; then
-        for pid in "${monitor_pids[@]}"; do
-            # Only kill non-zero PIDs
-            if [ "$pid" -gt 0 ] 2>/dev/null; then
-                kill "$pid" 2>/dev/null || true
-            fi
-        done
-    fi
+    for pid in "${monitor_pids[@]}"; do
+        if [ "$pid" -gt 0 ] 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+        fi
+    done
+    
+    echo -e "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
     # Remove temporary files
     rm -rf "$TEMP_DIR"
