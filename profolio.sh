@@ -557,7 +557,8 @@ function show_installation_in_tui {
         # Run installation in completely detached background process
         {
             if [ -n "$installer_args" ]; then
-                nohup bash "$installer_script" "$installer_args" > "$log_file" 2>&1 < /dev/null
+                # Use eval to properly expand multiple arguments
+                eval "nohup bash \"$installer_script\" $installer_args > \"$log_file\" 2>&1 < /dev/null"
             else
                 nohup bash "$installer_script" > "$log_file" 2>&1 < /dev/null
             fi
@@ -603,7 +604,8 @@ function show_installation_in_tui {
         echo -e "${YW}$operation_type Progress:${CL}"
         echo "Installing... Please wait."
         if [ -n "$installer_args" ]; then
-            bash "$installer_script" "$installer_args"
+            # Use eval to properly expand multiple arguments
+            eval "bash \"$installer_script\" $installer_args"
         else
             bash "$installer_script"
         fi
