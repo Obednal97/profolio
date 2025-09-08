@@ -93,8 +93,11 @@ show_progress() {
     # In silent mode, execute command without visual output
     if [ "$SILENT_MODE" = true ]; then
         if [[ -n "$command" ]]; then
-            eval "$command" > /tmp/profolio_progress.log 2>&1
-            return $?
+            local silent_log_file="/tmp/profolio_silent_${step}_${RANDOM}.log"
+            eval "$command" > "$silent_log_file" 2>&1
+            local result=$?
+            rm -f "$silent_log_file" 2>/dev/null
+            return $result
         fi
         return 0
     fi
@@ -102,8 +105,11 @@ show_progress() {
     printf "${BLUE}[$step/$total]${NC} $message"
     
     if [[ -n "$command" ]]; then
+        # Use unique log file name to avoid conflicts
+        local log_file="/tmp/profolio_step_${step}_${RANDOM}.log"
+        
         # Run command in background and show spinner
-        eval "$command" > /tmp/profolio_progress.log 2>&1 &
+        eval "$command" > "$log_file" 2>&1 &
         local cmd_pid=$!
         
         # Simple ASCII spinner
@@ -121,11 +127,19 @@ show_progress() {
         
         if [[ $exit_code -eq 0 ]]; then
             printf "\r${BLUE}[$step/$total]${NC} $message ${GREEN}✓${NC}\n"
+            # Clean up successful step log
+            rm -f "$log_file" 2>/dev/null
             return 0
         else
             printf "\r${BLUE}[$step/$total]${NC} $message ${RED}✗${NC}\n"
             echo "${RED}Error details:${NC}"
-            cat /tmp/profolio_progress.log
+            if [ -f "$log_file" ] && [ -s "$log_file" ]; then
+                cat "$log_file"
+            else
+                echo "No error details available"
+            fi
+            # Clean up error log after displaying
+            rm -f "$log_file" 2>/dev/null
             return 1
         fi
     else
@@ -1983,6 +1997,49 @@ verify_build_dependencies() {
     return 0
 }
 
+# Generate Prisma client with error recovery
+generate_prisma_client() {
+    cd /opt/profolio/backend || return 1
+    
+    # First, ensure package.json exists and has the prisma:generate script
+    if [ ! -f "package.json" ]; then
+        error "Backend package.json not found"
+        return 1
+    fi
+    
+    # Check if prisma:generate script exists
+    if ! grep -q "prisma:generate" package.json; then
+        error "prisma:generate script not found in package.json"
+        return 1
+    fi
+    
+    # Ensure dependencies are installed first
+    if [ ! -d "node_modules" ] || [ ! -f "node_modules/.pnpm-lock.yaml" ]; then
+        info "Dependencies not found, installing..."
+        sudo -u profolio pnpm install --frozen-lockfile=false || return 1
+    fi
+    
+    # Try to generate Prisma client
+    if sudo -u profolio pnpm run prisma:generate; then
+        success "Prisma client generated successfully"
+        return 0
+    else
+        warn "Initial Prisma generation failed, attempting recovery..."
+        
+        # Try installing prisma specifically
+        if sudo -u profolio pnpm install prisma @prisma/client; then
+            info "Prisma packages installed, retrying generation..."
+            if sudo -u profolio pnpm run prisma:generate; then
+                success "Prisma client generated successfully after recovery"
+                return 0
+            fi
+        fi
+        
+        error "Failed to generate Prisma client after recovery attempts"
+        return 1
+    fi
+}
+
 # Internal build function (original logic)
 build_application_internal() {
     # Clean up any existing build artifacts with permission issues
@@ -1993,12 +2050,12 @@ build_application_internal() {
     chown -R profolio:profolio /opt/profolio
     
     local steps=(
-        "Installing backend dependencies (dev mode for build)" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
-        "Generating Prisma client" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm run prisma:generate"
-                        "Running database migrations" "run_database_migrations"
-        "Building NestJS backend" "(cd /opt/profolio/backend || exit 1) && sudo -u profolio pnpm run build"
-        "Installing frontend dependencies (dev mode for build)" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
-        "Building Next.js frontend" "(cd /opt/profolio/frontend || exit 1) && sudo -u profolio pnpm run build"
+        "Installing backend dependencies (dev mode for build)" "cd /opt/profolio/backend && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
+        "Generating Prisma client" "generate_prisma_client"
+        "Running database migrations" "run_database_migrations"
+        "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio pnpm run build"
+        "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
+        "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio pnpm run build"
         "Optimizing for production deployment" "optimize_production_deployment"
         "Cleaning build artifacts and cache" "cleanup_build_artifacts"
     )
