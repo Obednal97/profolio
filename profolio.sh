@@ -166,16 +166,7 @@ function needs_repair {
 function main_menu {
     while true; do
         local choice
-        local menu_items=(
-            1 "Install Profolio (Recommended)"
-            2 "Update Existing Installation"
-            3 "Advanced Installation"
-            4 "System Tools & Diagnostics >"
-            5 "Health Check"
-            6 "Config Management >"
-        )
-        
-        # Check repair status once and cache the result
+        # Check repair status for optional indicator
         local repair_needed
         if needs_repair; then
             repair_needed="yes"
@@ -183,19 +174,29 @@ function main_menu {
             repair_needed="no"
         fi
         
-        # Add repair option if needed
-        local menu_height=20
+        # Build menu items (repair option always shown)
+        local menu_items=(
+            1 "Install Profolio (Recommended)"
+            2 "Update Existing Installation"  
+            3 "Advanced Installation"
+            4 "System Tools & Diagnostics >"
+            5 "Health Check"
+            6 "Config Management >"
+        )
+        
+        # Add repair option with optional indicator
         if [ "$repair_needed" = "yes" ]; then
             menu_items+=(7 "🔧 Repair Installation (Services Down)")
-            menu_items+=(8 "System Requirements")
-            menu_items+=(9 "About Profolio")
-            menu_items+=(10 "Exit")
-            menu_height=22
         else
-            menu_items+=(7 "System Requirements")
-            menu_items+=(8 "About Profolio")
-            menu_items+=(9 "Exit")
+            menu_items+=(7 "🔧 Repair Installation")
         fi
+        
+        # Add remaining options
+        menu_items+=(8 "System Requirements")
+        menu_items+=(9 "About Profolio")
+        menu_items+=(10 "Exit")
+        
+        local menu_height=22
         
         # Calculate menu count dynamically from array
         local menu_count=$((${#menu_items[@]}/2))
@@ -204,35 +205,20 @@ function main_menu {
             --menu "Select an option:" $menu_height 70 "$menu_count" \
             "${menu_items[@]}" 3>&1 1>&2 2>&3)
         
-        # Handle menu choices dynamically based on repair option
-        if [ "$repair_needed" = "yes" ]; then
-            case $choice in
-                1) install_profolio ;;
-                2) update_profolio ;;
-                3) advanced_install ;;
-                4) system_tools_menu ;;
-                5) run_health_check ;;
-                6) config_menu ;;
-                7) repair_installation ;;
-                8) show_requirements ;;
-                9) show_about ;;
-                10) exit 0 ;;
-                *) exit 0 ;;
-            esac
-        else
-            case $choice in
-                1) install_profolio ;;
-                2) update_profolio ;;
-                3) advanced_install ;;
-                4) system_tools_menu ;;
-                5) run_health_check ;;
-                6) config_menu ;;
-                7) show_requirements ;;
-                8) show_about ;;
-                9) exit 0 ;;
-                *) exit 0 ;;
-            esac
-        fi
+        # Handle menu choices (repair always at option 7)
+        case $choice in
+            1) install_profolio ;;
+            2) update_profolio ;;
+            3) advanced_install ;;
+            4) system_tools_menu ;;
+            5) run_health_check ;;
+            6) config_menu ;;
+            7) repair_installation ;;
+            8) show_requirements ;;
+            9) show_about ;;
+            10) exit 0 ;;
+            *) exit 0 ;;
+        esac
     done
 }
 
@@ -558,46 +544,66 @@ function execute_advanced_install {
     return $install_result
 }
 
-# Simplified Progress Monitoring (no TUI dialogs to avoid hanging)
-function monitor_installation_progress {
+# TUI-compatible Progress Display
+function show_installation_in_tui {
     local operation_type="$1"
+    local installer_script="$2"
+    local installer_args="$3"
     
-    # Simple terminal-based progress monitoring
-    echo -e "${YW}$operation_type Progress:${CL}"
-    echo "Progress will be shown below (this may take several minutes)..."
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
-    # Start a simple background monitor that shows dots
-    (
-        local start_time
-        start_time=$(date +%s)
-        local timeout=1800  # 30 minutes timeout
-        local dot_count=0
-        
-        while true; do
-            # Check for timeout
-            local current_time
-            current_time=$(date +%s)
-            if [ $((current_time - start_time)) -gt $timeout ]; then
-                echo -e "\n${RD}TIMEOUT: Installation taking too long (>30min)${CL}"
-                break
+    # Check if programbox is supported (best option for showing output in TUI)
+    if [ "$TUI_ENABLED" = true ]; then
+        if $TUI_TOOL --help 2>&1 | grep -q "programbox" 2>/dev/null; then
+            # Use programbox to show installer output within TUI
+            if [ -n "$installer_args" ]; then
+                bash "$installer_script" "$installer_args" | \
+                $TUI_TOOL --title "$operation_type Progress" \
+                    --programbox "Installing Profolio... Please wait." 20 80
+            else
+                bash "$installer_script" | \
+                $TUI_TOOL --title "$operation_type Progress" \
+                    --programbox "Installing Profolio... Please wait." 20 80
             fi
-            
-            # Show progress dots
-            printf "."
-            dot_count=$((dot_count + 1))
-            if [ $dot_count -ge 60 ]; then
-                printf "\n"
-                dot_count=0
-            fi
-            
-            sleep 1
-        done
-    ) &
-    local monitor_pid=$!
-    
-    # Return monitor PID (no tailbox PID needed)
-    echo "0 $monitor_pid"
+            return $?
+        else
+            # Fallback: Show installation with gauge simulation
+            (
+                if [ -n "$installer_args" ]; then
+                    bash "$installer_script" "$installer_args" &
+                else
+                    bash "$installer_script" &
+                fi
+                local install_pid=$!
+                
+                # Show progress gauge while installation runs
+                (
+                    for i in {1..100}; do
+                        echo $i
+                        sleep 3
+                        # Check if installation is still running
+                        if ! kill -0 $install_pid 2>/dev/null; then
+                            echo 100
+                            break
+                        fi
+                    done
+                ) | $TUI_TOOL --title "$operation_type Progress" \
+                    --gauge "Installing Profolio... Please wait." 8 60 0
+                
+                # Wait for installation to complete
+                wait $install_pid
+                return $?
+            )
+        fi
+    else
+        # Fallback to terminal output
+        echo -e "${YW}$operation_type Progress:${CL}"
+        echo "Installing... Please wait."
+        if [ -n "$installer_args" ]; then
+            bash "$installer_script" "$installer_args"
+        else
+            bash "$installer_script"
+        fi
+        return $?
+    fi
 }
 
 # Enhanced installation with progress monitoring
@@ -626,46 +632,27 @@ function install_with_progress {
     
     chmod +x "$TEMP_DIR/$INSTALLER_SCRIPT"
     
-    # Start simple progress monitoring
-    local monitor_pids_string
-    monitor_pids_string=$(monitor_installation_progress "$operation_type")
-    
-    # Convert to array for cleanup
-    read -ra monitor_pids <<< "$monitor_pids_string"
-    
-    # Run installer directly without complex TUI integration
-    clear
-    echo -e "${GN}Starting $operation_type...${CL}\n"
-    
-    if [ -n "$installer_args" ]; then
-        bash "$TEMP_DIR/$INSTALLER_SCRIPT" "$installer_args"
-    else
-        bash "$TEMP_DIR/$INSTALLER_SCRIPT"
-    fi
-    local install_result=$?
-    
-    # Cleanup monitoring processes
-    for pid in "${monitor_pids[@]}"; do
-        if [ "$pid" -gt 0 ] 2>/dev/null; then
-            kill "$pid" 2>/dev/null || true
-        fi
-    done
-    
-    echo -e "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    # Run installation within TUI
+    local install_result
+    install_result=$(show_installation_in_tui "$operation_type" "$TEMP_DIR/$INSTALLER_SCRIPT" "$installer_args")
+    local install_exit_code=$?
     
     # Remove temporary files
     rm -rf "$TEMP_DIR"
     
-    # Show completion status
-    if [ $install_result -eq 0 ]; then
-        $TUI_TOOL --title "$operation_type Complete" \
-            --msgbox "$operation_type completed successfully!\n\nProfolio should now be running properly." 8 60
-    else
-        $TUI_TOOL --title "$operation_type Failed" \
-            --msgbox "$operation_type encountered errors.\n\nCheck the output above for details.\n\nYou may need to run a repair installation." 10 60
+    # Show completion status in TUI
+    if [ "$TUI_ENABLED" = true ]; then
+        if [ $install_exit_code -eq 0 ]; then
+            local ip_address=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "localhost")
+            $TUI_TOOL --title "$operation_type Complete" \
+                --msgbox "$operation_type completed successfully!\n\nProfolio should now be running properly.\n\nAccess your instance at:\nhttp://$ip_address" 12 60
+        else
+            $TUI_TOOL --title "$operation_type Failed" \
+                --msgbox "$operation_type encountered errors.\n\nYou may need to run a repair installation or check the system logs." 10 60
+        fi
     fi
     
-    return $install_result
+    return $install_exit_code
 }
 
 # Cleanup environment variables
