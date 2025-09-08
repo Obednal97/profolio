@@ -546,7 +546,22 @@ function show_installation_in_tui {
     local installer_script="$2" 
     local installer_args="$3"
     
-    # Always try to stay within TUI using enhanced progress monitoring
+    # For advanced installation, show direct output for better feedback
+    if [[ "$operation_type" == "Advanced Installation" ]]; then
+        echo -e "${YW}$operation_type Progress:${CL}"
+        echo "Running installer with real-time feedback..."
+        echo ""
+        
+        if [ -n "$installer_args" ]; then
+            # Use eval to properly expand multiple arguments  
+            eval "bash \"$installer_script\" $installer_args"
+        else
+            bash "$installer_script"
+        fi
+        return $?
+    fi
+    
+    # For other installations, use TUI progress monitoring
     if [ "$TUI_ENABLED" = true ]; then
         local log_file="/tmp/profolio-install-$(date +%s).log"
         local progress_file="/tmp/profolio-progress-$(date +%s).tmp"
