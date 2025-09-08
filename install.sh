@@ -426,9 +426,11 @@ create_rollback_point() {
         fi
     fi
     
-    # Create backup directory
+    # Create backup directory in organized location
     local timestamp=$(date +%Y%m%d_%H%M%S)
-    ROLLBACK_BACKUP_DIR="/opt/profolio-rollback-$timestamp"
+    local rollback_base_dir="/opt/profolio-rollbacks"
+    mkdir -p "$rollback_base_dir"
+    ROLLBACK_BACKUP_DIR="$rollback_base_dir/rollback-$timestamp"
     
     if [ -d "/opt/profolio" ]; then
         info "Creating rollback backup..."
@@ -568,14 +570,31 @@ cleanup_rollback_files() {
         success "Rollback backup cleaned up"
     fi
     
-    # Keep only 2 most recent rollback backups
-    local rollback_count=$(ls -1 /opt/ | grep "^profolio-rollback-" | wc -l)
-    if [ "$rollback_count" -gt 2 ]; then
-        local backups_to_remove=$((rollback_count - 2))
-        ls -1t /opt/ | grep "^profolio-rollback-" | tail -n "$backups_to_remove" | while read -r old_backup; do
-            rm -rf "/opt/$old_backup"
-            info "Removed old rollback backup: $old_backup"
+    # Migrate old rollback directories to new location
+    if ls /opt/profolio-rollback-* >/dev/null 2>&1; then
+        info "Migrating old rollback directories..."
+        mkdir -p "/opt/profolio-rollbacks"
+        for old_rollback in /opt/profolio-rollback-*; do
+            if [ -d "$old_rollback" ]; then
+                local rollback_name=$(basename "$old_rollback")
+                local new_name=${rollback_name#profolio-}
+                mv "$old_rollback" "/opt/profolio-rollbacks/$new_name"
+                info "Migrated: $rollback_name -> /opt/profolio-rollbacks/$new_name"
+            fi
         done
+    fi
+    
+    # Keep only 2 most recent rollback backups in new organized location
+    local rollback_dir="/opt/profolio-rollbacks"
+    if [ -d "$rollback_dir" ]; then
+        local rollback_count=$(ls -1 "$rollback_dir" 2>/dev/null | wc -l)
+        if [ "$rollback_count" -gt 2 ]; then
+            local backups_to_remove=$((rollback_count - 2))
+            ls -1t "$rollback_dir" | tail -n "$backups_to_remove" | while read -r old_backup; do
+                rm -rf "$rollback_dir/$old_backup"
+                info "Removed old rollback backup: $old_backup"
+            done
+        fi
     fi
 }
 

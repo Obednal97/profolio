@@ -817,28 +817,34 @@ function system_tools_menu {
 function update_installer {
     # Look for installer in install directory first, then common locations
     local script_path=""
+    local install_script_path=""
     local found_installer=false
     
     # Check install directory first
     if [ -f "$INSTALL_DIR/profolio.sh" ]; then
         script_path="$INSTALL_DIR/profolio.sh"
+        install_script_path="$INSTALL_DIR/install.sh"
         found_installer=true
     elif [ -f "/usr/local/bin/profolio.sh" ]; then
         script_path="/usr/local/bin/profolio.sh" 
+        install_script_path="/usr/local/bin/install.sh"
         found_installer=true
     elif [ -f "/usr/bin/profolio.sh" ]; then
         script_path="/usr/bin/profolio.sh"
+        install_script_path="/usr/bin/install.sh"
         found_installer=true
     elif [ -f "/opt/profolio.sh" ]; then
         script_path="/opt/profolio.sh"
+        install_script_path="/opt/install.sh"
         found_installer=true
     fi
     
     # If no installer found, offer to install one
     if [ "$found_installer" = false ]; then
         if $TUI_TOOL --title "No Installer Found" \
-            --yesno "No profolio.sh installer found in common locations.\n\nWould you like to install one to $INSTALL_DIR/profolio.sh?" 10 60; then
+            --yesno "No profolio.sh installer found in common locations.\n\nWould you like to install both scripts to $INSTALL_DIR/?" 10 60; then
             script_path="$INSTALL_DIR/profolio.sh"
+            install_script_path="$INSTALL_DIR/install.sh"
         else
             return 0
         fi
@@ -846,51 +852,88 @@ function update_installer {
     
     # Show target location
     $TUI_TOOL --title "Update Installer" \
-        --msgbox "Target installer location:\n$script_path\n\nDownloading latest version..." 8 70
+        --msgbox "Target locations:\n- profolio.sh: $script_path\n- install.sh: $install_script_path\n\nDownloading latest versions..." 10 70
     
-    # Download latest version
+    # Download latest versions
     mkdir -p "$TEMP_DIR"
+    local download_failed=false
+    
+    # Download profolio.sh
     if ! curl -fsSL "$GITHUB_RAW/profolio.sh" -o "$TEMP_DIR/profolio-new.sh"; then
+        download_failed=true
+    fi
+    
+    # Download install.sh
+    if ! curl -fsSL "$GITHUB_RAW/install.sh" -o "$TEMP_DIR/install-new.sh"; then
+        download_failed=true
+    fi
+    
+    if [ "$download_failed" = true ]; then
         $TUI_TOOL --title "Update Failed" \
-            --msgbox "Failed to download latest installer from GitHub.\n\nPlease check your internet connection and try again." 8 60
+            --msgbox "Failed to download latest installer scripts from GitHub.\n\nPlease check your internet connection and try again." 8 60
+        rm -f "$TEMP_DIR/profolio-new.sh" "$TEMP_DIR/install-new.sh"
         return 1
     fi
     
-    # Confirm update (no version comparison, always update)
+    # Confirm update
     if ! $TUI_TOOL --title "Update Installer" \
-        --yesno "This will:\n\n- Backup existing installer as profolio-backup.sh\n- Download fresh installer from GitHub\n- Install to: $script_path\n\nProceed with installer update?" 12 70; then
-        rm -f "$TEMP_DIR/profolio-new.sh"
+        --yesno "This will:\n\n- Backup existing scripts with -backup.sh suffix\n- Download fresh scripts from GitHub\n- Update both profolio.sh and install.sh\n\nProceed with installer update?" 12 70; then
+        rm -f "$TEMP_DIR/profolio-new.sh" "$TEMP_DIR/install-new.sh"
         return 0
     fi
     
-    # Create directory if needed
+    # Create directories if needed
     mkdir -p "$(dirname "$script_path")"
+    mkdir -p "$(dirname "$install_script_path")"
     
-    # Create backup with new naming scheme
+    # Create backups
+    local backup_failed=false
     if [ -f "$script_path" ]; then
         local backup_path="$(dirname "$script_path")/profolio-backup.sh"
         if ! mv "$script_path" "$backup_path"; then
-            $TUI_TOOL --title "Backup Failed" \
-                --msgbox "Failed to backup existing installer to:\n$backup_path\n\nUpdate cancelled for safety." 8 70
-            rm -f "$TEMP_DIR/profolio-new.sh"
-            return 1
+            backup_failed=true
         fi
     fi
     
-    # Install new version
-    if mv "$TEMP_DIR/profolio-new.sh" "$script_path" && chmod +x "$script_path"; then
-        $TUI_TOOL --title "Update Complete" \
-            --msgbox "Installer updated successfully!\n\nLocation: $script_path\nBackup: $(dirname "$script_path")/profolio-backup.sh\n\nRestart the installer to use the new version." 12 70
-    else
-        # Restore from backup if available and update failed
-        local backup_path="$(dirname "$script_path")/profolio-backup.sh"
-        if [ -f "$backup_path" ]; then
-            mv "$backup_path" "$script_path"
+    if [ -f "$install_script_path" ]; then
+        local install_backup_path="$(dirname "$install_script_path")/install-backup.sh"
+        if ! mv "$install_script_path" "$install_backup_path"; then
+            backup_failed=true
         fi
-        $TUI_TOOL --title "Update Failed" \
-            --msgbox "Failed to update installer.\n\nOriginal installer has been restored if it existed." 8 60
+    fi
+    
+    if [ "$backup_failed" = true ]; then
+        $TUI_TOOL --title "Backup Failed" \
+            --msgbox "Failed to backup existing scripts.\n\nUpdate cancelled for safety." 8 70
+        rm -f "$TEMP_DIR/profolio-new.sh" "$TEMP_DIR/install-new.sh"
         return 1
     fi
+    
+    # Install new versions
+    local install_failed=false
+    if ! mv "$TEMP_DIR/profolio-new.sh" "$script_path" || ! chmod +x "$script_path"; then
+        install_failed=true
+    fi
+    
+    if ! mv "$TEMP_DIR/install-new.sh" "$install_script_path" || ! chmod +x "$install_script_path"; then
+        install_failed=true
+    fi
+    
+    if [ "$install_failed" = true ]; then
+        # Restore from backups if available
+        local backup_path="$(dirname "$script_path")/profolio-backup.sh"
+        local install_backup_path="$(dirname "$install_script_path")/install-backup.sh"
+        [ -f "$backup_path" ] && mv "$backup_path" "$script_path"
+        [ -f "$install_backup_path" ] && mv "$install_backup_path" "$install_script_path"
+        
+        $TUI_TOOL --title "Update Failed" \
+            --msgbox "Failed to update installer scripts.\n\nOriginal scripts have been restored if they existed." 8 60
+        return 1
+    fi
+    
+    # Success
+    $TUI_TOOL --title "Update Complete" \
+        --msgbox "Installer scripts updated successfully!\n\nLocations:\n- profolio.sh: $script_path\n- install.sh: $install_script_path\n\nBackups saved with -backup.sh suffix\n\nRestart the installer to use the new version." 14 70
     
     # Offer to restart
     if $TUI_TOOL --title "Restart Installer?" \
