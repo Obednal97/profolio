@@ -538,27 +538,56 @@ function show_installation_in_tui {
     local installer_script="$2" 
     local installer_args="$3"
     
-    # Always try to stay within TUI using simple infobox + background process
+    # Always try to stay within TUI using enhanced progress monitoring
     if [ "$TUI_ENABLED" = true ]; then
-        # Show initial progress message
-        $TUI_TOOL --title "$operation_type Progress" \
-            --infobox "$operation_type is running in the background...\n\nThis may take several minutes.\n\nPlease wait for completion dialog." 8 60 &
-        local infobox_pid=$!
+        local log_file="/tmp/profolio-install-$(date +%s).log"
+        local progress_file="/tmp/profolio-progress-$(date +%s).tmp"
         
-        # Run installation in background
-        if [ -n "$installer_args" ]; then
-            bash "$installer_script" "$installer_args" > /tmp/profolio-install.log 2>&1 &
-        else
-            bash "$installer_script" > /tmp/profolio-install.log 2>&1 &
-        fi
+        # Initialize progress tracking
+        echo "0" > "$progress_file"
+        
+        # Run installation in completely detached background process
+        {
+            if [ -n "$installer_args" ]; then
+                nohup bash "$installer_script" "$installer_args" > "$log_file" 2>&1 < /dev/null
+            else
+                nohup bash "$installer_script" > "$log_file" 2>&1 < /dev/null
+            fi
+            echo $? > "${progress_file}.exit"
+        } &
         local install_pid=$!
         
-        # Wait for installation to complete
-        wait $install_pid
-        local install_result=$?
+        # Progress monitoring loop
+        local dots=""
+        local counter=0
+        while kill -0 $install_pid 2>/dev/null; do
+            # Update progress indicator
+            case $((counter % 4)) in
+                0) dots="   " ;;
+                1) dots=".  " ;;
+                2) dots=".. " ;;
+                3) dots="..." ;;
+            esac
+            
+            # Show progress with dots animation
+            $TUI_TOOL --title "$operation_type Progress" \
+                --infobox "$operation_type is running$dots\n\nThis may take several minutes.\nPlease wait for completion dialog.\n\nProgress: $((counter / 2))s elapsed" 10 60
+            
+            sleep 2
+            counter=$((counter + 1))
+        done
         
-        # Kill the infobox
-        kill $infobox_pid 2>/dev/null || true
+        # Wait for background process to complete
+        wait $install_pid
+        
+        # Get exit code from file if available
+        local install_result=1
+        if [ -f "${progress_file}.exit" ]; then
+            install_result=$(cat "${progress_file}.exit" 2>/dev/null || echo "1")
+        fi
+        
+        # Cleanup progress files
+        rm -f "$progress_file" "${progress_file}.exit" 2>/dev/null
         
         return $install_result
     else
