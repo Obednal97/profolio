@@ -754,7 +754,7 @@ function system_tools_menu {
     while true; do
         local choice
         choice=$($TUI_TOOL --title "System Tools & Diagnostics" \
-            --menu "Select a tool:" 22 70 12 \
+            --menu "Select a tool:" 24 70 13 \
             1 "Validate System Resources" \
             2 "Detect Network Configuration" \
             3 "Collect Diagnostics" \
@@ -766,7 +766,8 @@ function system_tools_menu {
             9 "Clear Build Artifacts" \
             10 "Installation Integrity Check" \
             11 "Run All Cleanup Tasks" \
-            12 "Back to Main Menu" 3>&1 1>&2 2>&3)
+            12 "Update Installer" \
+            13 "Back to Main Menu" 3>&1 1>&2 2>&3)
         
         case $choice in
             1) validate_resources ;;
@@ -780,10 +781,84 @@ function system_tools_menu {
             9) clear_build_artifacts ;;
             10) integrity_check ;;
             11) run_all_cleanup ;;
-            12) return ;;
+            12) update_installer ;;
+            13) return ;;
             *) return ;;
         esac
     done
+}
+
+# Update Installer Function
+function update_installer {
+    local current_script="${BASH_SOURCE[0]}"
+    local script_path="$(realpath "$current_script" 2>/dev/null || echo "$current_script")"
+    local current_version=$(get_installer_version)
+    
+    # Show current status
+    $TUI_TOOL --title "Update Installer" \
+        --msgbox "Current installer information:\n\nVersion: $current_version\nLocation: $script_path\n\nChecking for updates..." 10 70
+    
+    # Download latest version to temp file
+    mkdir -p "$TEMP_DIR"
+    if ! curl -fsSL "$GITHUB_RAW/profolio.sh" -o "$TEMP_DIR/profolio-new.sh"; then
+        $TUI_TOOL --title "Update Failed" \
+            --msgbox "Failed to download latest installer from GitHub.\n\nPlease check your internet connection and try again." 8 60
+        return 1
+    fi
+    
+    # Extract version from downloaded file
+    local new_version
+    new_version=$(grep -m1 "echo \"v[0-9]" "$TEMP_DIR/profolio-new.sh" | grep -o "v[0-9][0-9]*\.[0-9][0-9]*" || echo "unknown")
+    
+    # Compare versions
+    if [ "$current_version" = "$new_version" ]; then
+        $TUI_TOOL --title "Already Up to Date" \
+            --msgbox "You already have the latest installer version ($current_version).\n\nNo update needed." 8 60
+        rm -f "$TEMP_DIR/profolio-new.sh"
+        return 0
+    fi
+    
+    # Confirm update
+    if ! $TUI_TOOL --title "Update Available" \
+        --yesno "Update available!\n\nCurrent version: $current_version\nNew version: $new_version\n\nDo you want to update the installer?\n\nThis will:\n• Backup current installer\n• Replace with new version\n• Preserve executable permissions" 16 60; then
+        rm -f "$TEMP_DIR/profolio-new.sh"
+        return 0
+    fi
+    
+    # Check write permissions
+    if [ ! -w "$script_path" ]; then
+        $TUI_TOOL --title "Permission Error" \
+            --msgbox "Cannot write to installer location:\n$script_path\n\nPlease run this installer with appropriate permissions (sudo) to update." 10 70
+        rm -f "$TEMP_DIR/profolio-new.sh"
+        return 1
+    fi
+    
+    # Create backup
+    local backup_path="${script_path}.backup.$(date +%Y%m%d-%H%M%S)"
+    if ! cp "$script_path" "$backup_path"; then
+        $TUI_TOOL --title "Backup Failed" \
+            --msgbox "Failed to create backup at:\n$backup_path\n\nUpdate cancelled for safety." 8 70
+        rm -f "$TEMP_DIR/profolio-new.sh"
+        return 1
+    fi
+    
+    # Replace installer
+    if mv "$TEMP_DIR/profolio-new.sh" "$script_path" && chmod +x "$script_path"; then
+        $TUI_TOOL --title "Update Complete" \
+            --msgbox "Installer updated successfully!\n\nOld version: $current_version\nNew version: $new_version\n\nBackup saved at:\n$backup_path\n\nRestart the installer to use the new version." 14 70
+    else
+        # Restore from backup if update failed
+        mv "$backup_path" "$script_path"
+        $TUI_TOOL --title "Update Failed" \
+            --msgbox "Failed to update installer.\n\nOriginal installer has been restored from backup." 8 60
+        return 1
+    fi
+    
+    # Offer to restart
+    if $TUI_TOOL --title "Restart Installer?" \
+        --yesno "Would you like to restart the installer with the new version now?" 8 60; then
+        exec "$script_path" "$@"
+    fi
 }
 
 # Clean Dependencies Function
