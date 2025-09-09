@@ -1237,7 +1237,7 @@ create_proxmox_container() {
             
             # Download and execute installer in container
             pct exec $PROXMOX_VMID -- bash -c "
-                apt update && apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4
+                apt update && apt install -y git nodejs npm postgresql postgresql-contrib redis-server whiptail dialog curl wget openssl openssh-server && npm install -g pnpm@9.14.4 && systemctl enable redis-server && systemctl start redis-server
                 curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | bash
             "
         else
@@ -2188,6 +2188,99 @@ verify_build_dependencies() {
     return 0
 }
 
+# Check and install system dependencies required for Profolio
+check_and_install_dependencies() {
+    info "🔍 Checking system dependencies..."
+    
+    local missing_deps=()
+    local redis_needed=false
+    local tui_needed=false
+    
+    # Check for Redis (required for rate limiting and caching)
+    if ! command -v redis-server >/dev/null 2>&1; then
+        missing_deps+=("redis-server")
+        redis_needed=true
+    fi
+    
+    # Check for TUI tools (needed for interactive installer)
+    if ! command -v whiptail >/dev/null 2>&1 && ! command -v dialog >/dev/null 2>&1; then
+        missing_deps+=("whiptail" "dialog")
+        tui_needed=true
+    fi
+    
+    # Check for basic tools
+    command -v git >/dev/null 2>&1 || missing_deps+=("git")
+    command -v node >/dev/null 2>&1 || missing_deps+=("nodejs" "npm")
+    command -v psql >/dev/null 2>&1 || missing_deps+=("postgresql" "postgresql-contrib")
+    command -v curl >/dev/null 2>&1 || missing_deps+=("curl")
+    command -v wget >/dev/null 2>&1 || missing_deps+=("wget")
+    
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        info "📦 Installing missing dependencies: ${missing_deps[*]}"
+        
+        # Update package lists
+        if ! apt update; then
+            error "Failed to update package lists"
+            return 1
+        fi
+        
+        # Install missing packages
+        if ! apt install -y "${missing_deps[@]}"; then
+            error "Failed to install dependencies: ${missing_deps[*]}"
+            return 1
+        fi
+        
+        # Configure Redis if it was installed
+        if [ "$redis_needed" = true ]; then
+            info "🔧 Configuring Redis..."
+            systemctl enable redis-server 2>/dev/null || true
+            systemctl start redis-server 2>/dev/null || true
+            
+            # Verify Redis is running
+            if systemctl is-active --quiet redis-server 2>/dev/null; then
+                success "✅ Redis configured and running"
+            else
+                warn "⚠️  Redis installed but may not be running properly"
+            fi
+        fi
+        
+        # Install pnpm if not present
+        if ! command -v pnpm >/dev/null 2>&1; then
+            info "📦 Installing pnpm package manager..."
+            if command -v npm >/dev/null 2>&1; then
+                npm install -g pnpm@9.14.4 || warn "Failed to install pnpm globally"
+            else
+                warn "npm not available, pnpm installation skipped"
+            fi
+        fi
+        
+        success "✅ Missing dependencies installed"
+    else
+        success "✅ All required dependencies are already installed"
+    fi
+    
+    # Verify critical services
+    info "🔍 Verifying critical services..."
+    
+    # Check Redis connectivity
+    if command -v redis-cli >/dev/null 2>&1; then
+        if redis-cli ping >/dev/null 2>&1; then
+            success "✅ Redis connectivity verified"
+        else
+            warn "⚠️  Redis is installed but not responding to ping"
+        fi
+    fi
+    
+    # Check PostgreSQL
+    if systemctl is-active --quiet postgresql 2>/dev/null; then
+        success "✅ PostgreSQL service is running"
+    else
+        info "📝 PostgreSQL will be configured during installation"
+    fi
+    
+    return 0
+}
+
 # Generate Prisma client with error recovery
 generate_prisma_client() {
     cd /opt/profolio/backend || return 1
@@ -2737,6 +2830,16 @@ JWT_SECRET="${jwt_secret}"
 API_ENCRYPTION_KEY="${api_key}"
 PORT=3001
 NODE_ENV=production
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# Rate Limiting Configuration
+RATE_LIMIT_TTL=60
+RATE_LIMIT_MAX=100
 EOF
     
     # Append preserved settings if they exist
@@ -5075,11 +5178,19 @@ fresh_install() {
         info "Installing latest Profolio version"
     fi
     
+    # Pre-flight dependency check
+    if ! check_and_install_dependencies; then
+        error "Dependency check failed - installation cannot continue"
+        OPERATION_SUCCESS=false
+        show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
+        return 1
+    fi
+    
     # System setup phase
     local system_steps=(
         "Creating profolio user" "useradd -r -s /bin/bash -d /home/profolio -m profolio 2>/dev/null || true"
         "Updating package lists" "apt update"
-        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib curl wget openssl openssh-server && npm install -g pnpm@9.14.4"
+        "Installing system dependencies" "apt install -y git nodejs npm postgresql postgresql-contrib redis-server whiptail dialog curl wget openssl openssh-server && npm install -g pnpm@9.14.4 && systemctl enable redis-server && systemctl start redis-server"
     )
     
     if ! execute_steps "System Setup" "${system_steps[@]}"; then
