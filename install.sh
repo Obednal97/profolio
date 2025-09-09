@@ -5424,4 +5424,4 @@ download_profolio_incremental() {
 }
 
 # Run main function
-main "$@" # Force sync - Tue Sep  9 11:38:37 BST 2025
+main "$@"
