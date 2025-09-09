@@ -12,8 +12,11 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
       retry: (failureCount: number, error: unknown) => {
-        if (error?.status === 401 || error?.status === 403) {
-          return false;
+        if (error && typeof error === 'object' && 'status' in error) {
+          const httpError = error as { status: number };
+          if (httpError.status === 401 || httpError.status === 403) {
+            return false;
+          }
         }
         return failureCount < 3;
       },
