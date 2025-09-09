@@ -420,6 +420,197 @@ version_exists() {
     fi
 }
 
+# Smart backup function that excludes unnecessary large files
+create_smart_backup() {
+    local source_dir="$1"
+    local dest_dir="$2"
+    
+    # Check available disk space before creating backup
+    local source_size=$(du -sm "$source_dir" 2>/dev/null | cut -f1 || echo "0")
+    local available_space=$(df -m "$(dirname "$dest_dir")" | awk 'NR==2{print $4}' || echo "0")
+    
+    # Estimate smart backup size (approximately 5-10% of original)
+    local estimated_size=$((source_size / 15))  # Conservative estimate
+    
+    if [ "$available_space" -lt "$estimated_size" ]; then
+        error "Insufficient disk space for backup: need ~${estimated_size}MB, have ${available_space}MB"
+        return 1
+    fi
+    
+    info "Creating smart backup (excluding node_modules, build artifacts)..."
+    info "  Estimated size: ~${estimated_size}MB (original: ${source_size}MB)"
+    
+    # Create destination directory
+    mkdir -p "$dest_dir"
+    
+    # Check if rsync is available, fallback to cp with exclusions
+    if command -v rsync >/dev/null 2>&1; then
+        # Use rsync for efficient backup with exclusions
+        if rsync -a \
+            --exclude='node_modules/' \
+            --exclude='.next/' \
+            --exclude='dist/' \
+            --exclude='*.log' \
+            --exclude='.cache/' \
+            --exclude='.npm/' \
+            --exclude='*.tsbuildinfo' \
+            --exclude='coverage/' \
+            --exclude='.nyc_output/' \
+            --exclude='tmp/' \
+            --exclude='temp/' \
+            --exclude='.DS_Store' \
+            --exclude='pnpm-lock.yaml' \
+            "$source_dir/" "$dest_dir/" 2>/dev/null; then
+            
+            local actual_size=$(du -sm "$dest_dir" 2>/dev/null | cut -f1 || echo "0")
+            success "Smart backup created: ${actual_size}MB (${dest_dir})"
+            return 0
+        else
+            error "rsync backup failed"
+            return 1
+        fi
+    else
+        # Fallback: create directory and copy selectively
+        info "rsync not available, using selective copy method..."
+        
+        # Copy essential directories and files, excluding large artifacts
+        for item in "$source_dir"/*; do
+            if [ ! -e "$item" ]; then continue; fi
+            
+            local basename=$(basename "$item")
+            case "$basename" in
+                node_modules|.next|dist|coverage|.nyc_output|tmp|temp|*.log|.cache|.npm) 
+                    info "  Skipping: $basename"
+                    ;;
+                *.tsbuildinfo|.DS_Store|pnpm-lock.yaml)
+                    info "  Skipping: $basename"
+                    ;;
+                *)
+                    info "  Copying: $basename"
+                    cp -r "$item" "$dest_dir/" 2>/dev/null || true
+                    ;;
+            esac
+        done
+        
+        local actual_size=$(du -sm "$dest_dir" 2>/dev/null | cut -f1 || echo "0")
+        success "Smart backup created: ${actual_size}MB (${dest_dir})"
+        return 0
+    fi
+}
+
+# Restore from lean backup (without node_modules and build artifacts)
+restore_lean_backup() {
+    local backup_dir="$1"
+    local target_dir="$2"
+    
+    if [ ! -d "$backup_dir" ]; then
+        error "Backup directory does not exist: $backup_dir"
+        return 1
+    fi
+    
+    info "Restoring from lean backup: $backup_dir"
+    
+    # Create target directory
+    mkdir -p "$target_dir"
+    
+    # Copy the lean backup files
+    if command -v rsync >/dev/null 2>&1; then
+        # Use rsync for efficient restoration
+        if ! rsync -a "$backup_dir/" "$target_dir/" 2>/dev/null; then
+            error "Failed to restore backup files"
+            return 1
+        fi
+    else
+        # Fallback to cp
+        if ! cp -r "$backup_dir"/* "$target_dir/" 2>/dev/null; then
+            error "Failed to restore backup files"
+            return 1
+        fi
+    fi
+    
+    # Now we need to restore the missing parts (node_modules, build artifacts)
+    info "Restoring dependencies and build artifacts..."
+    
+    # Navigate to the restored directory
+    cd "$target_dir" || return 1
+    
+    # Restore backend dependencies and build if package.json exists
+    if [ -f "backend/package.json" ]; then
+        info "  Restoring backend dependencies..."
+        cd backend || return 1
+        if ! sudo -u profolio pnpm install --frozen-lockfile=false 2>/dev/null; then
+            warn "Backend dependency restoration failed, but continuing..."
+        fi
+        
+        # Restore Prisma client if needed
+        if grep -q "prisma:generate" package.json 2>/dev/null; then
+            info "  Regenerating Prisma client..."
+            sudo -u profolio pnpm run prisma:generate 2>/dev/null || warn "Prisma generation failed"
+        fi
+        
+        # Rebuild backend if dist directory is missing
+        if [ ! -d "dist" ]; then
+            info "  Rebuilding backend..."
+            sudo -u profolio pnpm run build 2>/dev/null || warn "Backend build failed"
+        fi
+        
+        cd "$target_dir" || return 1
+    fi
+    
+    # Restore frontend dependencies and build if package.json exists
+    if [ -f "frontend/package.json" ]; then
+        info "  Restoring frontend dependencies..."
+        cd frontend || return 1
+        if ! sudo -u profolio pnpm install --frozen-lockfile=false 2>/dev/null; then
+            warn "Frontend dependency restoration failed, but continuing..."
+        fi
+        
+        # Rebuild frontend if .next directory is missing
+        if [ ! -d ".next" ]; then
+            info "  Rebuilding frontend..."
+            sudo -u profolio pnpm run build 2>/dev/null || warn "Frontend build failed"
+        fi
+        
+        cd "$target_dir" || return 1
+    fi
+    
+    success "Lean backup restoration completed"
+    return 0
+}
+
+# Clean up old rollback backups to prevent disk space issues
+cleanup_old_rollback_backups() {
+    local backup_base_dir="$1"
+    local max_backups="${2:-3}"
+    
+    if [ ! -d "$backup_base_dir" ]; then
+        return 0
+    fi
+    
+    # Get list of rollback directories sorted by modification time (newest first)
+    local backup_dirs=()
+    while IFS= read -r -d '' dir; do
+        backup_dirs+=("$dir")
+    done < <(find "$backup_base_dir" -maxdepth 1 -type d -name "rollback-*" -print0 | xargs -0 ls -dt)
+    
+    # If we have more than max_backups, remove the oldest ones
+    if [ ${#backup_dirs[@]} -gt $max_backups ]; then
+        info "Cleaning up old rollback backups (keeping $max_backups most recent)..."
+        
+        local removed_count=0
+        for ((i=max_backups; i<${#backup_dirs[@]}; i++)); do
+            local old_backup="${backup_dirs[i]}"
+            local backup_size=$(du -sh "$old_backup" 2>/dev/null | cut -f1 || echo "unknown")
+            
+            info "  Removing old backup: $(basename "$old_backup") ($backup_size)"
+            rm -rf "$old_backup" 2>/dev/null || true
+            ((removed_count++))
+        done
+        
+        success "Cleaned up $removed_count old rollback backup(s)"
+    fi
+}
+
 # Create rollback point
 create_rollback_point() {
     if [ "$ROLLBACK_ENABLED" = false ]; then
@@ -447,9 +638,9 @@ create_rollback_point() {
     ROLLBACK_BACKUP_DIR="$rollback_base_dir/rollback-$timestamp"
     
     if [ -d "/opt/profolio" ]; then
-        info "Creating rollback backup..."
-        if cp -r /opt/profolio "$ROLLBACK_BACKUP_DIR" 2>/dev/null; then
-            success "Rollback backup created: $ROLLBACK_BACKUP_DIR"
+        if create_smart_backup "/opt/profolio" "$ROLLBACK_BACKUP_DIR"; then
+            # Limit number of rollback backups to prevent disk space issues
+            cleanup_old_rollback_backups "$rollback_base_dir" 3
         else
             warn "Failed to create rollback backup - continuing without rollback protection"
             ROLLBACK_BACKUP_DIR=""
@@ -501,7 +692,7 @@ execute_rollback() {
             mv /opt/profolio /opt/profolio.failed
         fi
         
-        if cp -r "$ROLLBACK_BACKUP_DIR" /opt/profolio; then
+        if restore_lean_backup "$ROLLBACK_BACKUP_DIR" "/opt/profolio"; then
             chown -R profolio:profolio /opt/profolio
             success "Backup restoration successful"
             rollback_success=true
@@ -3130,45 +3321,19 @@ restore_from_backup() {
     if [ -d "/opt/profolio" ]; then
         local timestamp=$(date +%Y%m%d_%H%M%S)
         local current_backup="/opt/profolio-before-restore-$timestamp"
-        info "Backing up current installation to $current_backup"
-        cp -r /opt/profolio "$current_backup" 2>/dev/null || warn "Could not backup current installation"
+        info "Creating smart backup of current installation..."
+        create_smart_backup "/opt/profolio" "$current_backup" || warn "Could not backup current installation"
     fi
     
     # Remove current installation
     rm -rf /opt/profolio
     
-    # Restore from backup
-    info "Copying backup files..."
-    if cp -r "$backup_path" /opt/profolio; then
+    # Restore from backup using lean restore method
+    if restore_lean_backup "$backup_path" "/opt/profolio"; then
         success "✅ Backup restored successfully"
         
-        # Fix permissions
+        # Fix permissions (dependency installation and rebuilding handled by restore_lean_backup)
         chown -R profolio:profolio /opt/profolio
-        
-        # Reinstall dependencies if needed
-        if [ -d "/opt/profolio" ]; then
-            cd /opt/profolio || exit 1
-            
-            if [ -f "pnpm-lock.yaml" ]; then
-                info "Reinstalling dependencies with pnpm..."
-                sudo -u profolio pnpm install --frozen-lockfile || warn "Dependencies installation had issues"
-            fi
-            
-            # Rebuild if needed
-            if [ -f "backend/package.json" ] && [ ! -d "backend/dist" ]; then
-                info "Rebuilding backend..."
-                cd backend
-                sudo -u profolio pnpm run build || warn "Backend build had issues"
-                cd ..
-            fi
-            
-            if [ -f "frontend/package.json" ] && [ ! -d "frontend/.next" ]; then
-                info "Rebuilding frontend..."
-                cd frontend
-                sudo -u profolio pnpm run build || warn "Frontend build had issues"
-                cd ..
-            fi
-        fi
         
         # Restart services
         info "Starting Profolio services..."
