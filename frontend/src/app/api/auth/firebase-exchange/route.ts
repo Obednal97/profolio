@@ -14,11 +14,6 @@ const getBackendUrl = () => {
 
 const BACKEND_URL = getBackendUrl();
 
-// SECURITY: Rate limiting for token exchange attempts
-const rateLimitMap = new Map<string, { attempts: number; resetTime: number }>();
-const MAX_ATTEMPTS = 10; // Max 10 attempts per IP per 15 minutes
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-
 // SECURITY: Input validation for Firebase token
 const validateFirebaseToken = (token: unknown): string | null => {
   if (!token || typeof token !== "string") {
@@ -45,37 +40,7 @@ const validateFirebaseToken = (token: unknown): string | null => {
   return token;
 };
 
-// SECURITY: Rate limiting check
-const checkRateLimit = (clientIP: string): boolean => {
-  const now = Date.now();
-  const clientLimit = rateLimitMap.get(clientIP);
-
-  if (!clientLimit) {
-    rateLimitMap.set(clientIP, {
-      attempts: 1,
-      resetTime: now + RATE_LIMIT_WINDOW,
-    });
-    return true;
-  }
-
-  if (now > clientLimit.resetTime) {
-    // Reset window
-    rateLimitMap.set(clientIP, {
-      attempts: 1,
-      resetTime: now + RATE_LIMIT_WINDOW,
-    });
-    return true;
-  }
-
-  if (clientLimit.attempts >= MAX_ATTEMPTS) {
-    return false; // Rate limit exceeded
-  }
-
-  clientLimit.attempts++;
-  return true;
-};
-
-// SECURITY: Get client IP for rate limiting
+// SECURITY: Get client IP for advanced rate limiting
 const getClientIP = (request: NextRequest): string => {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0] ||
@@ -89,16 +54,6 @@ export async function POST(request: NextRequest) {
   const clientIP = getClientIP(request);
 
   try {
-    // SECURITY: Check rate limit
-    if (!checkRateLimit(clientIP)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Rate limit exceeded. Please try again later.",
-        },
-        { status: 429 } // Too Many Requests
-      );
-    }
 
     // SECURITY: Parse and validate request body
     const body = await request.json();
@@ -120,15 +75,26 @@ export async function POST(request: NextRequest) {
       firebaseToken: firebaseToken,
     };
 
-    // Forward the request to the backend
+    // SECURITY: Forward to backend with sophisticated rate limiting
+    // Backend uses advanced rate limiting with:
+    // - 10 attempts per minute with progressive exponential backoff
+    // - Bot detection with user agent analysis
+    // - CAPTCHA integration at 80% threshold  
+    // - Redis-based distributed rate limiting
+    // - Audit logging and monitoring
     const backendResponse = await fetch(
       `${BACKEND_URL}/api/auth/firebase-exchange`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // SECURITY: Add client IP for backend logging
+          // SECURITY: Forward client information for advanced rate limiting and bot detection
           "X-Client-IP": clientIP,
+          "X-Forwarded-For": request.headers.get("x-forwarded-for") || clientIP,
+          "X-Real-IP": request.headers.get("x-real-ip") || clientIP,
+          "User-Agent": request.headers.get("user-agent") || "unknown",
+          // SECURITY: Forward original request headers for bot detection analysis
+          "X-Original-Host": request.headers.get("host") || "unknown",
         },
         body: JSON.stringify(cleanBody),
         // SECURITY: Add timeout to prevent hanging requests

@@ -17,10 +17,6 @@ export class OAuthPasswordService {
   private readonly BCRYPT_ROUNDS = 12;
   private readonly TOKEN_LENGTH = 32; // 32 bytes = 256 bits
   
-  // Rate limiting storage (in production, use Redis)
-  private static rateLimitMap = new Map<string, { count: number; resetAt: Date }>();
-  private readonly RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
-  private readonly RATE_LIMIT_MAX_REQUESTS = 3;
   
   constructor(
     private readonly prisma: PrismaService
@@ -64,8 +60,7 @@ export class OAuthPasswordService {
         );
       }
 
-      // Check rate limiting
-      this.checkRateLimit(user.email);
+      // Rate limiting is handled by global RateLimitMiddleware
 
       // Invalidate any existing unused tokens
       await this.prisma.passwordSetupToken.updateMany({
@@ -100,9 +95,6 @@ export class OAuthPasswordService {
 
       // Send email (simplified - in production use proper email service)
       await this.sendPasswordSetupEmail(user.email, user.name || "User", rawToken);
-
-      // Update rate limit
-      this.updateRateLimit(user.email);
 
       this.logger.log(`Password setup requested for user: ${user.email}`);
 
@@ -350,48 +342,6 @@ export class OAuthPasswordService {
     return hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
   }
 
-  /**
-   * Check rate limiting
-   */
-  private checkRateLimit(email: string): void {
-    const key = `password_setup:${email}`;
-    const now = new Date();
-    const limit = OAuthPasswordService.rateLimitMap.get(key);
-
-    if (limit) {
-      // Reset if window has passed
-      if (now > limit.resetAt) {
-        OAuthPasswordService.rateLimitMap.delete(key);
-      } else if (limit.count >= this.RATE_LIMIT_MAX_REQUESTS) {
-        const minutesLeft = Math.ceil(
-          (limit.resetAt.getTime() - now.getTime()) / 1000 / 60
-        );
-        throw new HttpException(
-          `Too many password setup requests. Please try again in ${minutesLeft} minutes.`,
-          HttpStatus.TOO_MANY_REQUESTS
-        );
-      }
-    }
-  }
-
-  /**
-   * Update rate limit counter
-   */
-  private updateRateLimit(email: string): void {
-    const key = `password_setup:${email}`;
-    const now = new Date();
-    const limit = OAuthPasswordService.rateLimitMap.get(key);
-
-    if (limit && now <= limit.resetAt) {
-      limit.count++;
-    } else {
-      const resetAt = new Date(now.getTime() + this.RATE_LIMIT_WINDOW);
-      OAuthPasswordService.rateLimitMap.set(key, {
-        count: 1,
-        resetAt
-      });
-    }
-  }
 
   /**
    * Send password setup email (simplified - in production use proper email service)

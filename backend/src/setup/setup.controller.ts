@@ -41,41 +41,10 @@ export interface SetupConfigDto {
 @Controller('setup')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class SetupController {
-  private static setupAttempts = new Map<string, { count: number; lastAttempt: Date }>();
-  private static readonly MAX_ATTEMPTS = 5;
-  private static readonly RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 
   constructor(private readonly setupService: SetupService) {}
 
-  /**
-   * Rate limiting for setup operations
-   */
-  private checkRateLimit(ip: string): void {
-    const now = new Date();
-    const attempts = SetupController.setupAttempts.get(ip);
 
-    if (attempts) {
-      // Reset if outside window
-      if (now.getTime() - attempts.lastAttempt.getTime() > SetupController.RATE_LIMIT_WINDOW) {
-        SetupController.setupAttempts.delete(ip);
-      } else if (attempts.count >= SetupController.MAX_ATTEMPTS) {
-        throw new HttpException(
-          'Too many setup attempts. Please wait 15 minutes before trying again.',
-          HttpStatus.TOO_MANY_REQUESTS
-        );
-      }
-    }
-  }
-
-  /**
-   * Update rate limit tracking
-   */
-  private updateRateLimit(ip: string): void {
-    const attempts = SetupController.setupAttempts.get(ip) || { count: 0, lastAttempt: new Date() };
-    attempts.count += 1;
-    attempts.lastAttempt = new Date();
-    SetupController.setupAttempts.set(ip, attempts);
-  }
 
   @Get('status')
   @ApiOperation({ summary: 'Get application setup status' })
@@ -100,8 +69,7 @@ export class SetupController {
     const clientIp = 'setup-client'; // In production, extract from request
     
     try {
-      // Check rate limiting
-      this.checkRateLimit(clientIp);
+      // Rate limiting handled by global RateLimitMiddleware
 
       // Check if setup is already complete
       const status = await this.setupService.getSetupStatus();
@@ -136,8 +104,6 @@ export class SetupController {
         );
       }
 
-      // Update rate limit tracking
-      this.updateRateLimit(clientIp);
 
       // Initialize application
       const result = await this.setupService.initializeApplication(config);

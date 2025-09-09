@@ -65,13 +65,6 @@ import {
 )
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
-  private static loginAttempts = new Map<
-    string,
-    { count: number; lastAttempt: Date; lockoutUntil?: Date }
-  >();
-  private static readonly MAX_LOGIN_ATTEMPTS = 5;
-  private static readonly LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
-  private static readonly RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     private readonly prisma: PrismaService,
@@ -81,66 +74,6 @@ export class AuthController {
     private readonly oauthPasswordService: OAuthPasswordService
   ) {}
 
-  /**
-   * Check and update rate limiting for authentication attempts
-   */
-  private checkRateLimit(identifier: string): void {
-    const now = new Date();
-    const attempts = AuthController.loginAttempts.get(identifier);
-
-    if (attempts) {
-      // Check if account is locked out
-      if (attempts.lockoutUntil && now < attempts.lockoutUntil) {
-        const remainingTime = Math.ceil(
-          (attempts.lockoutUntil.getTime() - now.getTime()) / 1000 / 60
-        );
-        throw new HttpException(
-          `Account temporarily locked. Please try again in ${remainingTime} minutes.`,
-          HttpStatus.TOO_MANY_REQUESTS
-        );
-      }
-
-      // Reset if outside rate limit window
-      if (
-        now.getTime() - attempts.lastAttempt.getTime() >
-        AuthController.RATE_LIMIT_WINDOW
-      ) {
-        AuthController.loginAttempts.delete(identifier);
-      } else if (attempts.count >= AuthController.MAX_LOGIN_ATTEMPTS) {
-        // Lock account
-        attempts.lockoutUntil = new Date(
-          now.getTime() + AuthController.LOCKOUT_DURATION
-        );
-        AuthController.loginAttempts.set(identifier, attempts);
-
-        this.logger.warn(
-          `Account locked for excessive login attempts: ${identifier}`
-        );
-        throw new HttpException(
-          "Too many failed login attempts. Account locked for 15 minutes.",
-          HttpStatus.TOO_MANY_REQUESTS
-        );
-      }
-    }
-  }
-
-  /**
-   * Update rate limit tracking
-   */
-  private updateRateLimit(identifier: string, success: boolean): void {
-    if (success) {
-      // Clear attempts on successful login
-      AuthController.loginAttempts.delete(identifier);
-    } else {
-      const attempts = AuthController.loginAttempts.get(identifier) || {
-        count: 0,
-        lastAttempt: new Date(),
-      };
-      attempts.count += 1;
-      attempts.lastAttempt = new Date();
-      AuthController.loginAttempts.set(identifier, attempts);
-    }
-  }
 
   /**
    * Generate secure JWT token
@@ -340,9 +273,8 @@ export class AuthController {
         );
       }
 
-      // Security: Rate limiting for token exchange
+      // Rate limiting handled by global RateLimitMiddleware
       const clientIP = this.getClientIP();
-      this.checkRateLimit(`firebase_exchange_${clientIP}`);
 
       // SECURITY: Use Firebase Admin SDK for proper token verification
       let firebaseUserInfo;
@@ -351,7 +283,6 @@ export class AuthController {
           body.firebaseToken
         );
       } catch (verificationError) {
-        this.updateRateLimit(`firebase_exchange_${clientIP}`, false);
 
         // Firebase service already provides proper error handling
         throw verificationError;
@@ -391,8 +322,6 @@ export class AuthController {
       // Generate our backend JWT token
       const token = this.generateToken(user);
 
-      // Success: Clear rate limiting
-      this.updateRateLimit(`firebase_exchange_${clientIP}`, true);
 
       this.logger.log(
         `✅ Firebase token exchange successful for user: ${user.email}`
@@ -531,21 +460,18 @@ export class AuthController {
       }
 
       // Check rate limiting for 2FA attempts
-      this.checkRateLimit(`2fa_${userId}`);
+      // Rate limiting handled by global RateLimitMiddleware
 
       // Verify the TOTP code
       const isValid = await this.twoFactorService.verifyToken(userId, dto.code);
 
       if (!isValid) {
-        this.updateRateLimit(`2fa_${userId}`, false);
         throw new HttpException(
           "Invalid 2FA code",
           HttpStatus.UNAUTHORIZED
         );
       }
 
-      // Success - clear rate limiting
-      this.updateRateLimit(`2fa_${userId}`, true);
 
       // Get user and generate JWT
       const user = await this.prisma.user.findUnique({
@@ -791,14 +717,8 @@ export class AuthController {
   @ApiResponse({ status: 429, description: "Too many requests" })
   async requestPasswordSetup(@Req() req: { user: AuthUser }) {
     try {
-      // Check rate limiting
-      const rateLimitKey = `password_setup_request_${req.user.id}`;
-      this.checkRateLimit(rateLimitKey);
-
+      // Rate limiting handled by global RateLimitMiddleware
       const result = await this.oauthPasswordService.requestPasswordSetup(req.user.id);
-      
-      // Update rate limiting on success
-      this.updateRateLimit(rateLimitKey, true);
       
       return result;
     } catch (error) {
@@ -819,20 +739,11 @@ export class AuthController {
   @ApiResponse({ status: 429, description: "Too many verification attempts" })
   async verifySetupToken(@Body(ValidationPipe) dto: VerifySetupTokenDto) {
     try {
-      // Rate limiting per token (to prevent brute force)
-      const rateLimitKey = `verify_token_${dto.token.substring(0, 8)}`;
-      this.checkRateLimit(rateLimitKey);
-
+      // Rate limiting handled by global RateLimitMiddleware
       const result = await this.oauthPasswordService.verifySetupToken(dto.token);
-      
-      // Update rate limiting on success
-      this.updateRateLimit(rateLimitKey, true);
       
       return result;
     } catch (error) {
-      // Update rate limiting on failure
-      const rateLimitKey = `verify_token_${dto.token.substring(0, 8)}`;
-      this.updateRateLimit(rateLimitKey, false);
       
       if (error instanceof HttpException) {
         throw error;
@@ -851,20 +762,11 @@ export class AuthController {
   @ApiResponse({ status: 409, description: "Password already set" })
   async setPasswordWithToken(@Body(ValidationPipe) dto: SetPasswordDto) {
     try {
-      // Rate limiting per token
-      const rateLimitKey = `set_password_${dto.token.substring(0, 8)}`;
-      this.checkRateLimit(rateLimitKey);
-
+      // Rate limiting handled by global RateLimitMiddleware
       const result = await this.oauthPasswordService.setPassword(dto);
-      
-      // Clear rate limiting on success
-      this.updateRateLimit(rateLimitKey, true);
       
       return result;
     } catch (error) {
-      // Update rate limiting on failure
-      const rateLimitKey = `set_password_${dto.token.substring(0, 8)}`;
-      this.updateRateLimit(rateLimitKey, false);
       
       if (error instanceof HttpException) {
         throw error;
