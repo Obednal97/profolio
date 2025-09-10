@@ -2338,6 +2338,7 @@ build_application_internal() {
         "Generating Prisma client" "generate_prisma_client"
         "Running database migrations" "run_database_migrations"
         "Building NestJS backend" "cd /opt/profolio/backend && sudo -u profolio pnpm run build"
+        "Verifying backend build" "[ -d /opt/profolio/backend/dist ] && [ -f /opt/profolio/backend/dist/main.js ] || (error 'Backend build verification failed' && return 1)"
         "Installing frontend dependencies (dev mode for build)" "cd /opt/profolio/frontend && sudo -u profolio rm -rf node_modules && sudo -u profolio pnpm install --frozen-lockfile=false"
         "Building Next.js frontend" "cd /opt/profolio/frontend && sudo -u profolio pnpm run build"
         "Optimizing for production deployment" "optimize_production_deployment"
@@ -3165,7 +3166,6 @@ get_update_info() {
     if [ -f "/opt/profolio/.metadata/update_info" ]; then
         source /opt/profolio/.metadata/update_info
         echo -e "🕐 Last Updated:      ${YELLOW}${LAST_UPDATE:-Never}${NC}"
-        echo -e "📋 Update Type:       ${YELLOW}${UPDATE_TYPE:-Unknown}${NC}"
     fi
 }
 
@@ -3179,7 +3179,11 @@ check_for_updates() {
         latest_version=$(timeout 2 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest 2>/dev/null | grep '"tag_name"' | cut -d'"' -f4)
     fi
     
-    if [ -n "$latest_version" ] && [ "$latest_version" != "$current_version" ] && [ "$current_version" != "unknown" ]; then
+    # Normalize versions by removing 'v' prefix for comparison
+    local clean_current="${current_version#v}"
+    local clean_latest="${latest_version#v}"
+    
+    if [ -n "$latest_version" ] && [ "$clean_latest" != "$clean_current" ] && [ "$current_version" != "unknown" ]; then
         echo -e "${MAGENTA}🆕 Update Available:  ${latest_version} (current: ${current_version})${NC}"
         echo -e "${CYAN}   Run 'profolio update' to upgrade${NC}"
     fi
@@ -5358,6 +5362,8 @@ Group=profolio
 WorkingDirectory=/opt/profolio/backend
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
+# Ensure backend is built before starting
+ExecStartPre=/bin/bash -c 'if [ ! -d "/opt/profolio/backend/dist" ] || [ ! -f "/opt/profolio/backend/dist/main.js" ]; then cd /opt/profolio/backend && /usr/bin/pnpm run build; fi'
 ExecStart=/usr/bin/pnpm run start
 Restart=on-failure
 RestartSec=10
