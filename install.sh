@@ -3078,6 +3078,20 @@ EOF
 setup_profolio_motd() {
     info "🎨 Setting up custom MOTD for Profolio..."
     
+    # Store update metadata
+    local update_timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local update_type="${OPERATION_TYPE:-INSTALL}"
+    local update_channel="${VERSION:-main}"
+    
+    # Create metadata file for tracking
+    mkdir -p /opt/profolio/.metadata
+    cat > /opt/profolio/.metadata/update_info << EOF
+LAST_UPDATE="${update_timestamp}"
+UPDATE_TYPE="${update_type}"
+UPDATE_CHANNEL="${update_channel}"
+INSTALLER_VERSION="$(grep '^INSTALLER_VERSION=' "$0" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "2.0.0")"
+EOF
+    
     # Disable default Ubuntu MOTD scripts (keep them but make non-executable)
     if [ -d "/etc/update-motd.d" ]; then
         chmod -x /etc/update-motd.d/* 2>/dev/null || true
@@ -3094,13 +3108,86 @@ BLUE='\033[0;34m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+RED='\033[0;31m'
+MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Get dynamic values
-APP_VERSION=$(grep '"version"' /opt/profolio/package.json 2>/dev/null | cut -d'"' -f4 || \
-              grep '"version"' /opt/profolio/frontend/package.json 2>/dev/null | cut -d'"' -f4 || \
-              echo "unknown")
+# Get dynamic values with multiple fallback methods
+get_app_version() {
+    # Try multiple sources for version
+    local version=""
+    
+    # Method 1: package.json in root
+    if [ -z "$version" ] && [ -f "/opt/profolio/package.json" ]; then
+        version=$(grep '"version"' /opt/profolio/package.json 2>/dev/null | head -1 | cut -d'"' -f4)
+    fi
+    
+    # Method 2: frontend package.json
+    if [ -z "$version" ] && [ -f "/opt/profolio/frontend/package.json" ]; then
+        version=$(grep '"version"' /opt/profolio/frontend/package.json 2>/dev/null | head -1 | cut -d'"' -f4)
+    fi
+    
+    # Method 3: backend package.json
+    if [ -z "$version" ] && [ -f "/opt/profolio/backend/package.json" ]; then
+        version=$(grep '"version"' /opt/profolio/backend/package.json 2>/dev/null | head -1 | cut -d'"' -f4)
+    fi
+    
+    # Method 4: Git tag
+    if [ -z "$version" ] && [ -d "/opt/profolio/.git" ]; then
+        version=$(cd /opt/profolio && git describe --tags --abbrev=0 2>/dev/null)
+    fi
+    
+    # Method 5: Cached version from metadata
+    if [ -z "$version" ] && [ -f "/opt/profolio/.metadata/update_info" ]; then
+        version=$(grep 'UPDATE_CHANNEL=' /opt/profolio/.metadata/update_info | cut -d'=' -f2 | tr -d '"')
+    fi
+    
+    echo "${version:-unknown}"
+}
+
+# Detect container/virtualization
+detect_environment() {
+    if [ -f /.dockerenv ]; then
+        echo "Docker"
+    elif [ -f /run/systemd/container ]; then
+        echo "LXC/LXD"
+    elif systemd-detect-virt -c >/dev/null 2>&1; then
+        systemd-detect-virt -c
+    elif systemd-detect-virt -v >/dev/null 2>&1; then
+        systemd-detect-virt -v
+    else
+        echo "Bare Metal"
+    fi
+}
+
+# Get update metadata
+get_update_info() {
+    if [ -f "/opt/profolio/.metadata/update_info" ]; then
+        source /opt/profolio/.metadata/update_info
+        echo -e "🕐 Last Updated:      ${YELLOW}${LAST_UPDATE:-Never}${NC}"
+        echo -e "📋 Update Type:       ${YELLOW}${UPDATE_TYPE:-Unknown}${NC}"
+    fi
+}
+
+# Check for updates
+check_for_updates() {
+    local current_version=$(get_app_version)
+    local latest_version=""
+    
+    # Try to check latest version from GitHub (with timeout)
+    if command -v curl >/dev/null 2>&1; then
+        latest_version=$(timeout 2 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest 2>/dev/null | grep '"tag_name"' | cut -d'"' -f4)
+    fi
+    
+    if [ -n "$latest_version" ] && [ "$latest_version" != "$current_version" ] && [ "$current_version" != "unknown" ]; then
+        echo -e "${MAGENTA}🆕 Update Available:  ${latest_version} (current: ${current_version})${NC}"
+        echo -e "${CYAN}   Run 'profolio update' to upgrade${NC}"
+    fi
+}
+
+APP_VERSION=$(get_app_version)
 CONTAINER_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "localhost")
+ENVIRONMENT=$(detect_environment)
 
 # Display ASCII art and info
 echo -e "${BLUE}"
@@ -3116,9 +3203,12 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo -e "📁 Install Directory: ${YELLOW}/opt/profolio${NC}"
 echo -e "📦 Installed Version: ${YELLOW}${APP_VERSION}${NC}"
 echo -e "🌐 Container IP:      ${YELLOW}${CONTAINER_IP}${NC}"
+echo -e "🖥️  Environment:       ${YELLOW}${ENVIRONMENT}${NC}"
+get_update_info
 echo -e "💻 Frontend URL:      ${CYAN}http://${CONTAINER_IP}:3000${NC}"
 echo -e "🔧 Backend API:       ${CYAN}http://${CONTAINER_IP}:3001${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+check_for_updates
 echo -e "📚 GitHub Repo: ${BLUE}https://github.com/Obednal97/profolio${NC}"
 echo ""
 EOF
