@@ -2725,6 +2725,7 @@ setup_environment() {
         existing_db_password=$(grep "^DATABASE_URL=" /opt/profolio/backend/.env | sed 's/.*:\/\/profolio:\([^@]*\)@.*/\1/' 2>/dev/null || echo "")
         existing_jwt_secret=$(grep "^JWT_SECRET=" /opt/profolio/backend/.env | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
         existing_api_key=$(grep "^API_ENCRYPTION_KEY=" /opt/profolio/backend/.env | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
+        existing_redis_password=$(grep "^REDIS_PASSWORD=" /opt/profolio/backend/.env | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
         
         if [ -n "$existing_db_password" ] && [ -n "$existing_jwt_secret" ] && [ -n "$existing_api_key" ]; then
             credentials_preserved=true
@@ -2735,11 +2736,13 @@ setup_environment() {
     local db_password
     local jwt_secret
     local api_key
+    local redis_password
     
     if [ "$credentials_preserved" = true ]; then
         db_password="$existing_db_password"
         jwt_secret="$existing_jwt_secret"
         api_key="$existing_api_key"
+        redis_password="$existing_redis_password"
         info "Preserving existing credentials"
         
         # FIXED: Test if profolio user can actually authenticate with the preserved password
@@ -2770,6 +2773,7 @@ setup_environment() {
         db_password="${DB_PASSWORD:-$(openssl rand -base64 12)}"
         jwt_secret="$(openssl rand -base64 32)"
         api_key="$(openssl rand -base64 32)"
+        redis_password="${existing_redis_password:-$(openssl rand -base64 16)}"
         info "Generating new credentials"
         
         # Create/update PostgreSQL user with new password
@@ -2799,6 +2803,33 @@ setup_environment() {
     
     # Update global DB_PASSWORD variable for consistency
     DB_PASSWORD="$db_password"
+    
+    # Configure Redis with password if we have one
+    if [ -n "$redis_password" ] && command -v redis-server >/dev/null 2>&1; then
+        info "Configuring Redis with secure password..."
+        
+        # Backup existing config
+        if [ -f "/etc/redis/redis.conf" ]; then
+            sudo cp /etc/redis/redis.conf /etc/redis/redis.conf.backup 2>/dev/null || true
+            
+            # Set Redis password
+            sudo sed -i "s/^# requirepass foobared/requirepass $redis_password/" /etc/redis/redis.conf 2>/dev/null || true
+            sudo sed -i "s/^requirepass .*/requirepass $redis_password/" /etc/redis/redis.conf 2>/dev/null || true
+            
+            # Ensure Redis only binds to localhost for security
+            sudo sed -i "s/^bind .*/bind 127.0.0.1 ::1/" /etc/redis/redis.conf 2>/dev/null || true
+            
+            # Restart Redis to apply changes
+            sudo systemctl restart redis-server 2>/dev/null || true
+            
+            # Test Redis connection with password
+            if redis-cli -a "$redis_password" ping >/dev/null 2>&1; then
+                success "Redis configured with secure password"
+            else
+                warn "Redis password configuration may need manual verification"
+            fi
+        fi
+    fi
     
     info "Setting up environment configuration..."
     
@@ -2834,7 +2865,7 @@ NODE_ENV=production
 # Redis Configuration
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=$redis_password
 REDIS_DB=0
 
 # Rate Limiting Configuration
@@ -3041,6 +3072,212 @@ EOF
         info "✅ Root .env + frontend .env.production structure established"
         info "✅ API proxy correctly enabled (production-ready)"
     fi
+}
+
+# Setup custom MOTD (Message of the Day) for Profolio
+setup_profolio_motd() {
+    info "🎨 Setting up custom MOTD for Profolio..."
+    
+    # Disable default Ubuntu MOTD scripts (keep them but make non-executable)
+    if [ -d "/etc/update-motd.d" ]; then
+        chmod -x /etc/update-motd.d/* 2>/dev/null || true
+    else
+        mkdir -p /etc/update-motd.d
+    fi
+    
+    # Create custom Profolio MOTD script
+    cat > /etc/update-motd.d/01-profolio << 'EOF'
+#!/bin/bash
+
+# Colors
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Get dynamic values
+APP_VERSION=$(grep '"version"' /opt/profolio/package.json 2>/dev/null | cut -d'"' -f4 || \
+              grep '"version"' /opt/profolio/frontend/package.json 2>/dev/null | cut -d'"' -f4 || \
+              echo "unknown")
+CONTAINER_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "localhost")
+
+# Display ASCII art and info
+echo -e "${BLUE}"
+echo "    ____             _____      _ _       "
+echo "   |  _ \\ _ __ ___  |  ___|__  | (_) ___  "
+echo "   | |_) | '__/ _ \\ | |_ / _ \\ | | |/ _ \\ "
+echo "   |  __/| | | (_) ||  _| (_) || | | (_) |"
+echo "   |_|   |_|  \\___/ |_|  \\___/ |_|_|\\___/ "
+echo "                                           "
+echo -e "${NC}"
+echo -e "${GREEN}Professional Portfolio Management System${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo -e "📁 Install Directory: ${YELLOW}/opt/profolio${NC}"
+echo -e "📦 Installed Version: ${YELLOW}${APP_VERSION}${NC}"
+echo -e "🌐 Container IP:      ${YELLOW}${CONTAINER_IP}${NC}"
+echo -e "💻 Frontend URL:      ${CYAN}http://${CONTAINER_IP}:3000${NC}"
+echo -e "🔧 Backend API:       ${CYAN}http://${CONTAINER_IP}:3001${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo -e "📚 GitHub Repo: ${BLUE}https://github.com/Obednal97/profolio${NC}"
+echo ""
+EOF
+    
+    # Make the script executable
+    chmod +x /etc/update-motd.d/01-profolio
+    
+    # Create service status script
+    cat > /etc/update-motd.d/10-profolio-status << 'EOF'
+#!/bin/bash
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Check service status
+BACKEND_STATUS=$(systemctl is-active profolio-backend 2>/dev/null || echo "inactive")
+FRONTEND_STATUS=$(systemctl is-active profolio-frontend 2>/dev/null || echo "inactive")
+REDIS_STATUS=$(systemctl is-active redis-server 2>/dev/null || echo "inactive")
+POSTGRES_STATUS=$(systemctl is-active postgresql 2>/dev/null || echo "inactive")
+
+echo "📊 Service Status:"
+# Backend
+if [ "$BACKEND_STATUS" = "active" ]; then
+    echo -e "   Backend:    ${GREEN}● Running${NC}"
+else
+    echo -e "   Backend:    ${RED}● Stopped${NC}"
+fi
+
+# Frontend
+if [ "$FRONTEND_STATUS" = "active" ]; then
+    echo -e "   Frontend:   ${GREEN}● Running${NC}"
+else
+    echo -e "   Frontend:   ${RED}● Stopped${NC}"
+fi
+
+# Redis
+if [ "$REDIS_STATUS" = "active" ]; then
+    echo -e "   Redis:      ${GREEN}● Running${NC}"
+else
+    echo -e "   Redis:      ${RED}● Stopped${NC}"
+fi
+
+# PostgreSQL
+if [ "$POSTGRES_STATUS" = "active" ]; then
+    echo -e "   PostgreSQL: ${GREEN}● Running${NC}"
+else
+    echo -e "   PostgreSQL: ${RED}● Stopped${NC}"
+fi
+
+echo ""
+echo "💡 Quick Commands:"
+echo "   profolio status  - Check service status"
+echo "   profolio logs    - View service logs"
+echo "   profolio update  - Update Profolio"
+echo "   profolio restart - Restart services"
+echo "   profolio stop    - Stop all services"
+echo "   profolio start   - Start all services"
+echo ""
+EOF
+    
+    chmod +x /etc/update-motd.d/10-profolio-status
+    
+    # Update /etc/motd to be empty (dynamic MOTD will be used instead)
+    echo "" > /etc/motd
+    
+    success "✅ Custom MOTD configured successfully"
+}
+
+# Create profolio helper command for quick management
+create_profolio_command() {
+    info "🛠️  Creating profolio helper command..."
+    
+    cat > /usr/local/bin/profolio << 'EOF'
+#!/bin/bash
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+case "$1" in
+    status)
+        echo -e "${BLUE}Profolio Service Status:${NC}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━"
+        systemctl status profolio-backend profolio-frontend --no-pager
+        ;;
+    logs)
+        echo -e "${BLUE}Profolio Service Logs (Ctrl+C to exit):${NC}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        journalctl -u profolio-backend -u profolio-frontend -f
+        ;;
+    restart)
+        echo -e "${YELLOW}Restarting Profolio services...${NC}"
+        systemctl restart profolio-backend
+        sleep 2
+        systemctl restart profolio-frontend
+        sleep 3
+        echo -e "${GREEN}✅ Services restarted${NC}"
+        systemctl is-active --quiet profolio-backend && echo -e "Backend:  ${GREEN}● Running${NC}" || echo -e "Backend:  ${RED}● Failed${NC}"
+        systemctl is-active --quiet profolio-frontend && echo -e "Frontend: ${GREEN}● Running${NC}" || echo -e "Frontend: ${RED}● Failed${NC}"
+        ;;
+    stop)
+        echo -e "${YELLOW}Stopping Profolio services...${NC}"
+        systemctl stop profolio-frontend profolio-backend
+        echo -e "${GREEN}✅ Services stopped${NC}"
+        ;;
+    start)
+        echo -e "${YELLOW}Starting Profolio services...${NC}"
+        systemctl start profolio-backend
+        sleep 2
+        systemctl start profolio-frontend
+        sleep 3
+        echo -e "${GREEN}✅ Services started${NC}"
+        systemctl is-active --quiet profolio-backend && echo -e "Backend:  ${GREEN}● Running${NC}" || echo -e "Backend:  ${RED}● Failed${NC}"
+        systemctl is-active --quiet profolio-frontend && echo -e "Frontend: ${GREEN}● Running${NC}" || echo -e "Frontend: ${RED}● Failed${NC}"
+        ;;
+    update)
+        echo -e "${BLUE}Starting Profolio update...${NC}"
+        if [ -f "/opt/profolio/install.sh" ]; then
+            cd /opt/profolio && ./install.sh
+        else
+            echo -e "${RED}Error: Installer not found at /opt/profolio/install.sh${NC}"
+            echo "Try: curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash"
+        fi
+        ;;
+    version)
+        VERSION=$(grep '"version"' /opt/profolio/package.json 2>/dev/null | cut -d'"' -f4 || \
+                  grep '"version"' /opt/profolio/frontend/package.json 2>/dev/null | cut -d'"' -f4 || \
+                  echo "unknown")
+        echo -e "${BLUE}Profolio Version:${NC} $VERSION"
+        ;;
+    help|--help|-h)
+        echo -e "${BLUE}Profolio Management Commands:${NC}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  status   - Check service status"
+        echo "  logs     - View service logs (live)"
+        echo "  restart  - Restart all services"
+        echo "  stop     - Stop all services"
+        echo "  start    - Start all services"
+        echo "  update   - Update Profolio"
+        echo "  version  - Show installed version"
+        echo "  help     - Show this help message"
+        ;;
+    *)
+        echo -e "${RED}Unknown command:${NC} $1"
+        echo "Usage: profolio {status|logs|restart|stop|start|update|version|help}"
+        exit 1
+        ;;
+esac
+EOF
+    
+    chmod +x /usr/local/bin/profolio
+    
+    success "✅ Profolio helper command installed (type 'profolio help' for usage)"
 }
 
 # Show access information - removed hardcoded banner (handled by show_completion_status)
@@ -4697,6 +4934,11 @@ update_installation() {
     done
     
     OPERATION_SUCCESS=true
+    
+    # Setup or update MOTD and helper command
+    setup_profolio_motd
+    create_profolio_command
+    
     report_milestone "update_completed" "Update process completed successfully" "completed"
     report_status "update" "completed" "All update steps completed successfully"
     show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
@@ -5001,6 +5243,13 @@ repair_installation() {
     
     # Final verification - this sets OPERATION_SUCCESS
     verify_installation
+    
+    # Setup or update MOTD and helper command after successful repair
+    if [ "$OPERATION_SUCCESS" = true ]; then
+        setup_profolio_motd
+        create_profolio_command
+    fi
+    
     show_completion_status "$OPERATION_TYPE" "$OPERATION_SUCCESS"
 }
 
@@ -5298,6 +5547,10 @@ fresh_install() {
     
     # If we got here, the installation was successful
     OPERATION_SUCCESS=true
+    
+    # Setup MOTD and helper command for better user experience
+    setup_profolio_motd
+    create_profolio_command
     
     # Show installed version info
     if [ -f "/opt/profolio/package.json" ]; then
