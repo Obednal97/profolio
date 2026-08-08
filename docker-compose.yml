@@ -1,0 +1,129 @@
+# Profolio - full stack for local development and self-hosting.
+#
+#   cp .env.docker.example .env.docker
+#   # edit .env.docker and set JWT_SECRET / API_ENCRYPTION_KEY
+#   docker compose --env-file .env.docker up --build
+#
+# Frontend on http://localhost:3000, backend on http://localhost:3001.
+# Migrations are applied automatically on backend startup, so an empty volume
+# comes up as a working system with no manual step.
+
+name: profolio
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-profolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-profolio}
+      POSTGRES_DB: ${POSTGRES_DB:-profolio}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      # Exposed on 5433 so it cannot collide with a Postgres already running
+      # on the host's default 5432.
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      # The dbname is required, otherwise pg_isready reports ready before the
+      # application database has actually been created on first boot.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-profolio} -d ${POSTGRES_DB:-profolio}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_PORT_HOST:-6380}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-profolio}:${POSTGRES_PASSWORD:-profolio}@postgres:5432/${POSTGRES_DB:-profolio}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: 0
+      # Must be at least 32 characters - the sign-in path rejects anything shorter.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required and must be at least 32 characters}
+      API_ENCRYPTION_KEY: ${API_ENCRYPTION_KEY:?API_ENCRYPTION_KEY is required}
+      # Browser-facing origin, used for CORS.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      # In-container updates are meaningless; images are replaced, not patched.
+      DISABLE_UPDATES: "true"
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    healthcheck:
+      # /api/health, not /api - the latter only answers in development, where
+      # Swagger is mounted at the global prefix.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Compile-time only. NEXT_PUBLIC_API_URL is left empty so browser code
+        # uses same-origin /api/* proxy routes rather than addressing the
+        # backend container directly.
+        NEXT_PUBLIC_AUTH_MODE: ${NEXT_PUBLIC_AUTH_MODE:-local}
+        NEXT_PUBLIC_ENABLE_DEMO_MODE: ${NEXT_PUBLIC_ENABLE_DEMO_MODE:-true}
+        NEXT_PUBLIC_SHOW_LANDING_PAGE: ${NEXT_PUBLIC_SHOW_LANDING_PAGE:-true}
+        NEXT_PUBLIC_ALLOW_REGISTRATION: ${NEXT_PUBLIC_ALLOW_REGISTRATION:-true}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Server-side only: how Next's proxy routes reach the API over the
+      # compose network. Never exposed to the browser.
+      BACKEND_URL: http://backend:3001
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+volumes:
+  postgres-data:
+  redis-data:

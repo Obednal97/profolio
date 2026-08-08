@@ -31,6 +31,16 @@ const nextConfig = {
   // SECURITY: Explicitly define allowed page extensions
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
 
+  // CONTAINER: Emit a self-contained server bundle for Docker images.
+  // Gated on DOCKER_BUILD so `pnpm build` and `pnpm start` keep behaving
+  // exactly as before outside of a container build.
+  // outputFileTracingRoot must point at the pnpm workspace root, otherwise
+  // Next traces from frontend/ and misses hoisted dependencies.
+  ...(process.env.DOCKER_BUILD === "true" && {
+    output: "standalone",
+    outputFileTracingRoot: require("path").join(__dirname, "../"),
+  }),
+
   // SECURITY: Controlled environment variable exposure
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,

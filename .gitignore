@@ -12,6 +12,10 @@
 .env*.local
 *.env
 .env.secrets
+# Templates carry no secrets and must be committed, so re-include them after
+# the blanket .env.* rule above.
+!.env.example
+!.env.*.example
 
 # ===============================================
 # DEPENDENCIES & PACKAGE MANAGERS

@@ -238,6 +238,23 @@ wave starts.
 5. Remove the phantom preload paths from `usePagePreloader`.
 6. Confine `marketDataWidget`'s fabricated prices to demo mode only.
 7. Implement email sending for password setup and payment failure.
+8. **Fix token storage in production builds.** Found while verifying Phase 2.
+   `setSecureToken` (`frontend/src/lib/localAuth.ts:37`) writes a cookie only
+   when `NODE_ENV === "development"`; in production it logs a warning and
+   stores nothing. Demo sign-in therefore stores no token and the `/app/*`
+   guard bounces straight back to sign-in - reproduced in the container, and
+   it fails the same way in any production build.
+   `getSecureToken` compounds this by gating reads on
+   `window.isSecureContext`, which is true on `localhost` but false on a
+   plain-HTTP LAN address such as `http://192.168.1.54:3000` - precisely how
+   a home-server deployment is reached. The three API routes that do set the
+   cookie server-side (`auth/login`, `auth/signin`, `auth/firebase-exchange`)
+   all set `secure: NODE_ENV === "production"`, which a browser rejects over
+   plain HTTP.
+   Net effect: self-hosting over plain HTTP cannot hold a session. Either the
+   token must always be set server-side as an httpOnly cookie, or the
+   deployment must be documented as HTTPS-only. This needs deciding before
+   the home-server deployment is trusted.
 
 ### Phase 5 - Tests and docs
 
