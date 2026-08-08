@@ -1,4 +1,23 @@
+import 'server-only';
 import Decimal from 'decimal.js';
+
+/**
+ * Money handling. Ported unchanged from the NestJS backend - financial code is
+ * the wrong place to take a rewrite risk.
+ *
+ * THE CONVENTION, which was never written down and has caused two live bugs:
+ *
+ *  - Money is stored in the database as INTEGER CENTS. Conversion happens only
+ *    at the service boundary: toCents on write, fromCents on read. Interest
+ *    rates are basis points.
+ *  - `current_value` on an asset is the TOTAL value of the position, not a
+ *    unit price. The price-sync job writes `quantity * price` into it.
+ *    Multiplying by quantity again double-counts - the dashboard did exactly
+ *    that.
+ *  - Values arriving from a market data provider are already in DOLLARS. They
+ *    must not be passed through fromCents; doing so divided every synced
+ *    valuation by 100, so a $313.33 share read as $3.13.
+ */
 
 // Configure Decimal.js for financial precision (same as frontend)
 Decimal.config({

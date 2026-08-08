@@ -1,8 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import 'server-only';
 import * as crypto from 'crypto';
 
-@Injectable()
-export class EncryptionService {
+/**
+ * AES-256-GCM envelope encryption for 2FA secrets.
+ *
+ * Ported from the NestJS service with the key derivation and output format
+ * UNCHANGED: PBKDF2-SHA256, 100k iterations, 32-byte key, static salt
+ * sha256('profolio-salt'), output base64(iv | tag | ciphertext). Altering any
+ * of these makes every existing encrypted row unreadable, and there is no
+ * re-encrypt path in the codebase.
+ */
+
+class EncryptionService {
   private readonly algorithm = 'aes-256-gcm';
   private readonly keyLength = 32; // 256 bits
   private readonly ivLength = 16; // 128 bits
@@ -14,14 +23,27 @@ export class EncryptionService {
   private encryptionKey: Buffer;
 
   constructor() {
-    // Get encryption key from environment or generate one
-    const keyString = process.env.API_ENCRYPTION_KEY || this.generateKeyString();
-    
-    if (!process.env.API_ENCRYPTION_KEY) {
-      console.warn('⚠️  API_ENCRYPTION_KEY not set in environment. Using generated key for development.');
-      console.warn(`   Add this to your .env file: API_ENCRYPTION_KEY=${keyString}`);
+    // A missing key used to fall back to a randomly generated one. That is
+    // silently destructive on serverless: every cold start derives a different
+    // key, so anything encrypted by one instance cannot be read by the next,
+    // and 2FA secrets become permanently unrecoverable. Fail closed instead.
+    const configured = process.env.API_ENCRYPTION_KEY;
+
+    if (!configured) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'API_ENCRYPTION_KEY is required. Refusing to start with a generated key: ' +
+            'it would change on every cold start and make stored secrets undecryptable.',
+        );
+      }
+      console.warn(
+        '⚠️  API_ENCRYPTION_KEY not set. Using a development-only generated key; ' +
+          'anything encrypted now will not decrypt after a restart.',
+      );
     }
-    
+
+    const keyString = configured || this.generateKeyString();
+
     // Derive a proper key from the string
     const salt = crypto.createHash('sha256').update('profolio-salt').digest();
     this.encryptionKey = crypto.pbkdf2Sync(keyString, salt, this.iterations, this.keyLength, this.digest);
@@ -138,3 +160,8 @@ export class EncryptionService {
     return result.join('');
   }
 }
+/**
+ * Shared instance. The key is derived once in the constructor, so this must
+ * not be re-instantiated per request.
+ */
+export const encryption = new EncryptionService();

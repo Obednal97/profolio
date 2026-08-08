@@ -1,36 +1,15 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Pre-commit hook with relaxed checks for development
-
 echo "🔍 Running pre-commit checks..."
 
-# Run lint-staged for automatic fixes
+# Auto-fix staged files
 pnpm lint-staged
 
-# Optional: Run checks but don't block on warnings
+# Non-blocking quality signal. Warnings are allowed so a work-in-progress
+# commit is never blocked; CI is the strict gate.
 echo "📝 Running type and lint checks (warnings allowed)..."
+pnpm run lint --max-warnings 100 2>/dev/null || echo "  ⚠️  Lint warnings (allowed)"
+pnpm run type-check:dev 2>/dev/null || echo "  ⚠️  Type warnings (allowed)"
 
-# Frontend checks
-if git diff --cached --name-only | grep -q "^frontend/"; then
-  echo "  Checking frontend..."
-  cd frontend
-  pnpm run lint --max-warnings 100 2>/dev/null || echo "  ⚠️  Frontend has some warnings (allowed)"
-  pnpm run type-check:dev 2>/dev/null || echo "  ⚠️  Frontend has type warnings (allowed)"
-  cd ..
-fi
-
-# Backend checks  
-if git diff --cached --name-only | grep -q "^backend/"; then
-  echo "  Checking backend..."
-  cd backend
-  pnpm run lint --max-warnings 100 2>/dev/null || echo "  ⚠️  Backend has some warnings (allowed)"
-  cd ..
-fi
-
-# Check for any types
 echo "🔍 Checking for 'any' types..."
 node scripts/check-any-types.js --pre-commit || true
 
 echo "✅ Pre-commit checks complete. Warnings don't block commits."
-echo "💡 Run 'pnpm fix:all' to auto-fix issues or 'pnpm check:all' for strict checking."
