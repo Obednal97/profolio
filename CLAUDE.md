@@ -1,468 +1,184 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) working in this repository.
 
 ## Project Overview
 
-Profolio is a privacy-focused, self-hosted portfolio management system built with Next.js (frontend) and NestJS (backend), using PostgreSQL for data persistence.
+Profolio is a privacy-focused portfolio management system: assets, expenses,
+properties, market data. Next.js 16 (App Router, React 19), Prisma 7 on
+PostgreSQL.
 
-**Current Version**: v1.13.1 (see [CHANGELOG.md](CHANGELOG.md) for full history)  
-**Branch**: css-architecture-foundation  
-**Status**: Production-ready with ongoing CSS architecture improvements
+**Version**: 1.18.0 · **Default branch**: `main`
 
-## Critical Warnings ⚠️
+## ⚠️ Read this first: the repository is mid-migration
 
-- **DO NOT** run `dev` or `build` commands unless explicitly requested
-- **DO NOT** build custom authentication or cryptography (use existing solutions)
-- **ALWAYS** use `pnpm` (not npm/yarn) for package management
-- **ALWAYS** check existing patterns before creating new components
-- **ALWAYS** use UK date formats (DD-MM-YYYY) and UK spelling
-- **NEVER** make direct backend API calls from frontend (use Next.js proxy routes)
+The app is being collapsed from two services (a Next.js frontend plus a
+separate NestJS backend) into **one Next.js application**. Which structure you
+are looking at depends on the branch.
 
-## Installation & Updates
+| Branch            | Structure                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `main`            | Two packages: `frontend/` and `backend/`, pnpm workspace. This is what is deployed.              |
+| `feat/single-app` | Single app at the repo root. `backend/` is **reference-only** and excluded from tsconfig/eslint. |
 
-The project includes a comprehensive installer script (`install.sh`) with advanced features:
+Design and rationale: `docs/superpowers/specs/2026-08-08-single-app-migration-design.md`.
+Migration status is at the bottom of that file — **read it before continuing the
+port**.
 
-```bash
-# Quick install
-curl -fsSL https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh | sudo bash
+On `feat/single-app`, `backend/src` still exists purely as the source to port
+from. Its dependencies are not installed, so it cannot compile. Do not try to
+fix its type errors; read it, port the logic to `src/server/`, and it gets
+deleted at the end.
 
-# Advanced options
-sudo ./install.sh --help                    # Show all options
-sudo ./install.sh --advanced                # Advanced setup mode
-sudo ./install.sh --version v1.13.1         # Install specific version
-sudo ./install.sh --restore-backup          # Restore from backup
-sudo ./install.sh --rollback                # Manual rollback
+## Critical warnings
 
-# Features
-- Automatic container/Proxmox detection
-- Rollback protection with automatic recovery
-- Version control and selection
-- Backup and restore functionality
-- File optimization options
-- LXC container creation wizard for Proxmox hosts
-```
+- **ALWAYS** use `pnpm`, never npm or yarn.
+- **DO NOT** run `dev` or `build` unless asked, or the task needs verification.
+- **NEVER** build custom authentication or cryptography — and specifically, do
+  not change the encryption envelope format or key derivation in
+  `src/server/crypto/encryption.ts`: existing rows become unreadable and there
+  is no re-encrypt path.
+- **ALWAYS** use UK date formats (DD-MM-YYYY) and UK spelling.
+- **NEVER** add Claude attribution or co-authoring to commits or PRs.
+- **Only commit files you changed.** No `git add -A`, no `git commit -a`,
+  unless explicitly asked.
 
-## Code Quality & Linting Strategy
+## Commands
 
-### Error Handling Philosophy
-
-- **Development**: Warnings don't block, focus on rapid iteration
-- **Pre-commit**: Auto-fix issues, allow warnings
-- **CI/CD**: Strict for critical errors, tolerant for style warnings
-- **Production**: Full strict checking
-
-## ⚠️ CRITICAL: Type Safety Requirements
-
-### NEVER Use `any` Types
-
-- **BANNED**: Direct use of `any` type
-- **BANNED**: Type assertions with `as any`
-- **BANNED**: Implicit any (missing type annotations)
-
-### Instead, ALWAYS Use:
-
-1. **Proper interfaces/types** - Define exact shape of data
-2. **`unknown`** - For truly unknown types with type guards
-3. **Generics** - For flexible, reusable types
-4. **`SafeAny<"reason">`** - ONLY for documented temporary migration
-
-### Type Safety Checklist for ALL Code:
-
-- ✅ All function parameters have explicit types
-- ✅ All API responses have defined interfaces
-- ✅ No `any` types (use `unknown` + type guards)
-- ✅ Express requests use `AuthenticatedRequest`
-- ✅ Array operations have typed items
-- ✅ Transform decorators use proper type checking
-
-### Import Type Utilities:
-
-```typescript
-// Backend
-import { SafeAny, AuthenticatedRequest, isObject } from "@/types/common";
-
-// Frontend
-import { ApiResponse, PropsWithClassName } from "@/types/common";
-```
-
-### Pre-commit Check:
-
-The system will automatically check for `any` types and warn you.
-Current limit: 43 (decreasing to 0)
-
-### Quick Fixes
+On `feat/single-app`, everything runs from the repo root:
 
 ```bash
-# Auto-fix all issues
-pnpm fix:all              # Fix both frontend and backend
-
-# Check without blocking
-pnpm check:all            # Run all checks with warnings allowed
-
-# Development type checking (loose)
-cd frontend && pnpm type-check:dev
-cd backend && pnpm type-check
+pnpm dev                 # dev server (Next 16 + Turbopack)
+pnpm build               # production build
+pnpm type-check          # tsc --noEmit
+pnpm lint                # eslint (max 80 warnings)
+pnpm test                # playwright e2e
+pnpm prisma:generate
+pnpm prisma:migrate      # migrate dev
 ```
 
-### When to Run Checks
+`vercel-build` runs `prisma generate && prisma migrate deploy && next build`,
+so a failed migration halts the deploy and the previous version keeps serving.
 
-- **Before major changes**: Run `pnpm check:all`
-- **Before commits**: Automatic via husky (non-blocking)
-- **Before releases**: Run strict checks with `pnpm lint:strict`
-- **During development**: Warnings are OK, fix critical errors only
-
-## Development Commands
-
-### Quick Start (from root directory)
+Full stack locally (Postgres + Redis + app):
 
 ```bash
-# Production Mode - Run both frontend and backend in production
-pnpm start            # Runs both services concurrently
-
-# Development Mode - Run both frontend and backend with hot-reload
-pnpm start:dev        # Runs both services with watch mode
-pnpm dev              # Alias for start:dev
-
-# Individual Services
-pnpm start:backend    # Production backend only
-pnpm start:frontend   # Production frontend only
-pnpm dev:backend      # Development backend only
-pnpm dev:frontend     # Development frontend only
+cp .env.docker.example .env.docker   # set JWT_SECRET and API_ENCRYPTION_KEY
+docker compose --env-file .env.docker up --build
 ```
 
-### Frontend (Next.js)
-
-```bash
-cd frontend
-
-# Development
-pnpm start:dev        # Start dev server (http://localhost:3000)
-pnpm dev              # Alias for start:dev
-pnpm dev:https        # Start with HTTPS for PWA testing
-pnpm dev:pwa          # Same as dev:https for PWA testing
-
-# Production
-pnpm build            # Build for production
-pnpm start            # Start production server
-
-# Testing - Comprehensive Suite
-pnpm test:e2e         # Run all Playwright E2E tests
-pnpm test:e2e:ui      # Run Playwright with visual UI
-pnpm test:e2e:debug   # Debug mode with browser open
-pnpm test:e2e --grep "@security"  # Security tests only
-pnpm test:performance # Run Lighthouse performance tests
-pnpm test:all         # Run all tests (unit + E2E + performance)
-
-# Code Quality
-pnpm lint             # Run ESLint (allows up to 50 warnings)
-pnpm lint:fix         # Auto-fix ESLint issues
-pnpm lint:strict      # Strict ESLint (no warnings)
-pnpm type-check       # TypeScript type checking (strict)
-pnpm type-check:dev   # TypeScript checking (development, loose)
-pnpm audit            # Security vulnerability check
-```
-
-### Backend (NestJS)
-
-```bash
-cd backend
-
-# Development
-pnpm start:dev        # Start with hot-reload (http://localhost:3001)
-pnpm dev              # Alias for start:dev
-
-# Production
-pnpm build            # Build for production
-pnpm start            # Start production server
-
-# Database
-pnpm prisma:generate  # Generate Prisma client
-pnpm prisma:migrate   # Run database migrations
-
-# Code Quality
-pnpm lint             # Run ESLint (allows up to 50 warnings)
-pnpm lint:fix         # Auto-fix ESLint issues
-pnpm lint:strict      # Strict ESLint (no warnings)
-pnpm format           # Format with Prettier
-```
-
-### Root Level Commands
-
-```bash
-# Development (from root)
-pnpm dev:frontend     # Start frontend dev server
-pnpm dev:backend      # Start backend dev server
-
-# Building (from root)
-pnpm build:frontend   # Build frontend
-pnpm build:backend    # Build backend
-```
-
-## Architecture Overview
-
-### Tech Stack
-
-- **Frontend**: Next.js 15, React 18, TypeScript, TailwindCSS v4, TanStack Query
-- **Backend**: NestJS, Prisma ORM, PostgreSQL, JWT authentication
-- **UI Components**: Radix UI primitives (NOT Shadcn/ui), custom glass design system
-- **State Management**: TanStack Query for server state, React Context for client state
-- **Authentication**: Dual mode - Firebase (cloud) or local JWT (self-hosted)
-
-### Project Structure
+## Architecture
 
 ```
-profolio/
-├── frontend/                 # Next.js application
-│   ├── src/
-│   │   ├── app/             # App router pages and API routes
-│   │   │   ├── api/         # API route handlers
-│   │   │   └── app/         # Protected app pages
-│   │   ├── components/      # React components
-│   │   │   ├── cards/       # Card components with glass design
-│   │   │   ├── modals/      # Modal components
-│   │   │   ├── common/      # Reusable components (StatsGrid, ChartContainer, etc.)
-│   │   │   └── ui/          # Base UI components
-│   │   ├── hooks/           # Custom React hooks
-│   │   ├── lib/             # Utilities and services
-│   │   └── styles/          # Modular CSS architecture
-│   │       ├── foundation/  # Reset, tokens, typography
-│   │       ├── components/  # Component-specific styles
-│   │       ├── themes/      # Light/dark themes
-│   │       └── main.css     # Main entry point
-│   └── public/              # Static assets
-├── backend/                  # NestJS application
-│   ├── src/
-│   │   ├── app/api/         # API modules (assets, auth, expenses, etc.)
-│   │   ├── common/          # Shared services and guards
-│   │   └── main.ts          # Application entry
-│   └── prisma/
-│       └── schema.prisma    # Database schema
-└── docs/                    # Documentation
-
+prisma/                  schema + 17 migrations
+prisma.config.ts         DIRECT_URL for migrations (not the pooled URL)
+src/
+  app/                   pages and route handlers
+  server/                server-only code. Every file starts `import "server-only"`.
+    db.ts                the single Prisma client
+    auth/session.ts      getSession / requireUser / requireAdmin
+    http/errors.ts       AppError hierarchy, assertOwned
+    http/handler.ts      withRoute(): validation + auth + error mapping
+    money.ts             MoneyUtils
+    crypto/encryption.ts AES-256-GCM for 2FA secrets
+    modules/<name>/      ported domain services
+  components/ hooks/ lib/
 ```
 
-### Key Design Patterns
+### Route handlers
 
-#### Frontend Architecture
+Handlers are thin. Wrap them in `withRoute` and put the logic in
+`src/server/modules/`:
 
-- **App Router**: Using Next.js 15 app directory structure
-- **Server Components**: Default to server components, use client components only when needed
-- **API Routes**: Next.js API routes proxy to backend NestJS services
-- **Glass Design System**: Custom Apple-style liquid glass components with performance-optimized rendering
-- **Modular CSS**: Component-scoped styles with CSS modules, avoiding inline styles
-
-#### Backend Architecture
-
-- **Module-based**: Each feature is a NestJS module (auth, assets, expenses, properties)
-- **Service Layer**: Business logic in services, controllers handle HTTP
-- **DTOs**: Data validation using class-validator
-- **Guards**: JWT authentication guard for protected routes
-- **Prisma ORM**: Type-safe database queries with PostgreSQL
-
-#### Authentication Flow
-
-1. Frontend uses `useAuth()` hook for auth state
-2. Local mode: JWT tokens stored securely, backend validates
-3. Firebase mode: Firebase SDK handles auth, backend validates Firebase tokens
-4. All API calls include auth headers automatically via `apiClient`
-
-#### Data Fetching Pattern
-
-```typescript
-// Using TanStack Query for data fetching
-const { data, isLoading } = useQuery({
-  queryKey: ["assets"],
-  queryFn: () => apiClient.get("/api/assets"),
+```ts
+export const POST = withRoute({
+  body: CreateAssetSchema, // zod, .strict()
+  handler: ({ body }) => createAsset(body),
 });
 ```
 
-## Important Conventions
+`withRoute` replaces NestJS's ValidationPipe, guards and exception filter.
+Validation is **strict** — an unknown property is a 400, matching the old
+`forbidNonWhitelisted: true`. Always use `.strict()` on object schemas; zod
+strips silently otherwise.
 
-### Component Creation
+### Authorisation
 
-- Check existing components first (especially in `components/common/`)
-- Use Radix UI primitives, NOT Shadcn/ui
-- Follow glass design system patterns from `components/cards/GlassCard.tsx`
-- Create component-specific CSS in `styles/components/`
-- **MANDATORY**: Add `data-testid` attributes to all interactive elements
+**Authorisation lives in the service layer, never in `proxy.ts`.** Next's docs
+state proxy may be CDN-deployed and must not be relied on for authz, and a
+page-level check does not protect a Server Action defined in that page.
 
-### State Management
+Every service function calls `requireUser()` itself and asserts ownership.
+A forgotten check is an unauthenticated endpoint with **no compiler error** —
+that is exactly how the `portfolio-history` IDOR happened. Never trust a user
+id from a path, query or body; take it from the session.
 
-- Server state: TanStack Query (NOT SWR)
-- Client state: React Context or local state
-- Form state: Controlled components with React state
-- Demo mode: 24-hour sessions with `DemoSessionManager`
+## Conventions that have caused real bugs
 
-### Styling - Glass Design System
+Each of these has produced a live defect. Treat them as load-bearing.
 
-- Use TailwindCSS v4 with PostCSS
-- Glass design tokens in `styles/foundation/tokens.css`
-- Liquid glass variants: `.liquid-glass-subtle`, `.liquid-glass-standard`, `.liquid-glass-prominent`
-- Performance-based tinting: `.liquid-glass-performance-positive` (green), `.liquid-glass-performance-negative` (red)
-- Mobile-first responsive design with safe area handling
-- Avoid inline styles, use modular CSS architecture
+- **Money is integer cents at rest.** Convert only at the service boundary:
+  `toCents` on write, `fromCents` on read. Interest rates are basis points.
+- **`current_value` on an asset is the TOTAL position value, not a unit
+  price.** Price sync writes `quantity * price` into it. Multiplying by
+  quantity again double-counts.
+- **Market-data prices arrive in dollars.** Do not pass them through
+  `fromCents`; that divided every synced valuation by 100.
+- **`Asset.symbol` is a foreign key to `Symbol.symbol`.** Upsert the symbol
+  before creating or updating an asset, or every holding with a ticker fails
+  with a foreign key violation.
+- **The auth cookie is `auth-token`,** defined once in `src/lib/authCookie.ts`.
+  Never write the name inline. `secure` is derived from the request, not
+  `NODE_ENV`, because a Secure cookie is rejected over plain HTTP and
+  self-hosted installs run on plain HTTP LAN addresses.
+- **Demo mode is signalled by a `demo-mode` cookie,** not localStorage. Server
+  code cannot see localStorage.
+- **Never fabricate financial data.** No mock prices, no invented trends, no
+  placeholder portfolio values. If data is unavailable, say so. Fabricated
+  numbers in a portfolio tracker are worse than an error.
 
-### Testing Requirements
+## Type safety
 
-- **E2E tests**: Playwright with multi-browser support (Chrome, Firefox, Safari, Edge, Mobile)
-- **Security tests**: Tag with `@security` for SQL injection, XSS, rate limiting
-- **Performance tests**: Core Web Vitals (LCP < 2.5s, CLS < 0.1)
-- **Accessibility tests**: WCAG 2.1 AA compliance
-- **Component tests**: All interactive elements must have `data-testid` attributes
-- **Coverage**: Minimum 80% for new features, 100% for financial calculations
+- **BANNED**: `any`, `as any`, implicit any. Pre-commit enforces a limit of
+  **0**; use `unknown` plus a type guard, or a proper interface.
+- All function parameters and API responses are explicitly typed.
+- Add `data-testid` to interactive elements.
 
-### Security Principles
+## Testing reality
 
-- **NEVER** build custom authentication (use NextAuth, Auth0, Firebase Auth)
-- **NEVER** build custom encryption (use Node.js crypto module)
-- **NEVER** make direct backend calls from frontend (use API proxy routes)
-- Use `pnpm audit` to check for vulnerabilities
-- Validate all user inputs with DTOs in backend
-- Encrypt sensitive data at rest (AES-256-GCM)
+Be honest about the safety net: there is almost none. Two backend jest specs
+(27 tests, Redis and Prisma mocked) and Playwright e2e that is largely skipped
+or written against UI that was never built. **Every recent repair was verified
+by hand.** After any significant change, verify by running the thing, not by
+reading it — and say plainly what you ran.
 
-## Environment Variables
+The manual checklist that matters is in the migration spec.
 
-### Frontend (.env.local)
+## Deployment
 
-```
-NEXT_PUBLIC_AUTH_MODE=local
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_FIREBASE_CONFIG={}  # Firebase config JSON if using Firebase auth
-```
+Two Vercel projects on team `obednal97s-projects` (never the Fanvue team):
 
-### Backend (.env)
+| Project             | URL                                |
+| ------------------- | ---------------------------------- |
+| `profolio-frontend` | profolio-frontend-three.vercel.app |
+| `profolio-backend`  | profolio-backend-mu.vercel.app     |
 
-```
-DATABASE_URL=postgresql://user:pass@localhost:5432/profolio
-JWT_SECRET=your-secret-key
-API_ENCRYPTION_KEY=your-encryption-key
-PORT=3001
-```
+Neon Postgres (London) and Upstash Redis are attached to the backend. Secrets
+were set `--sensitive`, so their values **cannot be read back** — plan for
+recreation rather than retrieval. Rotating `JWT_SECRET` signs everyone out;
+rotating `API_ENCRYPTION_KEY` makes stored secrets undecryptable.
 
-## Common Tasks
+The migration cuts over to a **new project against a Neon branch**, leaving
+both existing projects live until it is proven.
 
-### Adding a New Feature
+`install.sh`, `profolio.sh` and `docker-compose.yml` support self-hosting and
+remain supported. The self-update feature is permanently disabled.
 
-1. Create backend module in `backend/src/app/api/`
-2. Add Prisma schema if needed, run migrations
-3. Create frontend pages in `frontend/src/app/app/`
-4. Add API route handlers in `frontend/src/app/api/`
-5. Create React components following glass design patterns
-6. Add E2E tests for critical flows
+## Documentation
 
-### Modifying Database Schema
-
-1. Edit `backend/prisma/schema.prisma`
-2. Run `pnpm prisma migrate dev --name <migration_name>` in backend to generate proper migration files
-3. **IMPORTANT**: Never manually create migration SQL files - always use Prisma CLI
-4. Run `pnpm prisma:generate` to update Prisma Client
-5. Update DTOs in backend module
-6. Update TypeScript types in frontend
-
-### CSS Architecture Guidelines
-
-- Foundation styles (reset, tokens) go in `styles/foundation/`
-- Component styles in `styles/components/`
-- Use CSS custom properties for theming
-- Follow BEM naming for complex components
-- Keep specificity low, avoid !important
-
-## Package Management
-
-- **MANDATORY**: Use pnpm for all operations (not npm/yarn)
-- Workspace configured at root level
-- Always use `pnpm add` for adding dependencies
-- Include `"packageManager": "pnpm@9.14.4"` in package.json
-- Use `pnpm audit` for security vulnerability checks
-- Lock file: Only `pnpm-lock.yaml` (no `package-lock.json`)
-
-## Current Development Priorities
-
-### 🔴 High Priority Issues (from todo.md)
-
-- Google auth users cannot set password for email auth
-- Add proper 2FA using otplib
-- Implement failed password rate limiting
-- NextAuth migration from Firebase + custom backend
-- Expense modal positioning issues
-- Page transition performance issues
-
-### 🟢 Ongoing Features
-
-- Apple Liquid Glass Design Language (in progress at `/design-styles`)
-- Component architecture improvements (93% file size reduction planned)
-- CSS modular architecture migration
-- Performance optimizations for 1-4 second page delays
-
-### ✅ Recently Completed (Reference)
-
-- Fixed mock API preventing real backend usage
-- Created all missing API proxy routes
-- Fixed Google auth with PWA
-- Enhanced preloading strategy
-- Duplicate API call prevention
-
-## Development Workflow
-
-### Git Commit Format
-
-```bash
-# CRITICAL: NEVER add Claude attribution or co-authoring
-# NEVER add "🤖 Generated with Claude Code"
-# NEVER add "Co-Authored-By: Claude <noreply@anthropic.com>"
-
-# IMPORTANT: Only commit files you've explicitly modified
-# NEVER use git commit -a or git add -A unless explicitly instructed
-# Always use git add <specific-file> for files you've changed
-git add <specific-file-you-changed>
-git commit -m "feat: Add new feature"
-```
-
-### Creating Pull Requests
-
-```bash
-# Use GitHub CLI
-# IMPORTANT: Do NOT add any Claude attribution in PR body
-gh pr create --title "feat: Title" --body "$(cat <<'EOF'
-## Summary
-- Change 1
-- Change 2
-
-## Test plan
-- [ ] E2E tests pass
-- [ ] Security tests pass
-- [ ] Performance metrics met
-EOF
-)"
-```
-
-## Demo Mode
-
-### Demo Session Management
-
-- 24-hour time-limited sessions
-- Real Yahoo Finance market data (not mock)
-- Automatic session cleanup after expiry
-- Isolated demo data that doesn't persist
-- Demo token: `demo-token-secure-123`
-
-## Useful References
-
-### Project Documentation
-
-- **Cursor Rules**: `.cursor/rules/index.mdc` - Development conventions
-- **Testing Guide**: `docs/testing/TESTING_SETUP_GUIDE.md`
-- **Security Policy**: `SECURITY.md` - Security best practices
-- **Code Quality**: `docs/processes/CODE_QUALITY_CHECKLIST.md`
-- **Release Process**: `docs/processes/RELEASE_PROCESS_GUIDE.md`
-
-### Key Files to Review
-
-- **Current Tasks**: `todo.md` and `todo.csv`
-- **Recent Changes**: `CHANGELOG.md`
-- **Architecture Specs**: `docs/architecture/`
-- **Feature Documentation**: `docs/features/`
+- Migration design and status: `docs/superpowers/specs/2026-08-08-single-app-migration-design.md`
+- Modernisation sweep: `docs/superpowers/specs/2026-08-08-modernisation-design.md`
+- Changelog: `CHANGELOG.md`
 
 <!-- BEGIN:nextjs-agent-rules -->
 

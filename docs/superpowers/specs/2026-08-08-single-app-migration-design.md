@@ -147,6 +147,67 @@ Each stage ends type-checking, linting and building.
   database is empty - it will not be later, since rotating `API_ENCRYPTION_KEY`
   makes stored API keys undecryptable with no re-encrypt path.
 
+## STATUS - resume here
+
+_Last updated: 08-08-2026. Branch `feat/single-app`, based on `main` at
+`abf4530`._
+
+### Done
+
+| Commit    | What                                                                                                                                                                                                                                                                                                                   |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `69e6a9d` | This design document                                                                                                                                                                                                                                                                                                   |
+| `5506c78` | **M0 restructure.** Single Next.js app at the repo root; pnpm workspace deleted. 304 files moved with `git mv` so history follows. `prisma/` and all 17 migrations moved intact. `package.json` merged from three files, zero NestJS dependencies remaining. `vercel-build` runs `migrate deploy` before `next build`. |
+| `053a973` | **M0 foundation.** `src/server/{db,money}.ts`, `http/{errors,handler}.ts`, `auth/session.ts`, `crypto/encryption.ts`.                                                                                                                                                                                                  |
+
+Verified at that point: install resolves as one package, Prisma client
+generates, **0 type errors, 0 lint errors**, `next build` compiles, dev server
+boots on Next 16 + Turbopack.
+
+Fixed while porting: `encryption.ts` silently generated a random key when
+`API_ENCRYPTION_KEY` was absent, which on serverless means a different key per
+cold start and permanently undecryptable 2FA secrets - it now refuses to start
+in production. `prisma.config.ts` prefers `DIRECT_URL`, because Neon's pooled
+endpoint runs PgBouncer in transaction mode and cannot execute DDL.
+
+### Not started
+
+**105 files, ~13,850 lines, 96 handlers** across 15 controllers.
+
+1. **M1 Auth** - do this next. It gates everything, carries the most defects,
+   and proves `withRoute` + `session.ts` against real endpoints. After that the
+   remaining modules are mechanical.
+2. M2 Assets, Expenses, Properties
+3. M3 Market data
+4. M4 Notifications, Settings, API keys, Billing, Admin
+5. M5 Delete `backend/`, cut over
+
+### Facts worth not rediscovering
+
+- `backend/src` is reference-only: dependencies are not installed, it cannot
+  compile, and it is excluded from tsconfig and eslint. Read it, port it, delete
+  it. Do not fix its type errors.
+- Dead on arrival, do not port: nine 0-byte files (`groups`, `permissions`,
+  `invitations`), `src/lib/*`, `src/config/configuration.ts`,
+  `AllExceptionsFilter` (never registered), `auth/guards/auth.guard.ts` (third,
+  unused guard), `StripeWebhookDto`. `RbacService.changeUserRole` and
+  `initializeDefaultAdmin` have no callers and no route.
+- `src/updates/**` and `src/setup/**` are deleted, not ported.
+- In-memory state that does not survive serverless and must not be ported
+  as-is: circuit breakers in `PrismaService` and `YahooFinanceService`,
+  `RateLimitService.rulesCache`, `PriceSyncService.startupCompleted`
+  (a 30s constructor `setTimeout` a cold start never clears),
+  `UpdatesService` caches.
+- Rate limiting has never worked: rules are matched by exact string against
+  keys like `/auth/signin`, but `req.path` carries the `api` global prefix, so
+  nothing matches. Rebuild it with `@upstash/ratelimit` per route rather than
+  porting the middleware.
+- Stripe webhooks need the raw body: `await request.text()` before any parsing.
+- `assets.service.ts` fires `updateAssetPrice()` un-awaited; serverless freezes
+  after the response, so this needs `waitUntil()`.
+- The live database is empty, so secret rotation is currently free. It will not
+  be once there is real data.
+
 ## Verification
 
 There are 27 mocked tests and one health check for 14,000 lines. The manual
