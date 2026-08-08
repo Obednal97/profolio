@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SymbolService, SymbolData } from './symbol.service';
+import { YahooFinanceService } from './yahoo-finance.service';
 import { AssetType } from '@prisma/client';
 
 @Injectable()
 export class SymbolPopulationService {
   private readonly logger = new Logger(SymbolPopulationService.name);
 
-  constructor(private symbolService: SymbolService) {}
+  constructor(
+    private symbolService: SymbolService,
+    private yahooFinanceService: YahooFinanceService,
+  ) {}
 
   /**
    * Populate database with essential symbols
@@ -211,25 +215,37 @@ export class SymbolPopulationService {
       
       for (const symbol of symbols) {
         try {
-          // Here you would call Yahoo Finance API
-          // For now, we'll generate mock price data
-          const mockPrice = this.generateMockPrice();
-          
+          // Prices come from the market data provider. This previously called
+          // generateMockPrice() - a random $50-250 - and wrote the result to
+          // the Symbol table as though it were a real quote, which then
+          // propagated into users' asset valuations. Fabricated prices in a
+          // portfolio tracker are worse than no prices, so a symbol without a
+          // real quote is left untouched and its error recorded.
+          const priceData = await this.yahooFinanceService.getQuote(symbol);
+
+          if (!priceData) {
+            await this.symbolService.recordSymbolError(
+              symbol,
+              'No price available from market data provider',
+            );
+            continue;
+          }
+
           const symbolData: SymbolData = {
             symbol: symbol,
-            name: `${symbol} Inc.`,
+            name: priceData.name || symbol,
             type: 'STOCK',
-            current_price: mockPrice.current,
-            previous_close: mockPrice.previous,
-            day_change: mockPrice.change,
-            day_change_percent: mockPrice.changePercent,
-            volume: Math.floor(Math.random() * 10000000),
+            current_price: priceData.price,
+            previous_close: priceData.previousClose,
+            day_change: priceData.change,
+            day_change_percent: priceData.changePercent,
+            volume: priceData.volume,
           };
 
           await this.symbolService.upsertSymbol(symbolData);
           this.logger.debug(`Updated price for ${symbol}`);
-          
-          // Small delay to avoid overwhelming the system
+
+          // Small delay to avoid overwhelming the provider
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           this.logger.error(`Error updating price for ${symbol}:`, error);
@@ -243,26 +259,4 @@ export class SymbolPopulationService {
     }
   }
 
-  /**
-   * Generate mock price data for development
-   */
-  private generateMockPrice(): {
-    current: number;
-    previous: number;
-    change: number;
-    changePercent: number;
-  } {
-    const basePrice = 50 + Math.random() * 200; // Random price between $50-$250
-    const changePercent = (Math.random() - 0.5) * 0.1; // ±5% change
-    const previous = basePrice;
-    const current = previous * (1 + changePercent);
-    const change = current - previous;
-
-    return {
-      current: Math.round(current * 100) / 100,
-      previous: Math.round(previous * 100) / 100,
-      change: Math.round(change * 100) / 100,
-      changePercent: Math.round(changePercent * 10000) / 100, // Convert to percentage
-    };
-  }
 } 

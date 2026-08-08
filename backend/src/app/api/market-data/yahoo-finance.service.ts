@@ -31,6 +31,48 @@ interface CircuitBreakerState {
   nextRetryTime: number;
 }
 
+/** A quote with the fields the Symbol table stores. */
+export interface SymbolQuote {
+  symbol: string;
+  name: string;
+  price: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
+  volume?: number;
+  currency: string;
+}
+
+/**
+ * Minimal surface of the yahoo-finance2 client this service uses.
+ * Declared locally so the import can stay dynamic (the package is ESM-only).
+ */
+interface YahooFinanceClient {
+  quote(symbol: string): Promise<{
+    regularMarketPrice?: number;
+    regularMarketPreviousClose?: number;
+    regularMarketChange?: number;
+    regularMarketChangePercent?: number;
+    regularMarketVolume?: number;
+    shortName?: string;
+    longName?: string;
+    currency?: string;
+  }>;
+  chart(
+    symbol: string,
+    options: { period1: Date; interval: '1d' },
+  ): Promise<{
+    quotes: Array<{
+      date: Date;
+      open: number | null;
+      high: number | null;
+      low: number | null;
+      close: number | null;
+      volume: number | null;
+    }>;
+  }>;
+}
+
 @Injectable()
 export class YahooFinanceService {
   private readonly logger = new Logger(YahooFinanceService.name);
@@ -67,6 +109,32 @@ export class YahooFinanceService {
 
   private getRandomUserAgent(): string {
     return this.userAgents[Math.floor(Math.random() * this.userAgents.length)];
+  }
+
+  /**
+   * yahoo-finance2 client, created once and reused.
+   *
+   * This service used to scrape query1.finance.yahoo.com directly with rotated
+   * user agents. Yahoo now requires a cookie/crumb handshake, so every one of
+   * those requests came back 429 - verified against the live endpoint. The
+   * library performs that handshake and keeps the session.
+   *
+   * Imported dynamically because the package is ESM-only and this backend
+   * compiles to CommonJS.
+   */
+  private clientPromise?: Promise<YahooFinanceClient>;
+
+  private getClient(): Promise<YahooFinanceClient> {
+    if (!this.clientPromise) {
+      this.clientPromise = import('yahoo-finance2').then(mod => {
+        const YahooFinance = mod.default;
+        return new YahooFinance({
+          // Suppress the library's interactive console notices; this is a server.
+          suppressNotices: ['yahooSurvey'],
+        }) as unknown as YahooFinanceClient;
+      });
+    }
+    return this.clientPromise;
   }
 
   private isCircuitBreakerOpen(): boolean {
@@ -194,55 +262,91 @@ export class YahooFinanceService {
     throw new Error('Unexpected end of makeRequest method');
   }
 
-  async getCurrentPrice(symbol: string): Promise<PriceData | null> {
+  /**
+   * Full quote for a symbol, including the fields the Symbol table stores.
+   * Returns null when no quote is available - callers must not substitute a
+   * placeholder, because a fabricated price in a portfolio tracker is worse
+   * than a missing one.
+   */
+  async getQuote(symbol: string): Promise<SymbolQuote | null> {
+    if (this.isCircuitBreakerOpen()) {
+      this.logger.warn(`Circuit breaker open, skipping quote for ${symbol}`);
+      return null;
+    }
+
     try {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`;
-      const data: YahooQuoteResponse = await this.makeRequest(url);
-      
-      const result = data.chart?.result?.[0];
-      if (!result?.meta?.regularMarketPrice) {
+      await this.enforceRateLimit();
+      const client = await this.getClient();
+      const quote = await client.quote(symbol);
+
+      if (!quote?.regularMarketPrice) {
         this.logger.warn(`No price data found for symbol: ${symbol}`);
         return null;
       }
 
+      this.recordSuccess();
+
       return {
         symbol: symbol.toUpperCase(),
-        price: result.meta.regularMarketPrice,
-        timestamp: new Date(),
-        source: 'YAHOO_FINANCE',
-        currency: result.meta.currency || 'USD',
+        name: quote.shortName || quote.longName || symbol.toUpperCase(),
+        price: quote.regularMarketPrice,
+        previousClose: quote.regularMarketPreviousClose,
+        change: quote.regularMarketChange,
+        changePercent: quote.regularMarketChangePercent,
+        volume: quote.regularMarketVolume,
+        currency: quote.currency || 'USD',
       };
     } catch (error) {
-      this.logger.error(`Failed to fetch current price for ${symbol}:`, error);
+      this.recordFailure();
+      this.logger.error(`Failed to fetch quote for ${symbol}:`, error);
       return null;
     }
   }
 
+  async getCurrentPrice(symbol: string): Promise<PriceData | null> {
+    const quote = await this.getQuote(symbol);
+    if (!quote) return null;
+
+    return {
+      symbol: quote.symbol,
+      price: quote.price,
+      timestamp: new Date(),
+      source: 'YAHOO_FINANCE',
+      currency: quote.currency,
+    };
+  }
+
   async getHistoricalData(symbol: string, days: number): Promise<HistoricalData | null> {
+    if (this.isCircuitBreakerOpen()) {
+      this.logger.warn(`Circuit breaker open, skipping history for ${symbol}`);
+      return null;
+    }
+
     try {
-      const endTime = Math.floor(Date.now() / 1000);
-      const startTime = endTime - (days * 24 * 60 * 60);
-      
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${startTime}&period2=${endTime}&interval=1d`;
-      const data: YahooQuoteResponse = await this.makeRequest(url);
-      
-      const result = data.chart?.result?.[0];
-      if (!result?.timestamp || !result?.indicators?.quote?.[0]) {
+      await this.enforceRateLimit();
+      const client = await this.getClient();
+
+      const period1 = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const result = await client.chart(symbol, { period1, interval: '1d' });
+
+      const quotes = result?.quotes ?? [];
+      if (quotes.length === 0) {
         this.logger.warn(`No historical data found for symbol: ${symbol}`);
         return null;
       }
 
-      const timestamps = result.timestamp;
-      const quote = result.indicators.quote[0];
-      
-      const historicalData = timestamps.map((timestamp, index) => ({
-        timestamp: new Date(timestamp * 1000),
-        open: quote.open[index] || 0,
-        high: quote.high[index] || 0,
-        low: quote.low[index] || 0,
-        close: quote.close[index] || 0,
-        volume: quote.volume[index] || 0,
-      })).filter(item => item.close > 0); // Filter out invalid data points
+      this.recordSuccess();
+
+      const historicalData = quotes
+        .map(row => ({
+          timestamp: new Date(row.date),
+          open: row.open ?? 0,
+          high: row.high ?? 0,
+          low: row.low ?? 0,
+          close: row.close ?? 0,
+          volume: row.volume ?? 0,
+        }))
+        .filter(item => item.close > 0);
 
       return {
         symbol: symbol.toUpperCase(),
@@ -250,6 +354,7 @@ export class YahooFinanceService {
         source: 'YAHOO_FINANCE',
       };
     } catch (error) {
+      this.recordFailure();
       this.logger.error(`Failed to fetch historical data for ${symbol}:`, error);
       return null;
     }

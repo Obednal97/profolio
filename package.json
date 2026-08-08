@@ -78,7 +78,7 @@
   },
   "homepage": "https://github.com/Obednal97/profolio#readme",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "pnpm": ">=8.0.0"
   },
   "packageManager": "pnpm@9.14.4",

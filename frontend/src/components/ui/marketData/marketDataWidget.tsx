@@ -191,15 +191,16 @@ export function MarketDataWidget() {
           );
         }
 
-        // Fallback to mock data if API unavailable
-        return generateRealisticMockData(symbol);
+        // Outside demo mode, an unavailable price is reported as unavailable.
+        // This used to fall back to generated numbers, so a dead market-data
+        // provider looked indistinguishable from live prices.
+        return isDemoMode ? generateRealisticMockData(symbol) : null;
       } catch (error) {
         console.error(
           `❌ [MarketData] Error fetching price for ${symbol}:`,
           error
         );
-        // Always fallback to mock data on error
-        return generateRealisticMockData(symbol);
+        return isDemoMode ? generateRealisticMockData(symbol) : null;
       }
     },
     [authToken, isDemoMode, generateRealisticMockData]
@@ -331,23 +332,33 @@ export function MarketDataWidget() {
               isUserAsset: item.isUserAsset,
               userValue: item.userValue,
             };
-          } else {
-            // This should rarely happen now with improved fallbacks
-            const mockData = generateRealisticMockData(item.symbol);
-            return {
-              symbol: item.symbol,
-              name: demoMockPricesRef.current[item.symbol]?.name || item.name,
-              price: mockData.price,
-              change: mockData.change,
-              changePercent: mockData.changePercent,
-              isUserAsset: item.isUserAsset,
-              userValue: item.userValue,
-            };
           }
+
+          // Demo mode may invent a price; a real portfolio may not. Returning
+          // null drops the row rather than showing a number the user could
+          // mistake for a real quote.
+          if (!isDemoMode) return null;
+
+          const mockData = generateRealisticMockData(item.symbol);
+          return {
+            symbol: item.symbol,
+            name: demoMockPricesRef.current[item.symbol]?.name || item.name,
+            price: mockData.price,
+            change: mockData.change,
+            changePercent: mockData.changePercent,
+            isUserAsset: item.isUserAsset,
+            userValue: item.userValue,
+          };
         });
 
         const marketDataResults = await Promise.all(marketDataPromises);
-        setMarketData(marketDataResults.filter(Boolean));
+        const resolved = marketDataResults.filter(
+          (row): row is NonNullable<typeof row> => row !== null
+        );
+        setMarketData(resolved);
+        if (resolved.length === 0 && symbolsToFetch.length > 0) {
+          setError("Live prices unavailable");
+        }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           // Request was aborted, this is expected
@@ -355,14 +366,15 @@ export function MarketDataWidget() {
         }
         console.error("Error fetching market data:", error);
 
-        // Enhanced error handling with fallback to demo data
-        if (isDemoMode) {
-          // Use fallback data for demo mode
-        } else {
+        // Demo mode falls back to generated sample prices; a real portfolio
+        // surfaces the error instead. Previously this "always provided
+        // fallback data", so an outage silently produced invented quotes.
+        if (!isDemoMode) {
           setError("Live data temporarily unavailable");
+          setMarketData([]);
+          return;
         }
 
-        // Always provide fallback data
         const fallbackData = defaultSymbolsRef.current.map((item) => {
           const mockData = generateRealisticMockData(item.symbol);
           return {

@@ -44,40 +44,9 @@ const preloadCriticalAssets = async (route: string) => {
   }
 };
 
-// 🚀 ENHANCEMENT: Helper function to preload component chunks for a route
-const preloadComponentChunks = async (route: string) => {
-  try {
-    // Get the route-specific chunks that need preloading
-    const chunks = getComponentChunksForRoute(route);
-
-    const promises = chunks.map((chunk) => {
-      return new Promise<void>((resolve) => {
-        const script = document.createElement("link");
-        script.rel = "preload";
-        script.href = chunk;
-        script.as = "script";
-
-        script.onload = () => {
-          document.head.removeChild(script);
-          resolve();
-        };
-        script.onerror = () => {
-          document.head.removeChild(script);
-          resolve(); // Don't fail for individual chunks
-        };
-
-        document.head.appendChild(script);
-      });
-    });
-
-    await Promise.allSettled(promises);
-    logger.preload(
-      `🧩 Preloaded ${chunks.length} component chunks for ${route}`
-    );
-  } catch (error) {
-    logger.warn(`⚠️ Chunk preload failed for ${route}:`, error);
-  }
-};
+// Component-chunk preloading was removed along with the hardcoded chunk paths
+// it depended on: every href it emitted was a 404. Next's <Link> prefetching
+// already fetches the correct, content-hashed chunks for a route.
 
 // 🚀 ENHANCEMENT: Get critical assets for each route
 const getCriticalAssetsForRoute = (
@@ -88,43 +57,19 @@ const getCriticalAssetsForRoute = (
     { href: "/manifest.json", as: "fetch", type: "application/json" },
   ];
 
-  // Route-specific assets
-  const routeAssets: Record<
-    string,
-    Array<{ href: string; as: string; type?: string }>
-  > = {
-    "/app/assetManager": [
-      { href: "/_next/static/css/charts.css", as: "style" }, // If you have separate CSS
-    ],
-    "/app/dashboard": [
-      { href: "/_next/static/css/dashboard.css", as: "style" },
-    ],
-  };
-
-  return [...baseAssets, ...(routeAssets[route] || [])];
-};
-
-// 🚀 ENHANCEMENT: Get component chunks for each route
-const getComponentChunksForRoute = (route: string): string[] => {
-  // Map routes to their likely component chunks
-  // In production, these would be determined by your build process
-  const routeChunks: Record<string, string[]> = {
-    "/app/assetManager": [
-      "/_next/static/chunks/framer-motion.js",
-      "/_next/static/chunks/recharts.js",
-      "/_next/static/chunks/assetManager.js",
-    ],
-    "/app/dashboard": [
-      "/_next/static/chunks/react-confetti.js",
-      "/_next/static/chunks/dashboard.js",
-    ],
-    "/app/propertyManager": ["/_next/static/chunks/propertyManager.js"],
-    "/app/expenseManager": ["/_next/static/chunks/expenseManager.js"],
-    "/app/notifications": ["/_next/static/chunks/notifications.js"],
-    "/app/settings": ["/_next/static/chunks/settings.js"],
-  };
-
-  return routeChunks[route] || [];
+  // No route-specific asset preloads.
+  //
+  // This used to list files like /_next/static/css/charts.css and
+  // /_next/static/chunks/framer-motion.js. None of them have ever existed:
+  // bundlers emit content-hashed filenames, so every one of these produced a
+  // 404 on navigation. The named webpack cache groups they were written
+  // against were removed with the Next 16 upgrade, and Turbopack names chunks
+  // differently again.
+  //
+  // Next's own <Link> prefetching already loads the right chunks for a route.
+  // If explicit preloading is ever wanted, the hrefs must come from the build
+  // manifest rather than being hardcoded.
+  return baseAssets;
 };
 
 /**
@@ -183,9 +128,6 @@ export function usePagePreloader(
 
         // 2. Preload critical static assets for the route
         await preloadCriticalAssets(route);
-
-        // 3. Preload route-specific component chunks
-        await preloadComponentChunks(route);
 
         // Mark as preloaded
         preloadedRef.current.add(route);

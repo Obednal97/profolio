@@ -34,6 +34,25 @@ export class AssetsService {
       ...data 
     } = createAssetDto;
     
+    // Asset.symbol is a foreign key to Symbol.symbol. The Symbol table is
+    // populated by market-data sync, so on a fresh install it is empty and
+    // creating any asset with a ticker failed outright with a foreign key
+    // violation surfaced as a 500 - i.e. no stock or crypto holding could be
+    // added at all. Register the symbol on demand instead; the price-sync job
+    // fills in the market fields later.
+    if (data.symbol) {
+      await this.prisma.symbol.upsert({
+        where: { symbol: data.symbol },
+        update: {},
+        create: {
+          symbol: data.symbol,
+          // Best available label until market data supplies the real one.
+          name: createAssetDto.name || data.symbol,
+          type: createAssetDto.type,
+        },
+      });
+    }
+
     // Create the asset with precise conversions
     const asset = await this.prisma.asset.create({
       data: {
@@ -95,8 +114,9 @@ export class AssetsService {
   }
 
   async update(id: string, updateAssetDto: UpdateAssetDto, userId: string) {
-    // Check ownership
-    await this.findOne(id, userId);
+    // Check ownership. The record is also reused below to fill in the Symbol
+    // upsert when only the ticker is being changed.
+    const existing = await this.findOne(id, userId);
 
     // Validate monetary inputs
     const validations = this.validateMonetaryFields(updateAssetDto as unknown as Record<string, unknown>);
@@ -138,7 +158,24 @@ export class AssetsService {
     if (vesting_start_date !== undefined) updateData.vesting_start_date = vesting_start_date ? new Date(vesting_start_date) : null;
     if (vesting_end_date !== undefined) updateData.vesting_end_date = vesting_end_date ? new Date(vesting_end_date) : null;
     if (updateData.vesting_schedule !== undefined) updateData.vesting_schedule = updateData.vesting_schedule || null;
-    
+
+    // Same Symbol foreign key as in create(): changing an asset to a ticker
+    // that has never been seen would otherwise fail with a 500.
+    if (typeof updateData.symbol === 'string' && updateData.symbol) {
+      await this.prisma.symbol.upsert({
+        where: { symbol: updateData.symbol },
+        update: {},
+        create: {
+          symbol: updateData.symbol,
+          name:
+            (updateData.name as string) ||
+            (typeof existing.name === 'string' ? existing.name : '') ||
+            updateData.symbol,
+          type: (updateData.type ?? existing.type) as AssetType,
+        },
+      });
+    }
+
     const updated = await this.prisma.asset.update({
       where: { id },
       data: updateData as Prisma.AssetUpdateInput,
@@ -172,9 +209,12 @@ export class AssetsService {
         });
         
         if (asset) {
+          // priceData.price is already in dollars. This previously ran it
+          // through MoneyUtils.fromCents() as well, dividing every synced
+          // valuation by 100 - a $313.33 share showed as $3.13.
           const currentValue = MoneyUtils.safeMultiply(
-            Number(asset.quantity), 
-            MoneyUtils.fromCents(priceData.price)
+            Number(asset.quantity),
+            priceData.price
           );
           
           await this.prisma.asset.update({

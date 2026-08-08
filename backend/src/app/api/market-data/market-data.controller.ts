@@ -220,7 +220,10 @@ export class MarketDataController {
   // Legacy endpoint compatibility
   @Get('current-price/:symbol')
   @ApiOperation({ summary: 'Get current price for a symbol (legacy compatibility)' })
-  async getCurrentPrice(@Query('symbol') symbol: string) {
+  // The route declares :symbol as a path parameter, but this read it from the
+  // query string, so `symbol` was always undefined and the handler threw on
+  // `undefined.toUpperCase()`.
+  async getCurrentPrice(@Param('symbol') symbol: string) {
     try {
       const symbolData = await this.symbolService.getOrQueueSymbol(symbol);
       

@@ -37,6 +37,7 @@ interface DashboardData {
   totalAssets: number;
   totalExpenses: number;
   properties: number;
+  propertyValue: number;
   monthlyIncome: number;
   transactions: Transaction[];
   portfolioHistory: Array<{
@@ -44,6 +45,57 @@ interface DashboardData {
     value: number;
   }>;
   news: NewsArticle[];
+}
+
+/** Only the asset fields the dashboard totals need. */
+interface DashboardAsset {
+  current_value?: number;
+  purchase_price?: number;
+}
+
+/** Only the property fields the dashboard totals need. */
+interface DashboardProperty {
+  currentValue?: number;
+  purchasePrice?: number;
+}
+
+/** Compact currency for stat subtitles, e.g. "$2.4M". */
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+/** Only the expense fields the dashboard needs. */
+interface DashboardExpense {
+  amount?: number;
+  date: string;
+  description?: string;
+  category?: string;
+}
+
+/**
+ * Value of a holding.
+ *
+ * current_value is the TOTAL value of the position, not a unit price - the
+ * price-sync job writes `quantity * price` into it, and assetManager reads it
+ * directly. Multiplying by quantity here would double-count every holding.
+ *
+ * Falls back to purchase price when no current valuation exists yet, so an
+ * asset added before its first price sync still counts rather than reading as
+ * zero.
+ */
+function assetValue(asset: DashboardAsset): number {
+  return asset.current_value ?? asset.purchase_price ?? 0;
+}
+
+/** Income is recorded as an expense row with a negative amount or an income category. */
+function isIncome(expense: DashboardExpense): boolean {
+  if ((expense.amount ?? 0) < 0) return true;
+  return (expense.category ?? "").toLowerCase() === "income";
 }
 
 // IMPROVEMENT: Safe localStorage access utility
@@ -255,71 +307,87 @@ export default function DashboardPage() {
       // Mark that user has visited dashboard (for greeting system)
       safeLocalStorage.setItem("user-has-visited-dashboard", "true");
 
-      // IMPROVEMENT: Reduced artificial delay for better UX
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Real data, from the user's own records.
+      //
+      // This previously waited 500ms and then displayed hardcoded figures -
+      // ~$875k of assets, 2 properties, a fixed transaction list and invented
+      // market headlines - to every user, with Math.random() variance to make
+      // them look live. A brand new account with nothing in it showed a
+      // six-figure net worth. Nothing here was ever fetched.
+      const [assetsRes, expensesRes, propertiesRes] = await Promise.all([
+        fetch("/api/assets", { credentials: "same-origin" }),
+        fetch("/api/expenses", { credentials: "same-origin" }),
+        fetch("/api/properties", { credentials: "same-origin" }),
+      ]);
 
-      // IMPROVEMENT: More realistic mock data generation
-      const mockDashboardData: DashboardData = {
-        totalAssets: 875420 + Math.floor(Math.random() * 50000), // Add some variance
-        totalExpenses: 4230 + Math.floor(Math.random() * 1000),
-        properties: 2,
-        monthlyIncome: 12500,
-        transactions: [
-          {
-            type: "income",
-            amount: 5000,
-            date: "2024-01-15",
-            description: "Salary Payment",
-          },
-          {
-            type: "expense",
-            amount: 150,
-            date: "2024-01-14",
-            description: "Grocery Shopping",
-          },
-          {
-            type: "expense",
-            amount: 89,
-            date: "2024-01-13",
-            description: "Netflix Subscription",
-          },
-          {
-            type: "income",
-            amount: 250,
-            date: "2024-01-12",
-            description: "Freelance Project",
-          },
-          {
-            type: "expense",
-            amount: 45,
-            date: "2024-01-11",
-            description: "Gas Station",
-          },
-        ],
+      if (!assetsRes.ok || !expensesRes.ok || !propertiesRes.ok) {
+        throw new Error("Could not load your dashboard data");
+      }
+
+      const [assetsJson, expensesJson, propertiesJson] = await Promise.all([
+        assetsRes.json(),
+        expensesRes.json(),
+        propertiesRes.json(),
+      ]);
+
+      const assets: DashboardAsset[] = assetsJson?.assets ?? [];
+      const expenses: DashboardExpense[] = expensesJson?.expenses ?? [];
+      const properties: DashboardProperty[] = propertiesJson?.properties ?? [];
+
+      const propertyValue = properties.reduce(
+        (sum, property) =>
+          sum + (property.currentValue ?? property.purchasePrice ?? 0),
+        0
+      );
+
+      const totalAssets = assets.reduce(
+        (sum, asset) => sum + assetValue(asset),
+        0
+      );
+
+      // Expenses and income are both recorded as expense rows; income is
+      // distinguished by a negative amount or an explicit income category.
+      const now = new Date();
+      const thisMonth = expenses.filter((expense) => {
+        const date = new Date(expense.date);
+        return (
+          date.getMonth() === now.getMonth() &&
+          date.getFullYear() === now.getFullYear()
+        );
+      });
+
+      const totalExpenses = thisMonth
+        .filter((expense) => !isIncome(expense))
+        .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0);
+
+      const monthlyIncome = thisMonth
+        .filter(isIncome)
+        .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0);
+
+      const transactions: Transaction[] = [...expenses]
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+        .slice(0, 5)
+        .map((expense) => ({
+          type: isIncome(expense) ? "income" : "expense",
+          amount: Math.abs(expense.amount ?? 0),
+          date: expense.date,
+          description: expense.description || expense.category || "Transaction",
+        }));
+
+      setData({
+        totalAssets,
+        totalExpenses,
+        properties: properties.length,
+        propertyValue,
+        monthlyIncome,
+        transactions,
         portfolioHistory: [],
-        news: [
-          {
-            title: "S&P 500 Reaches New All-Time High",
-            source: "Reuters",
-            time: "2 hours ago",
-            url: "#",
-          },
-          {
-            title: "Fed Signals Potential Rate Cuts in 2024",
-            source: "Bloomberg",
-            time: "4 hours ago",
-            url: "#",
-          },
-          {
-            title: "Bitcoin Surges Past $70,000",
-            source: "CoinDesk",
-            time: "6 hours ago",
-            url: "#",
-          },
-        ],
-      };
-
-      setData(mockDashboardData);
+        // No news provider is wired up. An empty list renders nothing, which
+        // is honest; the previous hardcoded headlines were presented as real.
+        news: [],
+      });
 
       // IMPROVEMENT: Enhanced confetti logic with safe localStorage
       const lastVisit = safeLocalStorage.getItem("lastDashboardVisit");
@@ -366,10 +434,11 @@ export default function DashboardPage() {
     );
   }
 
-  const dashboardData = data || {
+  const dashboardData: DashboardData = data || {
     totalAssets: 0,
     totalExpenses: 0,
     properties: 0,
+    propertyValue: 0,
     monthlyIncome: 0,
     transactions: [],
     portfolioHistory: [],
@@ -408,12 +477,15 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <StatsGrid
         items={[
+          // No `trend` values here. They were hardcoded to +12.5% and -5.2%
+          // and rendered as though measured, on a dashboard that fetched
+          // nothing. Real trends need a historical comparison the app does not
+          // yet store; showing nothing is preferable to showing a number that
+          // is always the same.
           {
             label: "Total Assets",
             value: dashboardData.totalAssets,
             format: "currency" as const,
-            trend: 12.5,
-            subtitle: "this month",
             icon: <Wallet />,
             iconColor: "text-blue-500",
           },
@@ -421,8 +493,7 @@ export default function DashboardPage() {
             label: "Monthly Expenses",
             value: dashboardData.totalExpenses,
             format: "currency" as const,
-            trend: -5.2,
-            subtitle: "vs last month",
+            subtitle: "this month",
             icon: <CreditCard />,
             iconColor: "text-red-500",
           },
@@ -430,7 +501,12 @@ export default function DashboardPage() {
             label: "Properties",
             value: dashboardData.properties,
             format: "number" as const,
-            subtitle: "Valued at $2.4M",
+            // Actual combined value, replacing a hardcoded "Valued at $2.4M"
+            // that was shown even when the user had no properties.
+            subtitle:
+              dashboardData.properties > 0
+                ? `Valued at ${formatCurrency(dashboardData.propertyValue)}`
+                : undefined,
             icon: <Home />,
             iconColor: "text-purple-500",
           },
@@ -438,8 +514,7 @@ export default function DashboardPage() {
             label: "Monthly Income",
             value: dashboardData.monthlyIncome,
             format: "currency" as const,
-            trend: 0,
-            subtitle: "On track",
+            subtitle: "this month",
             icon: <TrendingUp />,
             iconColor: "text-green-500",
           },

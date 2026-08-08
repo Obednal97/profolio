@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "@/common/prisma.service";
 import { ApiKeysService } from "../api-keys/api-keys.service";
+import { YahooFinanceService } from "./yahoo-finance.service";
 import { ApiProvider } from "@prisma/client";
 
 // Removed temporary type - now using proper Prisma-generated ApiProvider enum
@@ -32,7 +33,8 @@ export class MarketDataService {
 
   constructor(
     private prisma: PrismaService,
-    private apiKeysService: ApiKeysService
+    private apiKeysService: ApiKeysService,
+    private yahooFinanceService: YahooFinanceService
   ) {}
 
   async getCurrentPrice(
@@ -255,41 +257,14 @@ export class MarketDataService {
   private async fetchYahooFinancePrice(
     symbol: string
   ): Promise<PriceData | null> {
+    // Delegates to YahooFinanceService rather than repeating a second raw
+    // scrape of query1.finance.yahoo.com. That endpoint now requires a
+    // cookie/crumb handshake and returns 429 without it, so this duplicate
+    // implementation had stopped working; the shared service uses
+    // yahoo-finance2, which performs the handshake, and applies the circuit
+    // breaker and rate limiting.
     try {
-      // This is a simplified implementation - in production you'd want a more robust scraper
-      const response = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`
-      );
-
-      interface YahooFinanceResponse {
-        chart?: {
-          result?: Array<{
-            meta?: {
-              regularMarketPrice?: number;
-              currency?: string;
-            };
-          }>;
-        };
-      }
-      const data = (await response.json()) as YahooFinanceResponse;
-      const result = data.chart?.result?.[0];
-
-      if (!result) {
-        return null;
-      }
-
-      const price = result.meta?.regularMarketPrice;
-      if (!price) {
-        return null;
-      }
-
-      return {
-        symbol: symbol.toUpperCase(),
-        price: price,
-        timestamp: new Date(),
-        source: "YAHOO_FINANCE",
-        currency: result.meta?.currency || "USD",
-      };
+      return await this.yahooFinanceService.getCurrentPrice(symbol);
     } catch (error) {
       this.logger.error(`Yahoo Finance API error for ${symbol}:`, error);
       return null;
