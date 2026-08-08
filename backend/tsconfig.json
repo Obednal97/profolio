@@ -1,9 +1,18 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    // Was `moduleResolution: node10`, which TypeScript 7 removes. `nodenext`
+    // models how Node actually resolves modules, which is the right fit for a
+    // server - `bundler` also type-checks clean but would permit imports Node
+    // cannot resolve at runtime. package.json has no "type": "module", so this
+    // still emits CommonJS and runtime behaviour is unchanged.
+    //
+    // Note: `prisma generate` must have been run, otherwise @prisma/client is
+    // an ungenerated stub and every model/enum import fails with TS2305. The
+    // postinstall script handles this.
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "target": "es2017",
     "lib": ["esnext"],
-    "moduleResolution": "node",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -13,9 +22,15 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
+    // Declared explicitly rather than relying on auto-discovery of everything
+    // under node_modules/@types, which is unreliable through pnpm's symlinked
+    // layout. These two are the only packages contributing globals.
+    "types": ["node", "jest"],
+    // `baseUrl` is deprecated in 6 and removed in 7; paths are now relative to
+    // this file. The backend has no tooling that depends on baseUrl, unlike the
+    // frontend where Next's webpack resolver still requires it.
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],

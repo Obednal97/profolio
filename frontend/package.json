@@ -93,6 +93,6 @@
     "stylelint-order": "^7.0.0",
     "tailwindcss": "^4.1.12",
     "tw-animate-css": "^1.2.9",
-    "typescript": "^5.9.2"
+    "typescript": "^6.0.3"
   }
 }
