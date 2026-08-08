@@ -99,12 +99,19 @@ export class SetupService {
     try {
       const testUrl = this.buildDatabaseUrl(dbConfig);
 
-      // Create a temporary Prisma client with the test URL
+      // Create a temporary Prisma client with the test URL. Prisma 7 dropped
+      // `datasources`; an ad-hoc connection string is supplied via the driver
+      // adapter instead.
       const { PrismaClient } = await import("@prisma/client");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
       const testClient = new PrismaClient({
-        datasources: {
-          db: { url: testUrl },
-        },
+        adapter: new PrismaPg({
+          connectionString: testUrl,
+          // A connectivity probe only - one connection, fail fast rather than
+          // hanging the setup wizard on an unreachable host.
+          max: 1,
+          connectionTimeoutMillis: 10000,
+        }),
       });
 
       // Test the connection

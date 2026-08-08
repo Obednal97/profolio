@@ -30,6 +30,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY backend/package.json backend/
 COPY frontend/package.json frontend/
 
+# The backend's postinstall runs `prisma generate`, which needs the schema and
+# config present before install. Copied separately from the rest of the source
+# so that editing application code does not invalidate the dependency layer.
+COPY backend/prisma backend/prisma
+COPY backend/prisma.config.ts backend/
+
 RUN pnpm install --frozen-lockfile --filter profolio-backend
 
 
@@ -51,6 +57,9 @@ COPY --from=build --chown=node:node /app/backend/node_modules /app/backend/node_
 COPY --from=build --chown=node:node /app/backend/dist /app/backend/dist
 COPY --from=build --chown=node:node /app/backend/prisma /app/backend/prisma
 COPY --from=build --chown=node:node /app/backend/package.json /app/backend/package.json
+# Required by `prisma migrate deploy` at startup: Prisma 7 reads the datasource
+# URL from here rather than from schema.prisma.
+COPY --from=build --chown=node:node /app/backend/prisma.config.ts /app/backend/prisma.config.ts
 COPY --chown=node:node backend/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

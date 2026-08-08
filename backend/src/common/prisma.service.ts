@@ -5,6 +5,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 @Injectable()
 export class PrismaService
@@ -13,11 +14,24 @@ export class PrismaService
 {
   private readonly logger = new Logger(PrismaService.name);
 
+  // Static because they are read inside super(), before `this` exists.
+  //
+  // Under Prisma 6 the pool was Prisma's own and these were decorative - the
+  // real size came from Prisma's default of cpus*2+1 (25 on the machine this
+  // was developed on). Prisma 7 delegates pooling to pg, so the value now
+  // genuinely applies. Defaulting to 10 (pg's own default) rather than the
+  // previous 100, which would have exhausted a stock Postgres configured for
+  // 100 total connections. Override with DATABASE_POOL_SIZE if needed.
+  private static readonly POOL_SIZE = Number(
+    process.env.DATABASE_POOL_SIZE ?? 10
+  );
+  private static readonly CONNECTION_TIMEOUT_MS = 30000;
+
   // 🛡️ CONNECTION POOL ISOLATION: Track user connections to prevent exhaustion
   private userConnectionCounts = new Map<string, number>();
   private readonly MAX_CONNECTIONS_PER_USER = 10; // Prevent single user from consuming all connections
-  private readonly CONNECTION_POOL_SIZE = 100; // Total pool size
-  private readonly CONNECTION_TIMEOUT = 30000; // 30 seconds
+  private readonly CONNECTION_POOL_SIZE = PrismaService.POOL_SIZE;
+  private readonly CONNECTION_TIMEOUT = PrismaService.CONNECTION_TIMEOUT_MS;
 
   // 🔒 CIRCUIT BREAKER: Protect against database overload
   private circuitBreaker = {
@@ -29,13 +43,15 @@ export class PrismaService
   };
 
   constructor() {
+    // Prisma 7 requires a driver adapter and no longer accepts `datasources`;
+    // the connection string is owned by the adapter rather than the schema.
+    // Pooling is now pg's, configured here rather than via URL query params.
     super({
-      // 🚀 ENTERPRISE CONNECTION POOL CONFIGURATION
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL,
-        },
-      },
+      adapter: new PrismaPg({
+        connectionString: process.env.DATABASE_URL,
+        max: PrismaService.POOL_SIZE,
+        connectionTimeoutMillis: PrismaService.CONNECTION_TIMEOUT_MS,
+      }),
       // Query logging writes every statement and its parameters (emails,
       // transaction amounts) to the log stream. Restrict it to development.
       log:
@@ -43,8 +59,6 @@ export class PrismaService
           ? ["error", "warn"]
           : ["query", "error", "info", "warn"],
       errorFormat: "colorless",
-      // Connection pool configuration is handled at the database URL level
-      // Format: postgresql://user:password@host:port/database?connection_limit=100&pool_timeout=30
     });
   }
 
