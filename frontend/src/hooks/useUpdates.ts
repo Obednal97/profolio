@@ -68,29 +68,12 @@ export function useUpdates(): UseUpdatesReturn {
   const backendAbortControllerRef = useRef<AbortController | null>(null);
   const statusAbortControllerRef = useRef<AbortController | null>(null);
 
-  const getApiBase = () => {
-    // Use environment variable if available
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-
-    // Auto-detect protocol and host for production
-    if (typeof window !== "undefined") {
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-
-      // In production, use same protocol as frontend
-      if (protocol === "https:") {
-        // For HTTPS, assume backend is on port 3001 with HTTPS
-        return `https://${hostname}:3001`;
-      }
-    }
-
-    // Development fallback
-    return "http://localhost:3001";
-  };
-
-  const API_BASE = getApiBase();
+  // Same-origin. Requests go through the /api/* proxy routes, which attach the
+  // httpOnly auth cookie server-side and reach the backend over the internal
+  // network. This previously addressed the backend directly - via
+  // NEXT_PUBLIC_API_URL, a guessed https://<host>:3001, or localhost:3001 -
+  // none of which a browser can reach in a real deployment.
+  const API_BASE = "";
 
   // Check if we're in self-hosted mode or development (for testing)
   const isSelfHosted = useCallback(() => {

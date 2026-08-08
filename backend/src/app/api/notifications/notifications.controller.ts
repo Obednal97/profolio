@@ -156,6 +156,29 @@ export class NotificationsController {
   }
 
   /**
+   * Delete all read notifications
+   */
+  // Declared before @Delete(':id'): Nest matches in declaration order, so
+  // the parameterised route would otherwise capture DELETE /read as id='read'.
+  @Delete('read')
+  async deleteAllRead(@Request() req: AuthenticatedRequest) {
+    try {
+      const userId = req.user?.id || '';
+      const result = await this.notificationsService.deleteAllRead(userId);
+      return {
+        success: true,
+        deletedCount: result.count,
+        message: `Deleted ${result.count} read notifications`
+      };
+    } catch (error) {
+      throw new HttpException(
+        'Failed to delete read notifications',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
    * Delete a notification
    */
   @Delete(':id')
@@ -176,27 +199,6 @@ export class NotificationsController {
       }
       throw new HttpException(
         'Failed to delete notification',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
-  /**
-   * Delete all read notifications
-   */
-  @Delete('read')
-  async deleteAllRead(@Request() req: AuthenticatedRequest) {
-    try {
-      const userId = req.user?.id || '';
-      const result = await this.notificationsService.deleteAllRead(userId);
-      return {
-        success: true,
-        deletedCount: result.count,
-        message: `Deleted ${result.count} read notifications`
-      };
-    } catch (error) {
-      throw new HttpException(
-        'Failed to delete read notifications',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
