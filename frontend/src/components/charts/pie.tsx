@@ -141,7 +141,11 @@ export default function PieChart({
             outerRadius={80}
             innerRadius={40}
             paddingAngle={2}
-            activeIndex={activeIndex ?? undefined}
+            // recharts 3 removed `activeIndex` - the active sector is tracked
+            // internally from pointer/keyboard state. `activeShape` still
+            // controls how it renders (deprecated in favour of `shape` +
+            // `isActive`, but functional). The local activeIndex state below
+            // still drives the dimming of the non-hovered cells.
             activeShape={renderActiveShape}
             onMouseEnter={(_, index) => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}

@@ -33,9 +33,11 @@ export default function LineChart({
       <ResponsiveContainer width="100%" height="100%">
         <RechartsLineChart
           data={data}
-          onMouseMove={(e: { activePayload?: { dataKey?: string }[] }) => {
-            if (e?.activePayload?.[0]?.dataKey) {
-              setActiveLine(e.activePayload[0].dataKey);
+          // recharts 3 replaced the `activePayload` array on this callback with
+          // a direct `activeDataKey`, which is what this needed anyway.
+          onMouseMove={(state) => {
+            if (typeof state?.activeDataKey === "string") {
+              setActiveLine(state.activeDataKey);
             }
           }}
           onMouseLeave={() => setActiveLine(null)}
