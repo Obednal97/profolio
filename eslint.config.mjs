@@ -9,6 +9,9 @@ const eslintConfig = [
     // `next lint` used to apply these implicitly; the ESLint CLI does not, so
     // build output and dependencies have to be excluded explicitly.
     ignores: [
+      // Reference-only during the migration; deleted once the port lands.
+      "backend/**",
+      "frontend/**",
       ".next/**",
       "out/**",
       "build/**",
@@ -23,6 +26,15 @@ const eslintConfig = [
   },
   ...coreWebVitals,
   ...typescript,
+  {
+    // Node tooling scripts and JS config files are CommonJS by design. These
+    // were outside the linted scope before the restructure, when only the
+    // frontend directory was linted.
+    files: ["scripts/**/*.js", "*.config.js", "*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   {
     // React Compiler rules, new in eslint-config-next 16. They ship as errors
     // and flag 51 pre-existing violations across the app - genuine issues

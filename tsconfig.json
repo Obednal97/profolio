@@ -37,5 +37,15 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "tailwind.config.ts", "tailwind.ts"]
+  "exclude": [
+    "node_modules",
+    "tailwind.config.ts",
+    "tailwind.ts",
+    // backend/ is reference-only during the migration: its NestJS dependencies
+    // are no longer installed, so it cannot type-check and is not part of the
+    // build. It is read while porting modules and deleted once the port lands.
+    "backend",
+    // Left behind by the restructure; removed once nothing references it.
+    "frontend"
+  ]
 }

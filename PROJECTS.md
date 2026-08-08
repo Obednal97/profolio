@@ -172,6 +172,31 @@ Each project should have:
 
 ---
 
+### P2.4: Watchdog Service & Health Monitoring
+
+**Status**: Not Started | **Estimated Effort**: 2-3 weeks | **Complexity**: Medium
+
+**Scope Requirements**:
+
+- [ ] SystemD service monitoring and auto-restart
+- [ ] Health check endpoints (/health, /ready)
+- [ ] Alert system for service failures
+- [ ] Log aggregation and rotation
+- [ ] Performance metrics collection
+- [ ] Database connection monitoring
+
+**Key Decisions Needed**:
+
+- Service monitoring approach (SystemD vs custom)
+- Alert notification system (email, webhook, SMS)
+- Health check intervals and thresholds
+- Log retention policies
+- Metric storage and visualization
+
+**Specification**: `docs/projects/WATCHDOG_SERVICE_SPEC.md` (To be created)
+
+---
+
 ## 🟢 Priority 3: Feature Enhancement Projects
 
 ### P3.1: Email Notification System

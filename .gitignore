@@ -169,3 +169,8 @@ claude-code-limit-tracker/
 *.backup
 *.bak
 *.old
+
+# Vendor-installed agent skill docs (Upstash marketplace integration)
+.agents/
+**/.agents/
+**/.claude/
