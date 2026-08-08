@@ -3,7 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AppController } from "./app.controller";
 import { UsersModule } from "@/app/api/admin/users/users.module";
-import { PrismaService } from "@/common/prisma.service";
+import { CommonModule } from "@/common/common.module";
 import { SettingsModule } from "@/app/api/settings/settings.module";
 import { AssetsModule } from "@/app/api/assets/assets.module";
 import { ApiKeysModule } from "@/app/api/api-keys/api-keys.module";
@@ -25,6 +25,7 @@ import { RateLimitAdminModule } from "@/app/api/admin/rate-limit/rate-limit-admi
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    CommonModule,
     RedisModule,
     RateLimitModule,
     RbacModule,
@@ -43,8 +44,6 @@ import { RateLimitAdminModule } from "@/app/api/admin/rate-limit/rate-limit-admi
     RateLimitAdminModule,
   ],
   controllers: [AppController],
-  providers: [PrismaService],
-  exports: [PrismaService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

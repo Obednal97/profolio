@@ -36,7 +36,12 @@ export class PrismaService
           url: process.env.DATABASE_URL,
         },
       },
-      log: ["query", "error", "info", "warn"],
+      // Query logging writes every statement and its parameters (emails,
+      // transaction amounts) to the log stream. Restrict it to development.
+      log:
+        process.env.NODE_ENV === "production"
+          ? ["error", "warn"]
+          : ["query", "error", "info", "warn"],
       errorFormat: "colorless",
       // Connection pool configuration is handled at the database URL level
       // Format: postgresql://user:password@host:port/database?connection_limit=100&pool_timeout=30

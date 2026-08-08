@@ -5,7 +5,6 @@ import { BotDetectionService } from './bot-detection.service';
 import { RateLimitMiddleware } from './rate-limit.middleware';
 import { CaptchaService } from './captcha.service';
 import { RedisModule } from '@/common/redis/redis.module';
-import { PrismaService } from '@/common/prisma.service';
 
 @Global()
 @Module({
@@ -15,7 +14,6 @@ import { PrismaService } from '@/common/prisma.service';
     BotDetectionService,
     RateLimitMiddleware,
     CaptchaService,
-    PrismaService,
   ],
   exports: [
     RateLimitService,

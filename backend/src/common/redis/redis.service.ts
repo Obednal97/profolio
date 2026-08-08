@@ -7,6 +7,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client!: Redis;
 
+  // Redis is a degradable dependency, not a boot requirement. When it is
+  // unavailable the backend still starts and rate limiting fails open, which
+  // the middleware already handles. Losing rate limiting is a lesser failure
+  // than the whole API being down.
+  private available = false;
+  private connectionErrorLogged = false;
+
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
@@ -25,14 +32,29 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       maxRetriesPerRequest: 3,
       lazyConnect: true,
       connectTimeout: 10000,
+      // Fail commands immediately while disconnected rather than queueing them.
+      // Without this, every request would hang waiting on a Redis that is down.
+      enableOfflineQueue: false,
     });
 
     this.client.on('connect', () => {
+      this.available = true;
+      this.connectionErrorLogged = false;
       this.logger.log('Redis connected successfully');
     });
 
     this.client.on('error', (error) => {
-      this.logger.error('Redis connection error:', error);
+      this.available = false;
+      // ioredis emits 'error' on every retry attempt; log once per outage so a
+      // sustained Redis failure cannot flood the logs.
+      if (!this.connectionErrorLogged) {
+        this.connectionErrorLogged = true;
+        this.logger.error('Redis connection error:', error);
+      }
+    });
+
+    this.client.on('close', () => {
+      this.available = false;
     });
 
     this.client.on('reconnecting', () => {
@@ -42,18 +64,38 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.client.connect();
       await this.client.ping();
+      this.available = true;
       this.logger.log('Redis connection verified with PING');
     } catch (error) {
-      this.logger.error('Failed to connect to Redis:', error);
-      throw error;
+      this.available = false;
+      this.logger.error(
+        'Failed to connect to Redis - starting in degraded mode. ' +
+          'Rate limiting and bot detection will fail open until Redis returns.',
+        error,
+      );
+      // Deliberately not rethrown: ioredis keeps retrying in the background and
+      // the 'connect' handler restores availability when it succeeds.
     }
   }
 
   async onModuleDestroy() {
     if (this.client) {
-      await this.client.quit();
-      this.logger.log('Redis connection closed');
+      try {
+        await this.client.quit();
+        this.logger.log('Redis connection closed');
+      } catch (error) {
+        // A quit() against an already-broken connection must not block shutdown.
+        this.logger.warn('Error closing Redis connection:', error);
+      }
     }
+  }
+
+  /**
+   * Whether Redis is currently usable. Callers that need to distinguish
+   * "no data" from "Redis is down" should check this first.
+   */
+  isAvailable(): boolean {
+    return this.available;
   }
 
   getClient(): Redis {

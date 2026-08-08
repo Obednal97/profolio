@@ -276,17 +276,11 @@ export class AuthController {
       // Rate limiting handled by global RateLimitMiddleware
       const clientIP = this.getClientIP();
 
-      // SECURITY: Use Firebase Admin SDK for proper token verification
-      let firebaseUserInfo;
-      try {
-        firebaseUserInfo = await this.firebaseService.verifyIdToken(
-          body.firebaseToken
-        );
-      } catch (verificationError) {
-
-        // Firebase service already provides proper error handling
-        throw verificationError;
-      }
+      // SECURITY: Use Firebase Admin SDK for proper token verification.
+      // Errors propagate as-is; the Firebase service already maps them.
+      const firebaseUserInfo = await this.firebaseService.verifyIdToken(
+        body.firebaseToken
+      );
 
       // Find or create user
       let user = await this.prisma.user.findUnique({

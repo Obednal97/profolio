@@ -5,7 +5,6 @@ import { YahooFinanceService } from './yahoo-finance.service';
 import { PriceSyncService } from './price-sync.service';
 import { SymbolService } from './symbol.service';
 import { SymbolPopulationService } from './symbol-population.service';
-import { PrismaService } from '@/common/prisma.service';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 
 @Module({
@@ -17,7 +16,6 @@ import { ApiKeysModule } from '../api-keys/api-keys.module';
     PriceSyncService,
     SymbolService,
     SymbolPopulationService,
-    PrismaService,
   ],
   exports: [
     MarketDataService,

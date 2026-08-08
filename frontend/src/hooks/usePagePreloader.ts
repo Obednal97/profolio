@@ -96,9 +96,6 @@ const getCriticalAssetsForRoute = (
     "/app/assetManager": [
       { href: "/_next/static/css/charts.css", as: "style" }, // If you have separate CSS
     ],
-    "/app/portfolio": [
-      { href: "/_next/static/css/portfolio.css", as: "style" },
-    ],
     "/app/dashboard": [
       { href: "/_next/static/css/dashboard.css", as: "style" },
     ],
@@ -116,10 +113,6 @@ const getComponentChunksForRoute = (route: string): string[] => {
       "/_next/static/chunks/framer-motion.js",
       "/_next/static/chunks/recharts.js",
       "/_next/static/chunks/assetManager.js",
-    ],
-    "/app/portfolio": [
-      "/_next/static/chunks/framer-motion.js",
-      "/_next/static/chunks/portfolio.js",
     ],
     "/app/dashboard": [
       "/_next/static/chunks/react-confetti.js",
@@ -324,7 +317,7 @@ export function useAppPagePreloader(
     "/app/assetManager",
     "/app/expenseManager",
     "/app/propertyManager",
-    "/app/portfolio",
+    "/app/dashboard",
     "/app/notifications",
     "/app/settings",
   ];
