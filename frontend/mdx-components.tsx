@@ -1,8 +1,11 @@
 import React from 'react';
 
-// Define our own MDXComponents type for compatibility
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Define our own MDXComponents type for compatibility.
+// `any` is deliberate here: MDX forwards arbitrary attributes to each element
+// component, and narrowing this map makes the 23 components below unassignable
+// (children is required on all but `hr`, while extra props stay untyped).
 type MDXComponents = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: React.ComponentType<any>;
 };
 

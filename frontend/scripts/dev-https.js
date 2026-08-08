@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-var-requires */
 
 const { createServer } = require('https');
 const { parse } = require('url');

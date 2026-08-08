@@ -471,7 +471,7 @@ export default function DashboardPage() {
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <Link
-                href="/app/portfolio"
+                href="/app/assetManager"
                 className="flex items-center justify-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                 data-testid="add-asset-button"
               >
@@ -486,14 +486,14 @@ export default function DashboardPage() {
                 <span className="font-medium">Add Expense</span>
               </Link>
               <Link
-                href="/app/properties"
+                href="/app/propertyManager"
                 className="flex items-center justify-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
               >
                 <i className="fas fa-building text-xl"></i>
                 <span className="font-medium">Add Property</span>
               </Link>
               <Link
-                href="/app/reports"
+                href="/app/assetManager"
                 className="flex items-center justify-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
               >
                 <i className="fas fa-file-alt text-xl"></i>
@@ -513,13 +513,13 @@ export default function DashboardPage() {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Recent Activity
+                Recent Expenses
               </h2>
               <Link
-                href="/app/transactions"
+                href="/app/expenseManager"
                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
-                View all
+                View all expenses
               </Link>
             </div>
             <div className="space-y-3">

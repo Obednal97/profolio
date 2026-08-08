@@ -536,7 +536,11 @@ test.describe('Security & Permissions', () => {
     const logs = await response.json();
     
     // Should have logged the dashboard access
-    expect(logs.some((log: any) => log.action === 'ADMIN_DASHBOARD_ACCESS')).toBeTruthy();
+    expect(
+      logs.some(
+        (log: { action?: string }) => log.action === "ADMIN_DASHBOARD_ACCESS"
+      )
+    ).toBeTruthy();
   });
 });
 

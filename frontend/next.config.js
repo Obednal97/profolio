@@ -57,9 +57,14 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
 
-    // SECURITY: Restrict image domains for production
+    // SECURITY: Restrict remote image sources in production.
+    // `domains` was deprecated in Next 16 in favour of `remotePatterns`, which
+    // also constrains protocol and path rather than just the hostname.
     ...(process.env.NODE_ENV === "production" && {
-      domains: ["localhost", "profolio.app"], // Add your production domains
+      remotePatterns: [
+        { protocol: "https", hostname: "profolio.app" },
+        { protocol: "http", hostname: "localhost" },
+      ],
     }),
 
     // PERFORMANCE: Optimize image loading
@@ -72,12 +77,9 @@ const nextConfig = {
   reactStrictMode: true, // Enable strict mode for better error detection
   trailingSlash: false, // Consistent URL structure
 
-  // Build configuration
-  eslint: {
-    // Development: Allow builds with warnings
-    // Production: Strict checking in CI/CD
-    ignoreDuringBuilds: process.env.NODE_ENV === 'development',
-  },
+  // Build configuration.
+  // The `eslint` key was removed in Next 16 - linting is no longer part of
+  // `next build` and runs via the ESLint CLI instead (see package.json).
   typescript: {
     // Development: Use looser tsconfig for faster iteration
     // Production: Strict checking in CI/CD
@@ -197,71 +199,16 @@ const nextConfig = {
       },
     }),
 
-  // PERFORMANCE: Webpack optimizations
-  webpack: (config, { dev, isServer }) => {
-    // 🚀 PERFORMANCE: Enhanced bundle splitting for better loading performance
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: "all",
-        cacheGroups: {
-          default: false,
-          vendors: false,
-
-          // 🚀 PERFORMANCE: Separate vendor chunks for better caching
-          vendor: {
-            chunks: "all",
-            name: "vendor",
-            test: /[\\/]node_modules[\\/]/,
-            priority: 10,
-          },
-
-          // 🚀 PERFORMANCE: Heavy libraries get their own chunks for better preloading
-          framerMotion: {
-            name: "framer-motion",
-            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
-            chunks: "all",
-            priority: 30,
-          },
-
-          recharts: {
-            name: "recharts",
-            test: /[\\/]node_modules[\\/]recharts[\\/]/,
-            chunks: "all",
-            priority: 30,
-          },
-
-          firebase: {
-            name: "firebase",
-            test: /[\\/]node_modules[\\/]firebase[\\/]/,
-            chunks: "all",
-            priority: 30,
-          },
-
-          // 🚀 PERFORMANCE: React libraries together for better loading
-          react: {
-            name: "react",
-            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-            chunks: "all",
-            priority: 20,
-          },
-        },
-      };
-    }
-
-    // PERFORMANCE: Resolve potential CSS optimization dependencies
-    if (!dev) {
-      // SECURITY: Ensure module resolution works correctly for CSS tools
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        // PERFORMANCE: Handle potential missing CSS optimization dependencies
-        fs: false,
-        path: false,
-        os: false,
-      };
-    }
-
-    return config;
-  },
+  // Bundle splitting is Turbopack's responsibility as of Next 16.
+  //
+  // A hand-tuned webpack `splitChunks` config used to live here, creating named
+  // vendor/framer-motion/recharts/firebase/react chunks. Next 16 builds with
+  // Turbopack, which ignores webpack config entirely, so it was dead weight
+  // that only looked meaningful. Turbopack does this chunking automatically.
+  //
+  // Note the old named chunks were never reachable anyway: webpack emits
+  // hashed filenames, so the `/_next/static/chunks/framer-motion.js` paths in
+  // usePagePreloader never matched a real asset.
 };
 
 // QUALITY: Export with proper error handling

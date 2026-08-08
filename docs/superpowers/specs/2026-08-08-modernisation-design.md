@@ -256,6 +256,31 @@ wave starts.
    deployment must be documented as HTTPS-only. This needs deciding before
    the home-server deployment is trusted.
 
+### Phase 5a - React Compiler lint debt
+
+Added during Phase 3D. eslint-config-next 16 ships a new React Compiler rule
+family as errors, flagging 51 pre-existing violations:
+
+| Rule                                      | Count |
+| ----------------------------------------- | ----- |
+| `react-hooks/set-state-in-effect`         | 29    |
+| `react-hooks/purity`                      | 9     |
+| `react-hooks/static-components`           | 4     |
+| `react-hooks/preserve-manual-memoization` | 3     |
+| `react-hooks/set-state-in-render`         | 2     |
+| `react-hooks/immutability`                | 2     |
+| `react-hooks/refs`                        | 2     |
+
+These are real problems - setState inside effects causes cascading renders,
+impure render breaks memoisation, unstable component identity remounts
+subtrees. Several of them are plausible contributors to the "1-4 second page
+delays" already recorded as a known issue.
+
+They are demoted to warnings in `eslint.config.mjs` so the upgrade could land
+without a large refactor riding along. Work through them by rule, raising each
+back to `error` as it reaches zero. `set-state-in-effect` is the bulk and the
+most likely performance win.
+
 ### Phase 5 - Tests and docs
 
 1. Unit coverage on financial calculations first (`financial.ts`,
