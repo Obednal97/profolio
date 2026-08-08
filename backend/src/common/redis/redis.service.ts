@@ -17,25 +17,43 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    const redisHost = this.configService.get<string>('REDIS_HOST', 'localhost');
-    const redisPort = this.configService.get<number>('REDIS_PORT', 6379);
-    const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
-    const redisDb = this.configService.get<number>('REDIS_DB', 0);
+    // Managed Redis providers (Upstash, Redis Cloud, Heroku) hand out a single
+    // connection URL rather than discrete host/port/password, so accept either
+    // form. Without this the discrete-fields-only version would silently fall
+    // back to localhost:6379 on a hosted deployment and never connect.
+    const redisUrl =
+      this.configService.get<string>('REDIS_URL') ||
+      this.configService.get<string>('KV_URL');
 
-    this.logger.log(`Connecting to Redis at ${redisHost}:${redisPort}/${redisDb}`);
-
-    this.client = new Redis({
-      host: redisHost,
-      port: redisPort,
-      password: redisPassword,
-      db: redisDb,
+    const commonOptions = {
       maxRetriesPerRequest: 3,
       lazyConnect: true,
       connectTimeout: 10000,
       // Fail commands immediately while disconnected rather than queueing them.
       // Without this, every request would hang waiting on a Redis that is down.
       enableOfflineQueue: false,
-    });
+    };
+
+    if (redisUrl) {
+      // Never log the URL itself - it embeds the password.
+      this.logger.log('Connecting to Redis via connection URL');
+      this.client = new Redis(redisUrl, commonOptions);
+    } else {
+      const redisHost = this.configService.get<string>('REDIS_HOST', 'localhost');
+      const redisPort = this.configService.get<number>('REDIS_PORT', 6379);
+      const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
+      const redisDb = this.configService.get<number>('REDIS_DB', 0);
+
+      this.logger.log(`Connecting to Redis at ${redisHost}:${redisPort}/${redisDb}`);
+
+      this.client = new Redis({
+        host: redisHost,
+        port: redisPort,
+        password: redisPassword,
+        db: redisDb,
+        ...commonOptions,
+      });
+    }
 
     this.client.on('connect', () => {
       this.available = true;
