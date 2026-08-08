@@ -256,6 +256,31 @@ wave starts.
    deployment must be documented as HTTPS-only. This needs deciding before
    the home-server deployment is trusted.
 
+### Phase 4b - Found during Phase 4, not yet fixed
+
+**Account deletion is blocked by a missing cascade.** `Asset.userId` has no
+`onDelete: Cascade`, so `DELETE FROM "User"` fails with a foreign key
+violation while the user holds any asset. Reproduced while cleaning up test
+data. The app exposes a delete-account flow, so this needs a schema change and
+migration covering every user-owned relation.
+
+**`USE_MOCK_API` auto-enables silently.** `mockApi.ts` turns itself on when
+neither `NEXT_PUBLIC_API_URL` nor `BACKEND_URL` is set, switching the app to
+localStorage-backed fake data with no visible signal. In a misconfigured
+deployment a user could enter real financial data into what is effectively a
+scratch pad. It should fail loudly instead of guessing.
+
+**Seeded symbol prices are hardcoded.** `symbol-population.service.addDemoAssets`
+inserts fixed prices (SPY 545.21, BTC 67842.30, ETH 3789.45) into the Symbol
+table. These are overwritten by the real price sync now, but until the first
+sync they read as genuine quotes.
+
+**`current_value` semantics are undocumented and inconsistent.** Creation takes
+whatever the user supplies while price sync writes `quantity * price`, so the
+field means "total position value". This is not stated anywhere and the
+dashboard initially got it wrong. Worth an explicit type-level or comment
+contract.
+
 ### Phase 5a - React Compiler lint debt
 
 Added during Phase 3D. eslint-config-next 16 ships a new React Compiler rule
