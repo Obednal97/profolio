@@ -72,8 +72,14 @@ export class PriceSyncService {
     name: 'price-sync',
     timeZone: 'UTC'
   })
-  async syncAllPrices(): Promise<void> {
-    if (!this.startupCompleted) {
+  async syncAllPrices(options?: { triggeredExternally?: boolean }): Promise<void> {
+    // The startup delay exists so a long-running process does not hammer the
+    // price API the moment it boots. It is meaningless - and actively harmful -
+    // when the run is triggered by an external scheduler: a serverless
+    // invocation cold-starts, finds this flag still false (it is set by a 30s
+    // setTimeout in the constructor) and returns without doing anything, so the
+    // cron silently never syncs. Externally triggered runs skip the gate.
+    if (!options?.triggeredExternally && !this.startupCompleted) {
       this.logger.log('⏸️ Price sync service not ready - skipping scheduled run');
       return;
     }
@@ -83,7 +89,9 @@ export class PriceSyncService {
       return;
     }
 
-    // Check if we've had a recent successful sync (last 3 hours)
+    // Skip if a recent sync already succeeded, to avoid over-syncing. This is
+    // per-process state, so on serverless it is effectively always empty and
+    // the guard does nothing - the cron schedule is the real rate limiter.
     if (this.lastSuccessfulSync && (Date.now() - this.lastSuccessfulSync.getTime()) < (3 * 60 * 60 * 1000)) {
       this.logger.log('⏸️ Recent successful sync found - skipping to prevent over-syncing');
       return;

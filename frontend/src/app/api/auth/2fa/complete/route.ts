@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME, authCookieOptions } from '@/lib/authCookie';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
@@ -27,12 +28,7 @@ export async function POST(req: NextRequest) {
     // Set the token in cookies if successful
     if (data.token) {
       const cookieStore = await cookies();
-      cookieStore.set('token', data.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24, // 24 hours
-      });
+      cookieStore.set(AUTH_COOKIE_NAME, data.token, authCookieOptions(req));
     }
 
     return NextResponse.json(data);

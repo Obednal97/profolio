@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME } from '@/lib/authCookie';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
@@ -7,7 +8,7 @@ export async function GET() {
   try {
     // Get the token from cookies
     const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
     if (!token) {
       return NextResponse.json(

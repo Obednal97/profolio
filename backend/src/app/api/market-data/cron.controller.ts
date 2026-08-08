@@ -46,7 +46,10 @@ export class CronController {
     }
 
     this.logger.log('Cron-triggered price sync starting');
-    await this.priceSyncService.syncAllPrices();
+    // triggeredExternally bypasses the in-process startup delay, which a cold
+    // serverless invocation would otherwise never clear - the run would return
+    // immediately and the cron would silently do nothing.
+    await this.priceSyncService.syncAllPrices({ triggeredExternally: true });
 
     return { success: true, ranAt: new Date().toISOString() };
   }

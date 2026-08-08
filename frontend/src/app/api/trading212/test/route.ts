@@ -27,7 +27,17 @@ function getUserFromToken(request: NextRequest): { userId: string; email: string
       };
     }
 
-    const decoded = verify(token, process.env.JWT_SECRET || 'fallback-secret') as UserJwtPayload;
+    // Fail closed when JWT_SECRET is absent. This previously fell back to the
+    // literal 'fallback-secret', and JWT_SECRET is not set in the Next runtime
+    // on Vercel - so any token signed with that publicly-known string was
+    // accepted, with an attacker-chosen userId.
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('JWT_SECRET is not configured; refusing to verify token');
+      return null;
+    }
+
+    const decoded = verify(token, jwtSecret) as UserJwtPayload;
     
     return {
       userId: decoded.userId || decoded.id || '',

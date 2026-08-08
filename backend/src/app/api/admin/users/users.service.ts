@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@/common/prisma.service';
 import { User } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -46,7 +47,16 @@ export class UsersService {
   }
 
   async create(data: CreateUserDto): Promise<AdminUserView> {
-    return this.prisma.user.create({ data, select: ADMIN_USER_SELECT });
+    // The password was previously written straight through to the database in
+    // plaintext, despite the DTO documenting it as "will be hashed". Cost 12
+    // matches AuthService.signUp so admin-created and self-registered accounts
+    // are indistinguishable at rest.
+    const password = await bcrypt.hash(data.password, 12);
+
+    return this.prisma.user.create({
+      data: { ...data, password },
+      select: ADMIN_USER_SELECT,
+    });
   }
 
   async delete(id: string): Promise<AdminUserView> {
