@@ -8,9 +8,14 @@ import {
   Logger,
   Post,
   Param,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '@/types/common';
+import { RoleGuard } from '@/common/rbac/role.guard';
+import { RequireAdmin } from '@/common/rbac/role.guard';
 import { MarketDataService } from './market-data.service';
 import { SymbolService } from './symbol.service';
 import { SymbolPopulationService } from './symbol-population.service';
@@ -18,7 +23,10 @@ import { PrismaService } from '@/common/prisma.service';
 
 @ApiTags('market-data')
 @Controller('market-data')
-@UseGuards(JwtAuthGuard)
+// RoleGuard is required alongside JwtAuthGuard for @RequireAdmin() to be
+// enforced; the two write endpoints below were documented as admin-only but
+// carried no role check.
+@UseGuards(JwtAuthGuard, RoleGuard)
 export class MarketDataController {
   private readonly logger = new Logger(MarketDataController.name);
 
@@ -176,11 +184,11 @@ export class MarketDataController {
   }
 
   @Post('populate')
+  @RequireAdmin()
   @ApiOperation({ summary: 'Populate database with initial symbols (admin only)' })
   @ApiResponse({ status: 200, description: 'Population started' })
   async populateSymbols() {
     try {
-      // In a real app, this would be protected by admin authentication
       this.symbolPopulationService.populateInitialSymbols();
       
       return {
@@ -197,11 +205,11 @@ export class MarketDataController {
   }
 
   @Post('update-prices')
+  @RequireAdmin()
   @ApiOperation({ summary: 'Update all symbol prices (admin only)' })
   @ApiResponse({ status: 200, description: 'Price update started' })
   async updatePrices() {
     try {
-      // In a real app, this would be protected by admin authentication
       this.symbolPopulationService.updateAllSymbolPrices();
       
       return {
@@ -284,8 +292,24 @@ export class MarketDataController {
   @Get('portfolio-history/:userId')
   async getPortfolioHistory(
     @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
     @Query('days') days?: string,
   ) {
+    // The :userId path parameter used to be trusted outright, so any
+    // authenticated user could read any other user's portfolio history simply
+    // by changing the id in the URL. The path segment is kept for backwards
+    // compatibility with existing callers but is now only permitted when it
+    // matches the caller, unless the caller is an administrator.
+    const callerId = req.user?.id ?? '';
+    const callerRole = req.user?.role;
+    const isAdmin = callerRole === 'ADMIN' || callerRole === 'SUPER_ADMIN';
+
+    if (userId !== callerId && !isAdmin) {
+      throw new ForbiddenException(
+        'You may only read your own portfolio history',
+      );
+    }
+
     try {
       const daysToFetch = days ? parseInt(days) : 30;
       const portfolioHistory = await this.getPortfolioHistoricalData(userId, daysToFetch);

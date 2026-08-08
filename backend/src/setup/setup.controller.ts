@@ -6,9 +6,11 @@ import {
   HttpException, 
   HttpStatus,
   ValidationPipe,
-  UsePipes
+  UsePipes,
+  UseGuards
 } from '@nestjs/common';
 import { SetupService } from './setup.service';
+import { SetupEnabledGuard } from './setup.guard';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 export interface SetupConfigDto {
@@ -38,6 +40,9 @@ export interface SetupConfigDto {
 }
 
 @ApiTags('setup')
+// Unauthenticated by necessity (it runs before any user exists), so the whole
+// controller is gated on ENABLE_SETUP_WIZARD and returns 404 when off.
+@UseGuards(SetupEnabledGuard)
 @Controller('setup')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class SetupController {
