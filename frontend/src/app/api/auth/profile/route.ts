@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME } from "@/lib/authCookie";
 
 // Auto-detect backend URL with proper protocol
 const getBackendUrl = () => {
@@ -15,12 +16,19 @@ const BACKEND_URL = getBackendUrl();
 
 export async function GET(request: NextRequest) {
   try {
-    // Get authorization header from the request
-    const authHeader = request.headers.get("authorization");
+    // Accept either an explicit Authorization header or the httpOnly auth
+    // cookie, matching every other proxy route. This route previously required
+    // the header, so it rejected cookie-authenticated callers - including the
+    // session check that runs on page load.
+    let authHeader = request.headers.get("authorization");
+    if (!authHeader) {
+      const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+      if (token) authHeader = `Bearer ${token}`;
+    }
 
     if (!authHeader) {
       return NextResponse.json(
-        { success: false, error: "Authorization header required" },
+        { success: false, error: "Authorization required" },
         { status: 401 }
       );
     }
@@ -60,13 +68,17 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    // Get authorization header and body
-    const authHeader = request.headers.get("authorization");
+    // Header or httpOnly cookie, as with GET above.
+    let authHeader = request.headers.get("authorization");
+    if (!authHeader) {
+      const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+      if (token) authHeader = `Bearer ${token}`;
+    }
     const body = await request.json();
 
     if (!authHeader) {
       return NextResponse.json(
-        { success: false, error: "Authorization header required" },
+        { success: false, error: "Authorization required" },
         { status: 401 }
       );
     }

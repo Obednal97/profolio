@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AUTH_COOKIE_NAME, authCookieOptions } from '@/lib/authCookie';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
@@ -7,7 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Forward the sign-in request to the backend
-    const response = await fetch(`${BACKEND_URL}/auth/signin`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/signin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,15 +34,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Normal sign-in: set token in cookie if provided
+    // Normal sign-in: set token in cookie if provided.
+    // Cookie name and flags come from the shared helper - this route used to
+    // set 'token', which none of the proxy routes read.
     if (data.token) {
       const res = NextResponse.json(data);
-      res.cookies.set('token', data.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24, // 24 hours
-      });
+      res.cookies.set(AUTH_COOKIE_NAME, data.token, authCookieOptions(req));
       return res;
     }
 

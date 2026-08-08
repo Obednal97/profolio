@@ -19,42 +19,35 @@ export interface AuthResponse {
 
 export interface SignUpResponse {
   token: string;
+  user?: {
+    id: string;
+    email: string;
+    name?: string;
+  };
 }
 
-// Secure token management for httpOnly cookies
-function getSecureToken(): string | null {
-  if (typeof window !== "undefined" && window.isSecureContext) {
-    // Read from httpOnly cookie set by server
-    const cookieValue = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth-token="))
-      ?.split("=")[1];
-    return cookieValue || null;
-  }
-  return null;
-}
-
-function setSecureToken(token: string): void {
-  // Note: httpOnly cookies must be set by the server
-  // This is a client-side fallback for development
-  if (typeof window !== "undefined") {
-    if (process.env.NODE_ENV === "development") {
-      // Development: Use secure cookie attributes
-      document.cookie = `auth-token=${token}; Secure; SameSite=Strict; Path=/; Max-Age=86400`;
-    } else {
-      // Production: Token should be set by server as httpOnly cookie
-      console.warn(
-        "Token should be set by server as httpOnly cookie in production"
-      );
-    }
-  }
-}
-
-function clearSecureToken(): void {
-  if (typeof window !== "undefined") {
-    // Clear the cookie by setting expired date
-    document.cookie =
-      "auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict";
+// Token storage is the server's job.
+//
+// The auth token lives in an httpOnly `auth-token` cookie issued by the Next
+// API routes under /api/auth/*. Being httpOnly it is deliberately invisible to
+// JavaScript, and every request that needs it goes through a proxy route that
+// reads the cookie server-side.
+//
+// The previous implementation could not work: it tried to *write* the cookie
+// from the client (only when NODE_ENV was development, so production stored
+// nothing at all), and tried to *read* an httpOnly cookie back out of
+// document.cookie, which is impossible by definition. It additionally gated
+// reads on window.isSecureContext, false on a plain-HTTP LAN address - exactly
+// how a self-hosted install is reached.
+//
+// Sign-out clears the cookie through the API rather than from the client, for
+// the same reason.
+async function clearSecureToken(): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    await fetch("/api/auth/signout", { method: "POST" });
+  } catch {
+    // Best-effort: local state is cleared regardless by the caller.
   }
 }
 
@@ -96,9 +89,15 @@ function setSecureUserData(user: Partial<LocalUser>): void {
 function clearSecureUserData(): void {
   if (typeof window !== "undefined") {
     sessionStorage.removeItem("user-profile");
-    localStorage.removeItem("demo-mode"); // Demo mode flag is safe in localStorage
+    localStorage.removeItem("demo-mode");
+    // Clear the matching cookie too, otherwise the proxy routes keep serving
+    // demo data after the user has signed out of demo mode.
+    document.cookie = "demo-mode=; Path=/; Max-Age=0; SameSite=Lax";
   }
 }
+
+/** Demo sessions last 24 hours, matching the documented behaviour. */
+const DEMO_SESSION_MAX_AGE = 60 * 60 * 24;
 
 // Generate secure demo session token
 function generateDemoSessionToken(): string {
@@ -126,50 +125,54 @@ class LocalAuthService {
   }
 
   private getBaseUrl(): string {
-    // Use environment variable if available
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-
-    // Auto-detect protocol and host for production
-    if (typeof window !== "undefined") {
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-
-      // In production, use same protocol as frontend
-      if (protocol === "https:") {
-        // For HTTPS, assume backend is on port 3001 with HTTPS
-        return `https://${hostname}:3001`;
-      }
-    }
-
-    // Development fallback
-    return "http://localhost:3001";
+    // Same-origin. Auth requests must go through the Next API routes under
+    // /api/auth/*, because those are what issue the httpOnly auth cookie.
+    // Calling the backend directly - as this used to, via NEXT_PUBLIC_API_URL
+    // or a guessed https://<host>:3001 - bypasses the route that sets the
+    // cookie, so a "successful" sign-in left the browser with no session.
+    return "";
   }
 
   private initializeFromStorage() {
     if (typeof window === "undefined") return;
 
-    const token = getSecureToken();
+    // The token is in an httpOnly cookie and cannot be read here, so the
+    // cached profile is a hint, not proof. It is shown immediately to avoid a
+    // flash of signed-out UI, then confirmed against the server.
     const userData = getSecureUserData();
+    if (!userData?.email) return;
 
-    if (token && userData) {
-      try {
-        this.currentUser = { ...(userData as LocalUser), token };
+    this.currentUser = { ...(userData as LocalUser), token: "" };
+    this.notifyListeners();
+
+    void this.confirmSession();
+  }
+
+  /**
+   * Verifies the httpOnly cookie is still valid. Signs the user out locally if
+   * the server rejects it, so a stale cached profile cannot masquerade as a
+   * live session.
+   */
+  private async confirmSession(): Promise<void> {
+    try {
+      const response = await fetch("/api/auth/profile", {
+        credentials: "same-origin",
+      });
+      if (response.status === 401 || response.status === 403) {
+        await this.clearStorage();
+        this.currentUser = null;
         this.notifyListeners();
-      } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to initialize from stored data:", error);
-        }
-        this.clearStorage();
       }
+    } catch {
+      // Network failure: keep the cached profile rather than signing the user
+      // out because the API was briefly unreachable.
     }
   }
 
-  private clearStorage() {
+  private async clearStorage() {
     if (typeof window === "undefined") return;
 
-    clearSecureToken();
+    await clearSecureToken();
     clearSecureUserData();
   }
 
@@ -182,6 +185,8 @@ class LocalAuthService {
 
     const response = await fetch(url, {
       ...options,
+      // Required so the browser sends and stores the httpOnly auth cookie.
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
         ...options.headers,
@@ -215,15 +220,18 @@ class LocalAuthService {
         }
       );
 
+      // Use the id the server assigned. This previously generated a random
+      // UUID client-side, so the in-app user id never matched the database
+      // record it was supposed to identify.
       const user: LocalUser = {
-        id: crypto.randomUUID(), // Generate proper unique ID
-        email,
-        name: displayName,
+        id: response.user?.id ?? "",
+        email: response.user?.email ?? email,
+        name: response.user?.name ?? displayName,
         token: response.token,
       };
 
-      // Store authentication data securely
-      setSecureToken(response.token);
+      // The token itself is already stored by the API route as an httpOnly
+      // cookie; only the non-sensitive profile is cached here.
       setSecureUserData(user);
 
       this.currentUser = user;
@@ -249,15 +257,16 @@ class LocalAuthService {
         }
       );
 
+      // Use the id the server assigned rather than a client-generated UUID.
       const user: LocalUser = {
-        id: crypto.randomUUID(), // Generate proper unique ID
-        email,
-        name: email.split("@")[0] || "User", // Provide default name from email
+        id: response.user?.id ?? "",
+        email: response.user?.email ?? email,
+        name: response.user?.name ?? email.split("@")[0] ?? "User",
         token: response.token,
       };
 
-      // Store authentication data securely
-      setSecureToken(response.token);
+      // The token itself is already stored by the API route as an httpOnly
+      // cookie; only the non-sensitive profile is cached here.
       setSecureUserData(user);
 
       this.currentUser = user;
@@ -356,8 +365,16 @@ class LocalAuthService {
     return this.currentUser;
   }
 
+  /**
+   * The token for the current session, if this tab performed the sign-in.
+   *
+   * Returns null after a page reload: the token lives in an httpOnly cookie
+   * that JavaScript cannot read. Callers that need authenticated data should
+   * go through a /api/* proxy route, which reads the cookie server-side,
+   * rather than attaching a bearer token themselves.
+   */
   getToken(): string | null {
-    return this.currentUser?.token || getSecureToken();
+    return this.currentUser?.token || null;
   }
 
   onAuthStateChange(callback: (user: LocalUser | null) => void): () => void {
@@ -384,13 +401,17 @@ class LocalAuthService {
       token: generateDemoSessionToken(),
     };
 
-    // Store demo token securely and set demo mode flag
-    setSecureToken(demoUser.token);
+    // Demo mode is entirely client-side - there is no backend session and no
+    // real credential, so nothing sensitive is being stored here.
     setSecureUserData(demoUser);
 
-    // Demo mode flag is safe in localStorage (non-sensitive)
     if (typeof window !== "undefined") {
       localStorage.setItem("demo-mode", "true");
+      // Also set as a cookie: the /api/* proxy routes decide whether to serve
+      // demo data by reading `demo-mode` server-side, and cannot see
+      // localStorage. Without this the flag was invisible to every route that
+      // checks it.
+      document.cookie = `demo-mode=true; Path=/; Max-Age=${DEMO_SESSION_MAX_AGE}; SameSite=Lax`;
     }
 
     this.currentUser = demoUser;

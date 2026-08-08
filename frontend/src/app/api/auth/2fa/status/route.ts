@@ -16,7 +16,7 @@ export async function GET() {
       );
     }
 
-    const response = await fetch(`${BACKEND_URL}/auth/2fa/status`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/2fa/status`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

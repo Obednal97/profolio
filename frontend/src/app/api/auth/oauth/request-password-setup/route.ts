@@ -17,7 +17,7 @@ export async function POST() {
     }
 
     // Forward the request to the backend
-    const response = await fetch(`${BACKEND_URL}/auth/oauth/request-password-setup`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/oauth/request-password-setup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

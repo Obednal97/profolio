@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Forward the request to the backend (no auth required, token validates identity)
-    const response = await fetch(`${BACKEND_URL}/auth/oauth/set-password`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/oauth/set-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

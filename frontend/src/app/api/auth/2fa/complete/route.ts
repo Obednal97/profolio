@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const response = await fetch(`${BACKEND_URL}/auth/2fa/complete`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/2fa/complete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
