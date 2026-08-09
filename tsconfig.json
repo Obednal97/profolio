@@ -41,11 +41,11 @@
     "node_modules",
     "tailwind.config.ts",
     "tailwind.ts",
-    // backend/ is reference-only during the migration: its NestJS dependencies
-    // are no longer installed, so it cannot type-check and is not part of the
-    // build. It is read while porting modules and deleted once the port lands.
+    // Both directories were deleted from the repository when the backend was
+    // merged in. They may still exist locally as untracked build output,
+    // .vercel links and .env files, so they stay excluded to keep a stale
+    // checkout from being type-checked.
     "backend",
-    // Left behind by the restructure; removed once nothing references it.
     "frontend"
   ]
 }

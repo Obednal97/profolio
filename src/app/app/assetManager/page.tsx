@@ -373,33 +373,11 @@ export default function AssetManager() {
         console.log(
           `✅ Loaded ${data.data.length} historical data points for ${timeframe} period`
         );
-      } else {
-        // Fallback: Generate simple data points for current portfolio value
-        console.log(
-          "📊 No historical data available, using current portfolio snapshot"
-        );
-        const fallbackData = [];
-        const currentDate = new Date();
-        const daysBack = timeframe === "max" ? 30 : parseInt(timeframe);
-
-        // Create a few data points showing current total value
-        for (
-          let i = daysBack;
-          i >= 0;
-          i -= Math.max(1, Math.floor(daysBack / 10))
-        ) {
-          const date = new Date(currentDate);
-          date.setDate(date.getDate() - i);
-
-          fallbackData.push({
-            date: date.toISOString(),
-            total_value: Math.round(currentTotalValue * 100), // Convert to cents
-          });
-        }
-
-        if (!controller.signal.aborted) {
-          setChartData(fallbackData);
-        }
+      } else if (!controller.signal.aborted) {
+        // No recorded history, so there is nothing to draw. This used to
+        // manufacture a flat line by repeating today's total back across the
+        // window, which looks exactly like a portfolio that never moved.
+        setChartData([]);
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -412,32 +390,12 @@ export default function AssetManager() {
         console.error("Chart data fetch error:", error);
       }
 
-      // 🚀 PERFORMANCE: Use cached total value for error fallback
-      const currentTotalValue = metrics?.totalValue || 0;
-
-      // Fallback for errors: Create simple progression
-      const fallbackData = [];
-      const currentDate = new Date();
-      const daysBack = timeframe === "max" ? 30 : parseInt(timeframe);
-
-      for (
-        let i = daysBack;
-        i >= 0;
-        i -= Math.max(1, Math.floor(daysBack / 5))
-      ) {
-        const date = new Date(currentDate);
-        date.setDate(date.getDate() - i);
-
-        fallbackData.push({
-          date: date.toISOString(),
-          total_value: Math.round(currentTotalValue * 100),
-        });
-      }
-
+      // A failed request means we do not know the history, which is not the
+      // same as knowing it was flat. The chart shows nothing rather than a
+      // fabricated progression built from today's total.
       if (!controller.signal.aborted) {
-        setChartData(fallbackData);
+        setChartData([]);
       }
-      console.log(`📊 Using fallback data due to API error: ${error}`);
     } finally {
       if (!controller.signal.aborted) {
         setChartLoading(false);

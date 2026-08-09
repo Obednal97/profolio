@@ -1,59 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verify, JwtPayload } from 'jsonwebtoken';
+import { getSession } from '@/server/auth/session';
 import { Trading212Service } from '@/lib/trading212Service';
-
-interface UserJwtPayload extends JwtPayload {
-  userId?: string;
-  id?: string;
-  email: string;
-}
-
-function getUserFromToken(request: NextRequest): { userId: string; email: string; isDemo: boolean } | null {
-  try {
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader?.startsWith('Bearer ')) {
-      return null;
-    }
-
-    const token = authHeader.slice(7);
-    
-    // Handle demo token specifically
-    if (token === 'demo-token-secure-123') {
-      return {
-        userId: 'demo-user-id',
-        email: 'demo@profolio.com',
-        isDemo: true
-      };
-    }
-
-    // Fail closed when JWT_SECRET is absent. This previously fell back to the
-    // literal 'fallback-secret', and JWT_SECRET is not set in the Next runtime
-    // on Vercel - so any token signed with that publicly-known string was
-    // accepted, with an attacker-chosen userId.
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      console.error('JWT_SECRET is not configured; refusing to verify token');
-      return null;
-    }
-
-    const decoded = verify(token, jwtSecret) as UserJwtPayload;
-    
-    return {
-      userId: decoded.userId || decoded.id || '',
-      email: decoded.email,
-      isDemo: false
-    };
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const user = getUserFromToken(request);
-    
+    // One session resolver for the whole application. These two routes used
+    // to verify the JWT themselves, which is how one of them ended up trusting
+    // a hardcoded fallback secret.
+    const user = await getSession();
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -76,7 +31,7 @@ export async function POST(request: NextRequest) {
       accountInfo: {
         id: testResult.accountInfo.id,
         currencyCode: testResult.accountInfo.currencyCode,
-        userId: user.userId,
+        userId: user.id,
         isDemo: user.isDemo,
       },
       apiCapabilities: {

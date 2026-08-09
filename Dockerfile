@@ -1,10 +1,14 @@
-# Frontend image (Next.js).
-# Build context is the REPOSITORY ROOT so pnpm can see the workspace manifests:
-#   docker build -f frontend/Dockerfile .
+# Profolio: one Next.js application, front and back.
+#
+# Build from the repository root:
+#   docker build -t profolio .
+#
+# The separate backend image is gone - the NestJS service was merged into this
+# application, so there is a single deployable and a single port.
 
 FROM node:22-bookworm-slim AS base
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
+ && apt-get install -y --no-install-recommends ca-certificates openssl \
  && rm -rf /var/lib/apt/lists/*
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -14,15 +18,16 @@ WORKDIR /app
 
 # ---- dependencies -----------------------------------------------------------
 FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY backend/package.json backend/
-COPY frontend/package.json frontend/
-RUN pnpm install --frozen-lockfile --filter frontend
+COPY package.json pnpm-lock.yaml ./
+# The postinstall script runs `prisma generate`, which needs the schema.
+COPY prisma/ prisma/
+COPY prisma.config.ts ./
+RUN pnpm install --frozen-lockfile
 
 
 # ---- build ------------------------------------------------------------------
 FROM deps AS build
-COPY frontend/ frontend/
+COPY . .
 
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time, so
 # they must be present here rather than only at runtime. Changing one requires
@@ -31,19 +36,16 @@ ARG NEXT_PUBLIC_AUTH_MODE=local
 ARG NEXT_PUBLIC_ENABLE_DEMO_MODE=true
 ARG NEXT_PUBLIC_SHOW_LANDING_PAGE=true
 ARG NEXT_PUBLIC_ALLOW_REGISTRATION=true
-ARG NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_AUTH_MODE=$NEXT_PUBLIC_AUTH_MODE
 ENV NEXT_PUBLIC_ENABLE_DEMO_MODE=$NEXT_PUBLIC_ENABLE_DEMO_MODE
 ENV NEXT_PUBLIC_SHOW_LANDING_PAGE=$NEXT_PUBLIC_SHOW_LANDING_PAGE
 ENV NEXT_PUBLIC_ALLOW_REGISTRATION=$NEXT_PUBLIC_ALLOW_REGISTRATION
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 ENV DOCKER_BUILD=true
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-WORKDIR /app/frontend
-RUN pnpm build
+RUN pnpm exec prisma generate && pnpm build
 
 
 # ---- runtime ----------------------------------------------------------------
@@ -53,14 +55,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# The standalone bundle carries its own minimal node_modules, so nothing is
-# installed here. Paths are workspace-relative because outputFileTracingRoot
-# was set to the repo root.
-COPY --from=build --chown=node:node /app/frontend/.next/standalone ./
-COPY --from=build --chown=node:node /app/frontend/.next/static ./frontend/.next/static
-COPY --from=build --chown=node:node /app/frontend/public ./frontend/public
+# The standalone bundle carries its own minimal node_modules.
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
+# Migrations are applied by the entrypoint, so the schema and the CLI have to
+# be present in the runtime image as well as at build time.
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/prisma.config.ts ./
+COPY --from=build --chown=node:node /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
+COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
+COPY --chown=node:node docker-entrypoint.sh ./
 
 USER node
 EXPOSE 3000
 
-CMD ["node", "frontend/server.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["node", "server.js"]

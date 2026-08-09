@@ -10,25 +10,26 @@ PostgreSQL.
 
 **Version**: 1.18.0 · **Default branch**: `main`
 
-## ⚠️ Read this first: the repository is mid-migration
+## ⚠️ Read this first: two branches, two structures
 
-The app is being collapsed from two services (a Next.js frontend plus a
-separate NestJS backend) into **one Next.js application**. Which structure you
-are looking at depends on the branch.
+The separate NestJS backend has been merged into the Next.js application. What
+you are looking at depends on the branch.
 
-| Branch            | Structure                                                                                        |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
-| `main`            | Two packages: `frontend/` and `backend/`, pnpm workspace. This is what is deployed.              |
-| `feat/single-app` | Single app at the repo root. `backend/` is **reference-only** and excluded from tsconfig/eslint. |
+| Branch            | Structure                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `main`            | Two packages, `frontend/` and `backend/`, in a pnpm workspace. Still what is deployed today. |
+| `feat/single-app` | **One application at the repo root.** `backend/` is gone. 53 route handlers, no proxies.     |
 
-Design and rationale: `docs/superpowers/specs/2026-08-08-single-app-migration-design.md`.
-Migration status is at the bottom of that file — **read it before continuing the
-port**.
+Design, rationale and a per-stage record of what was fixed:
+`docs/superpowers/specs/2026-08-08-single-app-migration-design.md`.
 
-On `feat/single-app`, `backend/src` still exists purely as the source to port
-from. Its dependencies are not installed, so it cannot compile. Do not try to
-fix its type errors; read it, port the logic to `src/server/`, and it gets
-deleted at the end.
+`backend/` and `frontend/` may still exist in a local checkout as untracked
+build output, `.vercel` links and `.env` files. Both are excluded from tsconfig
+and eslint. Nothing reads them; they are safe to delete.
+
+What remains before `feat/single-app` can replace `main`: create the Vercel
+project against a Neon branch, set the environment variables, and work through
+the manual checklist in the migration spec.
 
 ## Critical warnings
 
@@ -45,7 +46,7 @@ deleted at the end.
 
 ## Commands
 
-On `feat/single-app`, everything runs from the repo root:
+Everything runs from the repo root:
 
 ```bash
 pnpm dev                 # dev server (Next 16 + Turbopack)
@@ -81,9 +82,14 @@ src/
     http/handler.ts      withRoute(): validation + auth + error mapping
     money.ts             MoneyUtils
     crypto/encryption.ts AES-256-GCM for 2FA secrets
-    modules/<name>/      ported domain services
+    demo.ts              demo-mode detection, shared with session.ts
+    modules/<name>/      domain services: one per former NestJS module
   components/ hooks/ lib/
 ```
+
+`src/server/modules/` holds auth, assets, expenses, properties, market-data,
+notifications, api-keys, billing and admin. Each is `service.ts` plus
+`schemas.ts`, and the route handlers under `src/app/api/` are thin wrappers.
 
 ### Route handlers
 
@@ -133,9 +139,22 @@ Each of these has produced a live defect. Treat them as load-bearing.
   self-hosted installs run on plain HTTP LAN addresses.
 - **Demo mode is signalled by a `demo-mode` cookie,** not localStorage. Server
   code cannot see localStorage.
+- **Price sync writes `quantity * price`, per asset.** It cannot use
+  `updateMany`, because the quantity differs per holding. Writing the unit
+  price straight into `current_value` repriced every synced holding to a
+  hundredth of its unit price, and that is exactly what it used to do.
+- **Third-party API keys use a different encryption envelope** from 2FA
+  secrets: `server/modules/api-keys/crypto.ts` versus
+  `server/crypto/encryption.ts`. They are not interchangeable, and both derive
+  their key lazily so that importing a route module cannot throw.
+- **Expense amounts are cents on the wire**, unlike assets and properties which
+  use dollars. The expense form converts in both directions; the others do not.
 - **Never fabricate financial data.** No mock prices, no invented trends, no
   placeholder portfolio values. If data is unavailable, say so. Fabricated
-  numbers in a portfolio tracker are worse than an error.
+  numbers in a portfolio tracker are worse than an error. Three separate places
+  did this - a sine wave for the performance chart, a flat line for the asset
+  manager, and `price: 0` when the market-data proxy failed - and all three are
+  gone.
 
 ## Type safety
 
@@ -146,11 +165,13 @@ Each of these has produced a live defect. Treat them as load-bearing.
 
 ## Testing reality
 
-Be honest about the safety net: there is almost none. Two backend jest specs
-(27 tests, Redis and Prisma mocked) and Playwright e2e that is largely skipped
-or written against UI that was never built. **Every recent repair was verified
-by hand.** After any significant change, verify by running the thing, not by
-reading it — and say plainly what you ran.
+Be honest about the safety net: there is almost none. The backend jest specs
+went with the backend, and the Playwright e2e is largely skipped or written
+against UI that was never built. **Every repair in this migration was verified
+by hand**, against a throwaway Postgres in Docker driven with curl — 191
+assertions across the four stages, and each one found something. After any
+significant change, verify by running the thing, not by reading it, and say
+plainly what you ran.
 
 The manual checklist that matters is in the migration spec.
 
@@ -163,16 +184,29 @@ Two Vercel projects on team `obednal97s-projects` (never the Fanvue team):
 | `profolio-frontend` | profolio-frontend-three.vercel.app |
 | `profolio-backend`  | profolio-backend-mu.vercel.app     |
 
-Neon Postgres (London) and Upstash Redis are attached to the backend. Secrets
-were set `--sensitive`, so their values **cannot be read back** — plan for
-recreation rather than retrieval. Rotating `JWT_SECRET` signs everyone out;
-rotating `API_ENCRYPTION_KEY` makes stored secrets undecryptable.
+Both serve `main`. `feat/single-app` needs **one** project, and cutover means
+creating a new one against a Neon branch and leaving these two running until it
+is proven.
 
-The migration cuts over to a **new project against a Neon branch**, leaving
-both existing projects live until it is proven.
+Neon Postgres (London) and Upstash Redis are attached to the backend project.
+Secrets were set `--sensitive`, so their values **cannot be read back** — plan
+for recreation rather than retrieval. Rotating `JWT_SECRET` signs everyone out;
+rotating `API_ENCRYPTION_KEY` makes stored 2FA secrets undecryptable, and
+`API_KEY_ENCRYPTION_SECRET` does the same for stored provider keys.
+
+Environment variables the merged app needs: `DATABASE_URL`, `DIRECT_URL`,
+`JWT_SECRET` (32+ characters, enforced), `API_ENCRYPTION_KEY`,
+`API_KEY_ENCRYPTION_SECRET`, `CRON_SECRET`. Optional: the `STRIPE_*` set, the
+`FIREBASE_*` set, `NEXT_PUBLIC_ENABLE_DEMO_MODE`. Everything optional degrades
+to a 503 rather than a crash.
+
+`vercel.json` registers the six-hourly price sync against
+`/api/cron/sync-prices`, which is the only scheduled work.
 
 `install.sh`, `profolio.sh` and `docker-compose.yml` support self-hosting and
-remain supported. The self-update feature is permanently disabled.
+remain supported; compose is now one application container plus Postgres and
+Redis. The self-update feature is permanently disabled — `/api/updates/*`
+answers "disabled" rather than 404.
 
 ## Documentation
 

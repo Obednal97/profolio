@@ -1,75 +1,15 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { AUTH_COOKIE_NAME } from '@/lib/authCookie';
+import { withRoute } from "@/server/http/handler";
+import {
+  cancelSubscription,
+  getSubscription,
+} from "@/server/modules/billing/service";
 
-export async function GET() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+/** Null when there is no subscription, rather than an error. */
+export const GET = withRoute({
+  handler: async () => ({ subscription: await getSubscription() }),
+});
 
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    const response = await fetch(`${backendUrl}/api/billing/subscription`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      return NextResponse.json(
-        { error: error || 'Failed to fetch subscription' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Subscription fetch error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch subscription' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    const response = await fetch(`${backendUrl}/api/billing/subscription`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      return NextResponse.json(
-        { error: error || 'Failed to cancel subscription' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Subscription cancel error:', error);
-    return NextResponse.json(
-      { error: 'Failed to cancel subscription' },
-      { status: 500 }
-    );
-  }
-}
+/** Cancels at the end of the paid period. */
+export const DELETE = withRoute({
+  handler: () => cancelSubscription(),
+});

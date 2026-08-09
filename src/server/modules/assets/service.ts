@@ -1,6 +1,8 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
+import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/server/db";
+import { syncAssetPrice } from "@/server/modules/market-data/price-sync";
 import { MoneyUtils } from "@/server/money";
 import { assertNotDemo, requireUser } from "@/server/auth/session";
 import { NotFound } from "@/server/http/errors";
@@ -201,10 +203,18 @@ export async function createAsset(
     select: ASSET_SELECT,
   });
 
-  // A tradeable asset used to have its price fetched here, un-awaited. That
-  // does not survive serverless - the instance is frozen once the response is
-  // sent - and market data is not ported yet. The initial quote is picked up
-  // by the sync job; wiring it back into create() belongs with M3.
+  // Fetch an opening price for a tradeable holding, without making the caller
+  // wait for a third-party API. This used to be a bare un-awaited call, which
+  // on serverless is simply dropped: the instance freezes the moment the
+  // response is sent. waitUntil keeps it alive until the work finishes.
+  if (asset.symbol && (asset.type === "STOCK" || asset.type === "CRYPTO")) {
+    waitUntil(
+      syncAssetPrice(asset.id).catch((error: unknown) => {
+        console.error(`Opening price fetch failed for ${asset.symbol}:`, error);
+      }),
+    );
+  }
+
   return toResponse(asset);
 }
 

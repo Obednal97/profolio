@@ -404,12 +404,16 @@ export function AssetModal({
           }
         }
 
-        // Only if no cached data AND user is actively searching (not form initialization)
-        // trigger a search which will queue the symbol for processing
+        // Nothing cached: search the symbol catalogue, which also queues an
+        // unknown ticker for the next price sync.
+        //
+        // This used to call /api/integrations/product-search/search and read
+        // `data.data[0].offer.price` - a shopping-API shape that the symbol
+        // search never returned, so the branch could not have worked. That
+        // route also fell back to a demo identity whenever authentication
+        // failed, and has been removed.
         const response = await fetch(
-          `/api/integrations/product-search/search?q=${encodeURIComponent(
-            symbol
-          )}`,
+          `/api/market-data/search?q=${encodeURIComponent(symbol)}&limit=1`,
           {
             headers,
             signal: controller.signal,
@@ -419,29 +423,21 @@ export function AssetModal({
         if (controller.signal.aborted) return;
 
         const data = await response.json();
+        const match = data.symbols?.[0];
+        const price = match?.current_price;
 
-        if (data.status === "OK" && data.data.length > 0) {
-          const price = parseFloat(
-            data.data[0].offer.price.replace(/[^0-9.]/g, "")
-          );
+        if (typeof price === "number" && price > 0) {
+          const qty = parseFloat(quantity) || 1;
 
-          if (price > 0 && !controller.signal.aborted) {
-            const qty = parseFloat(quantity) || 1;
-            const totalValue = price * qty;
+          setFormData((prev) => ({
+            ...prev,
+            current_value: (price * qty).toFixed(2),
+          }));
 
-            setFormData((prev) => ({
-              ...prev,
-              current_value: totalValue.toFixed(2),
-            }));
-
-            setPriceSource("live");
-          } else {
-            setPriceSource("error");
-          }
-        } else if (data.fallback) {
-          // Service is temporarily unavailable, but don't clear existing value
-          setPriceSource("error");
+          setPriceSource("live");
         } else {
+          // No price yet. The value the user typed is left alone rather than
+          // replaced with a guess.
           setPriceSource("error");
         }
       } catch (error) {
