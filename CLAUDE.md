@@ -8,7 +8,7 @@ Profolio is a privacy-focused portfolio management system: assets, expenses,
 properties, market data. Next.js 16 (App Router, React 19), Prisma 7 on
 PostgreSQL.
 
-**Version**: 1.18.0 · **Default branch**: `main`
+**Version**: 2.0.0 · **Default branch**: `main`
 
 ## ⚠️ Read this first: two branches, two structures
 

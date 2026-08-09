@@ -1,6 +1,6 @@
 {
   "name": "profolio",
-  "version": "1.18.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Professional Self-Hosted Portfolio Management System - Complete data control and privacy for your financial portfolio tracking",
   "packageManager": "pnpm@9.14.4",

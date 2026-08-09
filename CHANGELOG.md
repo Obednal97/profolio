@@ -5,6 +5,99 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.0.0] - 09-08-2026
+
+### One application
+
+The separate NestJS backend is gone. Profolio is now a single Next.js
+application: one deployable, one authentication path, one set of types. Around
+14,000 lines of NestJS were removed and replaced with 53 route handlers over
+domain services in `src/server/modules/`.
+
+**This is a breaking change for self-hosted installs.** There is no longer a
+second service on port 3001. `docker-compose.yml` starts one application
+container plus Postgres and Redis, and migrations are applied by the entrypoint
+on startup.
+
+### Why
+
+The two-service split was the direct cause of a class of defect rather than an
+incidental cost: 18 of the 45 route files existed only to forward a request to
+the other service, and three separate JWT verifications had grown up across the
+boundary, two of them broken.
+
+### Fixed
+
+Every one of these was live before this release.
+
+#### Money and market data
+
+- **Price sync repriced every holding to a hundredth of its unit price.** It
+  wrote a unit price in dollars into a column holding a position total in
+  cents, and ignored quantity entirely. A $313.33 share became $3.13.
+- Price sync never recorded price history, so the portfolio chart had nothing
+  to draw even while prices were being fetched.
+- The scheduled sync never ran at all on serverless: it waited on a flag set by
+  a 30-second timer that a cold start never reaches.
+- Symbol search returned prices a hundred times too large.
+- Property money used a truthiness test, so a legitimate zero became "not
+  provided" - no mortgage, no HOA and no rental income could not be recorded.
+
+#### Fabricated data removed
+
+- The performance chart was drawing a sine wave plus `Math.random()` around a
+  hardcoded $10,000 and presenting it as the user's own history.
+- The asset manager invented a flat chart line in two more places.
+- A failed price lookup answered `0`, which the asset form multiplied by
+  quantity and displayed as a valuation.
+
+#### Security
+
+- An API-key encryption secret fell back to a default string published in this
+  repository, so a deployment missing the variable encrypted every user's
+  provider keys under a publicly known key and reported success.
+- A symbol-search endpoint resolved any failed authentication to a demo
+  identity and verified tokens with a hardcoded fallback secret.
+- Admin user creation had no validation and stored passwords in plain text;
+  admin listings returned password hashes to the browser.
+- Two market-data endpoints documented as admin-only had no role check.
+- Three components verified JWTs themselves; all now use one session resolver.
+
+#### Things that did not work
+
+- `/api/assets/{id}` had no handler, so editing and deleting an asset returned
+  a 404 page.
+- The asset form sent lowercase type names that validation rejected, so no
+  asset could be created from the UI.
+- OAuth password setup hashed its token with bcrypt and then looked it up by
+  equality; bcrypt salts every call, so the lookup could never match and every
+  attempt reported "Invalid token".
+- A single-field expense edit was rejected for missing the other three fields.
+- `/api/auth/delete-account` did not exist.
+- Settings reported "Failed to obtain authentication token" for every account
+  not signed in through Firebase.
+
+### Removed
+
+Self-update (it drove `git`, `npm` and `systemctl` through `child_process`),
+the setup wizard, the rate limiter (its rules never matched a single request),
+and every proxy route. `/api/updates/*` now answers "disabled" rather than 404.
+
+### Known gaps
+
+Email delivery is unimplemented, so OAuth password setup refuses in production
+rather than pretending to send. Rate limiting no longer exists and wants
+rebuilding on `@upstash/ratelimit`.
+
+### Verified
+
+223 assertions against a real Postgres - 73 for auth, 61 for the portfolio
+modules, 57 for market data and the rest, and 32 for the cutover checklist run
+against the deployment itself - plus browser verification of the live
+application. The browser pass is what caught the last defect: the asset manager
+reported "Failed to load assets" for a signed-in user, because the page sent a
+stale bearer token and the server preferred it over a perfectly good cookie.
+
 ## [v1.18.0] - 2025-09-07
 
 ### 🎉 **Major Milestone: Complete Security and Infrastructure Modernization**
