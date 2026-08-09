@@ -14,11 +14,12 @@ This project uses a three-tier organization system:
 
 ## 📊 High-Level Status
 
-### 🟡 Platform & Infrastructure (3 projects)
+### 🟡 Platform & Infrastructure (4 projects)
 
 - **NextAuth Migration** - Package installed, not configured
 - **Stripe Integration** - ~40% complete, needs finishing
 - **Admin Dashboard** - Backend ready, needs UI
+- **Watchdog Service** - Auto-restart and health monitoring needed
 
 ### 🟢 Features (3 projects)
 

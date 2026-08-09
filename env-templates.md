@@ -107,6 +107,12 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 STRIPE_PRICE_CLOUD_MONTHLY=price_your_monthly_price_id
 STRIPE_PRICE_CLOUD_ANNUAL=price_your_annual_price_id
 
+# === Redis Configuration (Required for Rate Limiting) ===
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=auto_generated_during_install
+REDIS_DB=0
+
 # === Backend Application Configuration ===
 PORT=3001
 NODE_ENV=development

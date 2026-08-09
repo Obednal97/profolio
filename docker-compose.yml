@@ -4,9 +4,12 @@
 #   # edit .env.docker and set JWT_SECRET / API_ENCRYPTION_KEY
 #   docker compose --env-file .env.docker up --build
 #
-# Frontend on http://localhost:3000, backend on http://localhost:3001.
-# Migrations are applied automatically on backend startup, so an empty volume
-# comes up as a working system with no manual step.
+# The application listens on http://localhost:3000. There is one service now:
+# the NestJS backend was merged into the Next.js app, so there is no second
+# container and no second port.
+#
+# Migrations are applied by the entrypoint on startup, so an empty volume comes
+# up as a working system with no manual step.
 
 name: profolio
 
@@ -55,10 +58,17 @@ services:
       retries: 20
       start_period: 5s
 
-  backend:
+  app:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        # Compile-time only: NEXT_PUBLIC_* values are inlined into the client
+        # bundle, so changing one needs a rebuild.
+        NEXT_PUBLIC_AUTH_MODE: ${NEXT_PUBLIC_AUTH_MODE:-local}
+        NEXT_PUBLIC_ENABLE_DEMO_MODE: ${NEXT_PUBLIC_ENABLE_DEMO_MODE:-true}
+        NEXT_PUBLIC_SHOW_LANDING_PAGE: ${NEXT_PUBLIC_SHOW_LANDING_PAGE:-true}
+        NEXT_PUBLIC_ALLOW_REGISTRATION: ${NEXT_PUBLIC_ALLOW_REGISTRATION:-true}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -67,62 +77,35 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: 3001
+      PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-profolio}:${POSTGRES_PASSWORD:-profolio}@postgres:5432/${POSTGRES_DB:-profolio}
+      # Migrations cannot run over a pooled connection, so prisma.config.ts
+      # reads DIRECT_URL. Same host here; the two differ on Neon.
+      DIRECT_URL: postgresql://${POSTGRES_USER:-profolio}:${POSTGRES_PASSWORD:-profolio}@postgres:5432/${POSTGRES_DB:-profolio}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_DB: 0
-      # Must be at least 32 characters - the sign-in path rejects anything shorter.
+      # At least 32 characters - token signing refuses anything shorter.
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required and must be at least 32 characters}
       API_ENCRYPTION_KEY: ${API_ENCRYPTION_KEY:?API_ENCRYPTION_KEY is required}
-      # Browser-facing origin, used for CORS.
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:?API_KEY_ENCRYPTION_SECRET is required}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
-      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       # In-container updates are meaningless; images are replaced, not patched.
       DISABLE_UPDATES: "true"
     ports:
-      - "${BACKEND_PORT:-3001}:3001"
+      - "${FRONTEND_PORT:-3000}:3000"
     healthcheck:
-      # /api/health, not /api - the latter only answers in development, where
-      # Swagger is mounted at the global prefix.
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 30s
-
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      args:
-        # Compile-time only. NEXT_PUBLIC_API_URL is left empty so browser code
-        # uses same-origin /api/* proxy routes rather than addressing the
-        # backend container directly.
-        NEXT_PUBLIC_AUTH_MODE: ${NEXT_PUBLIC_AUTH_MODE:-local}
-        NEXT_PUBLIC_ENABLE_DEMO_MODE: ${NEXT_PUBLIC_ENABLE_DEMO_MODE:-true}
-        NEXT_PUBLIC_SHOW_LANDING_PAGE: ${NEXT_PUBLIC_SHOW_LANDING_PAGE:-true}
-        NEXT_PUBLIC_ALLOW_REGISTRATION: ${NEXT_PUBLIC_ALLOW_REGISTRATION:-true}
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      # Server-side only: how Next's proxy routes reach the API over the
-      # compose network. Never exposed to the browser.
-      BACKEND_URL: http://backend:3001
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
 
 volumes:
   postgres-data:

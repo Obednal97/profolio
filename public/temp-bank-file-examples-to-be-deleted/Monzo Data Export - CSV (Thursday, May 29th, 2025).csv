@@ -1,0 +1,6 @@
+Transaction ID,Date,Time,Type,Name,Emoji,Category,Amount,Currency,Local amount,Local currency,Notes and #tags,Address,Receipt,Description,Category split,Money Out,Money In,Balance,Balance currency
+mm_0000AtdYlQngNrn7fHJZ7h,01/05/2025,03:11:37,Pot transfer,Reserve Pot,,Savings,-1666.66,GBP,-1666.66,GBP,,,,,,-1666.66,,9311.80,GBP
+mm_0000Atfcsm2WbSqxnF4bjO,02/05/2025,03:07:11,Pot transfer,Reserve Pot,,Savings,-1600.00,GBP,-1600.00,GBP,,,,,,-1600.00,,7711.80,GBP
+mm_0000Au56s5Y0RWV9GqS9Vx,14/05/2025,10:10:59,Pot transfer,Reserve Pot,,Savings,-7500.00,GBP,-7500.00,GBP,,,,,,-7500.00,,211.80,GBP
+mm_0000AuZtPKDTY9FshWyuMD,29/05/2025,06:36:11,Pot transfer,Reserve Pot,,Savings,6000.00,GBP,6000.00,GBP,,,,,,,6000.00,6211.80,GBP
+mm_0000AuZtR9JP3xWvOKCAa1,29/05/2025,06:36:30,Faster payment,Oliver Bednal,,Transfers,-6000.00,GBP,-6000.00,GBP,Oliver Bednal,,,Oliver Bednal,,-6000.00,,211.80,GBP

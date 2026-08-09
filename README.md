@@ -100,7 +100,7 @@ wget -qO- https://raw.githubusercontent.com/Obednal97/profolio/main/install.sh |
 
 ```bash
 # Install specific version
-sudo ./install.sh --version v1.18.0
+sudo ./install.sh --version v2.0.0
 
 # Unattended installation for automation
 sudo ./install.sh --auto
@@ -290,7 +290,7 @@ sudo systemctl enable profolio-backend profolio-frontend
 sudo ./install.sh
 
 # Update to specific version
-sudo ./install.sh --version v1.18.0
+sudo ./install.sh --version v2.0.0
 
 # Check for updates
 curl -s https://api.github.com/repos/Obednal97/profolio/releases/latest | grep tag_name
@@ -331,6 +331,12 @@ See our [**Offline Installation Guide**](docs/setup/offline-installation.md) for
 
 ### **Local Development Setup**
 
+> **Note:** the frontend and backend are being merged into a single Next.js
+> application. The commands below describe `main`, which is what is currently
+> deployed. On the `feat/single-app` branch everything runs from the repo root
+> with `pnpm install` and `pnpm dev`. See
+> `docs/superpowers/specs/2026-08-08-single-app-migration-design.md`.
+
 ```bash
 # Clone and setup development environment
 git clone https://github.com/Obednal97/profolio.git
@@ -343,6 +349,13 @@ cd ../frontend && pnpm install
 # Start development servers
 pnpm run dev:backend    # http://localhost:3001
 pnpm run dev:frontend   # http://localhost:3000
+```
+
+Or run the whole stack — Postgres, Redis, backend, frontend — in containers:
+
+```bash
+cp .env.docker.example .env.docker   # set JWT_SECRET and API_ENCRYPTION_KEY
+docker compose --env-file .env.docker up --build
 ```
 
 ### **Customization Options**
