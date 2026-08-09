@@ -1,34 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import {
-  AUTH_COOKIE_NAME,
-  clearedAuthCookieOptions,
-} from "@/lib/authCookie";
-
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
+import { withRoute } from "@/server/http/handler";
+import { jsonClearingSession } from "@/server/auth/cookie";
 
 /**
- * Clears the auth session.
+ * Ends the session.
  *
- * The auth cookie is httpOnly, so the client cannot delete it itself - this
- * route is the only way to end a session. The backend call is best-effort:
- * the cookie is cleared regardless, so a backend outage cannot leave a user
- * stuck in a session they have asked to end.
+ * The auth cookie is httpOnly, so the client cannot clear it itself - this is
+ * the only way out. Tokens are stateless, so there is nothing to revoke
+ * server-side and the request always succeeds; a user asking to sign out must
+ * never be left signed in because something else failed.
  */
-export async function POST(req: NextRequest) {
-  const token = req.cookies.get(AUTH_COOKIE_NAME)?.value;
-
-  if (token) {
-    try {
-      await fetch(`${BACKEND_URL}/api/auth/signout`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (error) {
-      console.error("Backend sign-out failed, clearing cookie anyway:", error);
-    }
-  }
-
-  const res = NextResponse.json({ success: true });
-  res.cookies.set(AUTH_COOKIE_NAME, "", clearedAuthCookieOptions(req));
-  return res;
-}
+export const POST = withRoute({
+  handler: async ({ request }) =>
+    jsonClearingSession(request, { success: true }),
+});

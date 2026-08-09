@@ -1,35 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/server/http/handler";
+import { SetPasswordSchema } from "@/server/modules/auth/schemas";
+import { setPasswordWithToken } from "@/server/modules/auth/oauth-password";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-
-    // Forward the request to the backend (no auth required, token validates identity)
-    const response = await fetch(`${BACKEND_URL}/api/auth/oauth/set-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        data,
-        { status: response.status }
-      );
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error setting password:", error);
-    return NextResponse.json(
-      { error: "Failed to set password" },
-      { status: 500 }
-    );
-  }
-}
+/**
+ * Sets a password from a setup link. Deliberately unauthenticated: the token
+ * is the credential, and the account it belongs to has no password yet.
+ */
+export const POST = withRoute({
+  body: SetPasswordSchema,
+  handler: ({ body }) => setPasswordWithToken(body),
+});

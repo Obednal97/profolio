@@ -1,48 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { AUTH_COOKIE_NAME } from '@/lib/authCookie';
+import { withRoute } from "@/server/http/handler";
+import { DisableTwoFactorSchema } from "@/server/modules/auth/schemas";
+import { disableTwoFactor } from "@/server/modules/auth/two-factor";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-
-export async function POST(req: NextRequest) {
-  try {
-    // Get the token from cookies
-    const cookieStore = await cookies();
-    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const body = await req.json();
-
-    const response = await fetch(`${BACKEND_URL}/api/auth/2fa/disable`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: data.message || 'Failed to disable 2FA' },
-        { status: response.status }
-      );
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('2FA disable error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+/** Turns 2FA off. Needs both the password and a current code. */
+export const POST = withRoute({
+  body: DisableTwoFactorSchema,
+  handler: ({ body }) => disableTwoFactor(body),
+});

@@ -159,6 +159,14 @@ _Last updated: 08-08-2026. Branch `feat/single-app`, based on `main` at
 | `69e6a9d` | This design document                                                                                                                                                                                                                                                                                                   |
 | `5506c78` | **M0 restructure.** Single Next.js app at the repo root; pnpm workspace deleted. 304 files moved with `git mv` so history follows. `prisma/` and all 17 migrations moved intact. `package.json` merged from three files, zero NestJS dependencies remaining. `vercel-build` runs `migrate deploy` before `next build`. |
 | `053a973` | **M0 foundation.** `src/server/{db,money}.ts`, `http/{errors,handler}.ts`, `auth/session.ts`, `crypto/encryption.ts`.                                                                                                                                                                                                  |
+| `HEAD`    | **M1 auth.** 17 proxy routes replaced by real handlers over `src/server/modules/auth/*`. Signing moved to `server/auth/tokens.ts`, cookie issuing to `server/auth/cookie.ts`. `/api/auth/delete-account` added; `/api/auth/login` deleted as a duplicate of `signin`.                                                  |
+
+M1 was verified end to end against a real Postgres, not by reading it: **73
+assertions, 0 failures** over registration, strict validation, cookie flags,
+session resolution, profile, password change, the full TOTP and backup-code
+lifecycle, the OAuth password setup flow, and account deletion with dependent
+rows present. `withRoute` and `session.ts` are now proven against real traffic,
+which was the point of doing auth first.
 
 Verified at that point: install resolves as one package, Prisma client
 generates, **0 type errors, 0 lint errors**, `next build` compiles, dev server
@@ -170,17 +178,46 @@ cold start and permanently undecryptable 2FA secrets - it now refuses to start
 in production. `prisma.config.ts` prefers `DIRECT_URL`, because Neon's pooled
 endpoint runs PgBouncer in transaction mode and cannot execute DDL.
 
+### Fixed during M1
+
+- **OAuth password setup could never have worked.** The setup token was hashed
+  with bcrypt and then looked up by equality. bcrypt salts every call, so
+  hashing the same token twice gives a different string and the row was
+  unfindable - every verification returned "Invalid token". Now SHA-256, which
+  is deterministic and correct for a 256-bit random value.
+- `/api/auth/delete-account` did not exist, so the settings page delete button
+  hit the Next 404 page. Implemented, deleting dependent rows explicitly
+  because most relations to `User` lack `onDelete: Cascade`.
+- The `firebase-exchange` route set its own cookie: 30-day lifetime for a
+  24-hour token, `secure` from `NODE_ENV`. Now uses the shared helper.
+- Profile update accepted `emailVerified` and `provider` and spread the DTO
+  into Prisma, so a user could mark their own account verified.
+- Two JWT implementations, one signing with `JWT_SECRET ||
+"dev-jwt-secret-fallback"`. One signer now, and a secret under 32 characters
+  is refused.
+- Sign-in minted a token before checking whether 2FA was required, and timed
+  differently for known and unknown emails.
+- A Firebase sign-in overwrote `provider` for an account that already had a
+  password; it is now `dual`.
+- `encryption.ts` derived its key in the constructor, so importing the module
+  threw when `API_ENCRYPTION_KEY` was absent - and `next build` imports every
+  route module, so the application could not be built without the key. Derived
+  lazily now; the envelope format is untouched.
+- `localAuth.fetchUserProfile` read `profile.id`/`profile.name` off a
+  `{ success, user }` envelope, so it always fell back to the email local part.
+- `TwoFactorVerification` copied the session token into `localStorage`,
+  undoing the point of the httpOnly cookie.
+
 ### Not started
 
-**105 files, ~13,850 lines, 96 handlers** across 15 controllers.
+**85 files, ~10,250 lines**, of which 15 are controllers. Three of those -
+`admin/groups`, `admin/permissions`, `admin/invitations` - are 0-byte stubs and
+are not ported.
 
-1. **M1 Auth** - do this next. It gates everything, carries the most defects,
-   and proves `withRoute` + `session.ts` against real endpoints. After that the
-   remaining modules are mechanical.
-2. M2 Assets, Expenses, Properties
-3. M3 Market data
-4. M4 Notifications, Settings, API keys, Billing, Admin
-5. M5 Delete `backend/`, cut over
+1. M2 Assets, Expenses, Properties
+2. M3 Market data
+3. M4 Notifications, Settings, API keys, Billing, Admin
+4. M5 Delete `backend/`, cut over
 
 ### Facts worth not rediscovering
 

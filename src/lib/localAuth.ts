@@ -334,12 +334,17 @@ class LocalAuthService {
         },
       });
 
-      // Update current user with profile data, providing defaults
+      // The endpoint answers { success, user }, so the fields are one level
+      // down. Reading profile.id and profile.name off the envelope always gave
+      // undefined, and the defaults below silently covered it up - the name
+      // shown in the app was the email local part, never the stored one.
+      const user = profile?.user ?? {};
+
       this.currentUser = {
         ...this.currentUser,
-        id: profile.id || this.currentUser.id,
+        id: user.id || this.currentUser.id,
         name:
-          profile.name ||
+          user.name ||
           this.currentUser.name ||
           this.currentUser.email.split("@")[0] ||
           "User",

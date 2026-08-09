@@ -36,10 +36,9 @@ export function TwoFactorVerification({
       return response;
     },
     onSuccess: (data) => {
-      if (data.token) {
-        // Store token
-        localStorage.setItem('token', data.token);
-      }
+      // The token is not stored here. The route sets it as an httpOnly cookie;
+      // copying it into localStorage would put the session back within reach
+      // of any script on the page, which is the thing httpOnly prevents.
       onSuccess(data);
     },
     onError: (error: Error & { response?: { data?: { error?: string } } }) => {

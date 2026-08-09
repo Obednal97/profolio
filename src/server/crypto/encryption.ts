@@ -20,9 +20,24 @@ class EncryptionService {
   private readonly iterations = 100000;
   private readonly digest = 'sha256';
   
-  private encryptionKey: Buffer;
+  private derivedKey: Buffer | null = null;
 
-  constructor() {
+  /**
+   * The derived key, computed on first use.
+   *
+   * Deriving in the constructor made importing this module a side effect that
+   * could throw, and `next build` imports every route module to collect its
+   * configuration - so a machine without the key could not build the
+   * application at all, whether or not anything encrypted. Deriving lazily
+   * keeps the failure where it belongs: the first attempt to actually encrypt
+   * or decrypt something.
+   *
+   * PBKDF2 over 100k iterations is slow enough to be worth memoising, and the
+   * value is process-lifetime constant.
+   */
+  private get encryptionKey(): Buffer {
+    if (this.derivedKey) return this.derivedKey;
+
     // A missing key used to fall back to a randomly generated one. That is
     // silently destructive on serverless: every cold start derives a different
     // key, so anything encrypted by one instance cannot be read by the next,
@@ -46,7 +61,8 @@ class EncryptionService {
 
     // Derive a proper key from the string
     const salt = crypto.createHash('sha256').update('profolio-salt').digest();
-    this.encryptionKey = crypto.pbkdf2Sync(keyString, salt, this.iterations, this.keyLength, this.digest);
+    this.derivedKey = crypto.pbkdf2Sync(keyString, salt, this.iterations, this.keyLength, this.digest);
+    return this.derivedKey;
   }
 
   /**

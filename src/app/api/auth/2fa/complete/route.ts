@@ -1,42 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { AUTH_COOKIE_NAME, authCookieOptions } from '@/lib/authCookie';
+import { withRoute } from "@/server/http/handler";
+import { jsonWithSession } from "@/server/auth/cookie";
+import { CompleteTwoFactorSchema } from "@/server/modules/auth/schemas";
+import { completeTwoFactorSignIn } from "@/server/modules/auth/two-factor";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-
-    const response = await fetch(`${BACKEND_URL}/api/auth/2fa/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: data.message || 'Failed to complete 2FA verification' },
-        { status: response.status }
-      );
-    }
-
-    // Set the token in cookies if successful
-    if (data.token) {
-      const cookieStore = await cookies();
-      cookieStore.set(AUTH_COOKIE_NAME, data.token, authCookieOptions(req));
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('2FA complete error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+/** Second step of sign-in: the code from the authenticator app. */
+export const POST = withRoute({
+  body: CompleteTwoFactorSchema,
+  handler: async ({ body, request }) => {
+    const result = await completeTwoFactorSignIn(body);
+    return jsonWithSession(request, result, result.token);
+  },
+});
