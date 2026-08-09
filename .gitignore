@@ -174,3 +174,4 @@ claude-code-limit-tracker/
 .agents/
 **/.agents/
 **/.claude/
+.env*

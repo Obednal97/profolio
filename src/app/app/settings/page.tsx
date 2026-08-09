@@ -985,6 +985,22 @@ const clearAuthData = () => {
 };
 
 // Helper function to get fresh authentication token
+/**
+ * Headers for a settings request.
+ *
+ * `getFreshAuthToken` only knows how to produce a Firebase token, so in
+ * local-auth mode it is always null. That is not an error: the session is an
+ * httpOnly cookie the browser attaches by itself. Sending `Bearer null` would
+ * be, and the server would reject it.
+ */
+function settingsAuthHeaders(token: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 const getFreshAuthToken = async (): Promise<string | null> => {
   try {
     const { getAuth } = await import("firebase/auth");
@@ -1124,19 +1140,18 @@ function SettingsPage() {
           clearAuthData();
 
           // Get fresh authentication token
+          // Null in local-auth mode, which is the normal case: this helper
+          // only knows how to mint a Firebase token. The session cookie is
+          // httpOnly and sent automatically, so the request goes ahead without
+          // a header rather than failing. Throwing here made every settings
+          // action report "Failed to obtain authentication token" for anyone
+          // not signed in through Firebase.
           const backendToken = await getFreshAuthToken();
-
-          if (!backendToken) {
-            throw new Error(
-              "Failed to obtain authentication token. Please sign out and sign in again."
-            );
-          }
 
           const response = await fetch("/api/auth/profile", {
             method: "GET",
-            headers: {
-              Authorization: `Bearer ${backendToken}`,
-            },
+            credentials: "same-origin",
+            headers: settingsAuthHeaders(backendToken),
           });
 
           if (!response.ok) {
@@ -1273,20 +1288,14 @@ function SettingsPage() {
         clearAuthData();
 
         // Get fresh authentication token
+        // See above: no Firebase token is the normal case, and the session
+        // cookie carries the request.
         const backendToken = await getFreshAuthToken();
-
-        if (!backendToken) {
-          throw new Error(
-            "Failed to obtain authentication token. Please sign out and sign in again."
-          );
-        }
 
         const response = await fetch("/api/auth/profile", {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${backendToken}`,
-          },
+          credentials: "same-origin",
+          headers: settingsAuthHeaders(backendToken),
           body: JSON.stringify({
             name: profileData.name,
             email: profileData.email,
@@ -1370,19 +1379,11 @@ function SettingsPage() {
       // Get fresh authentication token
       const backendToken = await getFreshAuthToken();
 
-      if (!backendToken) {
-        throw new Error(
-          "Failed to obtain authentication token. Please sign out and sign in again."
-        );
-      }
-
       // Call the password change API
       const response = await fetch("/api/auth/password", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${backendToken}`,
-        },
+        credentials: "same-origin",
+        headers: settingsAuthHeaders(backendToken),
         body: JSON.stringify({
           currentPassword: data.currentPassword,
           newPassword: data.newPassword,
@@ -1454,16 +1455,10 @@ function SettingsPage() {
       // For real users, call the account deletion API
       const backendToken = await getFreshAuthToken();
 
-      if (!backendToken) {
-        throw new Error("Authentication required to delete account");
-      }
-
       const response = await fetch("/api/auth/delete-account", {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${backendToken}`,
-        },
+        credentials: "same-origin",
+        headers: settingsAuthHeaders(backendToken),
       });
 
       if (!response.ok) {

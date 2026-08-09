@@ -207,6 +207,22 @@ const calculateAssetMetrics = (assets: Asset[]): AssetMetrics => {
   };
 };
 
+/**
+ * Headers for an authenticated request.
+ *
+ * The token is only attached when there is one. After a reload there is not -
+ * the session lives in an httpOnly cookie that JavaScript cannot read - and
+ * `Bearer null` reached the server as a credential, which it then rejected,
+ * turning a perfectly good cookie into "Failed to load assets".
+ */
+function authHeaders(token: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 export default function AssetManager() {
   const [error, setError] = useState<string | null>(null);
   const { user, token } = useAuth();
@@ -296,10 +312,8 @@ export default function AssetManager() {
 
       const response = await fetch("/api/assets", {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
+        credentials: "same-origin",
+        headers: authHeaders(authToken),
       });
 
       if (!response.ok) {
@@ -350,10 +364,8 @@ export default function AssetManager() {
       const response = await fetch(
         `/api/market-data/portfolio-history/${currentUser.id}?days=${days}`,
         {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
+          credentials: "same-origin",
+          headers: authHeaders(authToken),
           signal: controller.signal,
         }
       );
@@ -441,10 +453,8 @@ export default function AssetManager() {
         // in the body, which no handler read.
         const response = await fetch(`/api/assets/${assetId}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
+          credentials: "same-origin",
+          headers: authHeaders(authToken),
         });
 
         if (!response.ok) {
@@ -491,10 +501,8 @@ export default function AssetManager() {
 
         const response = await fetch(endpoint, {
           method,
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
+          credentials: "same-origin",
+          headers: authHeaders(authToken),
           body: JSON.stringify(fields),
         });
 

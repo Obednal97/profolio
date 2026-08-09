@@ -63,9 +63,42 @@ interface JwtPayload {
  * service call in a request would repeat it.
  */
 export const getSession = cache(async (): Promise<SessionUser | null> => {
-  const token = await readToken();
-  if (!token) return null;
+  for (const token of await candidateTokens()) {
+    const user = await resolve(token);
+    if (user) return user;
+  }
 
+  return null;
+});
+
+/**
+ * Every credential the request offers, in order of preference.
+ *
+ * Both are tried, rather than the header winning outright. The token lives in
+ * an httpOnly cookie that JavaScript cannot read, so a page that attaches its
+ * own header after a reload sends `Bearer null` - and a header-only reader
+ * turned a request carrying a perfectly good cookie into a 401. That is
+ * exactly what happened to the asset manager on the first deployment.
+ */
+async function candidateTokens(): Promise<string[]> {
+  const tokens: string[] = [];
+
+  const authorization = (await headers()).get("authorization");
+  if (authorization?.startsWith("Bearer ")) {
+    const value = authorization.slice(7).trim();
+    // "null" and "undefined" are what a template literal makes of a missing
+    // token. They are not credentials.
+    if (value && value !== "null" && value !== "undefined") tokens.push(value);
+  }
+
+  const cookie = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  if (cookie && !tokens.includes(cookie)) tokens.push(cookie);
+
+  return tokens;
+}
+
+/** Turns one token into a user, or null if it does not identify anyone. */
+async function resolve(token: string): Promise<SessionUser | null> {
   if (isDemoToken(token)) return DEMO_USER;
 
   const secret = process.env.JWT_SECRET;
@@ -93,18 +126,6 @@ export const getSession = cache(async (): Promise<SessionUser | null> => {
   if (!user) return null;
 
   return { ...user, isDemo: false };
-});
-
-/** Reads the bearer token from the Authorization header, else the auth cookie. */
-async function readToken(): Promise<string | null> {
-  const headerList = await headers();
-  const authorization = headerList.get("authorization");
-  if (authorization?.startsWith("Bearer ")) {
-    return authorization.slice(7).trim() || null;
-  }
-
-  const cookieStore = await cookies();
-  return cookieStore.get(AUTH_COOKIE_NAME)?.value ?? null;
 }
 
 /** The current user, or a 401. */
