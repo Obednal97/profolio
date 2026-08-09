@@ -479,15 +479,14 @@ export default function AssetManager() {
       try {
         const authToken = token || (isDemoMode ? "demo-token" : null);
 
-        const response = await fetch("/api/assets", {
+        // The id goes in the path. This used to DELETE /api/assets with the id
+        // in the body, which no handler read.
+        const response = await fetch(`/api/assets/${assetId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${authToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            id: assetId,
-          }),
         });
 
         if (!response.ok) {
@@ -520,10 +519,17 @@ export default function AssetManager() {
       try {
         const authToken = token || (isDemoMode ? "demo-token" : null);
 
-        const method = editingAsset ? "PUT" : "POST";
+        const method = editingAsset ? "PATCH" : "POST";
         const endpoint = editingAsset
           ? `/api/assets/${editingAsset.id}`
           : "/api/assets";
+
+        // Send only the fields the asset actually has. The id and userId that
+        // used to be attached here are decided by the server - userId comes
+        // from the session, never from the request - and validation is strict,
+        // so passing them is a 400.
+        const fields: Partial<Asset> = { ...assetData };
+        delete fields.id;
 
         const response = await fetch(endpoint, {
           method,
@@ -531,10 +537,7 @@ export default function AssetManager() {
             Authorization: `Bearer ${authToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            ...assetData,
-            userId: currentUser.id,
-          }),
+          body: JSON.stringify(fields),
         });
 
         if (!response.ok) {

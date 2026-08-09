@@ -271,7 +271,12 @@ export function AssetModal({
       initialData
         ? {
             name: initialData.name || "",
-            type: (initialData.type as AssetType) || "stock",
+            // The API answers with the database enum ("STOCK"), while this
+            // form is keyed by lowercase names. Without the fold, editing an
+            // existing asset looked up assetTypeFields["STOCK"], found
+            // nothing, and rendered a type-specific section with no fields.
+            type: ((initialData.type?.toLowerCase() as AssetType) ||
+              "stock") as AssetType,
             quantity: initialData.quantity?.toString() || "",
             current_value: (initialData.current_value || 0).toString(),
             purchase_price: initialData.purchase_price

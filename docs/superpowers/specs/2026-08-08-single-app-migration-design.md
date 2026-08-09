@@ -103,8 +103,8 @@ Carried from the modernisation sweep, none of which has a test:
 
 Found during inventory; all currently live:
 
-- Property money is converted dollars->cents on write but **read back in cents**,
-  so values display 100x too large
+- ~~Property money is read back in cents, so values display 100x too large~~ -
+  did not reproduce during M2; see the status section at the bottom
 - `UpdateExpenseDto` is not `PartialType`, so a single-field PATCH fails
 - A legitimate `0` becomes `undefined` via `@Transform` on property money fields
 - `/api/assets/:id` has **no route handler**; `useAssets` and the asset manager
@@ -159,14 +159,22 @@ _Last updated: 08-08-2026. Branch `feat/single-app`, based on `main` at
 | `69e6a9d` | This design document                                                                                                                                                                                                                                                                                                   |
 | `5506c78` | **M0 restructure.** Single Next.js app at the repo root; pnpm workspace deleted. 304 files moved with `git mv` so history follows. `prisma/` and all 17 migrations moved intact. `package.json` merged from three files, zero NestJS dependencies remaining. `vercel-build` runs `migrate deploy` before `next build`. |
 | `053a973` | **M0 foundation.** `src/server/{db,money}.ts`, `http/{errors,handler}.ts`, `auth/session.ts`, `crypto/encryption.ts`.                                                                                                                                                                                                  |
-| `HEAD`    | **M1 auth.** 17 proxy routes replaced by real handlers over `src/server/modules/auth/*`. Signing moved to `server/auth/tokens.ts`, cookie issuing to `server/auth/cookie.ts`. `/api/auth/delete-account` added; `/api/auth/login` deleted as a duplicate of `signin`.                                                  |
+| `29263bd` | **M1 auth.** 17 proxy routes replaced by real handlers over `src/server/modules/auth/*`. Signing moved to `server/auth/tokens.ts`, cookie issuing to `server/auth/cookie.ts`. `/api/auth/delete-account` added; `/api/auth/login` deleted as a duplicate of `signin`.                                                  |
+| `HEAD`    | **M2 assets, expenses, properties.** Eight proxy routes replaced, `/api/assets/[id]` added, three dead property routes deleted. Services in `src/server/modules/{assets,expenses,properties}`.                                                                                                                         |
 
-M1 was verified end to end against a real Postgres, not by reading it: **73
-assertions, 0 failures** over registration, strict validation, cookie flags,
-session resolution, profile, password change, the full TOTP and backup-code
-lifecycle, the OAuth password setup flow, and account deletion with dependent
-rows present. `withRoute` and `session.ts` are now proven against real traffic,
-which was the point of doing auth first.
+Both stages were verified end to end against a real Postgres, not by reading
+them: **73 assertions for M1 and 61 for M2, 0 failures.**
+
+M1 covered registration, strict validation, cookie flags, session resolution,
+profile, password change, the full TOTP and backup-code lifecycle, the OAuth
+password setup flow, and account deletion with dependent rows present.
+`withRoute` and `session.ts` are proven against real traffic, which was the
+point of doing auth first.
+
+M2 covered the money round trip in both directions for all three modules, the
+Symbol foreign key, per-field PATCH, the summary and history calculations, and
+cross-account isolation: another user's asset is a 404 on read, update and
+delete, and does not appear in their list.
 
 Verified at that point: install resolves as one package, Prisma client
 generates, **0 type errors, 0 lint errors**, `next build` compiles, dev server
@@ -208,16 +216,59 @@ endpoint runs PgBouncer in transaction mode and cannot execute DDL.
 - `TwoFactorVerification` copied the session token into `localStorage`,
   undoing the point of the httpOnly cookie.
 
+### Fixed during M2
+
+- `/api/assets/[id]` had no handler at all, so `useAssets`, `useUpdateAsset`,
+  `useDeleteAsset` and the asset manager's edit and delete buttons all received
+  the Next 404 page.
+- The asset form sends lowercase type names ("stock"); the database enum is
+  upper case and `@IsEnum` rejected them, so no asset could be created from the
+  UI. Both cases are accepted and normalised now.
+- `generateMockHistory()` fed the performance chart a sine wave plus
+  `Math.random()` around a hardcoded $10,000 - invented financial data
+  presented as the user's own history. Replaced with a series computed from
+  recorded prices, which is empty when nothing has been priced.
+- `UpdateExpenseDto` was a copy of the create DTO rather than a PartialType, so
+  a PATCH changing one field failed for missing the other three.
+- Property money used `value ? Math.round(value * 100) : undefined`, so a
+  legitimate zero became "not provided": no mortgage, no HOA and no rental
+  income could not be recorded, and an edit meant to clear a field left the old
+  value in place. The same truthiness test on read turned a stored zero into
+  null.
+- The expense form sends `parseFloat(x) * 100`, which for £19.99 is
+  1998.9999999999998 - not an integer, and the column is one. Rounded on
+  arrival.
+- Asset and property forms posted `id` and `userId`; with strict validation
+  that is a 400, and `userId` from a request body is never trusted anyway.
+  Stripped client-side.
+- The asset manager deleted via `DELETE /api/assets` with the id in the body,
+  and edited with `PUT`. Now `DELETE` and `PATCH` on `/api/assets/{id}`.
+- Editing an asset looked up `assetTypeFields["STOCK"]` against lowercase keys
+  and rendered an empty type-specific section.
+- Server-side demo mode checked `ENABLE_DEMO_MODE`, which nothing sets; the
+  deployment sets `NEXT_PUBLIC_ENABLE_DEMO_MODE`. Demo mode was therefore off
+  in production however it was configured.
+- `/api/properties/{create,update,delete}` deleted - three POST-only variants
+  of the REST routes with no callers.
+
+**Not reproduced:** the inventory listed "property money converted to cents on
+write but read back in cents, so values display 100x too large". The NestJS
+service did convert on read (`convertCentsToDollars`), and a round trip through
+the ported code returns dollars - verified with a £450,000 property reading
+back as 450000 from a stored 45000000. The claim appears to have been wrong.
+
 ### Not started
 
-**85 files, ~10,250 lines**, of which 15 are controllers. Three of those -
-`admin/groups`, `admin/permissions`, `admin/invitations` - are 0-byte stubs and
-are not ported.
+**~8,700 lines** across market data, notifications, settings, API keys,
+billing and admin. Three of the remaining controllers - `admin/groups`,
+`admin/permissions`, `admin/invitations` - are 0-byte stubs and are not ported.
 
-1. M2 Assets, Expenses, Properties
-2. M3 Market data
-3. M4 Notifications, Settings, API keys, Billing, Admin
-4. M5 Delete `backend/`, cut over
+1. M3 Market data. Also re-attaches the initial price fetch to asset creation,
+   which M2 deliberately left out: the old code fired it un-awaited, and a
+   serverless instance freezes once the response is sent, so it needs
+   `waitUntil()`.
+2. M4 Notifications, Settings, API keys, Billing, Admin
+3. M5 Delete `backend/`, cut over
 
 ### Facts worth not rediscovering
 

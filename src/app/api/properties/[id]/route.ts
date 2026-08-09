@@ -1,133 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/server/http/handler";
+import {
+  PropertyIdSchema,
+  UpdatePropertySchema,
+} from "@/server/modules/properties/schemas";
+import {
+  deleteProperty,
+  getProperty,
+  updateProperty,
+} from "@/server/modules/properties/service";
 
-// Auto-detect backend URL with proper protocol
-const getBackendUrl = () => {
-  // Use environment variable if available (should be set in production)
-  if (process.env.BACKEND_URL) {
-    return process.env.BACKEND_URL;
-  }
+export const GET = withRoute({
+  params: PropertyIdSchema,
+  handler: ({ params }) => getProperty(params.id),
+});
 
-  // Development fallback
-  return "http://localhost:3001";
-};
+export const PATCH = withRoute({
+  params: PropertyIdSchema,
+  body: UpdatePropertySchema,
+  handler: ({ params, body }) => updateProperty(params.id, body),
+});
 
-const BACKEND_URL = getBackendUrl();
-
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-
-    // Get authorization from header or httpOnly cookie
-    let authHeader = request.headers.get("authorization");
-
-    // If no auth header, try to get token from httpOnly cookie
-    if (!authHeader) {
-      const authToken = request.cookies.get("auth-token")?.value;
-      if (authToken) {
-        authHeader = `Bearer ${authToken}`;
-      }
-    }
-
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, error: "Authorization required - no token found" },
-        { status: 401 }
-      );
-    }
-
-    const body = await request.json();
-
-    // Forward the request to the backend
-    const backendResponse = await fetch(`${BACKEND_URL}/api/properties/${id}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    // Get the response data
-    const data = await backendResponse.json();
-
-    // Forward the response with the same status
-    return NextResponse.json(data, {
-      status: backendResponse.status,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (error) {
-    console.error("❌ [Proxy] Properties PATCH proxy error:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Proxy error - unable to reach backend service",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 503 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-
-    // Get authorization from header or httpOnly cookie
-    let authHeader = request.headers.get("authorization");
-
-    // If no auth header, try to get token from httpOnly cookie
-    if (!authHeader) {
-      const authToken = request.cookies.get("auth-token")?.value;
-      if (authToken) {
-        authHeader = `Bearer ${authToken}`;
-      }
-    }
-
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, error: "Authorization required - no token found" },
-        { status: 401 }
-      );
-    }
-
-    // Forward the request to the backend
-    const backendResponse = await fetch(`${BACKEND_URL}/api/properties/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-      },
-    });
-
-    // Get the response data
-    const data = await backendResponse.json();
-
-    // Forward the response with the same status
-    return NextResponse.json(data, {
-      status: backendResponse.status,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (error) {
-    console.error("❌ [Proxy] Properties DELETE proxy error:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Proxy error - unable to reach backend service",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 503 }
-    );
-  }
-}
+export const DELETE = withRoute({
+  params: PropertyIdSchema,
+  handler: ({ params }) => deleteProperty(params.id),
+});

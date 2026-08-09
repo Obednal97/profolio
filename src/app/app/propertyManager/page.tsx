@@ -165,6 +165,13 @@ export default function PropertyManager() {
   const handleSubmit = async (propertyData: Property) => {
     if (!userId) return;
 
+    // The id and userId the modal attaches are the server's to decide - userId
+    // comes from the session, never the request body - and validation is
+    // strict, so sending them is a 400.
+    const payload: Partial<Property> = { ...propertyData };
+    delete payload.id;
+    delete payload.userId;
+
     try {
       // 🚀 FIX: Convert to proper REST API calls
       const headers: Record<string, string> = {
@@ -181,7 +188,7 @@ export default function PropertyManager() {
         const response = await fetch(`/api/properties/${editingProperty.id}`, {
           method: "PATCH",
           headers,
-          body: JSON.stringify(propertyData),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -195,7 +202,7 @@ export default function PropertyManager() {
         const response = await fetch("/api/properties", {
           method: "POST",
           headers,
-          body: JSON.stringify(propertyData),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {

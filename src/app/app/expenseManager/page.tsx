@@ -210,11 +210,16 @@ function ExpenseManager() {
           headers["Authorization"] = `Bearer ${authToken}`;
         }
 
-        // For new expenses, we need to add an id if it doesn't exist
-        const expenseWithId: Expense = {
-          ...expenseData,
-          id: expenseData.id || Date.now().toString(),
-          userId: userId,
+        // Only the fields the expense actually has. The id and userId that
+        // used to be attached here are the server's to decide - userId comes
+        // from the session - and validation is strict, so sending them is a
+        // 400. The client-generated id was never used either: it was a
+        // timestamp, not the uuid the row ends up with.
+        const payload = {
+          amount: expenseData.amount,
+          category: expenseData.category,
+          date: expenseData.date,
+          notes: expenseData.notes,
         };
 
         if (editingExpense) {
@@ -222,7 +227,7 @@ function ExpenseManager() {
           const response = await fetch(`/api/expenses/${editingExpense.id}`, {
             method: "PATCH",
             headers,
-            body: JSON.stringify(expenseWithId),
+            body: JSON.stringify(payload),
             signal: controller.signal,
           });
 
@@ -239,7 +244,7 @@ function ExpenseManager() {
           const response = await fetch("/api/expenses", {
             method: "POST",
             headers,
-            body: JSON.stringify(expenseWithId),
+            body: JSON.stringify(payload),
             signal: controller.signal,
           });
 

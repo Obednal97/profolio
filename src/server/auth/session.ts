@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/server/db";
 import { Forbidden, Unauthorized } from "@/server/http/errors";
+import { demoModeAllowed } from "@/server/demo";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookie";
 
 /**
@@ -37,14 +38,6 @@ const DEMO_USER: SessionUser = {
   role: "USER",
   isDemo: true,
 };
-
-/** Whether demo mode may be used at all in this environment. */
-function demoModeAllowed(): boolean {
-  return (
-    process.env.NODE_ENV !== "production" ||
-    process.env.ENABLE_DEMO_MODE === "true"
-  );
-}
 
 /**
  * Recognises the demo bearer token, preserving the original format rules:
