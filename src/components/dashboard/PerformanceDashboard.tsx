@@ -43,6 +43,7 @@ interface PerformanceMetrics {
 }
 
 interface PerformanceDashboardProps {
+  /** Takes DOLLARS, which is what /api/assets/summary already returns. */
   formatCurrency: (amount: number) => string;
 }
 

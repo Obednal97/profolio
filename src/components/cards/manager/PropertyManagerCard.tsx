@@ -8,6 +8,7 @@ interface PropertyManagerCardProps {
   property: Property;
   onEdit: (property: Property) => void;
   onDelete: (id: string) => void;
+  /** Takes DOLLARS, which is what /api/properties already returns. */
   formatCurrency: (value: number) => string;
 }
 

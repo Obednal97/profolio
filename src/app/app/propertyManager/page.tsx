@@ -62,6 +62,13 @@ export default function PropertyManager() {
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [openCategoryDropdown, setOpenCategoryDropdown] = useState<string | null>(null);
+  /**
+   * /api/properties returns money in DOLLARS, which is exactly what
+   * `formatCurrency` takes, so every amount on this page passes through
+   * unconverted. Do not add a division by a hundred here: the formatter used to
+   * do that for any value over a thousand, which showed a 500,000 property as
+   * 5,000.00.
+   */
   const { formatCurrency } = useAppContext();
 
   // 🚀 PERFORMANCE: Use stable user hooks to prevent unnecessary re-renders

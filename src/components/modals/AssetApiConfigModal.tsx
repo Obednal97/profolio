@@ -426,7 +426,11 @@ export function AssetApiConfigModal({
         onApiKeysUpdated();
       }
 
-      // Show detailed success message
+      // Every money figure in this summary is in dollars: Trading 212 reports
+      // positions as quantity times unit price and cash balances as plain
+      // amounts, and /api/trading212/sync passes them through without scaling.
+      // FinancialCalculator.formatCurrency takes dollars, so they go in as they
+      // arrive.
       const message = `✅ Successfully synced ${
         data.assetsCount
       } assets from Trading 212!

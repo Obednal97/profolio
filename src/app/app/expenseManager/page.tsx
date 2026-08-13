@@ -26,6 +26,18 @@ import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassC
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
 
+  /**
+   * Expense amounts are CENTS on the wire, unlike assets and properties which
+   * are dollars, and `formatCurrency` takes dollars. Converting here keeps the
+   * boundary in one visible place. The formatter used to infer the unit from
+   * the magnitude, which meant an expense under ten currency units displayed a
+   * hundred times too large.
+   */
+  const formatCents = useCallback(
+    (cents: number) => formatCurrency(cents / 100),
+    [formatCurrency]
+  );
+
   // 🚀 PERFORMANCE: Use stable user hooks to prevent unnecessary re-renders
   const userId = useStableUserId();
   const authToken = useStableAuthToken();
@@ -967,7 +979,7 @@ function ExpenseManager() {
           <div className="flex justify-between items-center">
             <span className="text-gray-400 text-sm">Amount</span>
             <span className={`text-xl font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
-              {isIncome ? '+' : '-'}{formatCurrency(expense.amount)}
+              {isIncome ? '+' : '-'}{formatCents(expense.amount)}
             </span>
           </div>
 
@@ -1038,7 +1050,7 @@ function ExpenseManager() {
           </div>
         </td>
         <td className={`px-4 py-3 font-medium ${isIncome ? 'text-green-500' : 'text-red-500'}`}>
-          {isIncome ? '+' : '-'}{formatCurrency(expense.amount)}
+          {isIncome ? '+' : '-'}{formatCents(expense.amount)}
         </td>
         <td className="px-4 py-3 text-gray-900 dark:text-white">
           {new Date(expense.date).toLocaleDateString("en-US", {
@@ -1161,7 +1173,7 @@ function ExpenseManager() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard
             title="Expenses (Last 30 Days)"
-            value={formatCurrency(last30DaysExpenses)}
+            value={formatCents(last30DaysExpenses)}
             icon="fa-receipt"
             colorScheme="red"
             dots={Array.from({ length: 7 }, () => Math.random() > 0.3)}
@@ -1182,7 +1194,7 @@ function ExpenseManager() {
           
           <StatCard
             title="Income (Last 30 Days)"
-            value={formatCurrency(last30DaysIncome)}
+            value={formatCents(last30DaysIncome)}
             icon="fa-arrow-up"
             colorScheme="green"
             trend={{

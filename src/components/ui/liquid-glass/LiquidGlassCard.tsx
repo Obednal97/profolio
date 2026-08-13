@@ -140,6 +140,7 @@ interface PortfolioGlassCardProps {
     value: number;
     performance: number;
   };
+  /** Takes DOLLARS. `asset.value` is a position value in dollars. */
   formatCurrency: (amount: number) => string;
 }
 
