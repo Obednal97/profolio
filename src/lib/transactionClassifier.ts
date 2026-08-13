@@ -445,8 +445,21 @@ export const MERCHANT_DATABASE: Record<string, MerchantInfo> = {
   'allstate': { name: 'Allstate', category: 'financial', subcategory: 'insurance' },
 };
 
-// Transaction classification function
-export function classifyTransaction(description: string, amount: number, type: 'debit' | 'credit'): {
+/**
+ * Classifies one statement line.
+ *
+ * `amountInCents` is integer cents, matching every caller and the rest of this
+ * module: `detectRecurringTransactions` below divides by 100 to build a
+ * whole-pounds grouping key, the PDF parser stores the output of `parseAmount`
+ * which multiplies by 100, and the CSV reader in PdfUploader does the same. The
+ * amount-based heuristics further down used to compare that value against 10,
+ * 500 and 1000 as though it were pounds, so they actually triggered at ten
+ * pence, five pounds and ten pounds. The effect was that the small-amount guess
+ * only ever applied to sums under ten pence, and everything above ten pounds
+ * took the large-amount branch and came back as Other. The parameter is named
+ * for its unit so that a future caller cannot pass pounds without noticing.
+ */
+export function classifyTransaction(description: string, amountInCents: number, type: 'debit' | 'credit'): {
   category: string;
   subcategory?: string;
   confidence: number;
@@ -479,7 +492,7 @@ export function classifyTransaction(description: string, amount: number, type: '
       return { category: 'investment_income', confidence: 0.85, isSubscription: false };
     }
     // Transfer detection
-    if (normalizedDesc.match(/transfer|deposit|payment/i) && amount > 500) {
+    if (normalizedDesc.match(/transfer|deposit|payment/i) && amountInCents > 500_00) {
       return { category: 'transfers', confidence: 0.8, isSubscription: false };
     }
     return { category: 'income', confidence: 0.7, isSubscription: false };
@@ -522,10 +535,10 @@ export function classifyTransaction(description: string, amount: number, type: '
   }
   
   // Amount-based heuristics
-  if (amount < 10) {
+  if (amountInCents < 10_00) {
     // Small amounts likely coffee/snacks
     return { category: 'coffee_tea', confidence: 0.6, isSubscription: false };
-  } else if (amount > 1000) {
+  } else if (amountInCents > 1000_00) {
     // Large amounts likely rent/mortgage
     if (normalizedDesc.match(/rent|mortgage|lease/i)) {
       return { category: 'rent_mortgage', confidence: 0.85, isSubscription: true };
@@ -536,7 +549,12 @@ export function classifyTransaction(description: string, amount: number, type: '
   return { category: 'other', confidence: 0.5, isSubscription: false };
 }
 
-// Detect recurring transactions
+/**
+ * Groups repeated statement lines and guesses how often they recur. Amounts are
+ * integer cents here as well, which is why the grouping key below divides by
+ * 100 before rounding: it deliberately treats amounts within the same pound as
+ * the same subscription.
+ */
 export function detectRecurringTransactions(transactions: Array<{
   description: string;
   amount: number;

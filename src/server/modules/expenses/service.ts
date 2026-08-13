@@ -6,6 +6,8 @@ import { NotFound } from "@/server/http/errors";
 import type {
   CreateExpenseInput,
   ExpenseQuery,
+  ImportExpensesInput,
+  ImportedTransactionInput,
   UpdateExpenseInput,
 } from "./schemas";
 
@@ -80,6 +82,140 @@ export async function updateExpense(id: string, input: UpdateExpenseInput) {
       notes: input.notes,
       date: input.date ? new Date(input.date) : undefined,
     },
+  });
+}
+
+/**
+ * The categories the expense manager treats as money coming in. The table has
+ * no sign column, so this list is the only thing separating income from
+ * spending, and it has to agree with the one the expense manager renders from.
+ */
+const INCOME_CATEGORIES = new Set([
+  "income",
+  "salary",
+  "investment_income",
+  "freelance",
+]);
+
+/** Where a row with no usable category ends up. */
+const UNCATEGORISED = "other";
+
+/**
+ * The identity of a transaction for deduplication: the calendar day it fell on,
+ * the amount in cents, and the description with case and runs of whitespace
+ * flattened.
+ *
+ * Statements carry no stable reference we could key on, so this is the closest
+ * thing to an identity available. The day rather than the timestamp is
+ * deliberate: a statement gives a date and nothing finer, so two imports of the
+ * same line must agree even if one of them arrived with a time attached.
+ */
+function duplicateKey(
+  date: Date,
+  amountInCents: number,
+  description: string | null,
+): string {
+  const day = date.toISOString().slice(0, 10);
+  const normalised = (description ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${day}|${amountInCents}|${normalised}`;
+}
+
+/**
+ * The category to store, which is not necessarily the one the caller sent.
+ *
+ * A credit is money arriving, and filing it under the category the classifier
+ * guessed from the merchant name would add spending that never happened - a
+ * refund from a supermarket would be recorded as groceries. Since income is
+ * signalled by the category alone, a credit that is not already in an income
+ * category is stored as income.
+ */
+function categoryFor(row: ImportedTransactionInput): string {
+  const claimed = row.category ?? UNCATEGORISED;
+  if (row.type === "credit" && !INCOME_CATEGORIES.has(claimed)) {
+    return "income";
+  }
+  return claimed;
+}
+
+/**
+ * Imports reviewed statement lines, skipping those already recorded.
+ *
+ * Amounts pass through untouched. `ParsedTransaction.amount` is integer cents -
+ * `parseAmount` in pdfParser.ts multiplies by 100 as it reads the statement, the
+ * CSV reader in PdfUploader does the same, and TransactionReview divides by 100
+ * to display - and the expense column is integer cents too, so any conversion
+ * here would be a hundredfold error rather than a correction.
+ *
+ * Duplicates are matched as a multiset rather than a set of distinct keys: the
+ * existing rows are counted, and each incoming row consumes one of them. Two
+ * identical coffees on the same day are a real thing that happens, so treating
+ * the key as unique would have quietly dropped the second one, while counting
+ * matches still guarantees that re-importing a statement adds nothing.
+ *
+ * The read and the write share one transaction, so a batch cannot land
+ * half-imported.
+ */
+export async function importExpenses(
+  input: ImportExpensesInput,
+): Promise<{ imported: number; skipped: number }> {
+  const user = await requireUser();
+  assertNotDemo(user);
+
+  const rows = input.transactions.map((transaction) => ({
+    amount: transaction.amount,
+    category: categoryFor(transaction),
+    date: new Date(transaction.date),
+    notes: transaction.description,
+  }));
+
+  // Only existing rows that could share a calendar day and an amount with
+  // something in this batch can be duplicates, which keeps the comparison read
+  // proportional to the batch rather than to the user's whole history.
+  const timestamps = rows.map((row) => row.date.getTime());
+  const from = new Date(Math.min(...timestamps));
+  from.setUTCHours(0, 0, 0, 0);
+  const to = new Date(Math.max(...timestamps));
+  to.setUTCHours(23, 59, 59, 999);
+  const amounts = Array.from(new Set(rows.map((row) => row.amount)));
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.expense.findMany({
+      where: {
+        userId: user.id,
+        date: { gte: from, lte: to },
+        amount: { in: amounts },
+      },
+      select: { amount: true, date: true, notes: true },
+    });
+
+    const unmatched = new Map<string, number>();
+    for (const expense of existing) {
+      const key = duplicateKey(expense.date, expense.amount, expense.notes);
+      unmatched.set(key, (unmatched.get(key) ?? 0) + 1);
+    }
+
+    const toCreate: Prisma.ExpenseCreateManyInput[] = [];
+    let skipped = 0;
+
+    for (const row of rows) {
+      const key = duplicateKey(row.date, row.amount, row.notes);
+      const available = unmatched.get(key) ?? 0;
+      if (available > 0) {
+        unmatched.set(key, available - 1);
+        skipped += 1;
+        continue;
+      }
+      toCreate.push({ userId: user.id, ...row });
+    }
+
+    if (toCreate.length > 0) {
+      await tx.expense.createMany({ data: toCreate });
+    }
+
+    return { imported: toCreate.length, skipped };
   });
 }
 
