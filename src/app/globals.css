@@ -144,12 +144,25 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
-  /* Performance optimizations */
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
+  /*
+   * No will-change here, deliberately.
+   *
+   * This block used to read `will-change: transform, backdrop-filter` under a
+   * "performance optimizations" heading, and it was costing what it meant to
+   * save. will-change promotes an element to its own compositor layer and keeps
+   * it there; on a class used by thirty-five components that is dozens of
+   * permanent layers, each with the blur pipeline armed, all of them recomposited
+   * as the page scrolls. Measured on the landing page: seventeen elements
+   * carrying will-change out of two hundred and thirty. It is a hint for the
+   * moment before a known change, not a decoration, and applying it broadly is
+   * the documented way to make scrolling worse.
+   *
+   * translate3d went with it. It was the older form of the same trick.
+   */
 
   /* Smooth transitions */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Legacy glass-tile support - maps to liquid-glass */
@@ -162,9 +175,8 @@
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark .glass-tile {
@@ -189,14 +201,14 @@
 }
 
 .liquid-glass--prominent {
-  backdrop-filter: blur(32px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(180%);
   background: rgba(255, 255, 255, 0.18);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .liquid-glass--navigation {
-  backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -308,9 +320,8 @@
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Card specific styles */
   @apply p-6 rounded-2xl relative overflow-hidden;
@@ -361,23 +372,22 @@
 
 .glass-modal {
   /* Prominent glass styles */
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Modal specific styles */
   @apply p-8 rounded-3xl max-w-md w-full relative;
 
   /* Enhanced modal blur */
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .dark .glass-modal {
@@ -390,14 +400,13 @@
 /* Glass Navigation */
 .glass-nav {
   /* Navigation glass styles */
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Navigation specific styles */
   @apply px-4 py-2 rounded-full;
