@@ -1,5 +1,6 @@
 import { withRoute } from "@/server/http/handler";
 import { requireUser } from "@/server/auth/session";
+import { isDemoRequest } from "@/server/demo";
 import { Forbidden } from "@/server/http/errors";
 import { MoneyUtils } from "@/server/money";
 import { getAssetHistory } from "@/server/modules/assets/service";
@@ -21,7 +22,11 @@ import {
 export const GET = withRoute({
   params: PortfolioHistoryParamsSchema,
   query: PortfolioHistoryQuerySchema,
-  handler: async ({ params, query }) => {
+  handler: async ({ params, query, request }) => {
+    // See /api/assets/history: a demo session has no price history, and an
+    // empty series is a better answer than a 401.
+    if (isDemoRequest(request)) return { status: "OK", data: [] };
+
     const user = await requireUser();
 
     if (params.userId !== user.id) {
