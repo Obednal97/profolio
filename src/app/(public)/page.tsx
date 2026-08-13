@@ -205,8 +205,14 @@ export default function LandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
             </div>
+            {/* This badge used to read "Trusted by 10,000+ investors
+                worldwide", which was never true of a project that was not
+                deployed anywhere. Anything claimed here has to be checkable
+                against the repository itself: the licence is MIT and
+                install.sh, profolio.sh and docker-compose.yml are supported
+                self-hosting paths. */}
             <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-              Trusted by 10,000+ investors worldwide
+              Open source and self-hostable
             </span>
           </motion.div>
 
