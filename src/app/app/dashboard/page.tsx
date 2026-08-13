@@ -35,6 +35,7 @@ interface NewsArticle {
 
 interface DashboardData {
   totalAssets: number;
+  totalLiabilities: number;
   totalExpenses: number;
   properties: number;
   propertyValue: number;
@@ -93,9 +94,25 @@ function assetValue(asset: DashboardAsset): number {
 }
 
 /** Income is recorded as an expense row with a negative amount or an income category. */
+/**
+ * The categories that mean money arriving.
+ *
+ * This list has to match the one the expense manager sorts by and the one the
+ * import path files credits under, because the expense table has no sign column
+ * and the category is the only signal. It did not match: this page recognised
+ * only "income", while the expense manager recognised four categories, so a
+ * salary row counted as income on one screen and as spending on the other.
+ */
+const INCOME_CATEGORIES = new Set([
+  "income",
+  "salary",
+  "investment_income",
+  "freelance",
+]);
+
 function isIncome(expense: DashboardExpense): boolean {
   if ((expense.amount ?? 0) < 0) return true;
-  return (expense.category ?? "").toLowerCase() === "income";
+  return INCOME_CATEGORIES.has((expense.category ?? "").toLowerCase());
 }
 
 // IMPROVEMENT: Safe localStorage access utility
@@ -314,11 +331,13 @@ export default function DashboardPage() {
       // market headlines - to every user, with Math.random() variance to make
       // them look live. A brand new account with nothing in it showed a
       // six-figure net worth. Nothing here was ever fetched.
-      const [assetsRes, expensesRes, propertiesRes] = await Promise.all([
-        fetch("/api/assets", { credentials: "same-origin" }),
-        fetch("/api/expenses", { credentials: "same-origin" }),
-        fetch("/api/properties", { credentials: "same-origin" }),
-      ]);
+      const [assetsRes, expensesRes, propertiesRes, liabilitiesRes] =
+        await Promise.all([
+          fetch("/api/assets", { credentials: "same-origin" }),
+          fetch("/api/expenses", { credentials: "same-origin" }),
+          fetch("/api/properties", { credentials: "same-origin" }),
+          fetch("/api/liabilities", { credentials: "same-origin" }),
+        ]);
 
       if (!assetsRes.ok || !expensesRes.ok || !propertiesRes.ok) {
         throw new Error("Could not load your dashboard data");
@@ -330,9 +349,24 @@ export default function DashboardPage() {
         propertiesRes.json(),
       ]);
 
+      // Liabilities are read separately and tolerantly. A failure here should
+      // not blank the whole dashboard, and until this endpoint existed the
+      // headline figure counted assets only.
+      const liabilitiesJson = liabilitiesRes.ok
+        ? await liabilitiesRes.json()
+        : null;
+
       const assets: DashboardAsset[] = assetsJson?.assets ?? [];
       const expenses: DashboardExpense[] = expensesJson?.expenses ?? [];
       const properties: DashboardProperty[] = propertiesJson?.properties ?? [];
+
+      // Balances arrive in dollars, matching assets and properties.
+      const liabilities: Array<{ balance?: number }> =
+        liabilitiesJson?.liabilities ?? [];
+      const totalLiabilities = liabilities.reduce(
+        (sum, liability) => sum + (liability.balance ?? 0),
+        0
+      );
 
       const propertyValue = properties.reduce(
         (sum, property) =>
@@ -389,6 +423,7 @@ export default function DashboardPage() {
 
       setData({
         totalAssets,
+        totalLiabilities,
         totalExpenses,
         properties: properties.length,
         propertyValue,
@@ -447,6 +482,7 @@ export default function DashboardPage() {
 
   const dashboardData: DashboardData = data || {
     totalAssets: 0,
+    totalLiabilities: 0,
     totalExpenses: 0,
     properties: 0,
     propertyValue: 0,
@@ -490,13 +526,13 @@ export default function DashboardPage() {
           own card as "valued at ..." and then left out of both total assets
           and net worth.
 
-          Liabilities are zero because nothing exposes them yet: the Liability
-          table has no API. Zero is at least true, and the figure appears in
-          the breakdown so it is visible rather than implied.
+          Liabilities now come from /api/liabilities. They read zero until the
+          user records one, which is different from the figure being unavailable:
+          it previously said zero because nothing exposed the table at all.
         */}
         <NetWorthDisplay
           totalAssets={dashboardData.totalAssets + dashboardData.propertyValue}
-          totalLiabilities={0}
+          totalLiabilities={dashboardData.totalLiabilities}
           showTaxToggle={true}
         />
       </div>
