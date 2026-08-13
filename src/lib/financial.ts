@@ -286,7 +286,14 @@ export class FinancialCalculator {
   }
 
   /**
-   * Format currency for display with proper precision
+   * Format currency for display with proper precision.
+   *
+   * THE UNIT CONTRACT: `amount` is in major currency units, meaning dollars,
+   * never cents. This formatter has never guessed, and must not start:
+   * `centsToDollars` is the explicit conversion for anything read out of a
+   * Prisma column or off the expenses API. The sibling formatter on the app
+   * context did guess, dividing anything over a thousand by a hundred, and that
+   * is where "Portfolio APY -99.58%" on a portfolio that was up came from.
    */
   static formatCurrency(
     amount: number | string | DecimalValue,

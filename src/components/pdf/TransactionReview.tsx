@@ -19,6 +19,16 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
   onCancel 
 }) => {
   const { formatCurrency } = useAppContext();
+
+  /**
+   * `ParsedTransaction.amount` is in CENTS, which is what the PDF parser
+   * produces and what the expenses API expects, while `formatCurrency` takes
+   * dollars. Converting in one named place keeps the boundary visible; the
+   * formatter used to guess the unit from the magnitude, so a statement line
+   * under ten units printed a hundred times too large.
+   */
+  const formatCents = (cents: number) => formatCurrency(cents / 100);
+
   const [transactions, setTransactions] = useState<ParsedTransaction[]>(parseResult.transactions);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
     new Set(parseResult.transactions.map(t => t.id))
@@ -120,7 +130,7 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
             <p className="text-sm text-gray-600 dark:text-gray-400">Net Total</p>
             <p className="font-semibold text-gray-900 dark:text-white">
-              {formatCurrency(totalAmount)}
+              {formatCents(totalAmount)}
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
@@ -206,7 +216,7 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                             {getConfidenceLabel(transaction.confidence)} ({Math.round(transaction.confidence * 100)}%)
                           </span>
                           <span className={`font-semibold ${transaction.type === 'debit' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                            {transaction.type === 'debit' ? '-' : '+'}{formatCurrency(transaction.amount)}
+                            {transaction.type === 'debit' ? '-' : '+'}{formatCents(transaction.amount)}
                           </span>
                         </div>
                       </div>
@@ -349,7 +359,7 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
           
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              {selectedTransactions.size} transactions • {formatCurrency(totalAmount)} net total
+              {selectedTransactions.size} transactions • {formatCents(totalAmount)} net total
             </span>
             <Button
               onClick={handleSave}

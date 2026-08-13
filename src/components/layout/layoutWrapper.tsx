@@ -27,6 +27,7 @@ interface LayoutWrapperProps {
 interface AppContextType {
   currency: string;
   setCurrency: (currency: string) => void;
+  /** Takes DOLLARS, not cents. See the implementation for the full contract. */
   formatCurrency: (amount: number) => string;
 }
 
@@ -116,15 +117,35 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     }
   };
 
+  /**
+   * THE UNIT CONTRACT: `amount` is in major currency units, meaning dollars or
+   * pounds, never cents. Anything holding cents converts before it gets here.
+   *
+   * This used to divide by a hundred whenever the amount exceeded a thousand,
+   * guessing the unit from the magnitude. It was wrong in both directions at
+   * once. A property worth 500,000 dollars rendered as 5,000.00, because a
+   * genuine dollar amount got scaled down. An expense of 450 cents rendered as
+   * 450.00 rather than 4.50, because it fell under the threshold and was left
+   * alone, while an expense of 4,500 cents happened to come out right. Which
+   * expenses displayed correctly depended on whether they were over ten units.
+   *
+   * The same heuristic in the asset gain/loss maths produced a displayed
+   * portfolio APY of -99.58% on a portfolio that was up, and it has been
+   * removed there too. Do not reintroduce it: a formatter cannot recover a unit
+   * the caller failed to state, and guessing wrong is a hundredfold error on a
+   * money figure.
+   *
+   * /api/assets and /api/properties return dollars, so their values pass
+   * straight through. /api/expenses returns cents, as do raw Prisma columns
+   * and the PDF parser, so those callers divide by a hundred at the point the
+   * value enters the component.
+   */
   const formatCurrency = (amount: number) => {
-    // Convert cents to currency units if amount is large (assuming it's in cents)
-    const value = amount > 1000 ? amount / 100 : amount;
-
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency,
       currencyDisplay: "symbol",
-    }).format(value);
+    }).format(amount);
   };
 
   const appValue = {

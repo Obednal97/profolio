@@ -12,6 +12,7 @@ interface Asset {
 
 interface PortfolioGlassCardProps {
   asset: Asset;
+  /** Takes DOLLARS. `asset.value` is a position value in dollars. */
   formatCurrency?: (amount: number) => string;
   className?: string;
 }

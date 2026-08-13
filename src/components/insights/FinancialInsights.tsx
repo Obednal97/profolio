@@ -43,6 +43,14 @@ export default function FinancialInsights({
   monthlyExpensesTrend = [],
   setTimeRange,
 }: FinancialInsightsProps) {
+  /**
+   * Every memo below converts `expense.amount` from cents to dollars as it
+   * aggregates, so everything this component derives is already in dollars and
+   * goes straight to `formatCurrency`. The call sites used to multiply by a
+   * hundred to put the value back into cents, purely so the formatter's
+   * magnitude heuristic would divide it down again. The heuristic is gone and so
+   * are those multiplications.
+   */
   const { formatCurrency } = useAppContext();
 
   // Separate income and expenses
@@ -206,6 +214,18 @@ export default function FinancialInsights({
     const projectedExpenses = avgMonthlyExpense;
     const projectedSavings = avgMonthlyIncome - projectedExpenses;
 
+    /**
+     * The mean expense, in dollars. This was the one figure on the panel
+     * computed straight from `e.amount` without dividing by a hundred, so it
+     * was in cents while its neighbours were in dollars. The old formatter
+     * masked it for means above ten units and printed a hundredfold overstate
+     * below that.
+     */
+    const averageTransaction =
+      expenseTransactions.length > 0
+        ? totalExpenses / expenseTransactions.length
+        : 0;
+
     return {
       totalIncome,
       totalExpenses,
@@ -213,6 +233,7 @@ export default function FinancialInsights({
       savingsRate,
       avgMonthlyExpense,
       avgMonthlyIncome,
+      averageTransaction,
       subscriptions: subscriptions.length,
       monthlySubscriptionCost,
       projectedExpenses,
@@ -402,7 +423,7 @@ export default function FinancialInsights({
                       </div>
                       <div className="text-right">
                         <p className="text-white text-sm font-medium">
-                          {formatCurrency(category.amount * 100)}
+                          {formatCurrency(category.amount)}
                         </p>
                         <p
                           className={`text-xs ${
@@ -445,7 +466,7 @@ export default function FinancialInsights({
                     </div>
                     <div className="text-right">
                       <p className="text-gray-900 dark:text-white font-medium">
-                        {formatCurrency(category.amount * 100)}
+                        {formatCurrency(category.amount)}
                       </p>
                       <p
                         className={`text-sm ${
@@ -524,12 +545,7 @@ export default function FinancialInsights({
                     </div>
                   </div>
                   <span className="font-bold">
-                    {formatCurrency(
-                      expenseTransactions.reduce(
-                        (sum, e) => sum + e.amount,
-                        0
-                      ) / expenseTransactions.length || 0
-                    )}
+                    {formatCurrency(metrics.averageTransaction)}
                   </span>
                 </div>
               </EnhancedGlassCard>
@@ -613,11 +629,9 @@ export default function FinancialInsights({
                     <span className="text-gray-900 dark:text-white font-medium">Needs (50%)</span>
                   </div>
                   <span className="text-sm text-gray-400">
-                    {formatCurrency(budgetRecommendations.needs.current * 100)}{" "}
+                    {formatCurrency(budgetRecommendations.needs.current)}{" "}
                     /{" "}
-                    {formatCurrency(
-                      budgetRecommendations.needs.recommended * 100
-                    )}
+                    {formatCurrency(budgetRecommendations.needs.recommended)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-3">
@@ -637,7 +651,7 @@ export default function FinancialInsights({
                   <p className="text-red-400 text-sm mt-1">
                     Over budget by{" "}
                     {formatCurrency(
-                      Math.abs(budgetRecommendations.needs.difference) * 100
+                      Math.abs(budgetRecommendations.needs.difference)
                     )}
                   </p>
                 )}
@@ -651,11 +665,9 @@ export default function FinancialInsights({
                     <span className="text-gray-900 dark:text-white font-medium">Wants (30%)</span>
                   </div>
                   <span className="text-sm text-gray-400">
-                    {formatCurrency(budgetRecommendations.wants.current * 100)}{" "}
+                    {formatCurrency(budgetRecommendations.wants.current)}{" "}
                     /{" "}
-                    {formatCurrency(
-                      budgetRecommendations.wants.recommended * 100
-                    )}
+                    {formatCurrency(budgetRecommendations.wants.recommended)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-3">
@@ -675,7 +687,7 @@ export default function FinancialInsights({
                   <p className="text-red-400 text-sm mt-1">
                     Over budget by{" "}
                     {formatCurrency(
-                      Math.abs(budgetRecommendations.wants.difference) * 100
+                      Math.abs(budgetRecommendations.wants.difference)
                     )}
                   </p>
                 )}
@@ -691,13 +703,9 @@ export default function FinancialInsights({
                     </span>
                   </div>
                   <span className="text-sm text-gray-400">
-                    {formatCurrency(
-                      budgetRecommendations.savings.current * 100
-                    )}{" "}
+                    {formatCurrency(budgetRecommendations.savings.current)}{" "}
                     /{" "}
-                    {formatCurrency(
-                      budgetRecommendations.savings.recommended * 100
-                    )}
+                    {formatCurrency(budgetRecommendations.savings.recommended)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-3">
@@ -717,7 +725,7 @@ export default function FinancialInsights({
                   <p className="text-yellow-400 text-sm mt-1">
                     Below target by{" "}
                     {formatCurrency(
-                      Math.abs(budgetRecommendations.savings.difference) * 100
+                      Math.abs(budgetRecommendations.savings.difference)
                     )}
                   </p>
                 )}

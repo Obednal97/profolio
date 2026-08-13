@@ -8,6 +8,7 @@ interface ExpenseManagerCardProps {
   expense: Expense;
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
+  /** Takes DOLLARS. `expense.amount` is cents, so this card divides first. */
   formatCurrency: (value: number) => string;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
@@ -83,7 +84,12 @@ export function ExpenseManagerCard({
         <div className="flex justify-between items-center">
           <span className="text-gray-400 text-sm">Amount</span>
           <span className={`text-xl font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
-            {isIncome ? '+' : '-'}{formatCurrency(expense.amount)}
+            {/*
+              Expense amounts are cents on the wire while formatCurrency takes
+              dollars, so the conversion happens here rather than being inferred
+              from how big the number looks.
+            */}
+            {isIncome ? '+' : '-'}{formatCurrency(expense.amount / 100)}
           </span>
         </div>
 
