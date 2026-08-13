@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withRoute } from "@/server/http/handler";
+import { limit, RATE_LIMITS } from "@/server/http/rate-limit";
 import { jsonWithSession } from "@/server/auth/cookie";
 import { SignInSchema } from "@/server/modules/auth/schemas";
 import { signIn } from "@/server/modules/auth/service";
@@ -14,6 +15,11 @@ import { signIn } from "@/server/modules/auth/service";
 export const POST = withRoute({
   body: SignInSchema,
   handler: async ({ body, request }) => {
+    // Ten per address per five minutes: enough for a mistyped password, and
+    // it also throttles how fast an attacker can mint 2FA verification
+    // tokens by repeating a password they already know.
+    await limit(request, RATE_LIMITS.signIn);
+
     const result = await signIn(body);
 
     if ("requiresTwoFactor" in result) {
