@@ -96,6 +96,17 @@ function clearSecureUserData(): void {
   }
 }
 
+/**
+ * The demo identity. One definition, used both when demo mode is entered and
+ * when it is restored in a tab that has no cached profile.
+ */
+const DEMO_USER: LocalUser = {
+  id: "demo-user-id",
+  email: "demo@profolio.com",
+  name: "Demo User",
+  token: "",
+};
+
 /** Demo sessions last 24 hours, matching the documented behaviour. */
 const DEMO_SESSION_MAX_AGE = 60 * 60 * 24;
 
@@ -136,6 +147,18 @@ class LocalAuthService {
   private initializeFromStorage() {
     if (typeof window === "undefined") return;
 
+    // A demo session is identified by the demo-mode flag rather than by a
+    // cached profile: sessionStorage does not cross tabs, so opening the app
+    // in a second one would otherwise look signed out while the API happily
+    // served demo data off the cookie.
+    if (this.isDemoMode()) {
+      this.currentUser = getSecureUserData()?.email
+        ? { ...(getSecureUserData() as LocalUser), token: "" }
+        : { ...DEMO_USER };
+      this.notifyListeners();
+      return;
+    }
+
     // The token is in an httpOnly cookie and cannot be read here, so the
     // cached profile is a hint, not proof. It is shown immediately to avoid a
     // flash of signed-out UI, then confirmed against the server.
@@ -154,6 +177,13 @@ class LocalAuthService {
    * live session.
    */
   private async confirmSession(): Promise<void> {
+    // A demo session has no account and no auth cookie, so /api/auth/profile
+    // answers 401 - correctly. Running this check against one destroyed the
+    // demo the moment the page was reloaded or navigated, which is why demo
+    // mode appeared not to work at all. Demo data is served off the demo-mode
+    // cookie instead, and there is no session to confirm.
+    if (this.isDemoMode()) return;
+
     try {
       const response = await fetch("/api/auth/profile", {
         credentials: "same-origin",
@@ -400,9 +430,7 @@ class LocalAuthService {
   // Demo mode support with secure session management
   async signInWithDemo(): Promise<LocalUser> {
     const demoUser: LocalUser = {
-      id: "demo-user-id",
-      email: "demo@profolio.com",
-      name: "Demo User",
+      ...DEMO_USER,
       token: generateDemoSessionToken(),
     };
 

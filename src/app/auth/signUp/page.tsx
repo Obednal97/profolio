@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
+import { getDeploymentLabel } from "@/lib/deploymentConfig";
 
 function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
@@ -180,11 +181,9 @@ function SignUpPage() {
           <p className="text-gray-600 dark:text-gray-400">
             Start managing your wealth in minutes
           </p>
-          {authMode && (
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-              {authMode === "local" ? "🏠 Self-hosted mode" : "☁️ Cloud mode"}
-            </p>
-          )}
+          <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+            {getDeploymentLabel()}
+          </p>
         </div>
 
         {error && (

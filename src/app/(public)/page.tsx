@@ -5,7 +5,7 @@ import { motion, useAnimationFrame } from "framer-motion";
 import { RadixButton as Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getAuthModeSync } from "@/lib/authConfig";
+import { shouldShowLandingPage } from "@/lib/deploymentConfig";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 
 const container = {
@@ -63,8 +63,11 @@ export default function LandingPage() {
   });
 
   useEffect(() => {
-    const authMode = getAuthModeSync();
-    if (authMode === "local") {
+    // Whether to show this page is a question about the deployment, not about
+    // how people sign in. It used to redirect whenever auth mode was "local",
+    // so a hosted deployment using email and password never showed its own
+    // landing page.
+    if (!shouldShowLandingPage()) {
       router.push("/auth/signIn");
     }
   }, [router]);

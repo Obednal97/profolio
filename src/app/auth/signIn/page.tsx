@@ -7,6 +7,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import ProfolioLogo from "@/components/ui/logo/ProfolioLogo";
 import { logger } from "@/lib/logger";
+import { getDeploymentLabel } from "@/lib/deploymentConfig";
 import { handleGoogleRedirectResult } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { TwoFactorVerification } from "@/components/settings/security/TwoFactorVerification";
@@ -263,11 +264,9 @@ function SignInPage() {
           <p className="text-gray-600 dark:text-gray-400">
             Sign in to your account to continue
           </p>
-          {authMode && (
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-              {authMode === "local" ? "🏠 Self-hosted mode" : "☁️ Cloud mode"}
-            </p>
-          )}
+          <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+            {getDeploymentLabel()}
+          </p>
         </div>
 
         {error && (
