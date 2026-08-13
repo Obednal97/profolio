@@ -15,14 +15,28 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = React.memo(
       <header className="sticky top-0 z-50 pwa-header">
         {/* Glass header with seamless transparency gradient */}
         <div className="relative pwa-header-background">
-          {/* Gradient blur layers - strongest to weakest */}
+          {/*
+            Four stacked backdrop-filter layers, masked to fade out, which
+            together make the blur weaken down the header.
+
+            Each one used to carry `transform: translateZ(0)` and
+            `willChange: "backdrop-filter"`. Nothing animates their filter, so
+            that pinned four permanent compositor layers to a STICKY element -
+            one that overlaps the scrolling content by definition - and armed the
+            blur pipeline on all of them. Every scroll frame re-sampled what was
+            behind, blurred it four times at four radii and applied four gradient
+            masks. It was the most expensive thing on the page and it was pinned
+            to the viewport.
+
+            The four layers remain, because collapsing them changes how the
+            effect looks and that is a design decision. If scrolling still costs
+            too much, this is the place to spend the next visual compromise.
+          */}
           <div
             className="absolute inset-0 backdrop-blur-xl bg-gradient-to-b from-white/40 via-white/20 to-transparent dark:from-gray-900/50 dark:via-gray-900/25 dark:to-transparent"
             style={{
               maskImage:
                 "linear-gradient(to bottom, black 0%, black 30%, transparent 100%)",
-              transform: "translateZ(0)",
-              willChange: "backdrop-filter",
             }}
           />
           <div
@@ -30,8 +44,6 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = React.memo(
             style={{
               maskImage:
                 "linear-gradient(to bottom, black 20%, black 50%, transparent 100%)",
-              transform: "translateZ(0)",
-              willChange: "backdrop-filter",
             }}
           />
           <div
@@ -39,8 +51,6 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = React.memo(
             style={{
               maskImage:
                 "linear-gradient(to bottom, black 40%, black 70%, transparent 100%)",
-              transform: "translateZ(0)",
-              willChange: "backdrop-filter",
             }}
           />
           <div
@@ -48,18 +58,12 @@ export const HeaderLayout: React.FC<HeaderLayoutProps> = React.memo(
             style={{
               maskImage:
                 "linear-gradient(to bottom, black 60%, transparent 100%)",
-              transform: "translateZ(0)",
-              willChange: "backdrop-filter",
             }}
           />
 
           {/* Content - Flexible layout that adapts to content needs */}
           <div
             className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 gap-4"
-            style={{
-              transform: "translateZ(0)",
-              willChange: "transform",
-            }}
           >
             {/* Logo - Fixed width, no flex growth */}
             <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 shrink-0">
