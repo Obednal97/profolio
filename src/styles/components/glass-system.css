@@ -18,13 +18,18 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
-  /* Performance optimizations */
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
+  /*
+   * No will-change and no translate3d here, deliberately. See the note in
+   * app/globals.css: promoting every glass surface to a permanent compositor
+   * layer with the blur pipeline armed is what made scrolling stutter, and this
+   * file is the one actually loaded, via styles/main.css from the root layout.
+   */
 
   /* Smooth transitions */
-  transition: all var(--animation-duration-normal)
-    var(--animation-easing-smooth);
+  transition: transform var(--animation-duration-normal)
+      var(--animation-easing-smooth),
+    box-shadow var(--animation-duration-normal)
+      var(--animation-easing-smooth);
 }
 
 /* Legacy glass-tile support - same as liquid-glass */
@@ -39,10 +44,10 @@
     saturate(var(--glass-saturation-high));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
-  transition: all var(--animation-duration-normal)
-    var(--animation-easing-smooth);
+  transition: transform var(--animation-duration-normal)
+      var(--animation-easing-smooth),
+    box-shadow var(--animation-duration-normal)
+      var(--animation-easing-smooth);
 }
 
 /* Dark mode adaptation */
@@ -121,10 +126,10 @@
     saturate(var(--glass-saturation-high));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translate3d(0, 0, 0);
-  will-change: transform, backdrop-filter;
-  transition: all var(--animation-duration-normal)
-    var(--animation-easing-smooth);
+  transition: transform var(--animation-duration-normal)
+      var(--animation-easing-smooth),
+    box-shadow var(--animation-duration-normal)
+      var(--animation-easing-smooth);
 
   /* Card specific */
   padding: var(--component-padding-md);
