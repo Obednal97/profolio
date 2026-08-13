@@ -24,15 +24,14 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
   const calculateAppreciation = () => {
     if (!asset.purchase_price || !asset.current_value || !asset.quantity) return null;
     
-    // Check if current_value is already in dollars or cents
-    const currentValueDollars = asset.current_value > 1000
-      ? parseFloat(FinancialCalculator.centsToDollars(asset.current_value))
-      : asset.current_value;
-    const purchasePriceDollars = asset.purchase_price; // Already in dollars
-    
+    // Both are dollars: /api/assets returns `current_value` as the total
+    // position value and `purchase_price` per unit. This used to guess the
+    // unit from the magnitude - anything over a thousand was assumed to be
+    // cents and divided by a hundred - which turned every position worth more
+    // than $1,000 into a 99% loss.
     return FinancialCalculator.calculateAssetGainLoss(
-      currentValueDollars,
-      purchasePriceDollars,
+      asset.current_value,
+      asset.purchase_price,
       asset.quantity
     );
   };

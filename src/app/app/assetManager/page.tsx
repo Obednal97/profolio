@@ -167,10 +167,12 @@ const calculateAssetMetrics = (assets: Asset[]): AssetMetrics => {
 
     // Gain/loss and APY calculations (only for assets with complete data)
     if (asset.purchase_price && asset.current_value && asset.quantity) {
-      const currentValueDollars =
-        asset.current_value > 1000
-          ? parseFloat(FinancialCalculator.centsToDollars(asset.current_value))
-          : asset.current_value;
+      // `current_value` is the total position value in dollars, which is what
+      // calculateAssetGainLoss expects. It used to be run through
+      // `value > 1000 ? centsToDollars(value) : value` - a guess at the unit
+      // based on the magnitude - so every position worth more than a thousand
+      // was divided by a hundred. That is where "-99.58% APY" came from.
+      const currentValueDollars = asset.current_value;
 
       // Gain/loss calculation
       const calculation = FinancialCalculator.calculateAssetGainLoss(
