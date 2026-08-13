@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { motion, useAnimationFrame } from "framer-motion";
+import { useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import { RadixButton as Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -40,13 +40,16 @@ const fadeIn = {
   },
 };
 
-// Live net worth simulation
-const getLiveNetWorth = () => {
-  const base = 750_000;
-  const ratePerSecond = 0.012;
-  const now = Math.floor(Date.now() / 1000);
-  return base + ratePerSecond * (now - 1700000000);
-};
+/**
+ * A fixed figure for the example portfolio shown below.
+ *
+ * This used to be `750_000 + 0.012 * secondsSinceEpochOffset`, recomputed on
+ * every animation frame and rendered under the heading "Live Portfolio Value"
+ * beside a pulsing dot labelled "Live". It was not live and it was not anyone's
+ * portfolio, and a visitor had no way to tell. The panel is now labelled as the
+ * illustration it always was, and the number holds still.
+ */
+const EXAMPLE_PORTFOLIO_VALUE = 750_000;
 
 const formatCompactNumber = (num: number) =>
   Intl.NumberFormat("en", {
@@ -55,12 +58,8 @@ const formatCompactNumber = (num: number) =>
   }).format(num);
 
 export default function LandingPage() {
-  const [liveNetWorth, setLiveNetWorth] = useState(getLiveNetWorth());
+  const exampleValue = EXAMPLE_PORTFOLIO_VALUE;
   const router = useRouter();
-
-  useAnimationFrame(() => {
-    setLiveNetWorth(getLiveNetWorth());
-  });
 
   useEffect(() => {
     // Whether to show this page is a question about the deployment, not about
@@ -325,24 +324,21 @@ export default function LandingPage() {
                   <i className="fas fa-chart-line text-3xl text-white" />
                 </div>
                 <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  Live Portfolio Value
+                  Example Portfolio
                 </h3>
               </div>
 
               <div className="text-center">
                 <p className="text-6xl sm:text-7xl font-black text-gray-900 dark:text-white mb-4 font-mono">
-                  ${formatCompactNumber(liveNetWorth)}
+                  ${formatCompactNumber(exampleValue)}
                 </p>
+                {/* The percentage here was hardcoded at +12.5% and sat next
+                    to a pulsing "Live" indicator, which together read as a
+                    measured return on real money. */}
                 <div className="flex items-center justify-center gap-4 text-lg">
-                  <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
-                    <i className="fas fa-arrow-up" />
-                    +12.5%
-                  </span>
                   <span className="text-gray-600 dark:text-gray-400">
-                    this month
+                    Illustrative figures, not real portfolio data
                   </span>
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                  <span className="text-gray-600 dark:text-gray-400">Live</span>
                 </div>
               </div>
 
@@ -454,8 +450,8 @@ export default function LandingPage() {
               </span>
             </h2>
             <p className="text-xl text-gray-700 dark:text-gray-300 mb-12 max-w-3xl mx-auto">
-              Join thousands who&apos;ve taken control of their wealth with
-              Profolio. Start free, upgrade when you&apos;re ready.
+              Track everything you own in one place, on infrastructure you
+              control. Self-host it or run it hosted, and start free.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <Button

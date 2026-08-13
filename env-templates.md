@@ -161,3 +161,19 @@ NEXT_PUBLIC_LOG_LEVEL=warn
 # NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 # NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
+
+## Rate limiting (optional)
+
+The authentication endpoints are rate limited only when a Redis is reachable.
+Attach Upstash through the Vercel Marketplace and it injects these itself; set
+them by hand for a self-hosted deployment. With neither pair present the
+limiter allows every request and logs a single warning, so the application runs
+exactly as it does without them.
+
+```bash
+UPSTASH_REDIS_REST_URL=https://your-instance.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-token
+```
+
+The `KV_REST_API_URL` and `KV_REST_API_TOKEN` pair is accepted as an alias,
+because that is what Vercel's Upstash integration sets.

@@ -200,6 +200,20 @@ Environment variables the merged app needs: `DATABASE_URL`, `DIRECT_URL`,
 `FIREBASE_*` set, `NEXT_PUBLIC_ENABLE_DEMO_MODE`. Everything optional degrades
 to a 503 rather than a crash.
 
+`NEXT_PUBLIC_DEPLOYMENT_MODE` is `cloud` or unset. It decides whether the app
+calls itself self-hosted and whether the landing page shows, and it is separate
+from `NEXT_PUBLIC_AUTH_MODE`, which only chooses between local and Firebase
+sign-in. Conflating the two made a hosted deployment announce itself as
+self-hosted and skip its own landing page.
+
+**Rate limiting is inert until Redis is attached.** `src/server/http/rate-limit.ts`
+enforces only when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are
+set, or the `KV_REST_API_URL`/`KV_REST_API_TOKEN` pair that Vercel's Upstash
+integration injects. With neither it allows every request and logs one warning.
+It also fails **open** on a Redis error: locking people out of their accounts
+because a cache is unreachable is worse than the abuse it prevents. Attach
+Upstash through the Marketplace to switch it on; nothing else needs changing.
+
 `vercel.json` registers the six-hourly price sync against
 `/api/cron/sync-prices`, which is the only scheduled work.
 

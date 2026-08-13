@@ -9,9 +9,14 @@ const eslintConfig = [
     // `next lint` used to apply these implicitly; the ESLint CLI does not, so
     // build output and dependencies have to be excluded explicitly.
     ignores: [
-      // Reference-only during the migration; deleted once the port lands.
+      // Leftovers of the two-service layout. Deleted from the repository; a
+      // local checkout may still hold build output and .env files there.
       "backend/**",
       "frontend/**",
+      // Agent worktrees are full copies of this repository living inside it.
+      // Without this, every file gets linted once per worktree and a clean
+      // run reports thousands of duplicated problems.
+      ".claude/**",
       ".next/**",
       "out/**",
       "build/**",
