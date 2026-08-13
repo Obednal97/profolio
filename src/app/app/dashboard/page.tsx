@@ -356,13 +356,24 @@ export default function DashboardPage() {
         );
       });
 
-      const totalExpenses = thisMonth
-        .filter((expense) => !isIncome(expense))
-        .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0);
+      // Expense amounts arrive in CENTS - that is the documented wire format
+      // for /api/expenses, and the expense manager divides by 100 for the same
+      // reason. Assets and properties arrive in dollars. This page was adding
+      // the two together, so a month of expenses read a hundred times too
+      // large next to the asset values beside it.
+      const toDollars = (cents: number) => cents / 100;
 
-      const monthlyIncome = thisMonth
-        .filter(isIncome)
-        .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0);
+      const totalExpenses = toDollars(
+        thisMonth
+          .filter((expense) => !isIncome(expense))
+          .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0)
+      );
+
+      const monthlyIncome = toDollars(
+        thisMonth
+          .filter(isIncome)
+          .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0)
+      );
 
       const transactions: Transaction[] = [...expenses]
         .sort(
@@ -371,7 +382,7 @@ export default function DashboardPage() {
         .slice(0, 5)
         .map((expense) => ({
           type: isIncome(expense) ? "income" : "expense",
-          amount: Math.abs(expense.amount ?? 0),
+          amount: toDollars(Math.abs(expense.amount ?? 0)),
           date: expense.date,
           description: expense.description || expense.category || "Transaction",
         }));
@@ -467,9 +478,25 @@ export default function DashboardPage() {
 
       {/* Net Worth Display */}
       <div className="mb-8">
+        {/*
+          Net worth is everything owned less everything owed.
+
+          This used to pass THIS MONTH'S EXPENSES as total liabilities, so the
+          headline figure was assets minus one month of spending - which for
+          the sample portfolio produced a net worth of minus eight hundred
+          thousand. Expenses are not liabilities.
+
+          Property value is included here. It was computed, displayed on its
+          own card as "valued at ..." and then left out of both total assets
+          and net worth.
+
+          Liabilities are zero because nothing exposes them yet: the Liability
+          table has no API. Zero is at least true, and the figure appears in
+          the breakdown so it is visible rather than implied.
+        */}
         <NetWorthDisplay
-          totalAssets={dashboardData.totalAssets}
-          totalLiabilities={dashboardData.totalExpenses}
+          totalAssets={dashboardData.totalAssets + dashboardData.propertyValue}
+          totalLiabilities={0}
           showTaxToggle={true}
         />
       </div>
