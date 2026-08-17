@@ -144,21 +144,21 @@
     }
   }
 
-  /* Hardware acceleration for mobile animations (from globals.css) */
   @media (max-width: 768px) {
-    /* Optimize all animated elements for mobile performance */
-    [class*="motion-"] {
-      transform: translateZ(0);
-      will-change: transform, opacity;
-      backface-visibility: hidden;
-      perspective: 1000px;
-    }
-
-    /* Optimize framer-motion animations */
-    [data-framer-motion] {
-      transform: translateZ(0);
-      will-change: auto;
-    }
+    /*
+     * Two rules stood here targeting [class*="motion-"] and
+     * [data-framer-motion], giving each match a permanent compositor layer via
+     * translateZ(0) and a static will-change. Both selectors match nothing -
+     * the attribute is a Framer Motion v2 marker, this project is on v13, and
+     * no component carries a "motion-" class; measured on the deployed site,
+     * zero elements matched either.
+     *
+     * They are gone rather than repointed at the real elements, because a
+     * static will-change on a wildcard is the mistake that made the header
+     * stutter: it promotes an unbounded number of elements to their own layer
+     * permanently, on the devices with the least memory to spare. will-change
+     * is for the moment before an animation, not for the lifetime of a page.
+     */
 
     /* Optimize background gradient animations */
     .gradient-animation {

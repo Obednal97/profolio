@@ -12,12 +12,18 @@
     scroll-behavior: auto !important;
   }
 
-  /* Disable complex animations on low-performance devices */
-  [class*="motion-"],
-  [data-framer-motion] {
-    animation: none !important;
-    transition: none !important;
-  }
+  /*
+   * The two selectors that used to be here, [class*="motion-"] and
+   * [data-framer-motion], match nothing: the attribute is a Framer Motion v2
+   * marker and this project is on v13, and no component carries a "motion-"
+   * class. Measured on the deployed site, both matched zero elements.
+   *
+   * It would not have worked even if they matched. Framer Motion animates by
+   * writing inline styles frame by frame, so CSS cannot switch it off. That is
+   * handled properly now by MotionConfig reducedMotion="user" in
+   * src/providers/client-providers.tsx. The universal rule above still covers
+   * everything animated by CSS.
+   */
 }
 
 /* High contrast mode support */
