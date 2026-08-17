@@ -20,5 +20,22 @@ export function blankable<T extends z.ZodType>(schema: T) {
   );
 }
 
+/**
+ * Like `blankable`, but for a PATCH, where "clear this field" and "leave this
+ * field alone" are different requests and both have to be expressible.
+ *
+ * `blankable` folds "" and null into undefined, which a partial update reads as
+ * "not provided". That is right on a create, where there is nothing to clear,
+ * and wrong on an update: it made an optional field write-once, since no
+ * request could ever set it back to empty. Here "" and null both mean null,
+ * which the service writes, and only omitting the key means leave it.
+ */
+export function clearable<T extends z.ZodType>(schema: T) {
+  return z.preprocess(
+    (value) => (value === "" ? null : value),
+    schema.nullable().optional(),
+  );
+}
+
 /** An ISO date, with or without a time component. */
 export const isoDate = z.iso.datetime({ offset: true }).or(z.iso.date());

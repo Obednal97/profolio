@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { blankable, isoDate } from "@/server/http/zod";
+import { blankable, clearable, isoDate } from "@/server/http/zod";
 
 /**
  * Request schemas for liabilities.
@@ -55,8 +55,15 @@ export type CreateLiabilityInput = z.infer<typeof CreateLiabilitySchema>;
 /**
  * Every field optional, so a PATCH that changes one field is not rejected for
  * omitting the rest.
+ *
+ * `dueDate` is overridden rather than inherited. On a create, `blankable` reads
+ * an unfilled form field as "no due date", which is correct. On an update it
+ * read it as "not provided", so a date once set could never be removed - the
+ * only way to clear one was to delete the liability and enter it again.
  */
-export const UpdateLiabilitySchema = CreateLiabilitySchema.partial().strict();
+export const UpdateLiabilitySchema = CreateLiabilitySchema.partial()
+  .extend({ dueDate: clearable(isoDate) })
+  .strict();
 export type UpdateLiabilityInput = z.infer<typeof UpdateLiabilitySchema>;
 
 export const LiabilityQuerySchema = z

@@ -702,3 +702,64 @@ export const initializeDemoData = () => {
 
   console.log("Demo data initialized successfully");
 };
+
+/**
+ * Demo liabilities.
+ *
+ * The demo already generates assets, expenses and properties, so a demo
+ * dashboard was showing a net worth with no debt side at all - the Total
+ * Liabilities tile read zero and net worth was the gross figure. These match
+ * the demo property, which carries a $600,000 mortgage at 3.25%, so the two
+ * screens agree with each other.
+ *
+ * Balances are DOLLARS and interest rates are PERCENTAGES, which is the
+ * liabilities wire format; the API returns these instead of reading the
+ * database, so they must already be in the units a real response would use.
+ */
+export interface DemoLiability {
+  id: string;
+  userId: string;
+  name: string;
+  balance: number;
+  interestRate: number;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const generateDemoLiabilities = (): DemoLiability[] => {
+  const now = new Date().toISOString();
+
+  return [
+    {
+      id: "demo-liability-1",
+      userId: "demo-user-id",
+      name: "Mortgage - 123 Main Street",
+      balance: 600000,
+      interestRate: 3.25,
+      dueDate: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "demo-liability-2",
+      userId: "demo-user-id",
+      name: "Car loan",
+      balance: 18400,
+      interestRate: 5.9,
+      dueDate: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "demo-liability-3",
+      userId: "demo-user-id",
+      name: "Credit card",
+      balance: 2340,
+      interestRate: 22.9,
+      dueDate: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+};

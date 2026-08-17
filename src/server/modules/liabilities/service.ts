@@ -74,7 +74,11 @@ function toRow(input: UpdateLiabilityInput): Prisma.LiabilityUpdateInput {
   if (input.interestRate !== undefined) {
     row.interestRate = toBasisPoints(input.interestRate);
   }
-  if (input.dueDate !== undefined) row.dueDate = new Date(input.dueDate);
+  // null is an explicit clear, which is why this tests against undefined and
+  // not for truthiness. Omitting the key leaves the stored date alone.
+  if (input.dueDate !== undefined) {
+    row.dueDate = input.dueDate === null ? null : new Date(input.dueDate);
+  }
 
   return row;
 }
