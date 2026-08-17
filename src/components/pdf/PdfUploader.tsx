@@ -3,30 +3,13 @@
 import React, { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  parseBankStatementPDF,
-  ParseResult,
-  ParsedTransaction,
-} from "@/lib/pdfParser";
+import { parseBankStatementPDF, ParseResult } from "@/lib/pdfParser";
+import { parseStatementCsv } from "@/lib/csvStatementParser";
 
 interface FileUploaderProps {
   onParsed: (result: ParseResult) => void;
   onError: (error: string) => void;
 }
-
-// SECURITY: Enhanced input sanitization
-const sanitizeInput = (input: string): string => {
-  if (!input || typeof input !== "string") return "";
-
-  // Remove potential XSS vectors and control characters
-  return input
-    .replace(/[<>'"&]/g, "") // Remove HTML/script injection chars
-    .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
-    .replace(/javascript:/gi, "") // Remove javascript: protocol
-    .replace(/data:/gi, "") // Remove data: protocol
-    .trim()
-    .slice(0, 500); // Limit length to prevent buffer overflow
-};
 
 // SECURITY: Enhanced file validation
 const validateFile = (file: File): { isValid: boolean; error?: string } => {
@@ -93,239 +76,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const formatDateFromCSV = useCallback((dateStr: string): string => {
-    // SECURITY: Sanitize date input
-    const sanitizedDate = sanitizeInput(dateStr);
-
-    // Handle American Express format: "Apr 15" (month abbreviation + day)
-    if (sanitizedDate.match(/^\w{3}\s+\d{1,2}$/)) {
-      const [monthStr, day] = sanitizedDate.split(/\s+/);
-      const currentYear = new Date().getFullYear();
-
-      const months: Record<string, string> = {
-        jan: "01",
-        feb: "02",
-        mar: "03",
-        apr: "04",
-        may: "05",
-        jun: "06",
-        jul: "07",
-        aug: "08",
-        sep: "09",
-        oct: "10",
-        nov: "11",
-        dec: "12",
-      };
-
-      const month = months[monthStr.toLowerCase()];
-      if (month) {
-        return `${currentYear}-${month}-${day.padStart(2, "0")}`;
-      }
-    }
-
-    // Handle DD/MM/YYYY format (UK)
-    if (sanitizedDate.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      const [day, month, year] = sanitizedDate.split("/");
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-    }
-
-    // Handle ISO format YYYY-MM-DD
-    if (sanitizedDate.match(/^\d{4}-\d{2}-\d{2}/)) {
-      return sanitizedDate.split("T")[0]; // Remove time if present
-    }
-
-    return sanitizedDate;
-  }, []);
-
-  const parseCSV = useCallback(
-    async (file: File): Promise<ParseResult> => {
-      try {
-        const text = await file.text();
-
-        // SECURITY: Validate file content size after reading
-        if (text.length > 50 * 1024 * 1024) {
-          // 50MB text limit
-          throw new Error("File content too large to process safely");
-        }
-
-        const lines = text.split("\n").filter((line) => line.trim());
-
-        if (lines.length < 2) {
-          throw new Error("CSV file appears to be empty or invalid");
-        }
-
-        // SECURITY: Limit number of lines to prevent DoS
-        if (lines.length > 50000) {
-          throw new Error("CSV file too large - maximum 50,000 lines allowed");
-        }
-
-        // SECURITY: Sanitize headers
-        const headers = lines[0]
-          .split(",")
-          .map((h) => sanitizeInput(h).toLowerCase().replace(/"/g, ""));
-        const transactions: ParsedTransaction[] = [];
-
-        console.log("CSV headers validated:", headers.length);
-
-        // Map headers to indices (handle different CSV formats)
-        const dateIndex = headers.findIndex(
-          (h) =>
-            h.includes("date") ||
-            h.includes("time") ||
-            h.includes("transaction date")
-        );
-        const typeIndex = headers.findIndex(
-          (h) => h.includes("type") || h.includes("transaction type")
-        );
-        const nameIndex = headers.findIndex(
-          (h) =>
-            h.includes("name") ||
-            h.includes("description") ||
-            h.includes("merchant")
-        );
-        const moneyOutIndex = headers.findIndex(
-          (h) =>
-            h.includes("money out") ||
-            h.includes("debit") ||
-            h.includes("amount out")
-        );
-        const moneyInIndex = headers.findIndex(
-          (h) =>
-            h.includes("money in") ||
-            h.includes("credit") ||
-            h.includes("amount in")
-        );
-        const amountIndex = headers.findIndex(
-          (h) =>
-            (h.includes("amount") && !h.includes("out") && !h.includes("in")) ||
-            h.includes("amount (£)")
-        );
-
-        for (let i = 1; i < lines.length && i < 10000; i++) {
-          // SECURITY: Limit processing to 10,000 transactions
-          // Handle CSV with potential quoted values
-          const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
-
-          // SECURITY: Sanitize all CSV values
-          const cleanValues = values.map((v) =>
-            sanitizeInput(v.replace(/^"|"$/g, ""))
-          );
-
-          if (cleanValues.length < headers.length - 1) continue; // Skip incomplete rows
-
-          try {
-            const dateStr = cleanValues[dateIndex] || "";
-            const type = cleanValues[typeIndex] || "";
-            const name = cleanValues[nameIndex] || "";
-
-            // SECURITY: Validate numeric inputs
-            let transactionAmount = 0;
-            let isDebit = true;
-
-            if (moneyOutIndex >= 0 && moneyInIndex >= 0) {
-              // Separate debit/credit columns (Monzo style)
-              const moneyOutStr = cleanValues[moneyOutIndex] || "0";
-              const moneyInStr = cleanValues[moneyInIndex] || "0";
-
-              // SECURITY: Safe number parsing with validation
-              const moneyOut = isNaN(parseFloat(moneyOutStr))
-                ? 0
-                : Math.abs(parseFloat(moneyOutStr));
-              const moneyIn = isNaN(parseFloat(moneyInStr))
-                ? 0
-                : Math.abs(parseFloat(moneyInStr));
-
-              if (moneyOut > 0) {
-                transactionAmount = Math.min(moneyOut * 100, 1000000000); // Cap at £10M
-                isDebit = true;
-              } else if (moneyIn > 0) {
-                transactionAmount = Math.min(moneyIn * 100, 1000000000); // Cap at £10M
-                isDebit = false;
-              }
-            } else if (amountIndex >= 0) {
-              // Single amount column
-              const amountStr = cleanValues[amountIndex] || "0";
-              const amount = isNaN(parseFloat(amountStr))
-                ? 0
-                : parseFloat(amountStr);
-              transactionAmount = Math.min(Math.abs(amount) * 100, 1000000000); // Cap at £10M
-
-              isDebit = amount < 0 ? false : true;
-
-              // Check if it's a credit based on description
-              const lowerName = name.toLowerCase();
-              if (
-                lowerName.includes("payment") ||
-                lowerName.includes("credit") ||
-                lowerName.includes("refund")
-              ) {
-                isDebit = false;
-              }
-            }
-
-            // Skip pot transfers and other non-spending transactions
-            const lowerType = type.toLowerCase();
-            if (
-              lowerType.includes("pot transfer") ||
-              lowerType.includes("active card check") ||
-              transactionAmount === 0
-            ) {
-              continue;
-            }
-
-            if (name && transactionAmount > 0) {
-              // Use the classifier for better categorization
-              const { classifyTransaction } = await import(
-                "@/lib/transactionClassifier"
-              );
-              const classification = classifyTransaction(
-                name,
-                transactionAmount,
-                isDebit ? "debit" : "credit"
-              );
-
-              const transaction: ParsedTransaction = {
-                id: `csv_${Date.now()}_${i}`,
-                date: formatDateFromCSV(dateStr),
-                description: sanitizeInput(name), // SECURITY: Sanitize description
-                amount: transactionAmount,
-                type: isDebit ? "debit" : "credit",
-                category: classification.category,
-                merchant: classification.merchant?.name,
-                isSubscription: classification.isSubscription,
-                confidence: 0.9,
-                rawText: sanitizeInput(lines[i].substring(0, 1000)), // SECURITY: Sanitize and limit raw text
-              };
-
-              transactions.push(transaction);
-            }
-          } catch {
-            // SECURITY: Safe error logging without exposing sensitive data
-            console.warn("Failed to parse CSV line at index:", i);
-            continue; // Continue processing other lines
-          }
-        }
-
-        console.log(`Parsed ${transactions.length} transactions from CSV`);
-
-        return {
-          transactions,
-          bankName: "CSV Import",
-          totalTransactions: transactions.length,
-          errors:
-            transactions.length === 0
-              ? ["No valid transactions found in CSV"]
-              : [],
-        };
-      } catch {
-        // SECURITY: Safe error handling without information disclosure
-        throw new Error(
-          "Failed to process CSV file - please check file format and try again"
-        );
-      }
-    },
-    [formatDateFromCSV]
-  );
+  /**
+   * Reading the dropped file. The CSV reader lives in
+   * `src/lib/csvStatementParser.ts` rather than here: as a hook it could not
+   * be tested, and it carried faults that only a real export shows - dropped
+   * empty fields shifting every later column, a carriage return stuck to the
+   * last value, and an inverted sign that filed card payments as income.
+   */
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -367,7 +124,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
 
         const fileName = file.name.toLowerCase();
         if (fileName.endsWith(".csv")) {
-          result = await parseCSV(file);
+          result = parseStatementCsv(await file.text());
         } else {
           result = await parseBankStatementPDF(file);
         }
@@ -379,9 +136,12 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
         // Delay to show completion
         setTimeout(() => {
           if (result.errors.length > 0 && result.transactions.length === 0) {
-            // SECURITY: Generic error message to prevent information disclosure
+            // The parser's own message, not a generic one. These say which
+            // column is missing or that the file has no rows, and they are
+            // about the reader's own file, so there is nothing to disclose.
             onError(
-              "Unable to process file - please check the file format and try again"
+              result.errors[0] ||
+                "Unable to process file - please check the file format and try again"
             );
           } else {
             onParsed(result);
@@ -398,7 +158,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onParsed, onError }) => {
         );
       }
     },
-    [onParsed, onError, parseCSV]
+    [onParsed, onError]
   );
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } =

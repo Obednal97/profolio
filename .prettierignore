@@ -1,0 +1,11 @@
+# Lockfiles are written by the package manager and must not be reformatted.
+# lint-staged runs prettier over **/*.{yml,yaml}, which caught pnpm-lock.yaml:
+# prettier rewrote it with double quotes, the next `pnpm install` rewrote it
+# back with single quotes, and every dependency change carried an unrelated
+# 11,000 line diff.
+pnpm-lock.yaml
+
+# Generated output.
+.next/
+coverage/
+prisma/generated/
