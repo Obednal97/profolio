@@ -204,9 +204,27 @@ Each of these has produced a live defect. Treat them as load-bearing.
 
 ## Testing reality
 
-Be honest about the safety net: it is thin. The backend jest specs went with
-the backend, and the Playwright e2e is largely skipped or written against UI
-that was never built.
+Be honest about the safety net: it is thin.
+
+**`pnpm test` (Playwright) fails.** Measured on chromium: **49 failed, 13
+passed, 18 skipped** of 80. The cause is mostly not regression - **89 of the
+102 `data-testid` values the specs look for do not exist in `src/`**, so the
+suite is written against a UI that was never built, and a `page.fill` against
+a field that is not in the DOM is what most of the failures are. Two traps:
+`--reporter=list` summarised "7 skipped, 5 passed" while printing sixty
+failures above it, so **use `--reporter=json` for a count**; and the visual
+regression baselines are gitignored (`.gitignore:70`), so that spec generates
+whatever it sees on a fresh checkout and passes without testing anything.
+
+Running it needs `NEXT_PUBLIC_AUTH_MODE=local` in the environment, or the
+sign-in form attempts Firebase and returns `auth/invalid-credential`. It also
+needs a dev server on port 3000 that you started yourself against a throwaway
+database — `playwright.config.ts` will otherwise start one that inherits
+`.env.local`, which points at **live Neon**.
+
+`e2e/expense-import.spec.ts` passes and is the one to copy the shape from.
+`auth.spec.ts` is flaky: 5 passed in one run, 2 passed and 3 failed in the
+next.
 
 What does exist is `pnpm test:unit` — vitest, node environment, `src/**/*.test.ts`,
 runs in about 200ms. It covers the pure logic where the bugs have actually
