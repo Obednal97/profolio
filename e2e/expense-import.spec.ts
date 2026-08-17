@@ -86,6 +86,30 @@ test.describe("Bank statement import", () => {
     // state is established by signing in, and the app layout sends anyone it
     // does not recognise back to the sign-in page.
     await page.goto("/auth/signIn");
+
+    // Where the email form is depends on the auth mode. With local accounts it
+    // renders directly; with Firebase configured the page leads with Google and
+    // demo mode, and hides it behind a "Sign in with Email" accordion. Wait for
+    // whichever appeared before deciding, rather than assuming one:
+    //
+    //  - asserting the toggle exists fails under local auth, where there is no
+    //    accordion at all
+    //  - guarding with isVisible() alone fails under Firebase, because it
+    //    returns false while the page is still hydrating and the click is
+    //    skipped
+    //
+    // A fill against a field that is not in the DOM is the shape of 32 of the
+    // 60 failures in this suite.
+    const emailField = page.locator("#email");
+    const emailToggle = page.getByRole("button", {
+      name: /sign in with email/i,
+    });
+    await expect(emailField.or(emailToggle).first()).toBeVisible();
+    if (!(await emailField.isVisible())) {
+      await emailToggle.click();
+      await emailField.waitFor({ state: "visible" });
+    }
+
     await page.locator("#email").first().fill(email);
     await page.locator("#password").first().fill(password);
     await page.getByTestId("submit-login").first().click();
@@ -136,14 +160,17 @@ test.describe("Bank statement import", () => {
       stored.find((expense) => expense.notes === "NETFLIX.COM")?.category
     ).toBe("streaming");
 
-    // A 2.40 line matches no merchant and no keyword, so it falls through to the
-    // amount heuristics. Those thresholds used to be compared against cents as
-    // though they were pounds, which sent everything above ten pence down the
-    // "large amount" branch and into Other. Coffee here is the heuristic working
-    // as it was written to.
+    // A 2.40 line matches no merchant and no keyword, so nothing about it says
+    // what it was. It is "other", and that is the point.
+    //
+    // This asserted "coffee_tea" when it was written, because the classifier
+    // guessed a category from the amount alone: under ten pounds meant coffee,
+    // at a stated confidence of 0.6. That is a category invented out of
+    // nothing - the same rule filed a 9.45 charge at Boots as coffee - and it
+    // is gone. An honest "other" is worth more than a plausible wrong answer.
     expect(
       stored.find((expense) => expense.notes === "BLUEBIRD KIOSK 22")?.category
-    ).toBe("coffee_tea");
+    ).toBe("other");
 
     // Money in is recorded under an income category, because the expense table
     // has no sign of its own and the expense manager reads income off the

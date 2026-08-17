@@ -16,7 +16,13 @@ import { test, expect, Page } from '@playwright/test';
 // Test configuration
 const TEST_EMAIL = 'ratelimit.test@example.com';
 const TEST_PASSWORD = 'TestPassword123!';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+/**
+ * The application serves its own API now. This defaulted to port 3001, which
+ * was the separate NestJS backend deleted during the single-app migration, so
+ * every request here failed with ECONNREFUSED against a service that no longer
+ * exists.
+ */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // Helper functions
 async function makeLoginAttempt(page: Page, email: string, password: string) {
@@ -30,7 +36,26 @@ async function waitForRateLimit(seconds: number) {
   await new Promise(resolve => setTimeout(resolve, seconds * 1000));
 }
 
+/**
+ * Rate limiting only enforces when Redis is configured. src/server/http/rate-limit.ts
+ * allows every request and logs one warning otherwise, and it fails open on a
+ * Redis error by design - locking people out because a cache is unreachable is
+ * worse than the abuse it prevents.
+ *
+ * So without Redis these tests cannot pass, and a test that cannot pass should
+ * say why rather than fail. Nothing is attached to the throwaway environment
+ * these run in, and nothing is attached to production either.
+ */
+const redisConfigured = Boolean(
+  process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
+);
+
 test.describe('Rate Limiting System', () => {
+  test.skip(
+    !redisConfigured,
+    'Rate limiting is inert without Redis: no UPSTASH_REDIS_REST_URL or KV_REST_API_URL is set, so every request is allowed by design.'
+  );
+
   test.describe('Authentication Rate Limiting', () => {
     test('should block after 5 failed login attempts @security', async ({ page }) => {
       // Attempt to login 5 times with wrong password
