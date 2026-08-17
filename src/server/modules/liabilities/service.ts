@@ -45,9 +45,9 @@ export type LiabilityResponse = Omit<Liability, "balance" | "interestRate"> & {
  * because the failure mode is getting one of the two wrong and only noticing
  * when a rate is read by something other than this service.
  *
- * Assets converts the same way MoneyUtils reads, so its stored rates are a
- * hundred times ours. Deliberately not matched: it round trips through its own
- * API so nothing has caught it, but the unit is wrong.
+ * Assets used to get this wrong in the other direction, handing MoneyUtils a
+ * percentage and storing every rate a hundred times too large. It agrees with
+ * this module now, and migration 20260817120000 rescaled the rows it wrote.
  */
 function toBasisPoints(percentage: Percent): BasisPoints {
   // Decimal arithmetic via MoneyUtils rather than a plain /100, deliberately:

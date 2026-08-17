@@ -8,7 +8,9 @@ import {
   asBasisPoints,
   asCents,
   asDollars,
-  asFraction,
+  asPercent,
+  fractionToPercent,
+  percentToFraction,
 } from "@/lib/moneyUnits";
 import { assertNotDemo, requireUser } from "@/server/auth/session";
 import { NotFound } from "@/server/http/errors";
@@ -87,6 +89,17 @@ export interface AssetResponse {
   updatedAt: Date;
 }
 
+/**
+ * An annual percentage from the API to the basis points the column holds.
+ *
+ * The schema accepts 0 to 100 and the form labels the field "Interest Rate
+ * (%)", so what arrives is a percentage. MoneyUtils.toBasisPoints takes a
+ * FRACTION - it scales by 10000 - so handing it 4.25 stored 42500.
+ */
+function toStoredBasisPoints(percentage: number): number {
+  return MoneyUtils.toBasisPoints(percentToFraction(asPercent(percentage)));
+}
+
 /** cents -> dollars, preserving a genuine zero. The columns are integer cents. */
 function dollars(cents: number | null): number | null {
   return cents === null ? null : MoneyUtils.fromCents(asCents(cents));
@@ -129,14 +142,16 @@ function toResponse(asset: AssetRow): AssetResponse {
     interestRate:
       asset.interestRate === null
         ? null
-        : // UNIT DISCREPANCY, deliberately preserved. fromBasisPoints returns a
-          // FRACTION, so a stored 425 reads back as 0.0425, and this module
-          // publishes that as its interest rate while liabilities publishes
-          // 4.25 for the same column. Both directions here are consistent with
-          // each other, so the value round trips through this API unchanged and
-          // nothing has caught it. Correcting it needs a migration of existing
-          // rows, not just a code change - see the note in liabilities/service.
-          MoneyUtils.fromBasisPoints(asBasisPoints(asset.interestRate)),
+        : // Basis points to a percentage, matching liabilities and the column's
+          // documented unit. This used to publish MoneyUtils.fromBasisPoints
+          // directly, which returns a FRACTION, and wrote the inverse - so the
+          // form's "4.25" was stored as 42500 rather than 425. The read and the
+          // write were consistent with each other, so it round tripped through
+          // this API and nothing caught it. Migration 20260817_fix_asset_
+          // interest_rate_basis_points rescales the rows the old code wrote.
+          fractionToPercent(
+            MoneyUtils.fromBasisPoints(asBasisPoints(asset.interestRate)),
+          ),
     interestType: asset.interestType,
     paymentFrequency: asset.paymentFrequency,
     termLength: asset.termLength,
@@ -199,9 +214,7 @@ export async function createAsset(
       interestRate:
         input.interestRate === undefined
           ? undefined
-          : // The other half of the discrepancy above: this treats the
-            // incoming rate as a fraction, matching how it is read back.
-            MoneyUtils.toBasisPoints(asFraction(input.interestRate)),
+          : toStoredBasisPoints(input.interestRate),
       interestType: input.interestType,
       paymentFrequency: input.paymentFrequency,
       termLength: input.termLength,
@@ -304,7 +317,7 @@ export async function updateAsset(
   };
 
   if (input.interestRate !== undefined) {
-    data.interestRate = MoneyUtils.toBasisPoints(asFraction(input.interestRate));
+    data.interestRate = toStoredBasisPoints(input.interestRate);
   }
   if (input.purchase_date !== undefined) {
     data.purchaseDate = new Date(input.purchase_date);

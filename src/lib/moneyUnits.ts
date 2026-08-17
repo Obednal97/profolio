@@ -86,14 +86,20 @@ export function asFraction(value: number): Fraction {
   return value as Fraction;
 }
 
-/** 4.25% -> 0.0425 */
+/**
+ * 4.25% -> 0.0425, and back.
+ *
+ * Decimal rather than a plain divide or multiply. `0.059 * 100` in binary
+ * floating point is 5.8999999999999995, and that is what the assets API
+ * returned for a 5.9% rate until this used Decimal.
+ */
 export function percentToFraction(rate: Percent): Fraction {
-  return (rate / 100) as Fraction;
+  return new Decimal(rate).dividedBy(100).toNumber() as Fraction;
 }
 
-/** 0.0425 -> 4.25% */
+/** 0.0425 -> 4.25%. See `percentToFraction`. */
 export function fractionToPercent(rate: Fraction): Percent {
-  return (rate * 100) as Percent;
+  return new Decimal(rate).times(100).toNumber() as Percent;
 }
 
 /**
@@ -110,11 +116,11 @@ export function toDollars(amount: Cents): Dollars {
 
 /** Basis points are hundredths of a percent, so 4.25% is 425. */
 export function toBasisPoints(rate: Percent): BasisPoints {
-  return Math.round(rate * 100) as BasisPoints;
+  return new Decimal(rate).times(100).round().toNumber() as BasisPoints;
 }
 
 export function toPercent(rate: BasisPoints): Percent {
-  return (rate / 100) as Percent;
+  return new Decimal(rate).dividedBy(100).toNumber() as Percent;
 }
 
 /** Adds amounts that are already in the same unit. */

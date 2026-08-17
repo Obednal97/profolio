@@ -133,10 +133,11 @@ Each of these has produced a live defect. Treat them as load-bearing.
   `asCents`/`asDollars` **only** where the compiler cannot see the unit: a
   database row, a validated request body. Never to silence an error.
   `MoneyUtils.toBasisPoints` takes a **fraction**, not a percentage, despite the
-  old parameter name — 0.0425, not 4.25. Liabilities divides by 100 first and is
-  right; **assets does not, so its stored rates are 100× too large.** It round
-  trips through its own API so nothing has caught it. Fixing it needs a data
-  migration, not just a code change.
+  old parameter name — 0.0425, not 4.25. Assets used to hand it a percentage and
+  stored every rate 100× too large; fixed, with a migration that rescales
+  existing rows. Both modules now agree. Convert with `percentToFraction` rather
+  than dividing by 100 yourself: `0.059 * 100` is 5.8999999999999995, and that
+  is exactly what the assets API returned for a 5.9% rate.
 - **`current_value` on an asset is the TOTAL position value, not a unit
   price.** Price sync writes `quantity * price` into it. Multiplying by
   quantity again double-counts.

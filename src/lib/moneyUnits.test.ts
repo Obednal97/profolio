@@ -51,6 +51,22 @@ describe("rate units", () => {
   it("rounds to the nearest basis point", () => {
     expect(toBasisPoints(asPercent(4.257))).toBe(426);
   });
+
+  it("does not leak binary floating point into a rate", () => {
+    // `0.059 * 100` is 5.8999999999999995, and the assets API returned exactly
+    // that for a 5.9% rate until these used Decimal.
+    expect(fractionToPercent(asFraction(0.059))).toBe(5.9);
+    expect(fractionToPercent(asFraction(0.229))).toBe(22.9);
+    expect(percentToFraction(asPercent(5.9))).toBe(0.059);
+    expect(toPercent(asBasisPoints(590))).toBe(5.9);
+  });
+
+  it("round trips every rate the form allows", () => {
+    for (let bp = 0; bp <= 10000; bp += 1) {
+      const percent = toPercent(asBasisPoints(bp));
+      expect(toBasisPoints(percent)).toBe(bp);
+    }
+  });
 });
 
 describe("positionValue", () => {
