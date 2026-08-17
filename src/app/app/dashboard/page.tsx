@@ -12,6 +12,7 @@ import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { StatsGrid } from "@/components/common/StatsGrid";
 import { Wallet, CreditCard, Home, TrendingUp } from "lucide-react";
+import { isIncomeCategory } from "@/lib/transactionClassifier";
 
 // 🚀 PERFORMANCE: Dynamic import of Confetti to reduce initial bundle size and prevent hydration issues
 const Confetti = dynamic(() => import("react-confetti"), {
@@ -93,26 +94,19 @@ function assetValue(asset: DashboardAsset): number {
   return asset.current_value ?? asset.purchase_price ?? 0;
 }
 
-/** Income is recorded as an expense row with a negative amount or an income category. */
 /**
- * The categories that mean money arriving.
+ * Income is an expense row with a negative amount or an income category.
  *
- * This list has to match the one the expense manager sorts by and the one the
- * import path files credits under, because the expense table has no sign column
- * and the category is the only signal. It did not match: this page recognised
- * only "income", while the expense manager recognised four categories, so a
- * salary row counted as income on one screen and as spending on the other.
+ * The set of income categories comes from the category tree, because it has to
+ * match the one the expense manager sorts by and the one the import path files
+ * credits under - the expense table has no sign column and the category is the
+ * only signal. Three hand-written copies did not match: this page recognised
+ * only "income", so a salary row counted as income on one screen and as
+ * spending on the other.
  */
-const INCOME_CATEGORIES = new Set([
-  "income",
-  "salary",
-  "investment_income",
-  "freelance",
-]);
-
 function isIncome(expense: DashboardExpense): boolean {
   if ((expense.amount ?? 0) < 0) return true;
-  return INCOME_CATEGORIES.has((expense.category ?? "").toLowerCase());
+  return isIncomeCategory(expense.category ?? "");
 }
 
 // IMPROVEMENT: Safe localStorage access utility

@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
 import { assertNotDemo, requireUser } from "@/server/auth/session";
 import { NotFound } from "@/server/http/errors";
+import { INCOME_CATEGORY_IDS } from "@/lib/transactionClassifier";
 import type {
   CreateExpenseInput,
   ExpenseQuery,
@@ -86,16 +87,13 @@ export async function updateExpense(id: string, input: UpdateExpenseInput) {
 }
 
 /**
- * The categories the expense manager treats as money coming in. The table has
- * no sign column, so this list is the only thing separating income from
- * spending, and it has to agree with the one the expense manager renders from.
+ * Which categories mean money coming in.
+ *
+ * Imported from the category tree rather than written out here. This set
+ * existed three times - in this file, in the dashboard and implicitly in the
+ * classifier - and nothing kept the copies in step.
  */
-const INCOME_CATEGORIES = new Set([
-  "income",
-  "salary",
-  "investment_income",
-  "freelance",
-]);
+const INCOME_CATEGORIES = INCOME_CATEGORY_IDS;
 
 /** Where a row with no usable category ends up. */
 const UNCATEGORISED = "other";
@@ -131,11 +129,21 @@ function duplicateKey(
  * refund from a supermarket would be recorded as groceries. Since income is
  * signalled by the category alone, a credit that is not already in an income
  * category is stored as income.
+ *
+ * The reverse matters just as much and was missing. A debit carrying an income
+ * category is money going out recorded as money coming in, which moves the
+ * dashboard's headline figure in both directions at once. The classifier used
+ * to produce exactly that - it had 'payment' as a keyword for 'freelance' - and
+ * while that is fixed, the category arrives from the browser and a reviewer can
+ * set it by hand, so the rule is enforced here rather than assumed upstream.
  */
 function categoryFor(row: ImportedTransactionInput): string {
-  const claimed = row.category ?? UNCATEGORISED;
+  const claimed = (row.category ?? UNCATEGORISED).trim().toLowerCase();
   if (row.type === "credit" && !INCOME_CATEGORIES.has(claimed)) {
     return "income";
+  }
+  if (row.type === "debit" && INCOME_CATEGORIES.has(claimed)) {
+    return UNCATEGORISED;
   }
   return claimed;
 }

@@ -54,7 +54,14 @@ export const TRANSACTION_CATEGORIES: Record<string, TransactionCategory> = {
     color: '#10b981',
     gradient: 'from-green-500 to-green-600',
     parent: 'income',
-    keywords: ['invoice', 'payment', 'client', 'project'],
+    // 'payment' was here, and it is far too broad to mean freelance income:
+    // it appears in CARD PAYMENT, MONTHLY RENT PAYMENT and FASTER PAYMENT.
+    // Because this category is declared near the top of the object and the
+    // keyword scan returned the first hit, any spending line containing the
+    // word was classified as freelance income - and 'freelance' counts as
+    // income on the dashboard, so a rent payment both vanished from spending
+    // and added itself to earnings.
+    keywords: ['invoice', 'client', 'project'],
   },
   
   // Food & Dining
@@ -120,7 +127,10 @@ export const TRANSACTION_CATEGORIES: Record<string, TransactionCategory> = {
     color: '#10b981',
     gradient: 'from-emerald-500 to-emerald-600',
     parent: 'transportation',
-    keywords: ['gas', 'fuel', 'petrol', 'diesel'],
+    // 'gas' on its own belongs to utilities in the UK, where it means the
+    // supply to a house, not a car. Both categories claimed it and this one
+    // is declared first, so BRITISH GAS ENERGY was filed as motor fuel.
+    keywords: ['fuel', 'petrol', 'diesel', 'gas station', 'filling station', 'service station'],
     merchants: ['shell', 'bp', 'exxon', 'chevron', 'texaco', 'esso'],
   },
   'public_transport': {
@@ -337,7 +347,9 @@ export const TRANSACTION_CATEGORIES: Record<string, TransactionCategory> = {
     color: '#6366f1',
     gradient: 'from-indigo-500 to-indigo-600',
     parent: 'financial',
-    keywords: ['transfer', 'payment', 'send', 'receive'],
+    // 'payment' was here too, and it is not a transfer signal any more than it
+    // was a freelance one: MONTHLY RENT PAYMENT is rent.
+    keywords: ['transfer', 'send', 'receive'],
   },
   'insurance': {
     id: 'insurance',
@@ -446,18 +458,87 @@ export const MERCHANT_DATABASE: Record<string, MerchantInfo> = {
 };
 
 /**
+ * The categories that mean money arriving.
+ *
+ * The expense table has no sign column, so the category is the only thing
+ * separating income from spending, and this set was written out by hand in
+ * three places - the dashboard, the expenses service and here. Derived from
+ * the category tree instead, so adding an income category cannot leave two of
+ * the three disagreeing.
+ */
+export const INCOME_CATEGORY_IDS: ReadonlySet<string> = new Set(
+  Object.values(TRANSACTION_CATEGORIES)
+    .filter((category) => category.id === 'income' || category.parent === 'income')
+    .map((category) => category.id),
+);
+
+export function isIncomeCategory(categoryId: string): boolean {
+  return INCOME_CATEGORY_IDS.has(categoryId.trim().toLowerCase());
+}
+
+/**
+ * Whether `needle` appears in `haystack` as a whole word.
+ *
+ * Plain `includes` matched 'gas' inside 'gasket' and 'ent' inside 'rent', and
+ * the merchant scan matched short keys inside longer unrelated names.
+ */
+function containsWord(haystack: string, needle: string): boolean {
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // A trailing plural is still the same word: 'fee' has to find FEES, and
+  // 'store' has to find STORES.
+  return new RegExp(`(^|[^a-z0-9])${escaped}s?([^a-z0-9]|$)`, 'i').test(haystack);
+}
+
+/**
+ * The longest matching key wins.
+ *
+ * Both the merchant scan and the keyword scan used to return the first hit in
+ * object declaration order, which made classification depend on where someone
+ * happened to paste a new entry. Two categories claimed 'gas' and the one
+ * declared first took it. Longest match is a real rule: 'british gas' beats
+ * 'gas' because it says more.
+ */
+function longestMatch<T>(
+  description: string,
+  entries: Array<[string, T]>,
+): { key: string; value: T } | null {
+  let best: { key: string; value: T } | null = null;
+  for (const [key, value] of entries) {
+    if (!containsWord(description, key)) continue;
+    if (best === null || key.length > best.key.length) best = { key, value };
+  }
+  return best;
+}
+
+const MERCHANT_ENTRIES = Object.entries(MERCHANT_DATABASE);
+
+const KEYWORD_ENTRIES: Array<[string, string]> = Object.values(TRANSACTION_CATEGORIES)
+  .flatMap((category) =>
+    (category.keywords ?? []).map(
+      (keyword) => [keyword, category.id] as [string, string],
+    ),
+  );
+
+/**
  * Classifies one statement line.
  *
  * `amountInCents` is integer cents, matching every caller and the rest of this
  * module: `detectRecurringTransactions` below divides by 100 to build a
  * whole-pounds grouping key, the PDF parser stores the output of `parseAmount`
- * which multiplies by 100, and the CSV reader in PdfUploader does the same. The
- * amount-based heuristics further down used to compare that value against 10,
- * 500 and 1000 as though it were pounds, so they actually triggered at ten
- * pence, five pounds and ten pounds. The effect was that the small-amount guess
- * only ever applied to sums under ten pence, and everything above ten pounds
- * took the large-amount branch and came back as Other. The parameter is named
- * for its unit so that a future caller cannot pass pounds without noticing.
+ * which multiplies by 100, and the CSV reader does the same. The parameter is
+ * named for its unit so a future caller cannot pass pounds without noticing.
+ *
+ * Direction gates which categories are even considered. A debit can never come
+ * back as income and a credit can only be income. Without that gate the
+ * keyword scan ran over the whole tree in declaration order, so a spending
+ * line was free to land on an income category - and did, constantly, because
+ * 'freelance' listed 'payment' as a keyword.
+ *
+ * There are no amount-only guesses left. Anything under ten pounds used to be
+ * returned as 'coffee_tea' with a stated confidence of 0.6, which is a
+ * category invented out of nothing: a 9.45 charge at Boots is not coffee.
+ * A line the description cannot explain is 'other', and says so with a low
+ * confidence rather than a plausible-looking wrong answer.
  */
 export function classifyTransaction(description: string, amountInCents: number, type: 'debit' | 'credit'): {
   category: string;
@@ -467,86 +548,83 @@ export function classifyTransaction(description: string, amountInCents: number, 
   merchant?: MerchantInfo;
 } {
   const normalizedDesc = description.toLowerCase().trim();
-  
-  // Check for known merchants first
-  for (const [key, merchant] of Object.entries(MERCHANT_DATABASE)) {
-    if (normalizedDesc.includes(key)) {
+  const wantIncome = type === 'credit';
+
+  // A known merchant is the strongest signal, but only when it agrees with the
+  // direction of the money. A refund from Tesco is not groceries.
+  const merchantMatch = longestMatch(normalizedDesc, MERCHANT_ENTRIES);
+  if (merchantMatch) {
+    const merchant = merchantMatch.value;
+    const category = merchant.subcategory || merchant.category;
+    if (isIncomeCategory(category) === wantIncome) {
       return {
-        category: merchant.subcategory || merchant.category,
+        category,
         subcategory: merchant.subcategory,
         confidence: 0.95,
         isSubscription: merchant.isSubscription || false,
         merchant,
       };
     }
-  }
-  
-  // Income detection
-  if (type === 'credit') {
-    // Salary detection
-    if (normalizedDesc.match(/salary|payroll|wage|compensation/i)) {
-      return { category: 'salary', confidence: 0.9, isSubscription: false };
-    }
-    // Investment income
-    if (normalizedDesc.match(/dividend|interest|capital gain/i)) {
-      return { category: 'investment_income', confidence: 0.85, isSubscription: false };
-    }
-    // Transfer detection
-    if (normalizedDesc.match(/transfer|deposit|payment/i) && amountInCents > 500_00) {
-      return { category: 'transfers', confidence: 0.8, isSubscription: false };
-    }
-    return { category: 'income', confidence: 0.7, isSubscription: false };
-  }
-  
-  // Check categories by keywords
-  for (const [categoryId, category] of Object.entries(TRANSACTION_CATEGORIES)) {
-    if (category.keywords) {
-      for (const keyword of category.keywords) {
-        if (normalizedDesc.includes(keyword)) {
-          return {
-            category: categoryId,
-            subcategory: category.parent,
-            confidence: 0.8,
-            isSubscription: false,
-          };
-        }
-      }
+    // Recognised, but pointing the wrong way. Keep the merchant for display and
+    // fall through to decide the category on the direction of the money.
+    if (wantIncome) {
+      return {
+        category: 'income',
+        confidence: 0.7,
+        isSubscription: false,
+        merchant,
+      };
     }
   }
-  
-  // Pattern-based detection
-  // Subscription patterns
+
+  const keywordMatch = longestMatch(
+    normalizedDesc,
+    KEYWORD_ENTRIES.filter(([, categoryId]) => isIncomeCategory(categoryId) === wantIncome),
+  );
+  if (keywordMatch) {
+    const category = TRANSACTION_CATEGORIES[keywordMatch.value];
+    return {
+      category: keywordMatch.value,
+      subcategory: category?.parent,
+      confidence: 0.8,
+      isSubscription: false,
+      merchant: merchantMatch?.value,
+    };
+  }
+
+  if (wantIncome) {
+    return {
+      category: 'income',
+      confidence: 0.7,
+      isSubscription: false,
+      merchant: merchantMatch?.value,
+    };
+  }
+
+  // Says nothing about the category, only that this looks like a standing
+  // charge, so it stays 'other' and is flagged for the recurring view.
   const subscriptionPatterns = [
     /monthly subscription/i,
     /annual subscription/i,
     /recurring payment/i,
     /membership/i,
-    /premium/i,
+    /subscription/i,
   ];
-  
-  for (const pattern of subscriptionPatterns) {
-    if (pattern.test(normalizedDesc)) {
-      return {
-        category: 'entertainment',
-        confidence: 0.7,
-        isSubscription: true,
-      };
-    }
+  if (subscriptionPatterns.some((pattern) => pattern.test(normalizedDesc))) {
+    return {
+      category: 'other',
+      confidence: 0.5,
+      isSubscription: true,
+      merchant: merchantMatch?.value,
+    };
   }
-  
-  // Amount-based heuristics
-  if (amountInCents < 10_00) {
-    // Small amounts likely coffee/snacks
-    return { category: 'coffee_tea', confidence: 0.6, isSubscription: false };
-  } else if (amountInCents > 1000_00) {
-    // Large amounts likely rent/mortgage
-    if (normalizedDesc.match(/rent|mortgage|lease/i)) {
-      return { category: 'rent_mortgage', confidence: 0.85, isSubscription: true };
-    }
-    return { category: 'other', confidence: 0.5, isSubscription: false };
-  }
-  
-  return { category: 'other', confidence: 0.5, isSubscription: false };
+
+  return {
+    category: 'other',
+    confidence: 0.3,
+    isSubscription: false,
+    merchant: merchantMatch?.value,
+  };
 }
 
 /**
