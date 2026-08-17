@@ -122,6 +122,18 @@ function duplicateKey(
 }
 
 /**
+ * A lock key for one user, for `pg_advisory_xact_lock`.
+ *
+ * The first 60 bits of the uuid, which is always positive and always fits in
+ * the bigint the function takes. A collision between two users would only mean
+ * their imports queue behind one another, so the odds do not need to be
+ * cryptographic.
+ */
+function advisoryLockKey(userId: string): bigint {
+  return BigInt(`0x${userId.replace(/-/g, "").slice(0, 15)}`);
+}
+
+/**
  * The category to store, which is not necessarily the one the caller sent.
  *
  * A credit is money arriving, and filing it under the category the classifier
@@ -189,42 +201,61 @@ export async function importExpenses(
   to.setUTCHours(23, 59, 59, 999);
   const amounts = Array.from(new Set(rows.map((row) => row.amount)));
 
-  return prisma.$transaction(async (tx) => {
-    const existing = await tx.expense.findMany({
-      where: {
-        userId: user.id,
-        date: { gte: from, lte: to },
-        amount: { in: amounts },
-      },
-      select: { amount: true, date: true, notes: true },
-    });
+  return prisma.$transaction(
+    async (tx) => {
+      // Serialises imports for this one user, for the length of the
+      // transaction. Deduplication is a read followed by a write, and at READ
+      // COMMITTED - which is the default - two imports of the same statement
+      // running at once both read zero existing rows and both insert, so
+      // double-clicking Save duplicated the whole batch. The lock is per user,
+      // so it costs nothing to anyone else, and Postgres releases it on commit
+      // or rollback without an unlock call.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${advisoryLockKey(user.id)})`;
 
-    const unmatched = new Map<string, number>();
-    for (const expense of existing) {
-      const key = duplicateKey(expense.date, expense.amount, expense.notes);
-      unmatched.set(key, (unmatched.get(key) ?? 0) + 1);
-    }
+      const existing = await tx.expense.findMany({
+        where: {
+          userId: user.id,
+          date: { gte: from, lte: to },
+          amount: { in: amounts },
+        },
+        select: { amount: true, date: true, notes: true },
+      });
 
-    const toCreate: Prisma.ExpenseCreateManyInput[] = [];
-    let skipped = 0;
-
-    for (const row of rows) {
-      const key = duplicateKey(row.date, row.amount, row.notes);
-      const available = unmatched.get(key) ?? 0;
-      if (available > 0) {
-        unmatched.set(key, available - 1);
-        skipped += 1;
-        continue;
+      const unmatched = new Map<string, number>();
+      for (const expense of existing) {
+        const key = duplicateKey(expense.date, expense.amount, expense.notes);
+        unmatched.set(key, (unmatched.get(key) ?? 0) + 1);
       }
-      toCreate.push({ userId: user.id, ...row });
-    }
 
-    if (toCreate.length > 0) {
-      await tx.expense.createMany({ data: toCreate });
-    }
+      const toCreate: Prisma.ExpenseCreateManyInput[] = [];
+      let skipped = 0;
 
-    return { imported: toCreate.length, skipped };
-  });
+      for (const row of rows) {
+        const key = duplicateKey(row.date, row.amount, row.notes);
+        const available = unmatched.get(key) ?? 0;
+        if (available > 0) {
+          unmatched.set(key, available - 1);
+          skipped += 1;
+          continue;
+        }
+        toCreate.push({ userId: user.id, ...row });
+      }
+
+      if (toCreate.length > 0) {
+        await tx.expense.createMany({ data: toCreate });
+      }
+
+      return { imported: toCreate.length, skipped };
+    },
+    {
+      // A second import of the same statement now waits for the first rather
+      // than racing it, so the window has to be wide enough to cover a full
+      // batch running ahead of it. Prisma's default of 5s is not, once one
+      // import is queued behind another.
+      timeout: 20_000,
+      maxWait: 10_000,
+    },
+  );
 }
 
 export async function deleteExpense(id: string) {
