@@ -3,6 +3,7 @@ import { requireUser } from "@/server/auth/session";
 import { isDemoRequest } from "@/server/demo";
 import { Forbidden } from "@/server/http/errors";
 import { MoneyUtils } from "@/server/money";
+import { asDollars } from "@/lib/moneyUnits";
 import { getAssetHistory } from "@/server/modules/assets/service";
 import {
   PortfolioHistoryParamsSchema,
@@ -39,7 +40,7 @@ export const GET = withRoute({
       status: "OK",
       data: history.map((point) => ({
         date: point.date,
-        total_value: MoneyUtils.toCents(point.totalValue),
+        total_value: MoneyUtils.toCents(asDollars(point.totalValue)),
       })),
     };
   },

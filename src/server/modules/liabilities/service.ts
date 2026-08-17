@@ -2,6 +2,15 @@ import "server-only";
 import type { Liability, Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
 import { MoneyUtils } from "@/server/money";
+import {
+  asBasisPoints,
+  asCents,
+  asDollars,
+  asFraction,
+  asPercent,
+  type BasisPoints,
+  type Percent,
+} from "@/lib/moneyUnits";
 import { assertNotDemo, requireUser } from "@/server/auth/session";
 import { NotFound } from "@/server/http/errors";
 import type {
@@ -40,20 +49,28 @@ export type LiabilityResponse = Omit<Liability, "balance" | "interestRate"> & {
  * hundred times ours. Deliberately not matched: it round trips through its own
  * API so nothing has caught it, but the unit is wrong.
  */
-function toBasisPoints(percentage: number): number {
-  return MoneyUtils.toBasisPoints(MoneyUtils.safeDivide(percentage, 100));
+function toBasisPoints(percentage: Percent): BasisPoints {
+  // Decimal arithmetic via MoneyUtils rather than a plain /100, deliberately:
+  // the branding is a compile-time change and is not worth altering how a
+  // stored rate is computed to get it.
+  return MoneyUtils.toBasisPoints(
+    asFraction(MoneyUtils.safeDivide(percentage, 100)),
+  );
 }
 
-function fromBasisPoints(basisPoints: number): number {
-  return MoneyUtils.safeMultiply(MoneyUtils.fromBasisPoints(basisPoints), 100);
+function fromBasisPoints(basisPoints: BasisPoints): Percent {
+  return asPercent(
+    MoneyUtils.safeMultiply(MoneyUtils.fromBasisPoints(basisPoints), 100),
+  );
 }
 
 /** cents to dollars, basis points to percentage, on the way out. */
 function toResponse(liability: Liability): LiabilityResponse {
   return {
     ...liability,
-    balance: MoneyUtils.fromCents(liability.balance),
-    interestRate: fromBasisPoints(liability.interestRate),
+    // The columns are cents and basis points; the row type says `number`.
+    balance: MoneyUtils.fromCents(asCents(liability.balance)),
+    interestRate: fromBasisPoints(asBasisPoints(liability.interestRate)),
   };
 }
 
@@ -70,9 +87,11 @@ function toRow(input: UpdateLiabilityInput): Prisma.LiabilityUpdateInput {
   const row: Prisma.LiabilityUpdateInput = {};
 
   if (input.name !== undefined) row.name = input.name;
-  if (input.balance !== undefined) row.balance = MoneyUtils.toCents(input.balance);
+  if (input.balance !== undefined) {
+    row.balance = MoneyUtils.toCents(asDollars(input.balance));
+  }
   if (input.interestRate !== undefined) {
-    row.interestRate = toBasisPoints(input.interestRate);
+    row.interestRate = toBasisPoints(asPercent(input.interestRate));
   }
   // null is an explicit clear, which is why this tests against undefined and
   // not for truthiness. Omitting the key leaves the stored date alone.
@@ -93,8 +112,8 @@ export async function createLiability(
     data: {
       userId: user.id,
       name: input.name,
-      balance: MoneyUtils.toCents(input.balance),
-      interestRate: toBasisPoints(input.interestRate),
+      balance: MoneyUtils.toCents(asDollars(input.balance)),
+      interestRate: toBasisPoints(asPercent(input.interestRate)),
       dueDate: input.dueDate === undefined ? undefined : new Date(input.dueDate),
     },
   });
@@ -105,10 +124,10 @@ export async function createLiability(
 /**
  * The caller's liabilities.
  *
- * A demo session resolves to a user id that owns no rows, so this returns an
- * empty list rather than generated debts. There is deliberately no demo
- * generator here: invented figures in a net worth calculation are worse than an
- * obviously empty one.
+ * A demo session never reaches here: the route returns generated debts before
+ * calling this, the same way it does for assets, expenses and properties. A
+ * demo user id owns no rows, so without that this returned an empty list and
+ * the demo dashboard showed a net worth with no debt side.
  */
 export async function listLiabilities(
   query: LiabilityQuery,

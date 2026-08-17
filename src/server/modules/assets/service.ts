@@ -4,6 +4,12 @@ import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/server/db";
 import { syncAssetPrice } from "@/server/modules/market-data/price-sync";
 import { MoneyUtils } from "@/server/money";
+import {
+  asBasisPoints,
+  asCents,
+  asDollars,
+  asFraction,
+} from "@/lib/moneyUnits";
 import { assertNotDemo, requireUser } from "@/server/auth/session";
 import { NotFound } from "@/server/http/errors";
 import type {
@@ -81,14 +87,14 @@ export interface AssetResponse {
   updatedAt: Date;
 }
 
-/** cents -> dollars, preserving a genuine zero. */
+/** cents -> dollars, preserving a genuine zero. The columns are integer cents. */
 function dollars(cents: number | null): number | null {
-  return cents === null ? null : MoneyUtils.fromCents(cents);
+  return cents === null ? null : MoneyUtils.fromCents(asCents(cents));
 }
 
-/** dollars -> cents, preserving a genuine zero. */
+/** dollars -> cents, preserving a genuine zero. This module takes dollars on the wire. */
 function cents(amount: number | undefined): number | undefined {
-  return amount === undefined ? undefined : MoneyUtils.toCents(amount);
+  return amount === undefined ? undefined : MoneyUtils.toCents(asDollars(amount));
 }
 
 function toResponse(asset: AssetRow): AssetResponse {
@@ -123,7 +129,14 @@ function toResponse(asset: AssetRow): AssetResponse {
     interestRate:
       asset.interestRate === null
         ? null
-        : MoneyUtils.fromBasisPoints(asset.interestRate),
+        : // UNIT DISCREPANCY, deliberately preserved. fromBasisPoints returns a
+          // FRACTION, so a stored 425 reads back as 0.0425, and this module
+          // publishes that as its interest rate while liabilities publishes
+          // 4.25 for the same column. Both directions here are consistent with
+          // each other, so the value round trips through this API unchanged and
+          // nothing has caught it. Correcting it needs a migration of existing
+          // rows, not just a code change - see the note in liabilities/service.
+          MoneyUtils.fromBasisPoints(asBasisPoints(asset.interestRate)),
     interestType: asset.interestType,
     paymentFrequency: asset.paymentFrequency,
     termLength: asset.termLength,
@@ -186,7 +199,9 @@ export async function createAsset(
       interestRate:
         input.interestRate === undefined
           ? undefined
-          : MoneyUtils.toBasisPoints(input.interestRate),
+          : // The other half of the discrepancy above: this treats the
+            // incoming rate as a fraction, matching how it is read back.
+            MoneyUtils.toBasisPoints(asFraction(input.interestRate)),
       interestType: input.interestType,
       paymentFrequency: input.paymentFrequency,
       termLength: input.termLength,
@@ -289,7 +304,7 @@ export async function updateAsset(
   };
 
   if (input.interestRate !== undefined) {
-    data.interestRate = MoneyUtils.toBasisPoints(input.interestRate);
+    data.interestRate = MoneyUtils.toBasisPoints(asFraction(input.interestRate));
   }
   if (input.purchase_date !== undefined) {
     data.purchaseDate = new Date(input.purchase_date);
@@ -481,7 +496,7 @@ export async function getAssetHistory(days: number): Promise<HistoryPoint[]> {
       total = MoneyUtils.safeAdd(
         total,
         MoneyUtils.safeMultiply(
-          MoneyUtils.fromCents(price),
+          MoneyUtils.fromCents(asCents(price)),
           quantities.get(assetId) ?? 0,
         ),
       );

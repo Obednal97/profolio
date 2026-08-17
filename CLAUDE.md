@@ -54,6 +54,7 @@ pnpm build               # production build
 pnpm type-check          # tsc --noEmit
 pnpm lint                # eslint (max 80 warnings)
 pnpm test                # playwright e2e
+pnpm test:unit           # vitest, ~200ms, run this one constantly
 pnpm prisma:generate
 pnpm prisma:migrate      # migrate dev
 ```
@@ -125,6 +126,17 @@ Each of these has produced a live defect. Treat them as load-bearing.
 
 - **Money is integer cents at rest.** Convert only at the service boundary:
   `toCents` on write, `fromCents` on read. Interest rates are basis points.
+- **Units are types now.** `src/lib/moneyUnits.ts` defines `Cents`, `Dollars`,
+  `BasisPoints`, `Percent` and `Fraction` as branded numbers — free at runtime,
+  not interchangeable at compile time. `MoneyUtils` is typed in terms of them,
+  so every place a unit crosses a boundary must say which one it is. Use
+  `asCents`/`asDollars` **only** where the compiler cannot see the unit: a
+  database row, a validated request body. Never to silence an error.
+  `MoneyUtils.toBasisPoints` takes a **fraction**, not a percentage, despite the
+  old parameter name — 0.0425, not 4.25. Liabilities divides by 100 first and is
+  right; **assets does not, so its stored rates are 100× too large.** It round
+  trips through its own API so nothing has caught it. Fixing it needs a data
+  migration, not just a code change.
 - **`current_value` on an asset is the TOTAL position value, not a unit
   price.** Price sync writes `quantity * price` into it. Multiplying by
   quantity again double-counts.
@@ -165,13 +177,24 @@ Each of these has produced a live defect. Treat them as load-bearing.
 
 ## Testing reality
 
-Be honest about the safety net: there is almost none. The backend jest specs
-went with the backend, and the Playwright e2e is largely skipped or written
-against UI that was never built. **Every repair in this migration was verified
-by hand**, against a throwaway Postgres in Docker driven with curl — 191
-assertions across the four stages, and each one found something. After any
-significant change, verify by running the thing, not by reading it, and say
-plainly what you ran.
+Be honest about the safety net: it is thin. The backend jest specs went with
+the backend, and the Playwright e2e is largely skipped or written against UI
+that was never built.
+
+What does exist is `pnpm test:unit` — vitest, node environment, `src/**/*.test.ts`,
+runs in about 200ms. It covers the pure logic where the bugs have actually
+been: the CSV statement parser, the transaction classifier, and money units.
+Add to it. A pure function that handles money or parses a statement has no
+excuse for being untested, and anything that cannot be tested that way is
+usually tangled into a component and worth extracting first — the CSV reader
+was a `useCallback` inside `PdfUploader`, and it was hiding four faults.
+
+Everything else is still verified by hand, against a throwaway Postgres driven
+with curl. That is not optional: **after any significant change, verify by
+running the thing, not by reading it, and say plainly what you ran.** If Docker
+is unavailable, `initdb` a cluster on a spare port; process env beats
+`.env.local`, but prove which database the server is on before writing to it,
+because `.env.local` points at live Neon.
 
 The manual checklist that matters is in the migration spec.
 

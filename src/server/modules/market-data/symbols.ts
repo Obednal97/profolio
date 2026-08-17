@@ -2,6 +2,7 @@ import "server-only";
 import { AssetType } from "@prisma/client";
 import { prisma } from "@/server/db";
 import { MoneyUtils } from "@/server/money";
+import { asCents, asDollars } from "@/lib/moneyUnits";
 
 /**
  * The Symbol table: the catalogue of tickers the application knows about, and
@@ -36,7 +37,7 @@ function toResult(row: {
     current_price:
       row.current_price === null
         ? undefined
-        : MoneyUtils.fromCents(row.current_price),
+        : MoneyUtils.fromCents(asCents(row.current_price)),
     day_change_percent:
       row.day_change_percent === null
         ? undefined
@@ -108,7 +109,7 @@ export async function findCachedPrice(symbol: string): Promise<{
 
   return {
     symbol: row.symbol,
-    price: MoneyUtils.fromCents(row.current_price),
+    price: MoneyUtils.fromCents(asCents(row.current_price)),
     last_updated: row.last_updated,
     source: "cached",
   };
@@ -187,13 +188,17 @@ export async function recordQuote(quote: {
 }): Promise<void> {
   const data = {
     name: quote.name,
-    current_price: MoneyUtils.toCents(quote.price),
+    // Provider quotes are DOLLARS. Passing one through fromCents divided
+    // every synced valuation by 100 and is why this is spelled out.
+    current_price: MoneyUtils.toCents(asDollars(quote.price)),
     previous_close:
       quote.previousClose === undefined
         ? undefined
-        : MoneyUtils.toCents(quote.previousClose),
+        : MoneyUtils.toCents(asDollars(quote.previousClose)),
     day_change:
-      quote.change === undefined ? undefined : MoneyUtils.toCents(quote.change),
+      quote.change === undefined
+        ? undefined
+        : MoneyUtils.toCents(asDollars(quote.change)),
     day_change_percent: quote.changePercent,
     volume: quote.volume === undefined ? undefined : BigInt(Math.round(quote.volume)),
     last_updated: new Date(),

@@ -2,6 +2,7 @@ import "server-only";
 import type { Prisma, Property } from "@prisma/client";
 import { prisma } from "@/server/db";
 import { MoneyUtils } from "@/server/money";
+import { asCents, asDollars } from "@/lib/moneyUnits";
 import { assertNotDemo, requireUser } from "@/server/auth/session";
 import { NotFound } from "@/server/http/errors";
 import type {
@@ -56,7 +57,9 @@ function toResponse(property: Property): PropertyResponse {
   const converted = {} as Record<MoneyField, number | null>;
   for (const field of MONEY_FIELDS) {
     const value = property[field];
-    converted[field] = value === null ? null : MoneyUtils.fromCents(value);
+    // The money columns are integer cents; the row type says `number`.
+    converted[field] =
+      value === null ? null : MoneyUtils.fromCents(asCents(value));
   }
 
   return {
@@ -87,7 +90,8 @@ function toRow(
 
   for (const field of MONEY_FIELDS) {
     const value = input[field];
-    if (value !== undefined) row[field] = MoneyUtils.toCents(value);
+    // Validated request fields, which this module takes in dollars.
+    if (value !== undefined) row[field] = MoneyUtils.toCents(asDollars(value));
   }
 
   for (const field of DATE_FIELDS) {

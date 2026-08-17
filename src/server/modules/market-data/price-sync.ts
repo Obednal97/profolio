@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/server/db";
-import { MoneyUtils } from "@/server/money";
+import { asDollars, positionValue } from "@/lib/moneyUnits";
 import { fetchQuote } from "./yahoo";
 import { storePriceData } from "./providers";
 import { recordQuote, recordSymbolError } from "./symbols";
@@ -132,9 +132,10 @@ async function repriceAssets(symbol: string, price: number): Promise<number> {
     await prisma.asset.update({
       where: { id: asset.id },
       data: {
-        current_value: MoneyUtils.toCents(
-          MoneyUtils.safeMultiply(quantity, price),
-        ),
+        // Prices arrive from the provider in DOLLARS, and current_value is
+        // the TOTAL position, not a unit price. Both have been got wrong here
+        // before; positionValue is named for exactly this conversion.
+        current_value: positionValue(quantity, asDollars(price)),
         lastSyncedAt: timestamp,
       },
     });
@@ -171,8 +172,9 @@ export async function syncAssetPrice(assetId: string): Promise<void> {
   await prisma.asset.update({
     where: { id: asset.id },
     data: {
-      current_value: MoneyUtils.toCents(
-        MoneyUtils.safeMultiply(Number(asset.quantity) || 0, quote.price),
+      current_value: positionValue(
+        Number(asset.quantity) || 0,
+        asDollars(quote.price),
       ),
       lastSyncedAt: timestamp,
     },

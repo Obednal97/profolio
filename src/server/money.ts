@@ -1,5 +1,6 @@
 import 'server-only';
 import Decimal from 'decimal.js';
+import type { Cents, Dollars, BasisPoints, Fraction } from '@/lib/moneyUnits';
 
 /**
  * Money handling. Ported unchanged from the NestJS backend - financial code is
@@ -31,52 +32,53 @@ export class MoneyUtils {
   /**
    * Convert cents/pence to decimal amount with precision
    */
-  static fromCents(cents: number): number {
+  static fromCents(cents: Cents): Dollars {
     try {
       const decimal = new Decimal(cents);
-      return decimal.dividedBy(100).toNumber();
+      return decimal.dividedBy(100).toNumber() as Dollars;
     } catch (error) {
       console.error('Error converting cents to dollars:', error);
-      return 0;
+      return 0 as Dollars;
     }
   }
 
   /**
    * Convert decimal amount to cents/pence with precision
    */
-  static toCents(amount: number): number {
+  static toCents(amount: Dollars): Cents {
     try {
       const decimal = new Decimal(amount);
-      return decimal.times(100).round().toNumber();
+      return decimal.times(100).round().toNumber() as Cents;
     } catch (error) {
       console.error('Error converting dollars to cents:', error);
-      return 0;
+      return 0 as Cents;
     }
   }
 
   /**
-   * Convert basis points to percentage with precision
+   * Basis points to a FRACTION, not a percentage: this divides by 10000, so
+   * 425 becomes 0.0425. The parameter on the way back was named `percentage`
+   * and is not one, which is how assets came to store rates a hundred times
+   * too large - see the note in the liabilities service.
    */
-  static fromBasisPoints(basisPoints: number): number {
+  static fromBasisPoints(basisPoints: BasisPoints): Fraction {
     try {
       const decimal = new Decimal(basisPoints);
-      return decimal.dividedBy(10000).toNumber();
+      return decimal.dividedBy(10000).toNumber() as Fraction;
     } catch (error) {
       console.error('Error converting basis points to percentage:', error);
-      return 0;
+      return 0 as Fraction;
     }
   }
 
-  /**
-   * Convert percentage to basis points with precision
-   */
-  static toBasisPoints(percentage: number): number {
+  /** A FRACTION to basis points: 0.0425 becomes 425. See `fromBasisPoints`. */
+  static toBasisPoints(fraction: Fraction): BasisPoints {
     try {
-      const decimal = new Decimal(percentage);
-      return decimal.times(10000).round().toNumber();
+      const decimal = new Decimal(fraction);
+      return decimal.times(10000).round().toNumber() as BasisPoints;
     } catch (error) {
-      console.error('Error converting percentage to basis points:', error);
-      return 0;
+      console.error('Error converting fraction to basis points:', error);
+      return 0 as BasisPoints;
     }
   }
 
@@ -109,7 +111,7 @@ export class MoneyUtils {
   /**
    * Format money for display
    */
-  static formatMoney(cents: number, currency: string = 'USD'): string {
+  static formatMoney(cents: Cents, currency: string = 'USD'): string {
     try {
       const formatter = new Intl.NumberFormat('en-US', {
         style: 'currency',
