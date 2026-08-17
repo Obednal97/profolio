@@ -26,7 +26,12 @@ const eslintConfig = [
       "test-results/**",
       "playwright-report/**",
       "public/sw.js",
+      // The pdf.js worker, a megabyte of minified vendor code copied out of
+      // node_modules by scripts/copy-pdf-worker.mjs. Matched on both
+      // extensions: pdfjs-dist 5 ships it as .mjs, and the moment the copied
+      // file changed extension a clean run reported 1,550 problems in it.
       "public/pdf.worker.min.js",
+      "public/pdf.worker.min.mjs",
     ],
   },
   ...coreWebVitals,

@@ -417,7 +417,7 @@ export const MERCHANT_DATABASE: Record<string, MerchantInfo> = {
   'tfl': { name: 'TfL', category: 'transportation', subcategory: 'public_transport' },
   
   // Retail
-  'amazon': { name: 'Amazon', category: 'shopping', subcategory: 'online' },
+  'amazon': { name: 'Amazon', category: 'shopping' },
   'apple': { name: 'Apple', category: 'shopping', subcategory: 'electronics' },
   'ikea': { name: 'IKEA', category: 'shopping', subcategory: 'home_garden' },
   'zara': { name: 'Zara', category: 'shopping', subcategory: 'clothing' },
@@ -441,10 +441,10 @@ export const MERCHANT_DATABASE: Record<string, MerchantInfo> = {
   'nintendo': { name: 'Nintendo', category: 'entertainment', subcategory: 'gaming' },
   
   // American Express specific
-  'membership fee': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
-  'annual fee': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
-  'amex annual': { name: 'American Express Fee', category: 'financial', subcategory: 'credit-cards' },
-  'foreign transaction fee': { name: 'Foreign Transaction Fee', category: 'financial', subcategory: 'fees' },
+  'membership fee': { name: 'American Express Fee', category: 'financial', subcategory: 'banking_fees' },
+  'annual fee': { name: 'American Express Fee', category: 'financial', subcategory: 'banking_fees' },
+  'amex annual': { name: 'American Express Fee', category: 'financial', subcategory: 'banking_fees' },
+  'foreign transaction fee': { name: 'Foreign Transaction Fee', category: 'financial', subcategory: 'banking_fees' },
   
   // Insurance companies
   'aviva': { name: 'Aviva', category: 'financial', subcategory: 'insurance' },

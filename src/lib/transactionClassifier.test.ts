@@ -4,6 +4,8 @@ import {
   classifyTransaction,
   isIncomeCategory,
   INCOME_CATEGORY_IDS,
+  MERCHANT_DATABASE,
+  TRANSACTION_CATEGORIES,
 } from "@/lib/transactionClassifier";
 
 const spend = (description: string, cents = 1000) =>
@@ -130,5 +132,37 @@ describe("INCOME_CATEGORY_IDS", () => {
 
   it("ignores case and padding, because stored categories vary", () => {
     expect(isIncomeCategory(" Salary ")).toBe(true);
+  });
+});
+
+describe("every category the classifier can return is a real category", () => {
+  const known = new Set(Object.keys(TRANSACTION_CATEGORIES));
+
+  it("holds for the merchant database", () => {
+    // The review table renders the category into a <select> built from this
+    // same tree. A value matching no option leaves the select on its first
+    // option, and the first option is Income - so 'online' for Amazon and
+    // 'fees' for a foreign transaction fee showed spending as earnings.
+    const escaped = Object.entries(MERCHANT_DATABASE)
+      .map(([key, merchant]) => [key, merchant.subcategory || merchant.category])
+      .filter(([, category]) => !known.has(category as string));
+    expect(escaped).toEqual([]);
+  });
+
+  it("holds for whatever classifyTransaction actually returns", () => {
+    const descriptions = [
+      ...Object.keys(MERCHANT_DATABASE),
+      "SOMETHING UNRECOGNISABLE",
+      "MONTHLY RENT PAYMENT",
+      "BANK FEES",
+      "GYM MEMBERSHIP",
+      "XFR 88213 QQ",
+    ];
+    for (const description of descriptions) {
+      for (const type of ["debit", "credit"] as const) {
+        const { category } = classifyTransaction(description, 1234, type);
+        expect(known.has(category), `${description} (${type}) -> ${category}`).toBe(true);
+      }
+    }
   });
 });

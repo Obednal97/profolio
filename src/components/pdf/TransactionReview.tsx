@@ -13,6 +13,11 @@ interface TransactionReviewProps {
   onCancel: () => void;
 }
 
+/** Falls back to Other, never to whichever option happens to be first. */
+function categoryOrOther(category: string | undefined, known: Set<string>): string {
+  return category && known.has(category) ? category : 'other';
+}
+
 const TransactionReview: React.FC<TransactionReviewProps> = ({ 
   parseResult, 
   onSave, 
@@ -39,11 +44,36 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
   // Get all available categories
   const allCategories = getAllCategories();
 
+  /**
+   * Every category id this select can actually show.
+   *
+   * A `value` that matches no option leaves the select on its first option,
+   * and the first option here is Income. The classifier used to return
+   * 'online' for Amazon and 'fees' for a foreign transaction fee, neither of
+   * which is in the tree, so an Amazon purchase appeared in the review table
+   * as income. Those particular values are fixed at source, but a select that
+   * silently relabels spending as earnings is not a thing to leave standing.
+   */
+  const knownCategoryIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const category of allCategories) {
+      ids.add(category.id);
+      for (const sub of getSubcategories(category.id)) ids.add(sub.id);
+    }
+    return ids;
+  }, [allCategories]);
+
+  /**
+   * Money in minus money out, which is what "Net Total" means and what each row
+   * above already shows: debits render as -63.18 and credits as +142.60. This
+   * added debits as positive and credits as negative, so a month that ended
+   * GBP 1,007.70 up was headlined as GBP 1,007.70 down.
+   */
   const totalAmount = useMemo(() => {
     return transactions
       .filter(t => selectedTransactions.has(t.id))
       .reduce((sum, t) => {
-        return sum + (t.type === 'debit' ? t.amount : -t.amount);
+        return sum + (t.type === 'debit' ? -t.amount : t.amount);
       }, 0);
   }, [transactions, selectedTransactions]);
 
@@ -225,7 +255,7 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                         <span>{transaction.date}</span>
                         <div className="flex items-center space-x-4">
                           <select
-                            value={transaction.category}
+                            value={categoryOrOther(transaction.category, knownCategoryIds)}
                             onChange={(e) => handleTransactionUpdate(transaction.id, { category: e.target.value })}
                             className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs"
                           >

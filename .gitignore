@@ -175,3 +175,4 @@ claude-code-limit-tracker/
 **/.agents/
 **/.claude/
 .env*
+public/pdf.worker.min.mjs

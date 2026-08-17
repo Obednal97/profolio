@@ -10,10 +10,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "build": "node scripts/copy-pdf-worker.mjs && next build",
+    "vercel-build": "prisma generate && node scripts/copy-pdf-worker.mjs && prisma migrate deploy && next build",
     "start": "next start",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && node scripts/copy-pdf-worker.mjs",
     "type-check": "tsc --noEmit",
     "type-check:dev": "tsc --noEmit -p tsconfig.dev.json",
     "lint": "eslint . --max-warnings 80",
