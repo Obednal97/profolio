@@ -11,6 +11,12 @@ import { GooglePlacesApiKeyModal } from "./GooglePlacesApiKeyModal";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { BaseModal } from "./modal";
 import type { Property, PropertyFormData } from "@/types/global";
+import {
+  asDollars,
+  asPercent,
+  toBasisPoints,
+  toCents,
+} from "@/lib/moneyUnits";
 
 // Country and state data
 const COUNTRIES_WITH_STATES = {
@@ -851,43 +857,49 @@ export function PropertyModal({
         ownershipType: formData.ownershipType as Property["ownershipType"],
         notes: formData.notes,
 
-        // Financial values
+        // Financial values. The form collects pounds and a percentage; the
+        // wire format is integer cents and integer basis points, so this is the
+        // one place in the property path where a decimal becomes an integer.
         purchasePrice: formData.purchasePrice
-          ? Number(formData.purchasePrice)
+          ? toCents(asDollars(Number(formData.purchasePrice)))
           : undefined,
         currentValue: formData.currentValue
-          ? Number(formData.currentValue)
+          ? toCents(asDollars(Number(formData.currentValue)))
           : undefined,
         monthlyRent: formData.monthlyRent
-          ? Number(formData.monthlyRent)
+          ? toCents(asDollars(Number(formData.monthlyRent)))
           : undefined,
         securityDeposit: formData.securityDeposit
-          ? Number(formData.securityDeposit)
+          ? toCents(asDollars(Number(formData.securityDeposit)))
           : undefined,
         rentalIncome: formData.rentalIncome
-          ? Number(formData.rentalIncome)
+          ? toCents(asDollars(Number(formData.rentalIncome)))
           : undefined,
         propertyTaxes: formData.propertyTaxes
-          ? Number(formData.propertyTaxes)
+          ? toCents(asDollars(Number(formData.propertyTaxes)))
           : undefined,
-        insurance: formData.insurance ? Number(formData.insurance) : undefined,
+        insurance: formData.insurance
+          ? toCents(asDollars(Number(formData.insurance)))
+          : undefined,
         maintenanceCosts: formData.maintenanceCosts
-          ? Number(formData.maintenanceCosts)
+          ? toCents(asDollars(Number(formData.maintenanceCosts)))
           : undefined,
-        hoa: formData.hoa ? Number(formData.hoa) : undefined,
+        hoa: formData.hoa
+          ? toCents(asDollars(Number(formData.hoa)))
+          : undefined,
 
         // Mortgage info
         mortgageAmount: formData.mortgageAmount
-          ? Number(formData.mortgageAmount)
+          ? toCents(asDollars(Number(formData.mortgageAmount)))
           : undefined,
         mortgageRate: formData.mortgageRate
-          ? Number(formData.mortgageRate)
+          ? toBasisPoints(asPercent(Number(formData.mortgageRate)))
           : undefined,
         mortgageTerm: formData.mortgageTerm
           ? Number(formData.mortgageTerm)
           : undefined,
         monthlyPayment: formData.monthlyPayment
-          ? Number(formData.monthlyPayment)
+          ? toCents(asDollars(Number(formData.monthlyPayment)))
           : undefined,
         mortgageStartDate: formData.mortgageStartDate,
         mortgageProvider: formData.mortgageProvider,

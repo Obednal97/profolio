@@ -20,6 +20,7 @@ import { ViewSwitcher } from "@/components/ui/ViewSwitcher";
 import type { Asset } from "@/types/global";
 import dynamic from "next/dynamic";
 import { FinancialCalculator } from "@/lib/financial";
+import { asCents, type Cents } from "@/lib/moneyUnits";
 import {
   ChartLoadingSkeleton,
   AssetManagerSkeleton,
@@ -139,10 +140,12 @@ const getCryptoIcon = (symbol: string) => {
 
 // 🚀 PERFORMANCE: Pre-calculate metrics to avoid expensive calculations on every render
 interface AssetMetrics {
-  totalValue: number;
-  totalGainLoss: number;
+  /** Cents. Every money figure on this page is cents until it is rendered. */
+  totalValue: Cents;
+  totalGainLoss: Cents;
+  /** A percentage, so 4.25 means 4.25%. Ratios are unit-agnostic. */
   collectiveAPY: number;
-  assetsByType: Record<string, { count: number; value: number }>;
+  assetsByType: Record<string, { count: number; value: Cents }>;
 }
 
 const calculateAssetMetrics = (assets: Asset[]): AssetMetrics => {
@@ -152,31 +155,35 @@ const calculateAssetMetrics = (assets: Asset[]): AssetMetrics => {
   let totalGainLoss = 0;
   let totalInvestment = 0;
   let weightedAPYSum = 0;
-  const assetsByType: Record<string, { count: number; value: number }> = {};
+  const assetsByType: Record<string, { count: number; value: Cents }> = {};
 
   assets.forEach((asset) => {
-    // Total value calculation
-    const valueInDollars = asset.current_value || 0;
-    totalValue += valueInDollars;
+    // Total value calculation. Cents - the wire format for every resource.
+    const positionValueCents = asset.current_value ?? 0;
+    totalValue += positionValueCents;
 
     // Assets by type
     const type = asset.type ?? "other";
-    if (!assetsByType[type]) assetsByType[type] = { count: 0, value: 0 };
+    if (!assetsByType[type])
+      assetsByType[type] = { count: 0, value: asCents(0) };
     assetsByType[type].count++;
-    assetsByType[type].value += valueInDollars;
+    assetsByType[type].value = asCents(
+      assetsByType[type].value + positionValueCents
+    );
 
     // Gain/loss and APY calculations (only for assets with complete data)
     if (asset.purchase_price && asset.current_value && asset.quantity) {
-      // `current_value` is the total position value in dollars, which is what
-      // calculateAssetGainLoss expects. It used to be run through
+      // `current_value` is the TOTAL position value, in cents. Gain/loss and
+      // APY are ratios of two amounts in the same unit, so they come out the
+      // same whichever unit that is. This used to be run through
       // `value > 1000 ? centsToDollars(value) : value` - a guess at the unit
       // based on the magnitude - so every position worth more than a thousand
       // was divided by a hundred. That is where "-99.58% APY" came from.
-      const currentValueDollars = asset.current_value;
+      const positionValue = asset.current_value;
 
       // Gain/loss calculation
       const calculation = FinancialCalculator.calculateAssetGainLoss(
-        currentValueDollars,
+        positionValue,
         asset.purchase_price,
         asset.quantity
       );
@@ -185,7 +192,7 @@ const calculateAssetMetrics = (assets: Asset[]): AssetMetrics => {
       // APY calculation (only if purchase date exists)
       if (asset.purchase_date) {
         const apy = FinancialCalculator.calculateAPY(
-          currentValueDollars,
+          positionValue,
           asset.purchase_price,
           asset.quantity,
           asset.purchase_date
@@ -202,8 +209,8 @@ const calculateAssetMetrics = (assets: Asset[]): AssetMetrics => {
     totalInvestment > 0 ? weightedAPYSum / totalInvestment : 0;
 
   return {
-    totalValue,
-    totalGainLoss,
+    totalValue: asCents(totalValue),
+    totalGainLoss: asCents(totalGainLoss),
     collectiveAPY,
     assetsByType,
   };
@@ -692,8 +699,8 @@ export default function AssetManager() {
                       {asset.quantity || "-"}
                     </td>
                     <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white text-right">
-                      {FinancialCalculator.formatCurrency(
-                        asset.current_value || 0
+                      {FinancialCalculator.formatCents(
+                        asset.current_value ?? asCents(0)
                       )}
                     </td>
                     <td className="px-4 py-4 text-sm text-right">
@@ -707,8 +714,8 @@ export default function AssetManager() {
                             }`}
                           >
                             {appreciation.gain >= 0 ? "+" : ""}
-                            {FinancialCalculator.formatCurrency(
-                              appreciation.gain
+                            {FinancialCalculator.formatCents(
+                              asCents(appreciation.gain)
                             )}
                           </div>
                           <div
@@ -822,7 +829,7 @@ export default function AssetManager() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatCard
             title="Total Asset Value"
-            value={FinancialCalculator.formatCurrency(totalValue)}
+            value={FinancialCalculator.formatCents(totalValue)}
             icon="fa-wallet"
             colorScheme="green"
           />
@@ -836,7 +843,7 @@ export default function AssetManager() {
           
           <StatCard
             title="Total Gain/Loss"
-            value={`${totalGainLoss >= 0 ? "+" : ""}${FinancialCalculator.formatCurrency(totalGainLoss)}`}
+            value={`${totalGainLoss >= 0 ? "+" : ""}${FinancialCalculator.formatCents(totalGainLoss)}`}
             icon={totalGainLoss >= 0 ? "fa-arrow-trend-up" : "fa-arrow-trend-down"}
             colorScheme={totalGainLoss >= 0 ? "green" : "red"}
           />

@@ -6,6 +6,7 @@ import { ParsedTransaction, ParseResult } from '@/lib/pdfParser';
 import { RadixButton as Button } from '@/components/ui/button';
 import { useAppContext } from '@/components/layout/layoutWrapper';
 import { getAllCategories, getSubcategories } from '@/lib/transactionClassifier';
+import { asDollars, toCents, toDollars, type Cents } from "@/lib/moneyUnits";
 
 interface TransactionReviewProps {
   parseResult: ParseResult;
@@ -32,7 +33,8 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
    * formatter used to guess the unit from the magnitude, so a statement line
    * under ten units printed a hundred times too large.
    */
-  const formatCents = (cents: number) => formatCurrency(cents / 100);
+  // formatCurrency takes cents now, so this only names the call.
+  const formatCents = (cents: Cents) => formatCurrency(cents);
 
   const [transactions, setTransactions] = useState<ParsedTransaction[]>(parseResult.transactions);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
@@ -74,7 +76,7 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
       .filter(t => selectedTransactions.has(t.id))
       .reduce((sum, t) => {
         return sum + (t.type === 'debit' ? -t.amount : t.amount);
-      }, 0);
+      }, 0) as Cents;
   }, [transactions, selectedTransactions]);
 
   const handleTransactionUpdate = (id: string, updates: Partial<ParsedTransaction>) => {
@@ -338,8 +340,8 @@ const TransactionReview: React.FC<TransactionReviewProps> = ({
                             </label>
                             <input
                               type="number"
-                              value={transaction.amount / 100}
-                              onChange={(e) => handleTransactionUpdate(transaction.id, { amount: Math.round(parseFloat(e.target.value) * 100) })}
+                              value={toDollars(transaction.amount)}
+                              onChange={(e) => handleTransactionUpdate(transaction.id, { amount: toCents(asDollars(parseFloat(e.target.value) || 0)) })}
                               step="0.01"
                               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm"
                             />

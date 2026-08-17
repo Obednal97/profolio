@@ -22,19 +22,18 @@ import {
 } from "@/lib/transactionClassifier";
 import { ExpenseManagerSkeleton } from "@/components/ui/skeleton";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import type { Cents } from "@/lib/moneyUnits";
 
 function ExpenseManager() {
   const { formatCurrency } = useAppContext();
 
   /**
-   * Expense amounts are CENTS on the wire, unlike assets and properties which
-   * are dollars, and `formatCurrency` takes dollars. Converting here keeps the
-   * boundary in one visible place. The formatter used to infer the unit from
-   * the magnitude, which meant an expense under ten currency units displayed a
-   * hundred times too large.
+   * Everything is CENTS now - assets and properties too - and formatCurrency
+   * takes cents, so this no longer converts. Kept as a named wrapper because
+   * the call sites read better for it.
    */
   const formatCents = useCallback(
-    (cents: number) => formatCurrency(cents / 100),
+    (cents: Cents) => formatCurrency(cents),
     [formatCurrency]
   );
 
@@ -376,7 +375,7 @@ function ExpenseManager() {
         expense.date >= thirtyDaysAgoStr &&
         !['income', 'salary', 'investment_income', 'freelance'].includes(expense.category)
       )
-      .reduce((sum, expense) => sum + expense.amount, 0);
+      .reduce((sum, expense) => sum + expense.amount, 0) as Cents;
   }, [expenses, thirtyDaysAgoStr]);
 
   const last30DaysIncome = useMemo(() => {
@@ -385,7 +384,7 @@ function ExpenseManager() {
         expense.date >= thirtyDaysAgoStr &&
         ['income', 'salary', 'investment_income', 'freelance'].includes(expense.category)
       )
-      .reduce((sum, expense) => sum + expense.amount, 0);
+      .reduce((sum, expense) => sum + expense.amount, 0) as Cents;
   }, [expenses, thirtyDaysAgoStr]);
 
   const activeSubscriptions = useMemo(() => {

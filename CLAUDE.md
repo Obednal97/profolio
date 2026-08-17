@@ -124,8 +124,12 @@ id from a path, query or body; take it from the session.
 
 Each of these has produced a live defect. Treat them as load-bearing.
 
-- **Money is integer cents at rest.** Convert only at the service boundary:
-  `toCents` on write, `fromCents` on read. Interest rates are basis points.
+- **Money is integer cents everywhere: at rest AND on the wire.** Every API
+  sends and receives the integers the database holds — cents for money, basis
+  points for rates — and **nothing on the server converts a unit**. The
+  conversion happens once, in the browser, at the point of display. Assets,
+  properties and liabilities used to speak dollars and percentages while
+  expenses spoke cents, and reconciling the two is what the dashboard got wrong.
 - **Units are types now.** `src/lib/moneyUnits.ts` defines `Cents`, `Dollars`,
   `BasisPoints`, `Percent` and `Fraction` as branded numbers — free at runtime,
   not interchangeable at compile time. `MoneyUtils` is typed in terms of them,
@@ -160,8 +164,14 @@ Each of these has produced a live defect. Treat them as load-bearing.
   secrets: `server/modules/api-keys/crypto.ts` versus
   `server/crypto/encryption.ts`. They are not interchangeable, and both derive
   their key lazily so that importing a route module cannot throw.
-- **Expense amounts are cents on the wire**, unlike assets and properties which
-  use dollars. The expense form converts in both directions; the others do not.
+- **A formatter that takes `Cents` must call `toDollars` in its body.** Retyping
+  the signature is not enough and does not fail the build: `Intl.NumberFormat`
+  accepts a `Cents` happily, because it is a number. Changing
+  `layoutWrapper`'s `formatCurrency` signature without its body rendered
+  GBP 1,600,000 of property as GBP 160,000,000. There are five of these
+  formatters — layoutWrapper, PropertyCard, the dashboard, EnhancedMetricCard
+  and MetricCard — plus `FinancialCalculator.formatCents`, and
+  `format: "currency"` on a metric card means the value is cents.
 - **The pdf.js worker is copied, never committed.** `scripts/copy-pdf-worker.mjs`
   runs on install and before every build. pdf.js throws rather than degrading
   when the worker and the library disagree, and a hand-committed

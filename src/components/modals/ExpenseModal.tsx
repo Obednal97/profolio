@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { BaseModal } from "./modal";
 import type { Expense } from "@/types/global";
+import { asDollars, toCents } from "@/lib/moneyUnits";
 
 interface ExpenseModalProps {
   onClose: () => void;
@@ -66,7 +67,9 @@ export function ExpenseModal({
     
     onSubmit({
       ...formData,
-      amount: parseFloat(formData.amount) * 100,
+      // The form takes pounds; the wire format is integer cents. Rounded
+      // because parseFloat("19.99") * 100 is 1998.9999999999998.
+      amount: toCents(asDollars(parseFloat(formData.amount) || 0)),
       userId: currentUserId,
       date: formData.date,
       description: formData.description,

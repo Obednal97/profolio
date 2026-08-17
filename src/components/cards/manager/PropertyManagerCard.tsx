@@ -3,13 +3,15 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { propertyTypeConfig, propertyStatusConfig } from '@/lib/constants/propertyTypes';
 import type { Property } from '@/types/global';
+import { asCents, type Cents } from "@/lib/moneyUnits";
 
 interface PropertyManagerCardProps {
   property: Property;
   onEdit: (property: Property) => void;
   onDelete: (id: string) => void;
   /** Takes DOLLARS, which is what /api/properties already returns. */
-  formatCurrency: (value: number) => string;
+  /** Takes CENTS: every money field on these records is cents. */
+  formatCurrency: (value: Cents) => string;
 }
 
 export function PropertyManagerCard({
@@ -150,7 +152,7 @@ export function PropertyManagerCard({
             Value
           </span>
           <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
-            {formatCurrency(property.currentValue ?? 0)}
+            {formatCurrency(property.currentValue ?? asCents(0))}
           </span>
         </div>
 
@@ -194,7 +196,7 @@ export function PropertyManagerCard({
                   netCashFlow >= 0 ? "text-green-600" : "text-red-600"
                 }`}
               >
-                {formatCurrency(netCashFlow)}/mo
+                {formatCurrency(asCents(netCashFlow))}/mo
               </span>
             </div>
             {monthlyROI > 0 && (

@@ -16,6 +16,7 @@ import { PropertyModal } from "@/components/modals/PropertyModal";
 import { useStableUserId, useStableAuthToken } from "@/hooks/useStableUser";
 import { PropertyManagerSkeleton } from "@/components/ui/skeleton";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { asCents } from "@/lib/moneyUnits";
 
 const propertyTypeConfig = {
   residential: {
@@ -281,23 +282,26 @@ export default function PropertyManager() {
 
   // Calculate metrics
   const totalValue = useMemo(() => {
-    return properties.reduce(
-      (sum, property) => sum + (property.currentValue ?? 0),
-      0
+    // Cents, summed as integers. `asCents` only restates the unit: a reduce
+    // seeded with 0 widens to plain number and would lose it.
+    return asCents(
+      properties.reduce((sum, property) => sum + (property.currentValue ?? 0), 0)
     );
   }, [properties]);
 
   const totalRentalIncome = useMemo(() => {
-    return properties.reduce(
-      (sum, property) => sum + (property.rentalIncome ?? 0),
-      0
+    // Cents, summed as integers. `asCents` only restates the unit: a reduce
+    // seeded with 0 widens to plain number and would lose it.
+    return asCents(
+      properties.reduce((sum, property) => sum + (property.rentalIncome ?? 0), 0)
     );
   }, [properties]);
 
   const totalMortgage = useMemo(() => {
-    return properties.reduce(
-      (sum, property) => sum + (property.mortgageAmount ?? 0),
-      0
+    // Cents, summed as integers. `asCents` only restates the unit: a reduce
+    // seeded with 0 widens to plain number and would lose it.
+    return asCents(
+      properties.reduce((sum, property) => sum + (property.mortgageAmount ?? 0), 0)
     );
   }, [properties]);
 
@@ -382,7 +386,7 @@ export default function PropertyManager() {
       (property.maintenanceCosts ?? 0) +
       (property.hoa ?? 0);
 
-    const netCashFlow = (property.rentalIncome ?? 0) - totalMonthlyCosts;
+    const netCashFlow = asCents((property.rentalIncome ?? 0) - totalMonthlyCosts);
 
     return (
       <motion.div
@@ -493,7 +497,7 @@ export default function PropertyManager() {
                 Current Value
               </p>
               <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(property.currentValue ?? 0)}
+                {formatCurrency(property.currentValue ?? asCents(0))}
               </p>
             </div>
             {property.rentalIncome && (
@@ -894,7 +898,9 @@ export default function PropertyManager() {
                   </p>
                   <p className="text-2xl font-bold text-white">
                     {formatCurrency(
-                      properties.length > 0 ? totalValue / properties.length : 0
+                      properties.length > 0
+          ? asCents(Math.round(totalValue / properties.length))
+          : asCents(0)
                     )}
                   </p>
                 </EnhancedGlassCard>
@@ -908,7 +914,7 @@ export default function PropertyManager() {
                     Total Annual Income
                   </p>
                   <p className="text-2xl font-bold text-green-400">
-                    {formatCurrency(totalRentalIncome * 12)}
+                    {formatCurrency(asCents(totalRentalIncome * 12))}
                   </p>
                 </EnhancedGlassCard>
                 <EnhancedGlassCard enableLensing hoverable

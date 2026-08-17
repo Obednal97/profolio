@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { blankable, isoDate } from "@/server/http/zod";
+import { MoneyInCents, blankable, isoDate } from "@/server/http/zod";
 
 /**
  * Request schemas for properties.
@@ -16,7 +16,12 @@ import { blankable, isoDate } from "@/server/http/zod";
  */
 
 /** A money amount in dollars. */
-const Money = z.number().min(0).max(9_999_999_999);
+/**
+ * A money amount in integer cents. The cap used to be 9,999,999,999 in dollars,
+ * a hundred times what the `Int` column can hold, so a large value passed
+ * validation and then failed as an overflow with a 500.
+ */
+const Money = MoneyInCents;
 
 /** An integer count, e.g. bedrooms or square footage. */
 const Count = z.number().int().min(0).max(1_000_000);

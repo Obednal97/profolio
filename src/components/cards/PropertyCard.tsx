@@ -4,6 +4,7 @@ import React from 'react';
 import { Property } from '@/types/global';
 import { Button } from '@/components/ui/button';
 import { EnhancedGlassCard } from '@/components/ui/enhanced-glass/EnhancedGlassCard';
+import { toDollars, type Cents, asCents} from "@/lib/moneyUnits";
 
 interface PropertyCardProps {
   property: Property;
@@ -31,13 +32,14 @@ export function PropertyCard({ property, onEdit, onDelete }: PropertyCardProps) 
   const typeConfig = propertyTypeConfig[property.propertyType as keyof typeof propertyTypeConfig] || propertyTypeConfig.single_family;
   const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig.owned;
   
-  const formatCurrency = (amount: number) => {
+  /** Takes CENTS, which is what the properties API now returns. */
+  const formatCurrency = (amount: Cents) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(toDollars(amount));
   };
 
   const calculateROI = () => {
@@ -141,7 +143,7 @@ export function PropertyCard({ property, onEdit, onDelete }: PropertyCardProps) 
           <div>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Current Value</p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(property.currentValue || 0)}
+              {formatCurrency(property.currentValue ?? asCents(0))}
             </p>
           </div>
           {property.rentalIncome && (

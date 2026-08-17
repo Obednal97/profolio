@@ -11,6 +11,12 @@ import { Asset } from "@/types/global";
 import { Button } from "@/components/ui/button";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
 import { FinancialCalculator } from "@/lib/financial";
+import {
+  asDollars,
+  asPercent,
+  toBasisPoints,
+  toCents,
+} from "@/lib/moneyUnits";
 
 // Asset type fields configuration
 const assetTypeFields = {
@@ -517,9 +523,16 @@ export function AssetModal({
         id: initialData?.id || "",
         ...formData,
         quantity: parseFloat(formData.quantity) || 0,
-        current_value: parseFloat(currentValueValidation.sanitized || "0"),
+        // The form collects pounds and a percentage; the wire format is
+        // integer cents and integer basis points. This is the only place in the
+        // asset path where a decimal becomes an integer.
+        current_value: toCents(
+          asDollars(parseFloat(currentValueValidation.sanitized || "0"))
+        ),
         purchase_price: formData.purchase_price
-          ? parseFloat(purchasePriceValidation.sanitized || "0")
+          ? toCents(
+              asDollars(parseFloat(purchasePriceValidation.sanitized || "0"))
+            )
           : undefined,
         vesting_schedule:
           formData.vesting_schedule &&
@@ -533,10 +546,12 @@ export function AssetModal({
             : undefined,
         // Savings fields with proper conversion and validation
         initialAmount: formData.initialAmount
-          ? parseFloat(initialAmountValidation.sanitized || "0")
+          ? toCents(
+              asDollars(parseFloat(initialAmountValidation.sanitized || "0"))
+            )
           : undefined,
         interestRate: formData.interestRate
-          ? parseFloat(formData.interestRate)
+          ? toBasisPoints(asPercent(parseFloat(formData.interestRate) || 0))
           : undefined,
         interestType: formData.interestType
           ? (formData.interestType as "SIMPLE" | "COMPOUND")

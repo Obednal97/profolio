@@ -13,6 +13,7 @@ import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassC
 import { StatsGrid } from "@/components/common/StatsGrid";
 import { Wallet, CreditCard, Home, TrendingUp } from "lucide-react";
 import { isIncomeCategory } from "@/lib/transactionClassifier";
+import { asCents, toDollars, type Cents } from "@/lib/moneyUnits";
 
 // 🚀 PERFORMANCE: Dynamic import of Confetti to reduce initial bundle size and prevent hydration issues
 const Confetti = dynamic(() => import("react-confetti"), {
@@ -22,7 +23,8 @@ const Confetti = dynamic(() => import("react-confetti"), {
 
 interface Transaction {
   type: string;
-  amount: number;
+  /** Cents, like every other figure on this page. */
+  amount: Cents;
   date: string;
   description: string;
 }
@@ -35,12 +37,13 @@ interface NewsArticle {
 }
 
 interface DashboardData {
-  totalAssets: number;
-  totalLiabilities: number;
-  totalExpenses: number;
+  /** All money on this page is CENTS until it is rendered. */
+  totalAssets: Cents;
+  totalLiabilities: Cents;
+  totalExpenses: Cents;
   properties: number;
-  propertyValue: number;
-  monthlyIncome: number;
+  propertyValue: Cents;
+  monthlyIncome: Cents;
   transactions: Transaction[];
   portfolioHistory: Array<{
     date: string;
@@ -49,31 +52,32 @@ interface DashboardData {
   news: NewsArticle[];
 }
 
-/** Only the asset fields the dashboard totals need. */
+/** Only the asset fields the dashboard totals need. Cents. */
 interface DashboardAsset {
-  current_value?: number;
-  purchase_price?: number;
+  current_value?: Cents;
+  purchase_price?: Cents;
 }
 
-/** Only the property fields the dashboard totals need. */
+/** Only the property fields the dashboard totals need. Cents. */
 interface DashboardProperty {
-  currentValue?: number;
-  purchasePrice?: number;
+  currentValue?: Cents;
+  purchasePrice?: Cents;
 }
 
 /** Compact currency for stat subtitles, e.g. "$2.4M". */
-function formatCurrency(value: number): string {
+/** Takes CENTS. Every figure on this page is cents until it is rendered. */
+function formatCurrency(value: Cents): string {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "USD",
     notation: "compact",
     maximumFractionDigits: 1,
-  }).format(value);
+  }).format(toDollars(value));
 }
 
 /** Only the expense fields the dashboard needs. */
 interface DashboardExpense {
-  amount?: number;
+  amount?: Cents;
   date: string;
   description?: string;
   category?: string;
@@ -354,23 +358,26 @@ export default function DashboardPage() {
       const expenses: DashboardExpense[] = expensesJson?.expenses ?? [];
       const properties: DashboardProperty[] = propertiesJson?.properties ?? [];
 
-      // Balances arrive in dollars, matching assets and properties.
-      const liabilities: Array<{ balance?: number }> =
+      // Every resource is integer CENTS on the wire now, so all four of these
+      // totals are cents and stay that way until formatCurrency renders them.
+      // `asCents` only restates the unit: a reduce seeded with 0 widens to
+      // plain number and would lose it.
+      const liabilities: Array<{ balance?: Cents }> =
         liabilitiesJson?.liabilities ?? [];
-      const totalLiabilities = liabilities.reduce(
-        (sum, liability) => sum + (liability.balance ?? 0),
-        0
+      const totalLiabilities = asCents(
+        liabilities.reduce((sum, liability) => sum + (liability.balance ?? 0), 0)
       );
 
-      const propertyValue = properties.reduce(
-        (sum, property) =>
-          sum + (property.currentValue ?? property.purchasePrice ?? 0),
-        0
+      const propertyValue = asCents(
+        properties.reduce(
+          (sum, property) =>
+            sum + (property.currentValue ?? property.purchasePrice ?? 0),
+          0
+        )
       );
 
-      const totalAssets = assets.reduce(
-        (sum, asset) => sum + assetValue(asset),
-        0
+      const totalAssets = asCents(
+        assets.reduce((sum, asset) => sum + assetValue(asset), 0)
       );
 
       // Expenses and income are both recorded as expense rows; income is
@@ -391,13 +398,16 @@ export default function DashboardPage() {
       // large next to the asset values beside it.
       const toDollars = (cents: number) => cents / 100;
 
-      const totalExpenses = toDollars(
+      // These used to be converted to dollars here, because expenses were the
+      // one resource that spoke cents while assets and properties spoke
+      // dollars. Everything speaks cents now, so there is nothing to reconcile.
+      const totalExpenses = asCents(
         thisMonth
           .filter((expense) => !isIncome(expense))
           .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0)
       );
 
-      const monthlyIncome = toDollars(
+      const monthlyIncome = asCents(
         thisMonth
           .filter(isIncome)
           .reduce((sum, expense) => sum + Math.abs(expense.amount ?? 0), 0)
@@ -410,7 +420,7 @@ export default function DashboardPage() {
         .slice(0, 5)
         .map((expense) => ({
           type: isIncome(expense) ? "income" : "expense",
-          amount: toDollars(Math.abs(expense.amount ?? 0)),
+          amount: asCents(Math.abs(expense.amount ?? 0)),
           date: expense.date,
           description: expense.description || expense.category || "Transaction",
         }));
@@ -475,12 +485,12 @@ export default function DashboardPage() {
   }
 
   const dashboardData: DashboardData = data || {
-    totalAssets: 0,
-    totalLiabilities: 0,
-    totalExpenses: 0,
+    totalAssets: asCents(0),
+    totalLiabilities: asCents(0),
+    totalExpenses: asCents(0),
     properties: 0,
-    propertyValue: 0,
-    monthlyIncome: 0,
+    propertyValue: asCents(0),
+    monthlyIncome: asCents(0),
     transactions: [],
     portfolioHistory: [],
     news: [],
@@ -525,7 +535,9 @@ export default function DashboardPage() {
           it previously said zero because nothing exposed the table at all.
         */}
         <NetWorthDisplay
-          totalAssets={dashboardData.totalAssets + dashboardData.propertyValue}
+          totalAssets={asCents(
+            dashboardData.totalAssets + dashboardData.propertyValue
+          )}
           totalLiabilities={dashboardData.totalLiabilities}
           showTaxToggle={true}
         />

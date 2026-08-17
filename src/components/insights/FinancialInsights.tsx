@@ -8,6 +8,7 @@ import { getCategoryInfo } from "@/lib/transactionClassifier";
 import LineChart from "@/components/charts/line";
 import PieChart from "@/components/charts/pie";
 import { EnhancedGlassCard } from "@/components/ui/enhanced-glass/EnhancedGlassCard";
+import { asCents, type Cents } from "@/lib/moneyUnits";
 
 interface FinancialInsightsProps {
   expenses: Expense[];
@@ -19,7 +20,7 @@ interface FinancialInsightsProps {
 
 interface CategorySpending {
   category: string;
-  amount: number;
+  amount: Cents;
   count: number;
   change: number; // percentage change from previous period
   icon: string;
@@ -156,7 +157,8 @@ export default function FinancialInsights({
 
         return {
           category: categoryInfo.name,
-          amount: (data.current + data.previous) / 100,
+          // Cents, like everything else on this screen.
+          amount: asCents(data.current + data.previous),
           count: data.count,
           change,
           icon: categoryInfo.icon,
@@ -169,9 +171,13 @@ export default function FinancialInsights({
 
   // Calculate key metrics
   const metrics = useMemo(() => {
-    const totalIncome = income.reduce((sum, t) => sum + t.amount, 0) / 100;
-    const totalExpenses =
-      expenseTransactions.reduce((sum, t) => sum + t.amount, 0) / 100;
+    // Everything here stays in CENTS. It used to divide by 100 at each of
+    // these points and work in decimals, which both loses exactness on a sum
+    // and left the units disagreeing with the formatter.
+    const totalIncome = asCents(income.reduce((sum, t) => sum + t.amount, 0));
+    const totalExpenses = asCents(
+      expenseTransactions.reduce((sum, t) => sum + t.amount, 0)
+    );
     const totalSavings = totalIncome - totalExpenses;
     const savingsRate =
       totalIncome > 0 ? (totalSavings / totalIncome) * 100 : 0;
@@ -191,7 +197,7 @@ export default function FinancialInsights({
         e.recurrence === "recurring"
     );
     const monthlySubscriptionCost = subscriptions.reduce((sum, sub) => {
-      const amount = sub.amount / 100;
+      const amount = sub.amount;
       switch (sub.frequency) {
         case "Daily":
           return sum + amount * 30;
@@ -221,10 +227,11 @@ export default function FinancialInsights({
      * masked it for means above ten units and printed a hundredfold overstate
      * below that.
      */
-    const averageTransaction =
+    const averageTransaction = asCents(
       expenseTransactions.length > 0
-        ? totalExpenses / expenseTransactions.length
-        : 0;
+        ? Math.round(totalExpenses / expenseTransactions.length)
+        : 0
+    );
 
     return {
       totalIncome,
@@ -244,9 +251,10 @@ export default function FinancialInsights({
   // Budget recommendations based on 50/30/20 rule
   const budgetRecommendations = useMemo(() => {
     const monthlyIncome = metrics.avgMonthlyIncome;
-    const needs = monthlyIncome * 0.5; // 50% for needs
-    const wants = monthlyIncome * 0.3; // 30% for wants
-    const savings = monthlyIncome * 0.2; // 20% for savings
+    // Rounded because a share of a cent is not an amount. All in cents.
+    const needs = asCents(Math.round(monthlyIncome * 0.5)); // 50% for needs
+    const wants = asCents(Math.round(monthlyIncome * 0.3)); // 30% for wants
+    const savings = asCents(Math.round(monthlyIncome * 0.2)); // 20% for savings
 
     // Categorize current spending
     const needsCategories = [
@@ -256,35 +264,40 @@ export default function FinancialInsights({
       "healthcare",
       "transportation",
     ];
-    const currentNeeds =
-      expenseTransactions
-        .filter((e) => needsCategories.includes(e.category))
-        .reduce((sum, e) => sum + e.amount, 0) /
-      100 /
-      (parseInt(timeRange) / 30);
+    const months = parseInt(timeRange) / 30;
+    const currentNeeds = asCents(
+      Math.round(
+        expenseTransactions
+          .filter((e) => needsCategories.includes(e.category))
+          .reduce((sum, e) => sum + e.amount, 0) / months
+      )
+    );
 
-    const currentWants =
-      expenseTransactions
-        .filter((e) => !needsCategories.includes(e.category))
-        .reduce((sum, e) => sum + e.amount, 0) /
-      100 /
-      (parseInt(timeRange) / 30);
+    const currentWants = asCents(
+      Math.round(
+        expenseTransactions
+          .filter((e) => !needsCategories.includes(e.category))
+          .reduce((sum, e) => sum + e.amount, 0) / months
+      )
+    );
 
     return {
       needs: {
         recommended: needs,
         current: currentNeeds,
-        difference: needs - currentNeeds,
+        difference: asCents(needs - currentNeeds),
       },
       wants: {
         recommended: wants,
         current: currentWants,
-        difference: wants - currentWants,
+        difference: asCents(wants - currentWants),
       },
       savings: {
         recommended: savings,
-        current: metrics.totalSavings / (parseInt(timeRange) / 30),
-        difference: savings - metrics.totalSavings / (parseInt(timeRange) / 30),
+        current: asCents(Math.round(metrics.totalSavings / months)),
+        difference: asCents(
+          Math.round(savings - metrics.totalSavings / months)
+        ),
       },
     };
   }, [metrics, expenseTransactions, timeRange]);
@@ -651,7 +664,7 @@ export default function FinancialInsights({
                   <p className="text-red-400 text-sm mt-1">
                     Over budget by{" "}
                     {formatCurrency(
-                      Math.abs(budgetRecommendations.needs.difference)
+                      asCents(Math.abs(budgetRecommendations.needs.difference))
                     )}
                   </p>
                 )}
@@ -687,7 +700,7 @@ export default function FinancialInsights({
                   <p className="text-red-400 text-sm mt-1">
                     Over budget by{" "}
                     {formatCurrency(
-                      Math.abs(budgetRecommendations.wants.difference)
+                      asCents(Math.abs(budgetRecommendations.wants.difference))
                     )}
                   </p>
                 )}
@@ -725,7 +738,7 @@ export default function FinancialInsights({
                   <p className="text-yellow-400 text-sm mt-1">
                     Below target by{" "}
                     {formatCurrency(
-                      Math.abs(budgetRecommendations.savings.difference)
+                      asCents(Math.abs(budgetRecommendations.savings.difference))
                     )}
                   </p>
                 )}

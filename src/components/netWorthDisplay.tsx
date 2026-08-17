@@ -3,10 +3,17 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { asCents, toDollars, type Cents } from '@/lib/moneyUnits';
 
 interface NetWorthDisplayProps {
-  totalAssets: number;
-  totalLiabilities: number;
+  /**
+   * CENTS, like every money value the API returns. This component formatted its
+   * props with toLocaleString directly, so it never went through a
+   * unit-checked formatter and rendered cents as if they were pounds - a net
+   * worth of GBP 1,091,760 appeared as GBP 109,176,000.
+   */
+  totalAssets: Cents;
+  totalLiabilities: Cents;
   showTaxToggle?: boolean;
   loading?: boolean;
 }
@@ -20,8 +27,9 @@ export default function NetWorthDisplay({
   const [showAfterTax, setShowAfterTax] = useState(false);
   const taxRate = 0.25; // Simplified 25% tax rate
 
-  const netWorth = totalAssets - totalLiabilities;
-  const afterTaxNetWorth = netWorth * (1 - taxRate);
+  // Subtracted in cents, so the arithmetic is exact; converted once, below.
+  const netWorth = asCents(totalAssets - totalLiabilities);
+  const afterTaxNetWorth = asCents(Math.round(netWorth * (1 - taxRate)));
   const displayValue = showAfterTax ? afterTaxNetWorth : netWorth;
 
   if (loading) {
@@ -47,7 +55,7 @@ export default function NetWorthDisplay({
           Total Net Worth {showAfterTax && '(After Tax)'}
         </h2>
         <div className="text-4xl md:text-5xl font-bold mb-4">
-          ${displayValue.toLocaleString('en-US', {
+          ${toDollars(displayValue).toLocaleString('en-US', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
           })}
@@ -56,7 +64,7 @@ export default function NetWorthDisplay({
           <div>
             <span className="opacity-75">Assets:</span>{' '}
             <span className="font-semibold">
-              ${totalAssets.toLocaleString('en-US', {
+              ${toDollars(totalAssets).toLocaleString('en-US', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
               })}
@@ -66,7 +74,7 @@ export default function NetWorthDisplay({
           <div>
             <span className="opacity-75">Liabilities:</span>{' '}
             <span className="font-semibold">
-              ${totalLiabilities.toLocaleString('en-US', {
+              ${toDollars(totalLiabilities).toLocaleString('en-US', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
               })}

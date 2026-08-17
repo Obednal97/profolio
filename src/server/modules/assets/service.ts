@@ -4,14 +4,6 @@ import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/server/db";
 import { syncAssetPrice } from "@/server/modules/market-data/price-sync";
 import { MoneyUtils } from "@/server/money";
-import {
-  asBasisPoints,
-  asCents,
-  asDollars,
-  asPercent,
-  fractionToPercent,
-  percentToFraction,
-} from "@/lib/moneyUnits";
 import { assertNotDemo, requireUser } from "@/server/auth/session";
 import { NotFound } from "@/server/http/errors";
 import type {
@@ -89,37 +81,29 @@ export interface AssetResponse {
   updatedAt: Date;
 }
 
-/**
- * An annual percentage from the API to the basis points the column holds.
+/*
+ * There are no unit conversions in this module any more.
  *
- * The schema accepts 0 to 100 and the form labels the field "Interest Rate
- * (%)", so what arrives is a percentage. MoneyUtils.toBasisPoints takes a
- * FRACTION - it scales by 10000 - so handing it 4.25 stored 42500.
+ * Money is integer cents and rates are integer basis points, on the wire and at
+ * rest, so a row goes out exactly as stored. What used to be here - a
+ * dollars/cents pair and a percentage-to-basis-points helper - was where the
+ * rate bug lived: the read and the write disagreed with liabilities about what
+ * a rate meant, and stored every one a hundred times too large.
  */
-function toStoredBasisPoints(percentage: number): number {
-  return MoneyUtils.toBasisPoints(percentToFraction(asPercent(percentage)));
-}
-
-/** cents -> dollars, preserving a genuine zero. The columns are integer cents. */
-function dollars(cents: number | null): number | null {
-  return cents === null ? null : MoneyUtils.fromCents(asCents(cents));
-}
-
-/** dollars -> cents, preserving a genuine zero. This module takes dollars on the wire. */
-function cents(amount: number | undefined): number | undefined {
-  return amount === undefined ? undefined : MoneyUtils.toCents(asDollars(amount));
-}
 
 function toResponse(asset: AssetRow): AssetResponse {
   const quantity = Number(asset.quantity) || 0;
-  const purchasePrice = dollars(asset.purchasePrice);
-  let currentValue = dollars(asset.current_value);
+  const purchasePrice = asset.purchasePrice;
+  let currentValue = asset.current_value;
 
   // No stored valuation: fall back to what the position cost. This is a
   // derived figure from the user's own purchase price, not a market quote, and
-  // it is the only estimate this module makes.
+  // it is the only estimate this module makes. Rounded because the product of
+  // an integer number of cents and a fractional quantity is not one.
   if (currentValue === null && purchasePrice !== null && quantity > 0) {
-    currentValue = MoneyUtils.safeMultiply(purchasePrice, quantity);
+    currentValue = Math.round(
+      MoneyUtils.safeMultiply(purchasePrice, quantity),
+    );
   }
 
   return {
@@ -133,25 +117,13 @@ function toResponse(asset: AssetRow): AssetResponse {
     externalId: asset.externalId,
     currency: asset.currency,
     current_value: currentValue,
-    valueOverride: dollars(asset.valueOverride),
+    valueOverride: asset.valueOverride,
     purchase_price: purchasePrice,
     purchase_date: asset.purchaseDate
       ? asset.purchaseDate.toISOString().split("T")[0]
       : null,
-    initialAmount: dollars(asset.initialAmount),
-    interestRate:
-      asset.interestRate === null
-        ? null
-        : // Basis points to a percentage, matching liabilities and the column's
-          // documented unit. This used to publish MoneyUtils.fromBasisPoints
-          // directly, which returns a FRACTION, and wrote the inverse - so the
-          // form's "4.25" was stored as 42500 rather than 425. The read and the
-          // write were consistent with each other, so it round tripped through
-          // this API and nothing caught it. Migration 20260817_fix_asset_
-          // interest_rate_basis_points rescales the rows the old code wrote.
-          fractionToPercent(
-            MoneyUtils.fromBasisPoints(asBasisPoints(asset.interestRate)),
-          ),
+    initialAmount: asset.initialAmount,
+    interestRate: asset.interestRate,
     interestType: asset.interestType,
     paymentFrequency: asset.paymentFrequency,
     termLength: asset.termLength,
@@ -207,14 +179,14 @@ export async function createAsset(
       externalId: input.externalId,
       notes: input.notes,
       autoSync: input.autoSync,
-      current_value: cents(input.current_value),
-      valueOverride: cents(input.valueOverride),
-      purchasePrice: cents(input.purchase_price),
-      initialAmount: cents(input.initialAmount),
+      current_value: input.current_value,
+      valueOverride: input.valueOverride,
+      purchasePrice: input.purchase_price,
+      initialAmount: input.initialAmount,
       interestRate:
         input.interestRate === undefined
           ? undefined
-          : toStoredBasisPoints(input.interestRate),
+          : input.interestRate,
       interestType: input.interestType,
       paymentFrequency: input.paymentFrequency,
       termLength: input.termLength,
@@ -307,17 +279,17 @@ export async function updateAsset(
     externalId: input.externalId,
     notes: input.notes,
     autoSync: input.autoSync,
-    current_value: cents(input.current_value),
-    valueOverride: cents(input.valueOverride),
-    purchasePrice: cents(input.purchase_price),
-    initialAmount: cents(input.initialAmount),
+    current_value: input.current_value,
+    valueOverride: input.valueOverride,
+    purchasePrice: input.purchase_price,
+    initialAmount: input.initialAmount,
     interestType: input.interestType,
     paymentFrequency: input.paymentFrequency,
     termLength: input.termLength,
   };
 
   if (input.interestRate !== undefined) {
-    data.interestRate = toStoredBasisPoints(input.interestRate);
+    data.interestRate = input.interestRate;
   }
   if (input.purchase_date !== undefined) {
     data.purchaseDate = new Date(input.purchase_date);
@@ -504,20 +476,20 @@ export async function getAssetHistory(days: number): Promise<HistoryPoint[]> {
 
     if (latest.size === 0) continue;
 
+    // Cents throughout. The stored price is cents and the quantity is a plain
+    // count, so the product is cents; this used to divide each price to dollars
+    // first and hand the route a decimal to multiply back up again.
     let total = 0;
     for (const [assetId, price] of latest) {
       total = MoneyUtils.safeAdd(
         total,
-        MoneyUtils.safeMultiply(
-          MoneyUtils.fromCents(asCents(price)),
-          quantities.get(assetId) ?? 0,
-        ),
+        MoneyUtils.safeMultiply(price, quantities.get(assetId) ?? 0),
       );
     }
 
     history.push({
       date: day.toISOString().split("T")[0],
-      totalValue: total,
+      totalValue: Math.round(total),
     });
   }
 

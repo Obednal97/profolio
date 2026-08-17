@@ -10,6 +10,7 @@
  */
 
 import { classifyTransaction } from "./transactionClassifier";
+import { asCents, type Cents } from "./moneyUnits";
 import {
   normaliseStatementDate,
   parseMoneyToCents,
@@ -21,7 +22,7 @@ export interface ParsedTransaction {
   id: string;
   date: string;
   description: string;
-  amount: number; // in cents
+  amount: Cents;
   type: 'debit' | 'credit';
   category?: string;
   merchant?: string;
@@ -465,7 +466,7 @@ export function parseTransactions(
       id: `pdf-${i + 1}`,
       date,
       description,
-      amount: amountCents,
+      amount: asCents(amountCents),
       type: isDebit ? "debit" : "credit",
       category: classification.category,
       merchant: classification.merchant?.name,

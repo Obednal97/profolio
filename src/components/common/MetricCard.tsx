@@ -3,6 +3,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { asCents, toDollars } from "@/lib/moneyUnits";
 
 export interface MetricCardProps {
   label: string;
@@ -39,11 +40,14 @@ export function MetricCard({
 
     switch (format) {
       case "currency":
+        // `format: "currency"` means the value is in CENTS, which is what every
+        // API in this application returns. Rendering it without dividing showed
+        // a net worth of GBP 1,091,760 as GBP 109,176,000.
         return new Intl.NumberFormat("en-UK", {
           style: "currency",
           currency: "GBP",
           ...formatOptions,
-        }).format(val);
+        }).format(toDollars(asCents(val)));
       case "number":
         return new Intl.NumberFormat("en-UK", formatOptions).format(val);
       case "percentage":

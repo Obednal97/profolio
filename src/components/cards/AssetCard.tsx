@@ -3,6 +3,7 @@ import type { Asset } from '@/types/global';
 import { FinancialCalculator } from '@/lib/financial';
 import { Button } from '@/components/ui/button';
 import { EnhancedGlassCard } from '@/components/ui/enhanced-glass/EnhancedGlassCard';
+import { asCents } from "@/lib/moneyUnits";
 
 interface AssetCardProps {
   asset: Asset;
@@ -85,7 +86,7 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
         <div className="flex justify-between items-center">
           <span className="text-gray-600 dark:text-gray-400 text-sm">Current Value</span>
           <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-            {FinancialCalculator.formatCurrency(asset.current_value || 0)}
+            {FinancialCalculator.formatCents(asset.current_value ?? asCents(0))}
           </span>
         </div>
 
@@ -101,7 +102,7 @@ export function AssetCard({ asset, onEdit, onDelete, config, getCryptoIcon }: As
             <span className="text-gray-600 dark:text-gray-400 text-sm">Gain/Loss</span>
             <div className="text-right">
               <div className={`font-semibold text-sm sm:text-base ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {appreciation.gain >= 0 ? '+' : ''}{FinancialCalculator.formatCurrency(appreciation.gain)}
+                {appreciation.gain >= 0 ? '+' : ''}{FinancialCalculator.formatCents(asCents(appreciation.gain))}
               </div>
               <div className={`text-xs sm:text-sm ${appreciation.gain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {FinancialCalculator.formatPercentage(appreciation.gainPercent, 2, true)}

@@ -1,16 +1,22 @@
 import "server-only";
 import { z } from "zod";
 import { AssetType, InterestType, PaymentFrequency } from "@prisma/client";
-import { blankable, isoDate } from "@/server/http/zod";
+import {
+  MoneyInCents,
+  RateInBasisPoints,
+  blankable,
+  isoDate,
+} from "@/server/http/zod";
 
 /**
  * Request schemas for assets.
  *
- * THE WIRE FORMAT, which the DTOs never wrote down:
- *  - money arrives and leaves in DOLLARS; the database stores integer cents
+ * THE WIRE FORMAT:
+ *  - money is integer CENTS and rates are integer BASIS POINTS, in both
+ *    directions, matching the columns. Nothing on the server converts a unit;
+ *    the browser divides for display.
  *  - `current_value` is the TOTAL value of the position, not a unit price -
  *    the asset form computes price x quantity before sending it
- *  - interest rates arrive as percentages and are stored as basis points
  *  - the snake_case names (current_value, purchase_price, purchase_date,
  *    vesting_*) match both the database columns and what the client sends
  */
@@ -36,8 +42,12 @@ const PaymentFrequencySchema = z
   .transform((value) => value.toUpperCase())
   .pipe(z.enum(PaymentFrequency));
 
-/** A money amount in dollars. */
-const Money = z.number().min(0).max(9_999_999_999);
+/**
+ * A money amount in integer cents. The cap used to be 9,999,999,999 in dollars,
+ * a hundred times what the `Int` column can hold, so a large value passed
+ * validation and then failed as an overflow with a 500.
+ */
+const Money = MoneyInCents;
 
 export const CreateAssetSchema = z
   .object({
@@ -67,7 +77,7 @@ export const CreateAssetSchema = z
     // Savings
     initialAmount: Money.optional(),
     /** Percent, e.g. 4.5. Stored as basis points. */
-    interestRate: z.number().min(0).max(100).optional(),
+    interestRate: RateInBasisPoints.optional(),
     interestType: blankable(InterestTypeSchema),
     paymentFrequency: blankable(PaymentFrequencySchema),
     termLength: z.number().int().min(1).max(600).optional(),

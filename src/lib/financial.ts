@@ -1,4 +1,5 @@
 import Decimal from 'decimal.js';
+import { toDollars, type Cents } from "./moneyUnits";
 
 // Type alias for Decimal instances for better readability
 type DecimalValue = InstanceType<typeof Decimal>;
@@ -295,6 +296,28 @@ export class FinancialCalculator {
    * context did guess, dividing anything over a thousand by a hundred, and that
    * is where "Portfolio APY -99.58%" on a portfolio that was up came from.
    */
+  /**
+   * Formats an amount held in CENTS, which is what every API in this
+   * application returns.
+   *
+   * `formatCurrency` below takes a decimal amount and is kept for the one case
+   * that genuinely has one: figures read straight off the Trading 212 API,
+   * which reports in dollars. Having both named separately is the point - the
+   * same function used to be called with each unit, and nothing said which.
+   */
+  static formatCents(
+    amount: Cents,
+    options: {
+      currency?: string;
+      locale?: string;
+      minimumFractionDigits?: number;
+      maximumFractionDigits?: number;
+    } = {}
+  ): string {
+    return FinancialCalculator.formatCurrency(toDollars(amount), options);
+  }
+
+  /** Formats a DECIMAL amount. For cents, use `formatCents`. */
   static formatCurrency(
     amount: number | string | DecimalValue,
     options: {

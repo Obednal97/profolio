@@ -1,5 +1,23 @@
 import type { Asset, Property } from "@/types/global";
 import { Expense } from "@/types/global";
+import {
+  asBasisPoints,
+  asCents,
+  type BasisPoints,
+  type Cents,
+} from "@/lib/moneyUnits";
+
+/**
+ * Demo and mock figures are written in dollars, because that is how a human
+ * reads them, and converted here. Every money field in these types is `Cents`
+ * and every rate is `BasisPoints` - the wire format the API now uses - so the
+ * literals below would otherwise all have to be written a hundred times larger,
+ * which is a hundred chances to get one wrong.
+ */
+const cents = (dollars: number): Cents => Math.round(dollars * 100) as Cents;
+const basisPoints = (percent: number): BasisPoints =>
+  Math.round(percent * 100) as BasisPoints;
+
 
 // Demo assets data
 export const demoAssets: Omit<Asset, "id">[] = [
@@ -8,8 +26,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     symbol: "AAPL",
     type: "stock",
     quantity: 50,
-    current_value: 8750, // $8,750.00 (50 shares * $175)
-    purchase_price: 7500, // $7,500.00 (50 shares * $150)
+    current_value: cents(8750), // $8,750.00 (50 shares * $175)
+    purchase_price: cents(7500), // $7,500.00 (50 shares * $150)
     purchase_date: "2023-01-15",
     notes: "Tech giant with strong fundamentals",
   },
@@ -18,8 +36,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     symbol: "BTC",
     type: "crypto",
     quantity: 0.5,
-    current_value: 21500, // $21,500.00 (0.5 BTC * $43,000)
-    purchase_price: 15000, // $15,000.00 (0.5 BTC * $30,000)
+    current_value: cents(21500), // $21,500.00 (0.5 BTC * $43,000)
+    purchase_price: cents(15000), // $15,000.00 (0.5 BTC * $30,000)
     purchase_date: "2023-03-10",
     notes: "Digital gold hedge against inflation",
   },
@@ -28,8 +46,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     symbol: "ETH",
     type: "crypto",
     quantity: 5,
-    current_value: 11250, // $11,250.00 (5 ETH * $2,250)
-    purchase_price: 9000, // $9,000.00 (5 ETH * $1,800)
+    current_value: cents(11250), // $11,250.00 (5 ETH * $2,250)
+    purchase_price: cents(9000), // $9,000.00 (5 ETH * $1,800)
     purchase_date: "2023-02-20",
     notes: "Smart contract platform with DeFi exposure",
   },
@@ -38,8 +56,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     symbol: "SPY",
     type: "stock",
     quantity: 25,
-    current_value: 10875, // $10,875.00 (25 shares * $435)
-    purchase_price: 10000, // $10,000.00 (25 shares * $400)
+    current_value: cents(10875), // $10,875.00 (25 shares * $435)
+    purchase_price: cents(10000), // $10,000.00 (25 shares * $400)
     purchase_date: "2023-01-05",
     notes: "Broad market exposure through S&P 500",
   },
@@ -48,8 +66,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     symbol: "TSLA",
     type: "stock",
     quantity: 20,
-    current_value: 4200, // $4,200.00 (20 shares * $210)
-    purchase_price: 5000, // $5,000.00 (20 shares * $250)
+    current_value: cents(4200), // $4,200.00 (20 shares * $210)
+    purchase_price: cents(5000), // $5,000.00 (20 shares * $250)
     purchase_date: "2023-04-12",
     notes: "EV leader with autonomous driving potential",
   },
@@ -58,8 +76,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     symbol: "MSFT",
     type: "stock",
     quantity: 15,
-    current_value: 5625, // $5,625.00 (15 shares * $375)
-    purchase_price: 4500, // $4,500.00 (15 shares * $300)
+    current_value: cents(5625), // $5,625.00 (15 shares * $375)
+    purchase_price: cents(4500), // $4,500.00 (15 shares * $300)
     purchase_date: "2023-02-28",
     notes: "Cloud computing and AI leader",
   },
@@ -67,8 +85,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     name: "High-Yield Savings",
     type: "cash",
     quantity: 1,
-    current_value: 25000, // $25,000.00
-    purchase_price: 25000,
+    current_value: cents(25000), // $25,000.00
+    purchase_price: cents(25000),
     purchase_date: "2023-01-01",
     notes: "Emergency fund earning 4.5% APY",
   },
@@ -77,8 +95,8 @@ export const demoAssets: Omit<Asset, "id">[] = [
     symbol: "COMP",
     type: "stock_options",
     quantity: 1000,
-    current_value: 50000, // $50,000.00 (1000 options * $50 current price)
-    purchase_price: 25000, // $25,000.00 (1000 options * $25 strike price)
+    current_value: cents(50000), // $50,000.00 (1000 options * $50 current price)
+    purchase_price: cents(25000), // $25,000.00 (1000 options * $25 strike price)
     vesting_start_date: "2023-01-01",
     vesting_end_date: "2027-01-01",
     vesting_schedule: { initial: "25", monthly: "2.083" },
@@ -93,21 +111,21 @@ export const demoProperties: Omit<Property, "id">[] = [
     ownershipType: "owned",
     propertyType: "single_family",
     status: "owned",
-    currentValue: 1200000, // $1,200,000.00
-    purchasePrice: 950000, // $950,000.00
+    currentValue: cents(1200000), // $1,200,000.00
+    purchasePrice: cents(950000), // $950,000.00
     purchaseDate: "2022-06-15",
     bedrooms: 3,
     bathrooms: 2.5,
     squareFootage: 2200,
     yearBuilt: 2018,
     lotSize: 6534, // 0.15 acres = 6,534 sq ft
-    propertyTaxes: 1440, // $1,440.00/month
-    insurance: 250, // $250.00/month
-    maintenanceCosts: 500, // $500.00/month
-    mortgageAmount: 760000, // $760,000.00
-    mortgageRate: 6.5,
+    propertyTaxes: cents(1440), // $1,440.00/month
+    insurance: cents(250), // $250.00/month
+    maintenanceCosts: cents(500), // $500.00/month
+    mortgageAmount: cents(760000), // $760,000.00
+    mortgageRate: basisPoints(6.5),
     mortgageTerm: 30,
-    monthlyPayment: 4800, // $4,800.00/month
+    monthlyPayment: cents(4800), // $4,800.00/month
     mortgageProvider: "Wells Fargo",
     notes: "Beautiful modern home in prime location",
   },
@@ -116,23 +134,23 @@ export const demoProperties: Omit<Property, "id">[] = [
     ownershipType: "owned",
     propertyType: "condo",
     status: "rental",
-    currentValue: 450000, // $450,000.00
-    purchasePrice: 380000, // $380,000.00
+    currentValue: cents(450000), // $450,000.00
+    purchasePrice: cents(380000), // $380,000.00
     purchaseDate: "2023-03-20",
     bedrooms: 2,
     bathrooms: 2,
     squareFootage: 1100,
     yearBuilt: 2020,
-    propertyTaxes: 450, // $450.00/month
-    insurance: 150, // $150.00/month
-    maintenanceCosts: 200, // $200.00/month
-    hoa: 350, // $350.00/month
-    mortgageAmount: 342000, // $342,000.00
-    mortgageRate: 7.0,
+    propertyTaxes: cents(450), // $450.00/month
+    insurance: cents(150), // $150.00/month
+    maintenanceCosts: cents(200), // $200.00/month
+    hoa: cents(350), // $350.00/month
+    mortgageAmount: cents(342000), // $342,000.00
+    mortgageRate: basisPoints(7.0),
     mortgageTerm: 30,
-    monthlyPayment: 2275, // $2,275.00/month
+    monthlyPayment: cents(2275), // $2,275.00/month
     mortgageProvider: "Chase Bank",
-    monthlyRent: 2800, // $2,800.00/month
+    monthlyRent: cents(2800), // $2,800.00/month
     notes: "Rental property generating positive cash flow",
   },
   {
@@ -140,13 +158,13 @@ export const demoProperties: Omit<Property, "id">[] = [
     ownershipType: "rented",
     propertyType: "condo",
     status: "rented",
-    currentValue: 0, // Not applicable for rented properties
-    purchasePrice: 0, // Not applicable for rented properties
+    currentValue: cents(0), // Not applicable for rented properties
+    purchasePrice: cents(0), // Not applicable for rented properties
     bedrooms: 1,
     bathrooms: 1,
     squareFootage: 800,
-    monthlyRent: 3500, // $3,500.00/month
-    securityDeposit: 3500, // $3,500.00
+    monthlyRent: cents(3500), // $3,500.00/month
+    securityDeposit: cents(3500), // $3,500.00
     rentalStartDate: "2023-12-01",
     rentalEndDate: "2024-03-31",
     notes: "Short-term rental for winter season",
@@ -212,8 +230,8 @@ export const generateDemoAssets = (): Asset[] => {
       type: "stock",
       symbol: "AAPL",
       quantity: 50,
-      purchase_price: 145,
-      current_value: 9250,
+      purchase_price: cents(145),
+      current_value: cents(9250),
       purchase_date: sixMonthsAgo.toISOString().split("T")[0],
       notes: "Tech portfolio - long term hold",
     },
@@ -224,8 +242,8 @@ export const generateDemoAssets = (): Asset[] => {
       type: "stock",
       symbol: "MSFT",
       quantity: 30,
-      purchase_price: 320,
-      current_value: 11700,
+      purchase_price: cents(320),
+      current_value: cents(11700),
       purchase_date: oneYearAgo.toISOString().split("T")[0],
       notes: "Core holding",
     },
@@ -236,8 +254,8 @@ export const generateDemoAssets = (): Asset[] => {
       type: "crypto",
       symbol: "BTC",
       quantity: 0.5,
-      purchase_price: 30000,
-      current_value: 21500,
+      purchase_price: cents(30000),
+      current_value: cents(21500),
       purchase_date: threeMonthsAgo.toISOString().split("T")[0],
       notes: "Crypto allocation",
     },
@@ -248,8 +266,8 @@ export const generateDemoAssets = (): Asset[] => {
       type: "crypto",
       symbol: "ETH",
       quantity: 5,
-      purchase_price: 2000,
-      current_value: 11250,
+      purchase_price: cents(2000),
+      current_value: cents(11250),
       purchase_date: threeMonthsAgo.toISOString().split("T")[0],
       notes: "DeFi exposure",
     },
@@ -259,7 +277,7 @@ export const generateDemoAssets = (): Asset[] => {
       name: "Emergency Fund",
       type: "cash",
       quantity: 1,
-      current_value: 25000,
+      current_value: cents(25000),
       notes: "6 months of expenses in high-yield savings",
     },
     {
@@ -269,8 +287,8 @@ export const generateDemoAssets = (): Asset[] => {
       type: "stock_options",
       symbol: "TSLA",
       quantity: 100,
-      purchase_price: 200,
-      current_value: 24000,
+      purchase_price: cents(200),
+      current_value: cents(24000),
       vesting_start_date: oneYearAgo.toISOString().split("T")[0],
       vesting_end_date: new Date(now.getTime() + 2 * 365 * 24 * 60 * 60 * 1000)
         .toISOString()
@@ -287,8 +305,8 @@ export const generateDemoAssets = (): Asset[] => {
       name: "US Treasury Bonds",
       type: "bond",
       quantity: 10,
-      purchase_price: 1000,
-      current_value: 9800,
+      purchase_price: cents(1000),
+      current_value: cents(9800),
       purchase_date: oneYearAgo.toISOString().split("T")[0],
       notes: "Safe haven allocation",
     },
@@ -305,7 +323,7 @@ export const generateDemoExpenses = (): Expense[] => {
     // Income items (amounts in cents)
     {
       category: "salary",
-      amount: 550000, // $5,500
+      amount: asCents(550000), // $5,500
       frequency: "Monthly",
       isSubscription: false,
       merchant: "TechCorp Inc",
@@ -313,7 +331,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "freelance",
-      amount: 120000, // $1,200
+      amount: asCents(120000), // $1,200
       frequency: "Occasional",
       merchant: "Client ABC",
       description: "Freelance project payment",
@@ -321,7 +339,7 @@ export const generateDemoExpenses = (): Expense[] => {
     // Recurring expenses (amounts in cents)
     {
       category: "rent_mortgage",
-      amount: 250000, // $2,500
+      amount: asCents(250000), // $2,500
       frequency: "Monthly",
       isSubscription: false,
       merchant: "Apartment Complex",
@@ -329,7 +347,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "utilities",
-      amount: 15000, // $150
+      amount: asCents(15000), // $150
       frequency: "Monthly",
       isSubscription: false,
       merchant: "City Utilities",
@@ -337,7 +355,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "internet_phone",
-      amount: 8900, // $89
+      amount: asCents(8900), // $89
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Verizon",
@@ -345,7 +363,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "internet_phone",
-      amount: 7500, // $75
+      amount: asCents(7500), // $75
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Comcast",
@@ -353,7 +371,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "healthcare",
-      amount: 4500, // $45
+      amount: asCents(4500), // $45
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Planet Fitness",
@@ -361,7 +379,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "streaming",
-      amount: 1099, // $10.99
+      amount: asCents(1099), // $10.99
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Spotify",
@@ -369,7 +387,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "streaming",
-      amount: 1549, // $15.49
+      amount: asCents(1549), // $15.49
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Netflix",
@@ -377,7 +395,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "insurance",
-      amount: 12500, // $125
+      amount: asCents(12500), // $125
       frequency: "Monthly",
       isSubscription: false,
       merchant: "Geico",
@@ -385,7 +403,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "insurance",
-      amount: 18500, // $185
+      amount: asCents(18500), // $185
       frequency: "Monthly",
       isSubscription: false,
       merchant: "Blue Cross",
@@ -393,7 +411,7 @@ export const generateDemoExpenses = (): Expense[] => {
     },
     {
       category: "shopping",
-      amount: 1299, // $12.99
+      amount: asCents(1299), // $12.99
       frequency: "Monthly",
       isSubscription: true,
       merchant: "Adobe",
@@ -465,7 +483,7 @@ export const generateDemoExpenses = (): Expense[] => {
             id: `demo-expense-${expenses.length + 1}`,
             userId: "demo-user-id",
             category: pattern.category,
-            amount: pattern.amount || 0,
+            amount: pattern.amount ?? asCents(0),
             date: date.toISOString().split("T")[0],
             description: pattern.description,
             recurrence: "recurring",
@@ -481,13 +499,16 @@ export const generateDemoExpenses = (): Expense[] => {
       expensePatterns
         .filter((p) => p.frequency === "Weekly")
         .forEach((pattern) => {
-          const amount = pattern.amountRange
-            ? Math.floor(
-                Math.random() *
-                  (pattern.amountRange[1] - pattern.amountRange[0]) +
-                  pattern.amountRange[0]
-              )
-            : 0;
+          // amountRange is already in cents, so the result is too.
+          const amount = asCents(
+            pattern.amountRange
+              ? Math.floor(
+                  Math.random() *
+                    (pattern.amountRange[1] - pattern.amountRange[0]) +
+                    pattern.amountRange[0]
+                )
+              : 0
+          );
           expenses.push({
             id: `demo-expense-${expenses.length + 1}`,
             userId: "demo-user-id",
@@ -512,13 +533,16 @@ export const generateDemoExpenses = (): Expense[] => {
           occasionalPatterns[
             Math.floor(Math.random() * occasionalPatterns.length)
           ];
-        const amount = pattern.amountRange
-          ? Math.floor(
-              Math.random() *
-                (pattern.amountRange[1] - pattern.amountRange[0]) +
-                pattern.amountRange[0]
-            )
-          : 0;
+        // amountRange is already in cents, so the result is too.
+        const amount = asCents(
+          pattern.amountRange
+            ? Math.floor(
+                Math.random() *
+                  (pattern.amountRange[1] - pattern.amountRange[0]) +
+                  pattern.amountRange[0]
+              )
+            : 0
+        );
         expenses.push({
           id: `demo-expense-${expenses.length + 1}`,
           userId: "demo-user-id",
@@ -559,7 +583,8 @@ export const generateDemoExpenses = (): Expense[] => {
         id: `demo-expense-${expenses.length + 1}`,
         userId: "demo-user-id",
         category: misc.category,
-        amount: misc.amount * (0.8 + Math.random() * 0.4), // Add some variance
+        // Rounded: a fraction of a cent is not an amount. misc.amount is cents.
+        amount: asCents(Math.round(misc.amount * (0.8 + Math.random() * 0.4))),
         date: date.toISOString().split("T")[0],
         description: misc.description,
         recurrence: "one-time",
@@ -581,22 +606,22 @@ export const generateDemoProperties = (): Property[] => {
       ownershipType: "owned",
       propertyType: "condo",
       status: "owned",
-      currentValue: 850000,
-      purchasePrice: 750000,
+      currentValue: cents(850000),
+      purchasePrice: cents(750000),
       purchaseDate: "2021-06-15",
       bedrooms: 2,
       bathrooms: 2,
       squareFootage: 1200,
       yearBuilt: 2018,
       lotSize: 0,
-      propertyTaxes: 708,
-      insurance: 125,
-      maintenanceCosts: 200,
-      hoa: 450,
-      mortgageAmount: 600000,
-      mortgageRate: 3.25,
+      propertyTaxes: cents(708),
+      insurance: cents(125),
+      maintenanceCosts: cents(200),
+      hoa: cents(450),
+      mortgageAmount: cents(600000),
+      mortgageRate: basisPoints(3.25),
       mortgageTerm: 30,
-      monthlyPayment: 2610,
+      monthlyPayment: cents(2610),
       mortgageProvider: "Wells Fargo",
       notes: "Primary residence - great location near downtown",
     },
@@ -607,22 +632,22 @@ export const generateDemoProperties = (): Property[] => {
       ownershipType: "owned",
       propertyType: "single_family",
       status: "rental",
-      currentValue: 425000,
-      purchasePrice: 350000,
+      currentValue: cents(425000),
+      purchasePrice: cents(350000),
       purchaseDate: "2020-03-20",
       bedrooms: 3,
       bathrooms: 2.5,
       squareFootage: 2100,
       yearBuilt: 2015,
       lotSize: 6500,
-      rentalIncome: 2800,
-      propertyTaxes: 583,
-      insurance: 180,
-      maintenanceCosts: 150,
-      mortgageAmount: 280000,
-      mortgageRate: 3.75,
+      rentalIncome: cents(2800),
+      propertyTaxes: cents(583),
+      insurance: cents(180),
+      maintenanceCosts: cents(150),
+      mortgageAmount: cents(280000),
+      mortgageRate: basisPoints(3.75),
       mortgageTerm: 30,
-      monthlyPayment: 1297,
+      monthlyPayment: cents(1297),
       mortgageProvider: "Chase Bank",
       notes: "Investment property - positive cash flow",
     },
@@ -633,23 +658,23 @@ export const generateDemoProperties = (): Property[] => {
       ownershipType: "owned",
       propertyType: "condo",
       status: "rental",
-      currentValue: 325000,
-      purchasePrice: 275000,
+      currentValue: cents(325000),
+      purchasePrice: cents(275000),
       purchaseDate: "2022-01-10",
       bedrooms: 1,
       bathrooms: 1,
       squareFootage: 800,
       yearBuilt: 2020,
       lotSize: 0,
-      rentalIncome: 2200,
-      propertyTaxes: 375,
-      insurance: 150,
-      maintenanceCosts: 100,
-      hoa: 350,
-      mortgageAmount: 220000,
-      mortgageRate: 4.25,
+      rentalIncome: cents(2200),
+      propertyTaxes: cents(375),
+      insurance: cents(150),
+      maintenanceCosts: cents(100),
+      hoa: cents(350),
+      mortgageAmount: cents(220000),
+      mortgageRate: basisPoints(4.25),
       mortgageTerm: 30,
-      monthlyPayment: 1082,
+      monthlyPayment: cents(1082),
       mortgageProvider: "Bank of America",
       notes: "Vacation rental - near beach",
     },
@@ -712,7 +737,7 @@ export const initializeDemoData = () => {
  * the demo property, which carries a $600,000 mortgage at 3.25%, so the two
  * screens agree with each other.
  *
- * Balances are DOLLARS and interest rates are PERCENTAGES, which is the
+ * Balances are integer CENTS and rates are integer BASIS POINTS, which is the
  * liabilities wire format; the API returns these instead of reading the
  * database, so they must already be in the units a real response would use.
  */
@@ -735,8 +760,8 @@ export const generateDemoLiabilities = (): DemoLiability[] => {
       id: "demo-liability-1",
       userId: "demo-user-id",
       name: "Mortgage - 123 Main Street",
-      balance: 600000,
-      interestRate: 3.25,
+      balance: 600000_00,
+      interestRate: asBasisPoints(325),
       dueDate: null,
       createdAt: now,
       updatedAt: now,
@@ -745,8 +770,8 @@ export const generateDemoLiabilities = (): DemoLiability[] => {
       id: "demo-liability-2",
       userId: "demo-user-id",
       name: "Car loan",
-      balance: 18400,
-      interestRate: 5.9,
+      balance: 18400_00,
+      interestRate: asBasisPoints(590),
       dueDate: null,
       createdAt: now,
       updatedAt: now,
@@ -755,8 +780,8 @@ export const generateDemoLiabilities = (): DemoLiability[] => {
       id: "demo-liability-3",
       userId: "demo-user-id",
       name: "Credit card",
-      balance: 2340,
-      interestRate: 22.9,
+      balance: 2340_00,
+      interestRate: asBasisPoints(2290),
       dueDate: null,
       createdAt: now,
       updatedAt: now,

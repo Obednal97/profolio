@@ -1,3 +1,19 @@
+import type { BasisPoints, Cents } from "@/lib/moneyUnits";
+
+/**
+ * MONEY IS `Cents` AND RATES ARE `BasisPoints` IN EVERY ONE OF THESE TYPES.
+ *
+ * That is the wire format for every resource - the API sends and receives the
+ * integers the database holds, and nothing on the server converts a unit. The
+ * conversion happens once, in the browser, at the point of display, via
+ * `formatCents` in src/lib/moneyUnits.ts.
+ *
+ * The types are branded so the compiler enforces it. `Cents` is a plain number
+ * at runtime, but it cannot be passed where a display value is wanted without
+ * saying so, which is the only reason it exists: every money bug this project
+ * has had was a unit crossing that looked like ordinary arithmetic.
+ */
+
 // --------------------
 // Asset Types
 // --------------------
@@ -8,8 +24,9 @@ export type Asset = {
   type: "stock" | "crypto" | "cash" | "stock_options" | "bond" | "other" | "savings";
   symbol?: string;
   quantity: number;
-  purchase_price?: number;
-  current_value?: number;
+  purchase_price?: Cents;
+  current_value?: Cents;
+  valueOverride?: Cents;
   purchase_date?: string;
   vesting_start_date?: string;
   vesting_end_date?: string;
@@ -18,11 +35,11 @@ export type Asset = {
     monthly: string;
   };
   notes?: string;
-  price_history?: { date: string; value: number }[];
+  price_history?: { date: string; value: Cents }[];
   
   // Savings-specific fields
-  initialAmount?: number;
-  interestRate?: number;
+  initialAmount?: Cents;
+  interestRate?: BasisPoints;
   interestType?: "SIMPLE" | "COMPOUND";
   paymentFrequency?: "MONTHLY" | "QUARTERLY" | "ANNUALLY";
   termLength?: number;
@@ -36,7 +53,7 @@ export type Expense = {
   id: string;
   userId?: string;
   category: string;
-  amount: number;
+  amount: Cents;
   date: string;
   description: string;
   recurrence: "one-time" | "recurring";
@@ -80,28 +97,28 @@ export type Property = {
   yearBuilt?: number;
   lotSize?: number;
   
-  // Financial values (received from backend as dollars)
-  currentValue?: number;
-  purchasePrice?: number;
-  rentalIncome?: number;
+  // Financial values, in integer cents
+  currentValue?: Cents;
+  purchasePrice?: Cents;
+  rentalIncome?: Cents;
   
   // Mortgage details
-  mortgageAmount?: number;
-  mortgageRate?: number;
+  mortgageAmount?: Cents;
+  mortgageRate?: BasisPoints;
   mortgageTerm?: number;
-  monthlyPayment?: number;
+  monthlyPayment?: Cents;
   mortgageProvider?: string;
   mortgageStartDate?: string;
   
   // Additional costs (monthly)
-  propertyTaxes?: number;
-  insurance?: number;
-  maintenanceCosts?: number;
-  hoa?: number;
+  propertyTaxes?: Cents;
+  insurance?: Cents;
+  maintenanceCosts?: Cents;
+  hoa?: Cents;
   
   // Rental details
-  monthlyRent?: number;
-  securityDeposit?: number;
+  monthlyRent?: Cents;
+  securityDeposit?: Cents;
   rentalStartDate?: string;
   rentalEndDate?: string;
   

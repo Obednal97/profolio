@@ -18,6 +18,7 @@ import { NetworkStatus } from "@/components/ui/NetworkStatus";
 import { useAuth } from "@/lib/unifiedAuth";
 import { createUserContext } from "@/lib/userUtils";
 import { motion } from "framer-motion";
+import { toDollars, type Cents } from "@/lib/moneyUnits";
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -28,7 +29,8 @@ interface AppContextType {
   currency: string;
   setCurrency: (currency: string) => void;
   /** Takes DOLLARS, not cents. See the implementation for the full contract. */
-  formatCurrency: (amount: number) => string;
+  /** Takes CENTS. The wire format is cents everywhere; this divides for display. */
+  formatCurrency: (amount: Cents) => string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -140,12 +142,12 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
    * and the PDF parser, so those callers divide by a hundred at the point the
    * value enters the component.
    */
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: Cents) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency,
       currencyDisplay: "symbol",
-    }).format(amount);
+    }).format(toDollars(amount));
   };
 
   const appValue = {

@@ -1,5 +1,18 @@
 // Mock data for development and testing
 import type { Asset, Expense, Property } from '@/types/global';
+import type { BasisPoints, Cents } from "@/lib/moneyUnits";
+
+/**
+ * Demo and mock figures are written in dollars, because that is how a human
+ * reads them, and converted here. Every money field in these types is `Cents`
+ * and every rate is `BasisPoints` - the wire format the API now uses - so the
+ * literals below would otherwise all have to be written a hundred times larger,
+ * which is a hundred chances to get one wrong.
+ */
+const cents = (dollars: number): Cents => Math.round(dollars * 100) as Cents;
+const basisPoints = (percent: number): BasisPoints =>
+  Math.round(percent * 100) as BasisPoints;
+
 
 export const mockAssets: Asset[] = [
   {
@@ -8,8 +21,8 @@ export const mockAssets: Asset[] = [
     type: 'stock',
     symbol: 'AAPL',
     quantity: 50,
-    purchase_price: 15000, // $150.00 per share in cents
-    current_value: 19000, // $190.00 per share in cents
+    purchase_price: cents(15000), // $150.00 per share in cents
+    current_value: cents(19000), // $190.00 per share in cents
     purchase_date: '2023-01-15',
     notes: 'Long-term investment',
   },
@@ -19,15 +32,15 @@ export const mockAssets: Asset[] = [
     type: 'crypto',
     symbol: 'BTC',
     quantity: 0.5,
-    purchase_price: 2000000, // $20,000 per BTC in cents
-    current_value: 3500000, // $35,000 per BTC in cents
+    purchase_price: cents(2000000), // $20,000 per BTC in cents
+    current_value: cents(3500000), // $35,000 per BTC in cents
     purchase_date: '2022-12-01',
   },
   {
     id: '3',
     name: 'Emergency Fund',
     type: 'cash',
-    current_value: 1500000, // $15,000 in cents
+    current_value: cents(1500000), // $15,000 in cents
     quantity: 1,
     notes: 'High-yield savings account',
   },
@@ -37,8 +50,8 @@ export const mockAssets: Asset[] = [
     type: 'stock',
     symbol: 'TSLA',
     quantity: 25,
-    purchase_price: 20000, // $200.00 per share in cents
-    current_value: 24000, // $240.00 per share in cents
+    purchase_price: cents(20000), // $200.00 per share in cents
+    current_value: cents(24000), // $240.00 per share in cents
     purchase_date: '2023-03-20',
   },
   {
@@ -47,8 +60,8 @@ export const mockAssets: Asset[] = [
     type: 'crypto',
     symbol: 'ETH',
     quantity: 5,
-    purchase_price: 150000, // $1,500 per ETH in cents
-    current_value: 200000, // $2,000 per ETH in cents
+    purchase_price: cents(150000), // $1,500 per ETH in cents
+    current_value: cents(200000), // $2,000 per ETH in cents
     purchase_date: '2023-02-10',
   },
 ];
@@ -58,7 +71,7 @@ export const mockExpenses: Expense[] = [
     id: '1',
     userId: 'demo-user-id',
     category: 'Food',
-    amount: 12500, // $125.00 in cents
+    amount: cents(12500), // $125.00 in cents
     date: new Date().toISOString().split('T')[0],
     description: 'Grocery shopping at Whole Foods',
     recurrence: 'one-time',
@@ -67,7 +80,7 @@ export const mockExpenses: Expense[] = [
     id: '2',
     userId: 'demo-user-id',
     category: 'Transportation',
-    amount: 5000, // $50.00 in cents
+    amount: cents(5000), // $50.00 in cents
     date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
     description: 'Uber rides',
     recurrence: 'one-time',
@@ -76,7 +89,7 @@ export const mockExpenses: Expense[] = [
     id: '3',
     userId: 'demo-user-id',
     category: 'Housing',
-    amount: 150000, // $1,500.00 in cents
+    amount: cents(150000), // $1,500.00 in cents
     date: new Date().toISOString().split('T')[0],
     description: 'Monthly rent',
     recurrence: 'recurring',
@@ -86,7 +99,7 @@ export const mockExpenses: Expense[] = [
     id: '4',
     userId: 'demo-user-id',
     category: 'Entertainment',
-    amount: 7500, // $75.00 in cents
+    amount: cents(7500), // $75.00 in cents
     date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
     description: 'Netflix and Spotify subscriptions',
     recurrence: 'recurring',
@@ -96,7 +109,7 @@ export const mockExpenses: Expense[] = [
     id: '5',
     userId: 'demo-user-id',
     category: 'Shopping',
-    amount: 25000, // $250.00 in cents
+    amount: cents(25000), // $250.00 in cents
     date: new Date(Date.now() - 259200000).toISOString().split('T')[0],
     description: 'New running shoes',
     recurrence: 'one-time',
@@ -105,7 +118,7 @@ export const mockExpenses: Expense[] = [
     id: '6',
     userId: 'demo-user-id',
     category: 'Utilities',
-    amount: 15000, // $150.00 in cents
+    amount: cents(15000), // $150.00 in cents
     date: new Date(Date.now() - 345600000).toISOString().split('T')[0],
     description: 'Electricity and internet',
     recurrence: 'recurring',
@@ -115,7 +128,7 @@ export const mockExpenses: Expense[] = [
     id: '7',
     userId: 'demo-user-id',
     category: 'Healthcare',
-    amount: 20000, // $200.00 in cents
+    amount: cents(20000), // $200.00 in cents
     date: new Date(Date.now() - 432000000).toISOString().split('T')[0],
     description: 'Doctor visit and prescription',
     recurrence: 'one-time',
@@ -129,14 +142,14 @@ export const mockProperties: Property[] = [
     address: '123 Main St, San Francisco, CA',
     propertyType: 'single_family',
     status: 'owned',
-    purchasePrice: 80000000, // $800,000 in cents
-    currentValue: 95000000, // $950,000 in cents
+    purchasePrice: cents(80000000), // $800,000 in cents
+    currentValue: cents(95000000), // $950,000 in cents
     purchaseDate: '2020-03-15',
-    mortgageAmount: 60000000, // $600,000 in cents
-    mortgageRate: 3.25,
+    mortgageAmount: cents(60000000), // $600,000 in cents
+    mortgageRate: basisPoints(3.25),
     mortgageStartDate: '2020-03-15',
-    rentalIncome: 0,
-    maintenanceCosts: 250000, // $2,500/month in cents
+    rentalIncome: cents(0),
+    maintenanceCosts: cents(250000), // $2,500/month in cents
     notes: 'Beautiful Victorian home in the heart of the city',
   },
   {
@@ -145,14 +158,14 @@ export const mockProperties: Property[] = [
     address: '456 Oak Ave, Oakland, CA',
     propertyType: 'single_family',
     status: 'rental',
-    purchasePrice: 45000000, // $450,000 in cents
-    currentValue: 52000000, // $520,000 in cents
+    purchasePrice: cents(45000000), // $450,000 in cents
+    currentValue: cents(52000000), // $520,000 in cents
     purchaseDate: '2021-08-20',
-    mortgageAmount: 35000000, // $350,000 in cents
-    mortgageRate: 3.75,
+    mortgageAmount: cents(35000000), // $350,000 in cents
+    mortgageRate: basisPoints(3.75),
     mortgageStartDate: '2021-08-20',
-    rentalIncome: 280000, // $2,800/month in cents
-    maintenanceCosts: 150000, // $1,500/month in cents
+    rentalIncome: cents(280000), // $2,800/month in cents
+    maintenanceCosts: cents(150000), // $1,500/month in cents
     notes: 'Great rental property with reliable tenants',
   },
 ];

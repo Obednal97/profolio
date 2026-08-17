@@ -12,6 +12,7 @@
 
 import { classifyTransaction } from "@/lib/transactionClassifier";
 import type { ParsedTransaction, ParseResult } from "@/lib/pdfParser";
+import { asCents } from "@/lib/moneyUnits";
 import {
   detectDayFirst,
   normaliseStatementDate,
@@ -326,7 +327,7 @@ export function parseStatementCsv(
       id: `csv-${i + 1}`,
       date,
       description,
-      amount: cents,
+      amount: asCents(cents),
       type: isDebit ? "debit" : "credit",
       category: classification.category,
       merchant: classification.merchant?.name,
