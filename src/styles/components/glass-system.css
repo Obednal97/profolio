@@ -303,3 +303,42 @@
     background: rgba(0, 0, 0, 0.85);
   }
 }
+
+/*
+ * Glass typography.
+ *
+ * Moved here from src/app/globals.css, which nothing imported. layout.tsx
+ * loads src/styles/main.css and only that, so globals.css was 730 lines of
+ * dead stylesheet redefining 31 classes that the live tree also defines - and
+ * editing it looked exactly like editing the real thing, which cost a round of
+ * debugging during the scroll performance work. These three rules were the
+ * only ones it did not duplicate, and LiquidGlassDemo uses two of them, so
+ * they come across rather than going in the bin with the rest.
+ */
+.glass-typography {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
+  font-feature-settings: "tnum" on, "lnum" on; /* Tabular numbers for financial data */
+}
+
+.glass-typography--large {
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+.glass-typography--numbers {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum" on;
+}
