@@ -57,7 +57,10 @@ export async function parseBankStatementPDF(file: File): Promise<ParseResult> {
   try {
     // Extract text from PDF
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    // `{ data }` rather than the buffer itself: pdfjs 6 dropped the shorthand
+    // and takes DocumentInitParameters only.
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) })
+      .promise;
     
     let text = '';
     
