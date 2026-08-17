@@ -162,6 +162,22 @@ Each of these has produced a live defect. Treat them as load-bearing.
   their key lazily so that importing a route module cannot throw.
 - **Expense amounts are cents on the wire**, unlike assets and properties which
   use dollars. The expense form converts in both directions; the others do not.
+- **The pdf.js worker is copied, never committed.** `scripts/copy-pdf-worker.mjs`
+  runs on install and before every build. pdf.js throws rather than degrading
+  when the worker and the library disagree, and a hand-committed
+  `public/pdf.worker.min.js` had drifted to 5.2.133 against a 5.4.149 library,
+  so every PDF upload failed before parsing a line. `public/pdf.worker.min.mjs`
+  is gitignored and eslint-ignored on both extensions.
+- **Statement parsing is split from the file readers on purpose.**
+  `pdfParser.ts` imports pdf.js at module scope and cannot load outside a
+  browser, so anything inside it is untestable — that is why three separate
+  parse bugs survived there. The logic lives in `statementTextParser.ts`,
+  `csvStatementParser.ts` and `statementValues.ts`, none of which import pdf.js.
+  Keep it that way.
+- **A category the classifier returns must exist in `TRANSACTION_CATEGORIES`.**
+  The review table renders it into a `<select>` built from that tree, and a
+  value matching no option leaves the select on its first option — which is
+  Income. An Amazon purchase showed as earnings that way. A test enforces it.
 - **Never fabricate financial data.** No mock prices, no invented trends, no
   placeholder portfolio values. If data is unavailable, say so. Fabricated
   numbers in a portfolio tracker are worse than an error. Three separate places
